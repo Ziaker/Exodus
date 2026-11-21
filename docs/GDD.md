@@ -40,10 +40,12 @@ visual pertence exclusivamente ao diretor criativo.
 - `assets/SOURCE_ASSETS.md` — proveniência dos assets temporários.
 - Apêndice A deste arquivo — registro cronológico de decisões (substitui um arquivo
   separado por decisão do diretor).
-- `AGENTS.md` (raiz) — **regra principal** para todos os agentes que mexerem no projeto:
-  auditar sempre, caçar erros e esquecimentos, corrigir até ficar entregável, deixar
-  crítica extrema e recomendações para o autor decidir, e nunca afirmar nada não
-  verificado. A validação visual pertence exclusivamente ao diretor.
+- `AGENTS.md` (raiz) — **cópia canônica da regra principal** para todos os agentes que
+  mexerem no projeto: auditar sempre, caçar erros e esquecimentos, corrigir até ficar
+  entregável, deixar crítica extrema com dimensões mínimas e recomendações para o autor
+  decidir, anexar evidência verificável, buscar `origin` antes de commit e nunca afirmar
+  nada não verificado. A validação visual pertence exclusivamente ao diretor.
+- `CLAUDE.md` (raiz) — ponteiro curto para `AGENTS.md`; não duplica a regra.
 
 ### 0.4 Protocolo de continuidade das rodadas — **CONFIRMADO**
 
@@ -371,6 +373,15 @@ Formato: ID · data · decisão · estado · impacto documental.
   cada pergunta. Evitar repetição de questões já resolvidas e nunca tratar
   alternativas como decisões antes da aprovação. **CONFIRMADO**. Impacto:
   GDD §0.4; nenhuma alteração de mecânica, especificação ou código.
+- **D-010 · 2026-11-21** · Reforço da regra de agentes a partir das recomendações do
+  autor: (1) cópia canônica em `AGENTS.md` com ponteiro em `CLAUDE.md` e nas regras
+  globais; (2) evidência anexada (comando, resultado e hash do diff) em toda alegação
+  de verificação; (3) crítica extrema com dimensões mínimas — correção, fidelidade ao
+  design, bugs, omissões, regressões e riscos — e ao menos um problema concreto por
+  entrega; (4) critério de parada e escalada de conflito de autoridade ao autor;
+  (5) busca de `origin` antes de commit e preservação de trabalho concorrente;
+  (6) eliminação de divergência entre camadas global e local por ponteiro único.
+  **CONFIRMADO**. Impacto: `AGENTS.md`, `CLAUDE.md` (raiz), regras globais e GDD §0.3.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
