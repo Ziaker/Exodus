@@ -1,0 +1,17 @@
+# Godot 4+ generated files
+.godot/
+*.translation
+export.cfg
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Not versioned: third-party / Shin Megami Tensei reference material
+Shin Megami Tensei VX The Genesis/
+Godot_v*.exe
+assets/**
+!assets/
+!assets/SOURCE_ASSETS.md
+data/extracted/
+captures/
