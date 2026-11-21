@@ -303,7 +303,7 @@ func _enemy_turn(actor: BattleUnit) -> void:
 	var reaction_declared := await _maybe_player_reaction(target, actor)
 	if not target.is_alive():
 		return
-	# D-020: no declared reaction means the enemy attack is guaranteed to hit,
+	# D-021: no declared reaction means the enemy attack is guaranteed to hit,
 	# whether the player had no acts or simply chose not to react.
 	await _perform_attack(actor, target, 100, false, reaction_declared,
 			not reaction_declared)
@@ -370,7 +370,7 @@ func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
 		auto_hit: bool = false) -> int:
 	if attacker.is_player:
 		return await _manual_rhythm(duration)
-	# D-014/D-020: without a declared reaction the hit is guaranteed. POINT is a
+	# D-014/D-021: without a declared reaction the hit is guaranteed. POINT is a
 	# normal landed hit — it grants no automatic critical and no extra bonus.
 	if auto_hit:
 		return BattleMath.RhythmResult.POINT
