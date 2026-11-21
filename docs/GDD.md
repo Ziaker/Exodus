@@ -201,6 +201,36 @@ Duração `1s − 0,05s por ponto de vantagem de AGI/SP` (mínimo 0,2 s). Bloque
 
 Implementado na cena; disputed details em A-04 e A-05.
 
+### 8.1 Perfis de ritmo por inimigo — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+Decisões do diretor sobre perfis especiais de ritmo (respostas **1C; 2B; 3C; 4C**,
+2026-11-21):
+
+- **1C:** determinados inimigos podem variar a **posição** das regiões POINT, a
+  **velocidade/cadência** do marcador ao longo da linha e o **número de regiões POINT**.
+- **2B:** cada inimigo pode possuir **dois padrões distintos**, um associado aos
+  ataques recebidos (ritmo ofensivo do jogador contra esse inimigo) e outro aos ataques
+  que executa (ritmo de defesa/reação do jogador contra ele).
+- **3C:** a **largura das regiões de acerto** deve variar de acordo com **SP e AGI**.
+  Ainda não foram aprovadas fórmula, direção da influência, limites nem distribuição
+  da largura entre múltiplas regiões POINT.
+- **4C:** o padrão especial é **descoberto durante a execução**; não há prévia
+  obrigatória que revele o padrão completo antes do reflexo começar.
+
+Essas decisões alteram o **design mecânico pretendido**, não somente a aparência
+da barra. **Conflito de especificação explicitado:** a regra vigente de POINT
+central fixo (10%) e BEAM adjacente (20%), em `docs/COMBAT_SPEC.md`, e a função
+`BattleMath.rhythm_zone()` representam o comportamento **implementado atualmente**,
+mas não descrevem os novos perfis. Continuam válidos para o protótipo existente
+até a definição formal da nova regra e implementação autorizada. Não se estabelecem
+aqui números, curvas de aceleração, aleatoriedade, duração adicional ou alterações
+na resolução de dano, crítico, bloqueio e Press Turn.
+
+**PENDENTES de especificação mecânica:** formato dos perfis por inimigo, limites e
+sobreposição das múltiplas zonas, função de SP/AGI sobre as larguras, precedência
+entre a duração já calculada por SP/AGI e a cadência variável, comportamento da IA
+com perfis especiais e testes de sincronização entre cursor visual e resultado real.
+
 ---
 
 ## 9. Magia, elementos, oração e afinidades — **PENDENTE**
@@ -284,6 +314,89 @@ Localizações nomeadas, geografia, hubs, dungeons e regras de exploração: **P
 - Idioma da UI: inglês. **CONFIRMADO**.
 - Acessibilidade, navegação por teclado/gamepad, escalonamento e contraste: **PENDENTE**.
 
+### 17.1 Tactical Altar — decisões de HUD das Rodadas Visuais 1 a 3 — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+A nova direção visual deve preservar o aspecto de **RPG clássico próximo de RPG
+Maker XP**, a visão frontal e a escala nativa 544×416. **Tactical Altar** é a
+direção aprovada: janelas e painéis legíveis, geometria contida, estética sombria e
+atenção prioritária às artes dos inimigos. Não reproduzir integralmente interfaces
+de jogos terceiros. A referência histórica a VX Ace acima descreve uma implementação
+anterior e **não substitui esta direção criativa aprovada**.
+
+**Rodada Visual 1 — 1A; 2D; 3D; 4B:**
+- Base Tactical Altar; barra **comparativa de SP** acompanhada de valores **individuais**;
+  inimigos com nome e HP discretos, com destaque do alvo; painéis de **Fallen e Ally
+  empilhados à esquerda**, comandos à direita.
+
+**Rodada Visual 2 — 1B; 2B; 3B; 4B; 5A; 6D; 7A; 8C:**
+- SP compara **combatente de referência × alvo em foco**; a comparação acompanha alvo
+  ativo, último atacado ou selecionado conforme a precedência da Rodada 3.
+- Atos exibidos por **quatro marcadores mais número**, para o estoque compartilhado
+  por ações e reações; não apresentar REACT como recurso separado.
+- Alvos navegáveis manualmente por **esquerda/direita**; apenas o alvo destacado
+  exibe **HP numérico**; os demais podem mostrar a barra de HP.
+- **Menu vertical** ancorado à direita; **Battle Log compacto**, com histórico
+  expansível; **números flutuantes** de feedback com atualização animada de SP/ACT.
+- A antiga escolha **7A** previa sobreposição central para reflexos; foi
+  **SUBSTITUÍDA** pela correção posterior de integração da linha ao alvo, sem
+  janela central.
+
+**Rodada Visual 3 — 1D; 2B; 3A; 4A; 5A; 6B; 7A; 8B; 9C; 10A; 11A; 12D:**
+- Referência SP: aliado **atuante** ou, durante ataque inimigo, aliado
+  **ameaçado**. Precedência do foco: **ação em resolução > alvo selecionado >
+  último atacado**.
+- Comparação principal com **barra proporcional aos valores individuais**.
+  Inimigos fora do foco recebem símbolos **↑/↓/=** ao lado da arte para
+  indicar se o aliado de referência tem, respectivamente, mais/menos/igual SP;
+  tais símbolos **não** representam aumento ou redução recente de SP.
+- Seleção de alvo acontece **após escolher o comando**. Caso o alvo do cursor
+  se torne inválido, o foco passa ao **próximo inimigo vivo**. Isso **não**
+  estabelece redirecionamento automático de uma ação já declarada.
+- Distribuição **horizontal adaptativa** para **1–4 inimigos**; números/marcadores
+  ACT inimigos visíveis **somente no inimigo destacado**.
+- Menu à direita **recolhido fora da seleção de comandos**; histórico do log
+  acessível **apenas fora de interações temporizadas**.
+- A informação contextual do reflexo inclui participantes, custo/ato e instrução,
+  mas **não** exige janela central: aplica-se a correção de posicionamento abaixo.
+- Tipografia **híbrida**: contornos pixelados, títulos de caráter ritualístico e
+  números legíveis em monoespaçada.
+
+### 17.2 Reflexos integrados e simplificação visual — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+Correções explícitas do diretor ao protótipo visual, seguidas da Rodada Visual 5
+aprovada por **“sigo suas recomendações”**:
+
+- **Ataque:** uma **linha de ritmo desenhada diretamente sobre a arte do inimigo
+  selecionado**, sem janela que obstrua os personagens. **Rodada Visual 5, 1B:**
+  a linha cresce da esquerda para a direita.
+- **Defesa:** a barra aparece **dentro do painel de Fallen ou Ally que está sendo
+  atacado**, conforme o alvo efetivo. **Rodada Visual 5, 2D:** destacar
+  discretamente a borda desse painel.
+- **Rodada Visual 5, 3B:** feedback POINT/BEAM/MISS junto à linha com **iluminação
+  localizada**, sem overlay central.
+- **Rodada Visual 5, 4A:** seleção por **quatro cantos geométricos separados**
+  ao redor do inimigo.
+- **Rodada Visual 5, 5A:** largura da linha de reflexo **adaptável à quantidade
+  de inimigos** visíveis; essa adaptação gráfica, por si, não altera a
+  duração nem a proporção mecânica das zonas.
+- **ABSORB pertence somente a Fallen**; não deve aparecer entre os comandos de
+  Ally, inclusive em mockups. A restrição mecânica já consta do código e da
+  especificação.
+- **Setas diagonais que colidem: REJEITADAS explicitamente pelo diretor.**
+  Não integrar nem reabrir como proposta de efeito.
+- O diretor rejeitou excesso de ornamentos e repetição de escolhas cosméticas.
+  A prioridade passa a ser **linguagem clássica de RPG Maker XP**, boa
+  legibilidade e diferenças efetivas no gameplay.
+
+**PENDENTES exclusivamente visuais, sem aprovação implícita:** escolhas não
+respondidas da Rodada Visual 4 (comportamento circular do cursor; foco inicial;
+ordem concreta de passagem ao próximo alvo; confirmação/cancelamento; comunicação
+da troca de referência SP; comparação 0/0; acabamento das setas ↑/↓/=; aspecto
+do menu recolhido; acesso concreto ao histórico; feedback de eventos múltiplos;
+paleta final). As propostas visuais não constituem aprovação automática.
+As decisões da Rodada Visual 6 sobre ornamentos **não foram aprovadas**;
+a ideia das setas diagonais foi posteriormente rejeitada.
+
 ---
 
 ## 18. Direção sonora — **PENDENTE**
@@ -327,6 +440,11 @@ Nenhum número de balanceamento deve ser considerado oficial sem decisão do dir
 7. Toda a narrativa além da premissa está indefinida.
 8. Sem magia, equipamentos, save/load ou loop de jogo completo.
 9. **D-005/D-007** - implementadas; nenhuma pendência restante nessas regras.
+10. Perfis variáveis de ritmo aprovados como design (§8.1), ainda sem contrato
+    mecânico ou implementação: posições, número de zonas, cadência, larguras por
+    SP/AGI e compatibilidade com as regras fixas atuais.
+11. HUD Tactical Altar aprovado em rodadas visuais (§§17.1–17.2), ainda não
+    implementado no motor; a validação visual final pertence ao diretor.
 
 ---
 
@@ -383,6 +501,28 @@ Formato: ID · data · decisão · estado · impacto documental.
   (6) subordinação explícita das regras globais à cópia canônica do projeto por
   ponteiro único — o conteúdo global foi preservado, não duplicado no repo.
   **CONFIRMADO**. Impacto: `AGENTS.md`, `CLAUDE.md` (raiz), regras globais e GDD §0.3.
+
+- **D-011 · 2026-11-21** · Rodadas Visuais 1–3: direção **Tactical Altar**,
+  barra SP contextual e individual, indicadores relativos ↑/↓/=, seleção por
+  esquerda/direita após comando, painéis aliados empilhados, menu à direita,
+  marcadores ACT, log expansível, distribuição horizontal para 1–4 inimigos,
+  tipografia híbrida e precedência ação > seleção > último atacado. **CONFIRMADO
+  como design; NÃO IMPLEMENTADO.** Impacto: GDD §17.1; nenhuma mudança de código.
+- **D-012 · 2026-11-21** · Correção do protótipo visual e Rodada Visual 5
+  (**1B; 2D; 3B; 4A; 5A**): linha ofensiva cresce sobre o alvo; linha
+  defensiva fica no painel do aliado ameaçado; feedback localizado; seleção
+  por quatro cantos; largura gráfica adaptativa. Janelas centrais de reflexo
+  substituídas, **ABSORB só para Fallen**, setas diagonais descartadas e
+  direção clássica próxima de **RPG Maker XP** reforçada. **CONFIRMADO como
+  design; NÃO IMPLEMENTADO no motor.** Impacto: GDD §17.2.
+- **D-013 · 2026-11-21** · Perfis especiais de ritmo por inimigo
+  (**1C; 2B; 3C; 4C**): posição, velocidade e número de regiões POINT
+  variáveis; padrões independentes para receber e executar ataques; largura
+  das regiões influenciada por SP/AGI; padrão descoberto durante execução.
+  **CONFIRMADO como intenção mecânica; CONTRATO NUMÉRICO PENDENTE;
+  NÃO IMPLEMENTADO.** Conflito com zonas centrais fixas atuais documentado;
+  não inventar fórmulas nem modificar a `COMBAT_SPEC.md` automaticamente.
+  Impacto: GDD §8.1 e §21.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
