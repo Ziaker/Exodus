@@ -410,7 +410,7 @@ a D-021 não foi implementada nesta entrega.
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
   ataque**, tanto do jogador como do inimigo. **Exceção explícita:** um
   ataque inimigo **sempre acerta quando o jogador não pode reagir**.
-  **D-021 estende a exceção:** também acerta quando o jogador *pode*
+  **D-022 estende a exceção:** também acerta quando o jogador *pode*
   reagir e escolhe não declarar reação. A garantia se refere ao
   **acerto**, não a dano máximo, crítico obrigatório ou afinidade.
 - **2A:** o **bloqueio na Trave reduz o dano em 50%**. A redução já
@@ -692,14 +692,14 @@ Preservar `poder × ATK ÷ DEF` conforme D-019.
     manutenção de ganhos +1 SP; comparação de dominância com adversário
     vivo de maior SP; críticos normais em acertos inimigos garantidos.
     Novas fórmulas e poderes ainda **não implementados**. O autoacerto
-    sem reação foi implementado por **D-021**.
+    sem reação foi implementado por **D-022**.
 13. **D-020 (Rodada 4):** perfis especiais de ritmo aprovados como design
     em §8.1.1 e na especificação técnica, **NÃO IMPLEMENTADOS**.
     Contratos pendentes: largura-base por AGI, faixas de SP,
     mínimos temporais das zonas, distribuição em múltiplos POINT,
     perfil de erro temporal da IA e derivação/reprodução da seed.
     O risco crítico é a janela útil subquadro em durações curtas.
-14. **D-021:** o acerto automático inimigo também vale quando o jogador
+15. **D-022:** o acerto automático inimigo também vale quando o jogador
     pode reagir e opta por não declarar reação. **IMPLEMENTADO.**
 
 ---
@@ -841,7 +841,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   e implementação da exceção de acerto da D-014.
   **Impacto:** GDD §§5.1, 8.2, 20, 21 e
   `docs/COMBAT_SPEC.md`; código, testes e arquivos locais intactos.
-- **D-021 · 2026-11-21 (continuação da pergunta 1 da Rodada 3)** ·
+- **D-022 · 2026-11-21 (continuação da pergunta 1 da Rodada 3)** ·
   A exceção de acerto automático inimigo também se aplica quando o jogador
   **pode reagir e opta por não declarar reação**. O acerto é normal — sem
   crítico automático, dano máximo ou bônus extra. **CONFIRMADO e

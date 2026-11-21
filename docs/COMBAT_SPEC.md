@@ -187,7 +187,7 @@
   **Exceção:** o ataque inimigo **sempre acerta quando o jogador não
   pode reagir**. O acerto garantido não significa dano máximo,
   crítico automático ou alteração de modificadores de dano e afinidade.
-  **D-021:** se o jogador *pode* reagir mas opta por não declarar reação,
+  **D-022:** se o jogador *pode* reagir mas opta por não declarar reação,
   o ataque inimigo **também acerta automaticamente**. **IMPLEMENTADO.**
 - **2A:** um **bloqueio na Trave reduz 50% do dano**. Percentual
   já praticado no código e agora confirmado como regra de design.
@@ -196,7 +196,7 @@
   pode causar **crítico pela chance normal**. Não é crítico
   automático, nem recebe bônus adicional. Usa-se a fórmula crítica
   implementada até a calibração aprovada na D-019 (1A).
-  A exceção de autoacerto foi **implementada** por D-014/D-021 em
+  A exceção de autoacerto foi **implementada** por D-014/D-022 em
   `BattleController._attack_timing()`.
 - **3A e 4A:** sem atos não há bloqueio/desvio; com reação elegível,
   pausar a escolha e manter o tempo de execução da barra.
@@ -208,7 +208,7 @@
   estão em elaboração no GDD §8.1. D-014 não os cancela.
 - **DIVERGÊNCIA RESTANTE:** a pausa para escolha de reação e a prioridade
   ofensiva por AGI ainda não foram implementadas. O autoacerto sem reação
-  foi implementado por D-014/D-021.
+  foi implementado por D-014/D-022.
 
 ### Perfis especiais de ritmo — D-013 e D-020 (Rodada 4; design aprovado, não implementado)
 
