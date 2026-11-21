@@ -121,6 +121,7 @@ narrativa — ainda não foi definido.
 | A-06 | MÉDIO | Descanso consome 2 atos (ação comum + ato extra); o spec diz abrir mão de 1 ato. |
 | A-07 | BAIXO | "SP base extra" da absorção ambíguo; implementação recalcula SP pela soma dos atributos. |
 | A-08 | BAIXO | Item de cura é `heal(6)` fixo, sem inventário. |
+| A-09 | ALTO | O teto de 4 atos disponíveis da D-005 ainda não está implementado: `BattleState.start_round()` soma atos novos e armazenados até 8, e `BattleUnit.grant_acts()` também admite 8. Nenhum código foi alterado nesta rodada. |
 
 Nenhuma divergência foi corrigida nesta entrega.
 
@@ -133,7 +134,9 @@ Fórmulas de dado, variação, crítico e limiar: `docs/COMBAT_SPEC.md`.
 
 SP define superioridade, sorteio de dano extra, rolagens de bloqueio e vantagem geral.
 Quando um lado ultrapassa 70% do SP do oponente, ganha +1 ato por rodada — a
-implementação atual desse limiar está sob A-02.
+implementação atual desse limiar está sob A-02. Pela D-005, o +1 ato por SP não
+pode elevar os atos disponíveis acima de 4. O destino do bônus excedente permanece
+**PENDENTE**; limiar e magnitude do bônus não foram modificados.
 
 ---
 
@@ -153,7 +156,17 @@ qualquer ação fora do turno, declarada em resposta ao anúncio de uma ação i
 inclusive mirando outro aliado. Todos os comandos podem ser Reação; inimigos também
 reagem. Atos não usados podem ser armazenados até 4 para a próxima rodada.
 
-Implementação parcial: ver A-01, A-03 e A-04.
+**D-005 — CONFIRMADO:** o total de atos **disponíveis simultaneamente** é limitado
+a **4 por personagem**, considerando os 2 novos por rodada, os atos armazenados e
+os atos concedidos por bônus de SP ou Press Turn; vale igualmente para Fallen,
+aliados e inimigos. Essa decisão substitui a interpretação de 4 armazenados
+**mais** 2 novos disponíveis ao mesmo tempo. Não determina como tratar atos que
+excedam o teto durante a passagem de rodada ou ao receber bônus: **PENDENTE**
+a política de descarte, adiamento ou outra solução. Regras existentes de obtenção
+(+1 por vantagem de SP nas condições documentadas; +1 por fraqueza) e de penalidade
+(-1 por Resist/Null/Absorb) são preservadas, sem definição adicional de precedência.
+
+Implementação parcial: ver A-01, A-03, A-04 e A-09.
 
 ---
 
@@ -288,6 +301,7 @@ Nenhum número de balanceamento deve ser considerado oficial sem decisão do dir
 4. Seis alterações locais permanecem não publicadas por decisão do diretor.
 5. Toda a narrativa além da premissa está indefinida.
 6. Sem inventário, IA tática, magia, equipamentos, save/load ou loop de jogo completo.
+7. **A-09 / D-005** — novo teto total de 4 atos disponíveis ainda não implementado; tratamento de excedentes de armazenamento, bônus SP e Press Turn depende de decisão.
 
 ---
 
@@ -306,6 +320,14 @@ Formato: ID · data · decisão · estado · impacto documental.
   pendente, não executada.** Impacto futuro: §17 e `battle_controller.gd`.
 - **D-004 · 2026-11-21** · O GDD inicial deve ser publicado em `main`, isolado das
   demais alterações locais. **CONFIRMADO**. Impacto: commit exclusivo de `docs/GDD.md`.
+- **D-005 · 2026-11-21 (Rodada 1)** · O máximo de atos disponíveis por personagem é
+  **4 no total**, incluindo atos recebidos por rodada, acumulados e bônus concedidos
+  por SP ou Press Turn; aplica-se a todos os combatentes. Substitui a interpretação
+  de até 4 armazenados somados a 2 novos simultaneamente disponíveis. **CONFIRMADO
+  como design; NÃO IMPLEMENTADO**. **PENDENTE:** destino dos atos excedentes e ordem
+  de aplicação dos bônus ao alcançar o teto. Os valores e as condições vigentes
+  de SP e Press Turn não foram alterados. Impacto: §§4.1, 5, 7, 21 e
+  `docs/COMBAT_SPEC.md`; nenhum arquivo de código.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

@@ -27,13 +27,25 @@
   também podem declarar Reações.
 - Atos não usados podem ser **armazenados até 4** para a próxima rodada
   (podem guardar todos de uma vez); inimigos também.
+- **D-005 (2026-11-21): teto de 4 atos disponíveis no total por personagem**, somando
+  atos novos da rodada, atos armazenados e bônus de SP/Press Turn. Vale igualmente
+  para Fallen, aliados e inimigos. Substitui a interpretação de 4 armazenados
+  **mais** 2 novos simultaneamente disponíveis. O tratamento dos excedentes de
+  armazenamento e concessões de bônus permanece **PENDENTE**; não há autorização
+  nesta rodada para escolher entre descarte, adiamento ou outro comportamento.
 - Ordem de turnos por `AGI`.
 - Quando o SP de um lado ultrapassa **70% do SP do oponente**, esse lado ganha
   **+1 ato por rodada**.
+- **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
+  não autoriza um quinto ato. Destino de bônus excedente: **PENDENTE**. O limiar
+  de 70% e o bônus de +1 não foram revisados.
 
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
 - Resistido / nulo / absorvido: **-1 ato** cada (independente do tipo).
+- **Consequência de D-005:** o +1 por fraqueza também respeita o teto de 4 atos
+  disponíveis. Destino do +1 concedido no teto e ordem de aplicação com outros
+  bônus: **PENDENTE**. A penalidade de -1 não foi alterada.
 - Afinidades consideradas: Weak, Normal, Resist, Null, Absorb.
 
 ## Dano (sem magia neste protótipo)
