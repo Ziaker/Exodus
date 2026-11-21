@@ -18,7 +18,13 @@
 - `SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI` (soma dos 7 atributos).
 - SP ganho em batalha é **temporário**; volta ao base ao fim da luta.
 - `EN`: habilidades custam EP definido nos dados; recupera **20% do máximo por rodada**.
-- **Descanso**: abrir mão de **um** ato recupera **+20% do máximo de EN**.
+- **REST / Descanso — D-038 (DESIGN CONFIRMADO, NÃO IMPLEMENTADO):** não gasta
+  nenhum ACT, recupera **2 EN fixos** (até o EN máximo; **sem porcentagem pelo
+  REST**) e encerra a participação do combatente na rodada, guardando os atos
+  ainda disponíveis para a próxima (estoque até 4; teto D-005). A recuperação
+  automática de 20% de EN no **fim da rodada** (regra acima) é independente
+  e não foi substituída. O REST antigo de 1 ato e +20% é histórico (D-006);
+  o código Godot ainda o executa até a atualização de implementação.
 - Mapeamento dos `.rvdata`: `MaxHP→HP`, `MaxMP→EN`, `ATK→ATK`, `DEF→DEF`,
   `MAT→MAK`, `MDF→MEF`, `LUK→AGI`.
 
@@ -150,6 +156,15 @@
   também podem declarar Reações.
 - Atos não usados podem ser **armazenados até 4** para a próxima rodada
   (podem guardar todos de uma vez); inimigos também.
+- **REST (D-038):** serve para guardar os atos remanescentes: escolher REST encerra
+  as oportunidades do combatente na rodada **sem gastar um ACT**. Os atos que
+  estavam disponíveis passam ao estoque (limite 4) para a próxima rodada,
+  sujeitando-se às regras vigentes de início de rodada D-005. REST também
+  recupera exatamente **2 EN** (até o máximo), **não** recupera EN por percentual
+  e não pode ser repetido na mesma rodada pelo mesmo combatente após encerrar
+  sua participação. **PENDENTE de implementação:** o motor atual gasta um ato
+  antes de escolher REST e usa `recover_en(0.2)`; não equiparar PASS a REST.
+  A regeneração automática no fim de rodada permanece distinta e inalterada.
 - **D-005 (2026-11-21): teto de 4 atos disponíveis no total por personagem**, somando
   atos novos da rodada, atos armazenados e bônus de SP/Press Turn. Vale igualmente
   para Fallen, aliados e inimigos. Substitui a interpretação de 4 armazenados
