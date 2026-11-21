@@ -380,7 +380,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   design, bugs, omissões, regressões e riscos — e ao menos um problema concreto por
   entrega; (4) critério de parada e escalada de conflito de autoridade ao autor;
   (5) busca de `origin` antes de commit e preservação de trabalho concorrente;
-  (6) eliminação de divergência entre camadas global e local por ponteiro único.
+  (6) subordinação explícita das regras globais à cópia canônica do projeto por
+  ponteiro único — o conteúdo global foi preservado, não duplicado no repo.
   **CONFIRMADO**. Impacto: `AGENTS.md`, `CLAUDE.md` (raiz), regras globais e GDD §0.3.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,

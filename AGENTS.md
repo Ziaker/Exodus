@@ -23,8 +23,9 @@ o autor decidir explicitamente.
    **pelo menos um problema concreto** por implementação. Recomendações e melhorias são
    apresentadas ao autor; nenhuma se torna regra sem decisão explícita dele.
 5. **Evidência anexada, não auto-declarada.** Toda alegação de verificação traz o comando
-   executado, o resultado real e o identificador do diff (`git rev-parse HEAD` ou hash do
-   arquivo). "Auditei" sem evidência não conta como auditoria.
+   executado, o resultado real e `git diff --stat` (ou `git status --short`); quando já
+   houver commit, incluir também `git rev-parse HEAD`. "Auditei" sem evidência não conta
+   como auditoria.
 6. **Nada não verificado.** Nunca afirmar que algo está pronto, correto, aprovado ou
    testado sem evidência real. Verificar cada implementação minuciosamente.
 7. **Validação visual pertence ao autor.** Capturas podem ser inspecionadas e
