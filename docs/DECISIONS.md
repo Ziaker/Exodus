@@ -42,5 +42,6 @@ qualquer alteração em documentos ou código.
 | D-033 | 2026-11-21 (Rodada 11: 1A; 2C; 3B; 4B; 5A; 6A; 7A; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) duração `clamp(1−0,00625×... | `docs/GDD.md` Apêndice A |
 | D-034 | 2026-11-21 (mudança de planos do diretor) | A barra de ritmo | `docs/GDD.md` Apêndice A |
 | D-035 | 2026-11-21 | A IA passa a usar a mesma largura de POINT | `docs/GDD.md` Apêndice A |
+| D-036 | 2026-11-21 (Rodada 12) | RESERVADO — piso por efeito, provas de estados, snapshots e rastros | `docs/GDD.md` Apêndice A |
 
-Total: 33 decisões indexadas.
+Total: 34 decisões indexadas.
