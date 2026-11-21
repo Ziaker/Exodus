@@ -12,8 +12,16 @@ const STAT_KEYS: Array[String] = [
 ]
 const MAX_GAIN := 10000
 
+## Tests may point the store at a private file so asynchronous battles from
+## other test scripts cannot overwrite the save being asserted.
+static var save_path_override: String = ""
+
+static func _path() -> String:
+	return save_path_override if not save_path_override.is_empty() else SAVE_PATH
+
+
 static func load_gains() -> Dictionary:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var file := FileAccess.open(_path(), FileAccess.READ)
 	if file == null:
 		return {}
 	var text := file.get_as_text().strip_edges()
@@ -44,7 +52,7 @@ static func save_gains(gains: Dictionary) -> bool:
 	for key in STAT_KEYS:
 		entries[key] = clampi(int(gains.get(key, 0)), 0, MAX_GAIN)
 	var payload := {"version": VERSION, "gains": entries}
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(_path(), FileAccess.WRITE)
 	if file == null:
 		return false
 	file.store_string(JSON.stringify(payload))
@@ -53,6 +61,8 @@ static func save_gains(gains: Dictionary) -> bool:
 
 
 static func clear() -> void:
-	var dir := DirAccess.open("user://")
-	if dir != null and dir.file_exists(SAVE_FILE):
-		dir.remove(SAVE_FILE)
+	var path := _path()
+	var file_name := path.get_file()
+	var dir := DirAccess.open(path.get_base_dir())
+	if dir != null and dir.file_exists(file_name):
+		dir.remove(file_name)

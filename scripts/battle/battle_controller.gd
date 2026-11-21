@@ -409,18 +409,22 @@ func _manual_rhythm(duration: float, point_half: float) -> int:
 	return await _wait_rhythm()
 
 
-## AI execution of the same POINT / BEAM / MISS zones. Advantage grants extra
-## attempts, mirroring the documented extra block rolls; no new rule is added.
+## D-035: the AI rolls a position on the same bar the player sees, so AGI and
+## SP change its POINT width too. Extra attempts still come only from the
+## documented SP block-roll rule; AGI no longer grants extra attempts.
+func _zone_roll(point_half: float) -> int:
+	return BattleMath.rhythm_zone(rng.randf_range(0.0, 1.0), point_half)
+
+
 func _ai_roll(attacker: BattleUnit, defender: BattleUnit) -> int:
-	var advantage := (attacker.current_sp - defender.current_sp) \
-		+ (attacker.stats.agi - defender.stats.agi)
+	var point_half := BattleMath.point_half_width(attacker.stats.agi,
+		defender.stats.agi, attacker.current_sp, defender.current_sp)
+	var advantage := attacker.current_sp - defender.current_sp
 	var rolls := BattleMath.extra_block_rolls(advantage) + 1
 	for _i in rolls:
-		var roll := rng.randi_range(0, 2)
-		if roll == 0:
-			return BattleMath.RhythmResult.POINT
-		if roll == 1:
-			return BattleMath.RhythmResult.BEAM
+		var result := _zone_roll(point_half)
+		if result != BattleMath.RhythmResult.MISS:
+			return result
 	return BattleMath.RhythmResult.MISS
 
 
@@ -444,16 +448,15 @@ func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 func _defender_reaction(defender: BattleUnit, attacker: BattleUnit) -> int:
 	if defender.acts_available <= 0:
 		return BattleMath.RhythmResult.MISS
+	var point_half := BattleMath.point_half_width(defender.stats.agi,
+		attacker.stats.agi, defender.current_sp, attacker.current_sp)
 	var advantage := defender.current_sp - attacker.current_sp
 	var rolls := BattleMath.extra_block_rolls(advantage) + 1
 	for _i in rolls:
-		var roll := rng.randi_range(0, 2)
-		if roll == 0:
+		var result := _zone_roll(point_half)
+		if result != BattleMath.RhythmResult.MISS:
 			defender.spend_act()
-			return BattleMath.RhythmResult.POINT
-		if roll == 1:
-			defender.spend_act()
-			return BattleMath.RhythmResult.BEAM
+			return result
 	return BattleMath.RhythmResult.MISS
 
 

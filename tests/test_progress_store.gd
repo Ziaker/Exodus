@@ -2,22 +2,26 @@ extends GutTest
 
 ## D-028: absorption gains must survive between battles via a versioned save.
 
+const TEST_PATH := "user://test_progress_store.json"
+
 func before_each() -> void:
+	ProgressStore.save_path_override = TEST_PATH
 	ProgressStore.clear()
 
 
 func after_each() -> void:
 	ProgressStore.clear()
+	ProgressStore.save_path_override = ""
 
 
 func _write_raw(text: String) -> void:
-	var file := FileAccess.open(ProgressStore.SAVE_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	file.store_string(text)
 	file.close()
 
 
 func test_missing_save_returns_no_gains() -> void:
-	assert_false(FileAccess.file_exists(ProgressStore.SAVE_PATH))
+	assert_false(FileAccess.file_exists(TEST_PATH))
 	assert_eq(ProgressStore.load_gains(), {})
 
 

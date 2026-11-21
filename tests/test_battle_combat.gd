@@ -126,6 +126,41 @@ func test_ai_defense_resolves_without_human_input() -> void:
 		assert_lt(enemy.acts_available, 2)
 
 
+func test_ai_attack_rolls_the_same_point_width_as_the_player() -> void:
+	var battle := await _fresh_battle()
+	var attacker: BattleUnit = battle.state.units[2]
+	var defender: BattleUnit = battle._fallen
+	attacker.current_sp = defender.current_sp
+	var point_half := BattleMath.point_half_width(attacker.stats.agi,
+		defender.stats.agi, attacker.current_sp, defender.current_sp)
+	var expected_rng := RandomNumberGenerator.new()
+	expected_rng.seed = 4242
+	var expected: int = BattleMath.rhythm_zone(
+		expected_rng.randf_range(0.0, 1.0), point_half)
+	battle.rng.seed = 4242
+	assert_eq(battle._ai_roll(attacker, defender), expected)
+
+
+func test_ai_defense_uses_point_width_and_spends_act() -> void:
+	var battle := await _fresh_battle()
+	var defender: BattleUnit = battle.state.units[2]
+	var attacker: BattleUnit = battle._fallen
+	defender.current_sp = attacker.current_sp
+	defender.acts_available = 2
+	var point_half := BattleMath.point_half_width(defender.stats.agi,
+		attacker.stats.agi, defender.current_sp, attacker.current_sp)
+	var expected_rng := RandomNumberGenerator.new()
+	expected_rng.seed = 777
+	var expected: int = BattleMath.rhythm_zone(
+		expected_rng.randf_range(0.0, 1.0), point_half)
+	battle.rng.seed = 777
+	assert_eq(battle._defender_reaction(defender, attacker), expected)
+	if expected == BattleMath.RhythmResult.MISS:
+		assert_eq(defender.acts_available, 2)
+	else:
+		assert_eq(defender.acts_available, 1)
+
+
 func test_rest_spends_exactly_one_act() -> void:
 	var battle := await _fresh_battle()
 	battle._fallen.current_en = 0

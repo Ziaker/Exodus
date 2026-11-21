@@ -1063,6 +1063,13 @@
 ## IA
 - Inimigos: aleatório ponderado entre ataque e habilidades.
 - Inimigos "profissionais" e inteligentes, mas com variações mais fracas previstas em dados.
+- **D-035 (2026-11-21): a IA usa a mesma largura de POINT do jogador.**
+  Ataque e defesa da IA rolam uma posição uniforme na barra e resolvem por
+  `BattleMath.rhythm_zone(posicao, largura)`. A diferença de AGI altera essa
+  largura (D-034); rolagens extras continuam dependendo apenas de SP, pela
+  regra documentada de +1 rolagem a cada 2 pontos de vantagem.
+  **IMPLEMENTADO** em `BattleController._zone_roll()`, `_ai_roll()` e
+  `_defender_reaction()`.
 
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), oração de humanos,

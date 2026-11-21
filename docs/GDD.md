@@ -1212,6 +1212,8 @@ Intenção confirmada: inimigos inteligentes e "profissionais", com variantes ma
 previstas em dados; escolha por aleatório ponderado no protótipo. Não há tabela de
 pesos, perfis de comportamento ou critérios de dificuldade aprovados.
 Implementado: apenas ataque físico com reações simuladas — ver A-04.
+**D-035:** a IA rola uma posição na mesma barra do jogador, usando a largura
+de POINT definida por AGI/SP (D-034). Rolagens extras continuam por SP.
 
 ---
 
@@ -1723,7 +1725,9 @@ rodada.
 
 ---
 
-21. **D-033 — Rodada 11:** interpolação contínua da duração; ficha resistente de laboratório revisada para HP 40, DEF 8 e SP_base 88; piso de 1 dano sob contato e afinidade válida; demonstração intervalar de cobertura das variantes; transição atômica de captura/seleção/início; ensaio neutro de 10.000 casos; versões separadas de esquema JSON e resolvedor; testes completos de duelos e múltiplos inimigos. **Aprovado como design; NÃO IMPLEMENTADO.** Conflito nominal da D-032 corrigido somente na ficha de laboratório; risco de SP persiste (ver §§4.2, 6.4, 8.1.8 e 20).
+21. **D-033 - Rodada 11:** interpolação contínua da duração; ficha resistente de laboratório revisada para HP 40, DEF 8 e SP_base 88; piso de 1 dano sob contato e afinidade válida; demonstração intervalar de cobertura das variantes; transição atômica de captura/seleção/início; ensaio neutro de 10.000 casos; versões separadas de esquema JSON e resolvedor; testes completos de duelos e múltiplos inimigos. **Aprovado como design; NÃO IMPLEMENTADO.** Conflito nominal da D-032 corrigido somente na ficha de laboratório; risco de SP persiste (ver §§4.2, 6.4, 8.1.8 e 20).
+22. **D-035:** IA usa a mesma largura de POINT do jogador; rolagens extras
+    continuam por SP. **IMPLEMENTADO.**
 
 ---
 
@@ -2124,6 +2128,14 @@ Formato: ID · data · decisão · estado · impacto documental.
   por AGI/SP e o ajuste de largura por AGI da D-021; D-032 permanece no
   histórico como direção anterior, não executada.
 - **D-033 · 2026-11-21 (Rodada 11: 1A; 2C; 3B; 4B; 5A; 6A; 7A; 8A)** · **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**: (1A) duração `clamp(1−0,00625×(ΔAGI+ΔSP),0,2,1)`; (2C) revisar apenas a ficha resistente de laboratório para HP 40, DEF 8 e SP_base 88, sem mudar espécies; (3B) manter `1dN` de SP e piso final de **1 dano** com contato e afinidade que permita dano, excluindo Null/Absorb; (4B) demonstrar matematicamente a cobertura integral das variantes em intervalos de estados alcançáveis; (5A) capturar AGI/SP, escolher variante válida e só então iniciar o relógio, em transição atômica; (6A) cenário neutro controlado para 10.000 casos com ±10%, Normal, sem crítico/bloqueio, meta ≥95% em 3–5 acertos; (7A) snapshots JSON com versão de esquema e versão de resolvedor distintas; (8A) testes de duelos e múltiplos inimigos cobrindo atos, reações, fraquezas, SP e duração. **PENDENTES:** implementação, testes, prova de intervalos, Moves sem dano nominal, semântica de timestamps e versões de replay. D-022–D-025 e D-028–D-032 preservadas; a ficha resistente antiga da D-032 permanece apenas no histórico. **Impacto:** GDD §§4.2, 6.4, 8.1.8, 20, 21; `docs/COMBAT_SPEC.md`; `docs/DECISIONS.md`. Nenhum código, recurso, save ou teste alterado.
+
+- **D-035 · 2026-11-21** · A IA passa a usar a **mesma largura de POINT**
+  do jogador: ataque e defesa inimigos rolam uma posição uniforme na barra e
+  resolvem por `BattleMath.rhythm_zone()`. AGI e SP alteram essa largura
+  conforme D-034; rolagens extras continuam dependendo apenas de SP, como
+  já documentado. **CONFIRMADO e IMPLEMENTADO.** Impacto:
+  `BattleController._zone_roll()`, `_ai_roll()`, `_defender_reaction()`,
+  `tests/test_battle_combat.gd`, GDD §11, `COMBAT_SPEC.md` §IA.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
