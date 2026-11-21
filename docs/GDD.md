@@ -145,7 +145,7 @@ narrativa — ainda não foi definido.
 | A-02 | ALTO | Limiar literal `SP_atual > 0,7 × SP_rival` premiava ambos os lados. | **CORRIGIDO:** D-007 substitui por dominância em razão. |
 | A-03 | MÉDIO | Reação do jogador não era utilizável para defesa; ataques inimigos exigiam entrada manual. | **CORRIGIDO:** entrada manual apenas para personagens do jogador; IA resolve seus próprios tempos; defesa manual exige reação declarada e 1 ato. |
 | A-04 | MÉDIO | IA não tinha resolução própria de ritmo. | **IMPLEMENTADO como execução provisória:** mesmas zonas POINT/BEAM/MISS com tentativas extras por vantagem; sem nova regra de design. |
-| A-05 | MÉDIO | Trave = 50% de dano, sem registro documental. | **REGISTRADO:** comportamento preservado; decisão pendente. |
+| A-05 | MÉDIO | Trave = 50% de dano, sem registro documental. | **HOMOLOGADO pela D-014 (2A):** bloqueio Trave reduz 50% do dano, comportamento já presente no código. |
 | A-06 | MÉDIO | Descanso consumia 2 atos. | **CORRIGIDO:** 1 ato, gasto antes da escolha do comando; teste de regressão. |
 | A-07 | BAIXO | "SP base extra" da absorção ambíguo. | **PENDENTE:** implementação recalcula SP pela soma dos atributos. |
 | A-08 | BAIXO | Item de cura fixo, sem inventário. | **PENDENTE:** fora do escopo da correção. |
@@ -187,6 +187,19 @@ reagem. Atos não usados podem ser armazenados até 4 para a próxima rodada.
 armazenados e bônus de SP/Press Turn; aplica-se a Fallen, aliados e inimigos.
 **IMPLEMENTADO:** excedente é **adiado** ao estoque (máximo 4) e pode voltar em rodada
 posterior. Substitui a soma de até 4 armazenados com 2 novos simultaneamente.
+
+### 7.1 Reações — decisões da Rodada 2 (D-014) — **CONFIRMADO como design**
+
+- **3A:** sem atos disponíveis, o personagem **não pode bloquear nem desviar**.
+- **4A:** quando a reação for elegível, **pausar o combate durante a escolha**.
+  O reflexo executado depois continua exigindo precisão temporal; o prazo
+  fixo de 0,8 s observado no código não corresponde à escolha aprovada.
+- **5C:** a prioridade entre uma ação anunciada e uma **reação ofensiva**
+  é determinada por **AGI**. **PENDENTE:** regra para AGI igual, definição
+  de interrupção/cancelamento da ação posterior e demais casos de simultaneidade.
+
+Essas decisões não modificam custos de atos, nem autorizam alteração do código
+nesta rodada. **Estado:** somente design; implementação incompleta.
 
 Implementação parcial: ver A-01, A-03, A-04 e D-005.
 
@@ -230,6 +243,35 @@ na resolução de dano, crítico, bloqueio e Press Turn.
 sobreposição das múltiplas zonas, função de SP/AGI sobre as larguras, precedência
 entre a duração já calculada por SP/AGI e a cadência variável, comportamento da IA
 com perfis especiais e testes de sincronização entre cursor visual e resultado real.
+
+---
+
+### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
+
+- **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
+  ataque**, tanto do jogador como do inimigo. **Exceção explícita:** um
+  ataque inimigo **sempre acerta quando o jogador não pode reagir**.
+  Essa garantia se refere ao **acerto**, não é aprovação para dano máximo,
+  crítico obrigatório ou modificação de afinidade.
+- **2A:** o **bloqueio na Trave reduz o dano em 50%**. A redução já
+  estava implementada e agora está homologada como regra.
+- **3A:** combatente sem atos não tem direito a bloqueio ou desvio.
+- **4A:** escolher reação com o combate pausado, mas executar a barra
+  com temporização e precisão normais.
+
+**PENDENTE:** interação entre POINT ofensivo e POINT defensivo quando
+ambos possam ocorrer; a resposta 1E reformulou a questão de precedência,
+mas não homologou uma ordem específica para resultados simultâneos.
+Também permanece pendente decidir se o ataque inimigo acerta
+automaticamente quando a reação **seria possível**, mas o jogador
+**escolhe não reagir**. Essa situação é diferente de não poder reagir.
+
+**Conflitos com o protótipo:** hoje a IA ainda pode falhar seu timing
+mesmo contra personagem incapaz de reagir; a escolha de reação usa
+temporizador fixo de 0,8 s; não há prioridade de reações ofensivas por AGI.
+Essas regras exigem implementação posterior, não autorizada nesta rodada.
+Não alteram nem substituem os perfis especiais de ritmo aprovados no §8.1
+nem o posicionamento da linha aprovado no §17.2.
 
 ---
 
@@ -431,7 +473,7 @@ Nenhum número de balanceamento deve ser considerado oficial sem decisão do dir
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
-2. A-05 — precedência POINT/POINT e resultado de Trave; preservado, sem decisão formal.
+2. **D-014:** bloqueio Trave homologado em 50%. Permanecem pendentes a precedência POINT/POINT, a escolha voluntária de não reagir, os empates de AGI e as regras de interrupção.
 3. A-07/A-10 — dificuldade de absorção, eliminação do alvo e persistência entre
    batalhas permanecem indefinidas.
 4. A-08 — inventário de itens não implementado.
@@ -523,6 +565,19 @@ Formato: ID · data · decisão · estado · impacto documental.
   NÃO IMPLEMENTADO.** Conflito com zonas centrais fixas atuais documentado;
   não inventar fórmulas nem modificar a `COMBAT_SPEC.md` automaticamente.
   Impacto: GDD §8.1 e §21.
+
+- **D-014 · 2026-11-21 (Rodada 2, 1E; 2A; 3A; 4A; 5C)** ·
+  **CONFIRMADO como design; sem implementação nesta rodada**:
+  (1E) barra de ritmo determina acerto/erro de ataques do jogador e inimigos,
+  com **acerto automático do inimigo quando o jogador não pode reagir**;
+  (2A) bloqueio Trave reduz dano em **50%** (já presente no código);
+  (3A) sem atos não se pode bloquear/desviar;
+  (4A) pausa para **escolher reação**, reflexo permanece temporizado;
+  (5C) prioridade de **reações ofensivas por AGI**.
+  **PENDENTES:** POINT ofensivo versus POINT defensivo quando coexistirem,
+  opção voluntária de não reagir, empate de AGI e interrupção/cancelamento.
+  **Impacto:** GDD §§4.1, 7.1, 8.2, 21; COMBAT_SPEC §§Atos e reações,
+  Sistema de ritmo. Código, testes e demais documentos não alterados.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

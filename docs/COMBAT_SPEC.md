@@ -46,6 +46,17 @@
 - **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
   não autoriza um quinto ato. O excedente é adiado ao estoque pela mesma regra.
 
+### Reações da Rodada 2 — D-014 (CONFIRMADO como design; não implementado)
+
+- **3A:** sem atos disponíveis, o personagem **não pode bloquear nem desviar**.
+- **4A:** o combate fica **pausado para a escolha da reação** quando elegível.
+  A execução posterior da barra continua temporizada; a janela fixa
+  de 0,8 s para escolher a reação deixa de ser o comportamento pretendido.
+- **5C:** a ordem de resolução de **reações ofensivas** em relação à
+  ação anunciada depende de **AGI**. Desempate, interrupção/cancelamento
+  e detalhes de encadeamento permanecem **PENDENTES**. Nenhuma alteração
+  implícita em custo ou comando foi autorizada.
+
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
 - Resistido / nulo / absorvido: **-1 ato** cada (independente do tipo).
@@ -84,6 +95,31 @@
 - Ao atacar: Ponto → dano integral; Trave → oponente bloqueia; Falha → sem dano.
 - Ao defender: Trave → bloqueia; Ponto → desvia e ganha +1 SP; Falha → dano integral.
 - Bloqueio extra: **+1 rolagem de bloqueio a cada 2 pontos de SP de vantagem**.
+
+### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
+
+- **1E (ideia própria do diretor):** a **barra de ritmo** determina
+  **acerto ou erro** do jogador e do inimigo durante os ataques.
+  **Exceção:** o ataque inimigo **sempre acerta quando o jogador não
+  pode reagir**. O acerto garantido não significa dano máximo,
+  crítico automático ou alteração de modificadores de dano e afinidade.
+  **PENDENTE:** qual o comportamento quando o jogador *pode* reagir,
+  mas opta por não declarar reação.
+- **2A:** um **bloqueio na Trave reduz 50% do dano**. Percentual
+  já praticado no código e agora confirmado como regra de design.
+- **3A e 4A:** sem atos não há bloqueio/desvio; com reação elegível,
+  pausar a escolha e manter o tempo de execução da barra.
+- A resposta **1E** não fixa o resultado quando ataque e defesa
+  têm ambos **POINT** numa situação com reação. A precedência
+  exata continua **PENDENTE**, mesmo que o código atual dê
+  prioridade ao desvio (0 dano).
+- As zonas fixas descritas acima representam o **protótipo vigente**;
+  os perfis variáveis de ritmo por inimigo e seus limites ainda
+  estão em elaboração no GDD §8.1. D-014 não os cancela.
+- **DIVERGÊNCIA COM O CÓDIGO:** o inimigo ainda pode falhar seu
+  próprio timing quando o jogador não pode reagir; a pausa para
+  escolha e a prioridade ofensiva por AGI ainda não foram
+  implementadas. Nenhuma mudança de código foi autorizada.
 
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
