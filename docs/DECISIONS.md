@@ -46,5 +46,7 @@ qualquer alteração em documentos ou código.
 | D-037 | 2026-11-21 (Rodada 13: 1A; 2B; 3C; 4A; 5A; 6B; 7A; 8C) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) travessia uniforme e fixa... | `docs/GDD.md` Apêndice A |
 | D-038 | 2026-11-21 | REST / guardar ações | `docs/GDD.md` Apêndice A |
 | D-039 | 2026-11-21 (Rodada 14: 1A; 2A; 3A; 4A; 5B; 6A; 7A; 8A) | CONFIRMADO como design/plano; NÃO IMPLEMENTADO nesta rodada: (1A) quatro fases sequen... | `docs/GDD.md` Apêndice A |
+| D-040 | 2026-11-21 (Rodada 15: 1A; 2A; 3A; 4A; 5A; 6A; 7A; 8A) | DESIGN APROVADO; NÃO IMPLEMENTADO nesta rodada: (1A) capturar timestamp monotônico do... | `docs/GDD.md` Apêndice A |
+| D-041 | 2026-11-21 (Rodada 16: 1A; 2A; 3A; 4A; 5A; 6C; 7B; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) `Time.get_ticks_usec()` n... | `docs/GDD.md` Apêndice A |
 
-Total: 37 decisões indexadas.
+Total: 39 decisões indexadas.
