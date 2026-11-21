@@ -42,10 +42,9 @@ qualquer alteração em documentos ou código.
 | D-033 | 2026-11-21 (Rodada 11: 1A; 2C; 3B; 4B; 5A; 6A; 7A; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) duração `clamp(1−0,00625×... | `docs/GDD.md` Apêndice A |
 | D-034 | 2026-11-21 (mudança de planos do diretor) | A barra de ritmo | `docs/GDD.md` Apêndice A |
 | D-035 | 2026-11-21 | A IA passa a usar a mesma largura de POINT | `docs/GDD.md` Apêndice A |
-| D-036 | 2026-11-21 (Rodada 12: 1D; 2A; 3D; 4A; 5A; 6A; 7A; 8A) | Participação e piso final por efeito, duas baterias resistentes, domínio de estados, eventos e replay determinístico | `docs/GDD.md` Apêndice A |
-| D-037 | 2026-11-21 (Rodada 13: 1A; 2B; 3C; 4A; 5A; 6B; 7A; 8C) | Barra uniforme, IA temporal especial, piso por pacote, certificados, sequência, microssegundos, rastro e baterias | `docs/GDD.md` Apêndice A |
-
-| D-038 | 2026-11-21 | REST não gasta ACT; recupera 2 EN fixos e guarda atos não utilizados para próxima rodada (substitui custo e percentual anteriores do REST) | `docs/GDD.md` Apêndice A |
-| D-039 | 2026-11-21 (Rodada 14: 1A; 2A; 3A; 4A; 5B; 6A; 7A; 8A) | Fases e critérios de liberação, Resource de dano, sequência por encontro, arredondamento par, autoacerto e bateria resistente | `docs/GDD.md` Apêndice A |
+| D-036 | 2026-11-21 (Rodada 12: 1D; 2A; 3D; 4A; 5A; 6A; 7A; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1D) cada efeito danoso declar... | `docs/GDD.md` Apêndice A |
+| D-037 | 2026-11-21 (Rodada 13: 1A; 2B; 3C; 4A; 5A; 6B; 7A; 8C) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) travessia uniforme e fixa... | `docs/GDD.md` Apêndice A |
+| D-038 | 2026-11-21 | REST / guardar ações | `docs/GDD.md` Apêndice A |
+| D-039 | 2026-11-21 (Rodada 14: 1A; 2A; 3A; 4A; 5B; 6A; 7A; 8A) | CONFIRMADO como design/plano; NÃO IMPLEMENTADO nesta rodada: (1A) quatro fases sequen... | `docs/GDD.md` Apêndice A |
 
 Total: 37 decisões indexadas.

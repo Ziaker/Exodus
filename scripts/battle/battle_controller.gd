@@ -297,9 +297,15 @@ func _player_turn(actor: BattleUnit) -> void:
 			_append_log("%s uses item: +%d HP%s." % [
 				actor.display_name, healed, " (-2 SP)" if actor.is_fallen else ""])
 		2:
-			# The act was already spent at the start of _player_turn.
-			actor.recover_en(0.2)
-			_append_log("%s rests: +20%% EN (1 act spent)." % actor.display_name)
+			# D-038: REST costs no act. The act spent on entering the menu is
+			# returned, remaining acts go to the stock and the unit stops acting.
+			actor.acts_available += 1
+			var remaining := actor.acts_available
+			actor.store_acts(remaining)
+			actor.acts_available = 0
+			actor.recover_en_flat(BattleMath.REST_EN_RECOVERY)
+			_append_log("%s rests: +%d EN, %d act(s) stored; round participation ended." % [
+				actor.display_name, BattleMath.REST_EN_RECOVERY, remaining])
 		3:
 			await _perform_absorption(actor, target)
 

@@ -63,6 +63,11 @@ func restore_sp() -> void:
 func recover_en(fraction: float) -> void:
 	current_en = mini(stats.max_en, current_en + int(float(stats.max_en) * fraction))
 
+
+## D-038: REST restores a fixed amount, never a percentage.
+func recover_en_flat(amount: int) -> void:
+	current_en = mini(stats.max_en, current_en + maxi(0, amount))
+
 ## D-017: a successful absorption consumes the target. It cannot act again,
 ## cannot be absorbed twice and no longer counts as a living enemy.
 func consume_by_absorption() -> void:

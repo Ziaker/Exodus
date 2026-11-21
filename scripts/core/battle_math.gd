@@ -7,6 +7,7 @@ enum Affinity { WEAK, NORMAL, RESIST, NULL, ABSORB }
 enum RhythmResult { POINT, BEAM, MISS }
 
 const SP_GAIN_PER_EVENT: int = 1
+const REST_EN_RECOVERY: int = 2
 const BLOCK_ROLLS_PER_SP: int = 2
 const THRESHOLD_RATIO: float = 0.7
 const MAX_AVAILABLE_ACTS: int = 4

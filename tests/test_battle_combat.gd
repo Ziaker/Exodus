@@ -1,4 +1,4 @@
-extends GutTest
+﻿extends GutTest
 
 ## Integration coverage for the corrected attack / defense / action economy.
 
@@ -161,17 +161,40 @@ func test_ai_defense_uses_point_width_and_spends_act() -> void:
 		assert_eq(defender.acts_available, 1)
 
 
-func test_rest_spends_exactly_one_act() -> void:
+func test_rest_costs_no_act_stores_acts_and_restores_flat_en() -> void:
 	var battle := await _fresh_battle()
 	battle._fallen.current_en = 0
-	# The act is already spent when the menu opens; set a known value here.
-	battle._fallen.acts_available = 2
+	battle._fallen.stored_acts = 0
+	# One act was already spent when the menu opened; REST returns it.
+	battle._fallen.acts_available = 1
 	_choose(battle, 2)
 	for _i in range(20):
 		await get_tree().process_frame
-	# The act was spent before the menu opened; REST must not spend a second one.
-	assert_eq(battle._fallen.acts_available, 2)
-	assert_eq(battle._fallen.current_en, int(float(battle._fallen.stats.max_en) * 0.2))
+	assert_eq(battle._fallen.acts_available, 0, "REST ends participation this round")
+	assert_eq(battle._fallen.stored_acts, 2, "all acts are stored, none consumed")
+	assert_eq(battle._fallen.current_en, 2, "REST restores exactly 2 EN")
+	assert_false(battle._fallen.spend_act(), "REST cannot be repeated this round")
+
+
+func test_rest_stores_at_most_four_acts() -> void:
+	var battle := await _fresh_battle()
+	battle._fallen.stored_acts = 0
+	battle._fallen.acts_available = 3
+	_choose(battle, 2)
+	for _i in range(20):
+		await get_tree().process_frame
+	assert_eq(battle._fallen.stored_acts, 4)
+
+
+func test_rest_en_is_capped_at_maximum() -> void:
+	var battle := await _fresh_battle()
+	battle._fallen.current_en = battle._fallen.stats.max_en - 1
+	battle._fallen.stored_acts = 0
+	battle._fallen.acts_available = 1
+	_choose(battle, 2)
+	for _i in range(20):
+		await get_tree().process_frame
+	assert_eq(battle._fallen.current_en, battle._fallen.stats.max_en)
 
 
 func test_absorption_without_input_grants_nothing() -> void:
