@@ -135,6 +135,12 @@
   sem validação
   matemática.
 
+### D-033 (Rodada 11, 2C) — ficha resistente de laboratório revisada; DESIGN, NÃO IMPLEMENTADO
+
+- **Somente a ficha resistente de laboratório** da D-032 muda: **HP 40, DEF 8**, conservando EN 8, ATK 8, MAK 8, MEF 8, AGI 8; **SP_base=88**, antes 104. Perfil antigo HP 48/DEF 16/SP 104 continua documentado como histórico da D-032, mas não é o valor vigente para novos testes.
+- Perfis ágil/equilibrado, referência neutra independente, Fallen, dados de espécies e progresso D-028 intactos.
+- Contra poder básico 8 e ATK 8, DEF 8 produz dano-base 8 e **cinco acertos nominais** em HP 40. Diferença de SP resistente 88 contra atacante 80 causa `−1d8` antes dos demais modificadores; a meta 5–7 não está validada estatisticamente.
+
 ## Atos e reações
 - Cada personagem possui **2 atos por rodada**; cada ato pode ser **Ação** ou **Reação**
   (2 ações, 2 reações ou 1 de cada).
@@ -400,6 +406,12 @@
   foi executada** por
   esta decisão
   documental.
+
+### D-033 (Rodada 11, 3B; 6A; 8A) — dano mínimo e critérios de teste; DESIGN, NÃO IMPLEMENTADO
+
+- **3B:** manter a rolagem SP `1d|ΔSP|` com sinal; ataques que **causam dano, fazem contato e possuem afinidade que permita dano** recebem **piso final de 1 dano**, mesmo se a diferença de SP anular o valor. Sem contato não há dano; afinidades **Null/Absorb** não recebem piso. Preservar D-015, fórmula crítica implementada D-021 e variação fixa ±10% aprovada D-019. **PENDENTE:** poder zero/Moves sem dano nominal, composição com efeitos futuros e estágio preciso em casos especiais. Código `BattleMath.physical_damage()` ainda permite zero.
+- **6A:** 10.000 **casos controlados** com referência neutra contra cópia equivalente: **HP 32, ATK 8, DEF 8, poder básico 8, SP iguais, afinidade Normal, sem crítico/bloqueio, variação fixa ±10%**. Exigir **≥95% dos casos** com derrota em **3–5 ataques bem-sucedidos** (D-032). Diferença inicial de SP é zero e não produz `1dN`; não introduzir ganhos extras não definidos. **PENDENTES:** seeds, amostragem, resets e harness. Não houve execução de 10.000 casos; o motor ainda não implementa ±10% fixos para ΔSP diferente de zero.
+- **8A:** testar **duelos** e **combates com múltiplos inimigos**, cobrindo teto e armazenamento de atos, reações e prioridade, fraquezas/Press Turn, dominância e ganhos SP, dano e duração dos perfis. Preservar D-024/D-025: propriedades, reprodutibilidade por seed, fronteiras, integração, equivalência mecânica em **30/60/120 FPS** com timestamps controlados. Matrizes, métricas, seeds e scripts de execução **PENDENTES**.
 
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
@@ -943,6 +955,14 @@
   do marcador.
   D-032 não
   altera código.
+
+### D-033 (Rodada 11, 1A; 4B; 5A; 7A) — duração contínua, prova e replay; DESIGN, NÃO IMPLEMENTADO
+
+- **1A:** duração `T=clamp(1−0,00625×(ΔAGI+ΔSP),0,2,1)` segundos, **6,25 ms por ponto combinado**, interpolada continuamente, sem grupos inteiros; exemplo Δ combinado +5 → **0,96875 s**. Preservar orientação, limites 0,2–1 s e atributos congelados por barra. A implementação atual ainda usa 0,05 s/ponto.
+- **4B:** validar variantes para **todos os estados de atributos alcançáveis** por **partição em intervalos e demonstração matemática de cobertura em cada intervalo**, incluindo extremos, cortes, limites temporais e velocidade. Amostragem não substitui prova; D-025 bloqueia encontro sem cobertura. **PENDENTES:** caracterização do domínio com D-028, representação de intervalos e método verificável de prova; sem inventar teto de atributos.
+- **5A:** na ativação, **capturar AGI/SP**, **validar elegibilidade**, **selecionar a primeira variante válida por prioridade**, e **só então iniciar o relógio monotônico do input em t=0**. A transição é mecânica e atomicamente consistente; nenhum evento intermediário muda o estado capturado. Semântica de simultaneidade e ausência de variante válida **PENDENTES**.
+- **7A:** snapshots **JSON** com **versão do esquema de dados** e **versão do resolvedor mecânico** distintas, conservando parâmetros completos, seed, IDs, índice, AGI/SP e instantes de input. Versão registrada não garante disponibilidade de resolvedores antigos. Esquema exato, precisão, compatibilidade e versões iniciais **PENDENTES**. Nenhum arquivo JSON criado.
+- Preservar D-014/D-022 e D-020–D-025/D-031/D-032: cobertura 8%–16%, mínimo 40 ms por região, até três regiões se duração ≥300 ms, velocidade ≤4× e aceleração ≤12×média/T, resultado temporal por input.
 
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
