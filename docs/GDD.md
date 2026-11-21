@@ -163,6 +163,12 @@ narrativa — ainda não foi definido.
 
 **PENDENTES:** interação com Moves sem dano nominal ou de poder zero e estágios de processamento dos efeitos futuros. O motor atual `BattleMath.physical_damage()` usa `maxi(0, int(round(amount)))` e pode produzir dano zero. **Código não alterado**.
 
+### 4.3 D-036 (Rodada 12, 1D e 2A) — participação explícita e piso final de dano — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+- **1D:** **cada efeito de dano declara explicitamente** se participa do piso mínimo de dano da D-033 (3B). Essa participação **não é inferida** apenas por contato, afinidade, nome do Move ou presença de um efeito de status. Em Moves com múltiplos efeitos, a decisão pertence a cada efeito de dano, não ao Move inteiro. **PENDENTES:** nome/tipo do campo declarativo, valor-padrão, migração dos ataques existentes e comportamento de efeitos puramente de status ou com poder nominal zero; nenhum Resource ou ficha foi alterado.
+- **2A:** quando o efeito declaradamente participa do piso e o ataque **faz contato** com **afinidade que permite dano**, aplicar o **mínimo final de 1 somente depois de todos os modificadores e do arredondamento final**. Sem contato, por MISS ou desvio POINT, não há piso; afinidades **Null/Absorb** não recebem dano artificial. O modificador SP `1dN`, a chance crítica D-021 e a variação percentual fixa ±10% da D-019 continuam sujeitos aos contratos existentes. Não criar dano para efeitos apenas de status.
+- **Divergência técnica:** `BattleMath.physical_damage()` atualmente calcula `maxi(0, int(round(amount)))`, sem declaração por efeito e sem piso final. **D-036 não modifica esse código**.
+
 ## 5. Superiority Points — **CONFIRMADO**
 
 `SP_base` = soma de HP, EN, ATK, MAK, DEF, MEF e AGI. SP ganho em batalha é temporário.
@@ -1150,6 +1156,18 @@ Nenhum script foi alterado.
 
 **Compatibilidade:** D-013 a D-025 e D-031/D-032 preservadas; nenhuma modificação de código, cadência, avaliação temporal ou HUD.
 
+### 8.1.9 D-036 (Rodada 12, 4A; 5A; 6A; 7A; 8A) — estados, ordenação, replay e rastros — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+- **4A — domínio alcançável:** a prova intervalar de cobertura das variantes (D-033 4B) deve usar **limites efetivos verificados do motor e todas as transições de atributos permitidas**, incluindo o progresso persistente D-028 e as alterações de AGI/SP durante combate, **sem introduzir tetos novos**. O `ProgressStore.MAX_GAIN` atualmente limita ganhos individuais serializados a 10000, mas isso **não autoriza inferir um teto global de atributos ou SP**; a definição exata do conjunto alcançável permanece **PENDENTE**. A prova deve cobrir todo o domínio permitido e não somente as fichas de teste.
+- **5A — eventos simultâneos no marco de ativação:** **resolver primeiro os eventos mecânicos já comprometidos até o instante de ativação**, depois **capturar AGI/SP**, validar elegibilidade, escolher a variante prioritária e iniciar o relógio do input, respeitando a preparação atômica da D-033 (5A). **PENDENTES:** ordenação determinística entre eventos realmente simultâneos, identidade e precedência de eventos não comprometidos. Não escolher tal ordem por suposição.
+- **6A — unidade de snapshots:** armazenar **tempos mecânicos em inteiros de microssegundos** nos snapshots JSON versionados, convertendo apenas nas interfaces necessárias. Isso estabelece unidade de representação, **não comprova precisão física de captura de teclas em microssegundos**. Precisão do relógio, arredondamento na conversão, limites numéricos e convenção de bordas permanecem **PENDENTES**.
+- **7A — resolvedor ausente:** quando a **versão mecânica exigida pelo snapshot não estiver disponível**, **recusar a reprodução mecânica exata**, informar a incompatibilidade e **preservar integralmente o registro original**. Não reexecutar silenciosamente em versão mais nova, não migrar ou excluir registros por inferência. Leitura/inspeção não constitui reprodução mecânica comprovada.
+- **8A — igualdade de rastro:** com mesma seed, configuração mecânica resolvida e inputs temporais controlados, exigir **igualdade exata dos rastros de eventos mecânicos**, **além dos resultados finais**, a **30, 60 e 120 FPS**. Comparar identidades, ordem, alterações de HP/SP/atos, reações, efeitos, cancelamentos, duração e marcos temporais pertinentes. A exigência **não é** igualdade visual quadro a quadro. **PENDENTES:** esquema canônico dos eventos, timestamp/ordenação, matriz de casos, determinismo de RNG e implementação dos testes; **nenhum teste foi executado**.
+
+**Precedência documental e código atual:** a **D-034**, aprovada depois da D-033, determina **barra de 1 segundo com velocidade fixa e largura POINT dependente de AGI/SP**; **D-035** aplica a mesma largura à IA. Logo, a fórmula variável de duração da D-033 (1A) é **histórica e substituída**, não deve voltar a ser usada durante a implementação da D-036. A antiga cadência variável das D-020/D-023 não deve ser reintroduzida silenciosamente contra D-034. O motor ainda julga o input pela posição do último frame da barra e resolve timing de IA por amostragem, divergências das exigências temporais/reprodutíveis pendentes. A prova de variantes deve refletir a regra vigente da D-034 e os demais limites aprovados aplicáveis.
+
+**Exemplo de viabilidade:** com travessia uniforme de **1 segundo** (D-034), cada zona POINT precisa ocupar ao menos **4% do percurso** para oferecer os **40 ms** individuais da D-021; três zonas exigem ao menos **12% de cobertura total**, dentro do intervalo global de 8%–16%. Esse é um **cálculo condicional**, não certificado de que os perfis atuais já estejam válidos.
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -1593,6 +1611,10 @@ rodada.
 
 **Revisão do conflito D-032:** a decisão posterior D-033 (2C) **substitui somente a ficha resistente de laboratório**, de HP 48/DEF 16/SP 104 para **HP 40/DEF 8/SP 88**. Isso corrige o cálculo **nominal** de 12 para 5 acertos com poder 8 e ATK 8, mas **não resolve o risco de desbalanceamento efetivo**: a diferença SP 80 versus 88 introduz `−1d8`, podendo resultar em mínimo de 1 por ataque. O teste neutro de 95% não cobre essa situação. Não ajustar outros poderes, atributos ou regras sem aprovação.
 
+**D-036 (Rodada 12, 3D) — validação resistente em duas baterias independentes:** realizar **uma bateria com SP igual** entre atacante de referência e alvo resistente de laboratório (D-033: HP 40, DEF 8, SP_base derivado 88) para isolar resistência por HP/DEF, e **outra com SP reais de 80 (atacante) contra 88 (resistente)** para medir a penalidade SP (`−1d8`). A ficha resistente revisada e o ataque básico de poder 8 permanecem. **PENDENTES:** qual valor igual de SP adotar no primeiro cenário, modo de controlar SP sem alterar fichas por inferência, contagem de casos, seeds, regras de acerto/crítico/afinidade/variação e **taxa estatística de aceitação de cada bateria**. Não aplicar automaticamente às novas baterias o limiar **≥95% em 10.000 casos**, que continua homologado para o **ensaio neutro** da D-032/D-033 (6A). A meta resistente de **5–7 acertos** permanece objetivo de balanceamento, **sem evidência de aprovação estatística**. Nenhuma das baterias foi executada.
+
+**D-036 — risco transversal:** a D-034 já implementou barra de duração fixa de 1 s; os textos históricos D-032/D-033 ainda mencionam duração variável. A especificação vigente deve tomar D-034 como autoridade para a duração. D-035 já compartilha largura POINT com a IA; seu modelo atual de amostragem uniforme não comprova o contrato temporal triangular anterior. D-036 não escolhe uma nova arquitetura de IA, não restaura fórmulas antigas e não valida automaticamente curvas ou variantes não implementadas.
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -1730,6 +1752,8 @@ rodada.
     continuam por SP. **IMPLEMENTADO.**
 
 ---
+
+23. **D-036 — Rodada 12:** cada efeito de dano declara participação no piso; piso de 1 aplicado após todos os modificadores e arredondamento final quando houver contato e afinidade que permita dano; duas baterias distintas para resistente (SP igual / SP 80 vs 88); domínio alcançável conforme motor e transições reais sem novos tetos; resolver eventos mecânicos comprometidos antes da captura atômica; tempos de replay JSON em inteiros de microssegundos; recusar replay mecânico exato sem resolvedor original preservando o registro; igualdade exata dos rastros mecânicos em 30/60/120 FPS para seeds e inputs controlados. **Design aprovado, NÃO IMPLEMENTADO.** Precedência da D-034 sobre a duração variável antiga explicitada no §8.1.9. Pendências e riscos nos §§4.3, 8.1.9 e 20.
 
 ## Apêndice A — Registro de decisões
 
@@ -2136,6 +2160,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   já documentado. **CONFIRMADO e IMPLEMENTADO.** Impacto:
   `BattleController._zone_roll()`, `_ai_roll()`, `_defender_reaction()`,
   `tests/test_battle_combat.gd`, GDD §11, `COMBAT_SPEC.md` §IA.
+
+- **D-036 · 2026-11-21 (Rodada 12: 1D; 2A; 3D; 4A; 5A; 6A; 7A; 8A)** · **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**: (1D) cada efeito danoso declara participação no piso mínimo; (2A) piso 1 após modificadores e arredondamento, somente com contato e afinidade válida, excluindo Null/Absorb; (3D) duas baterias resistentes separadas, com SP igual e SP 80 vs 88, sem limiar estatístico novo; (4A) domínio de estados dos limites efetivos do motor e transições permitidas, sem teto inventado; (5A) resolver eventos já comprometidos antes da captura de atributos/seleção atômica; (6A) snapshots JSON guardam tempos como inteiros em microssegundos; (7A) recusar replay exato sem versão mecânica disponível, preservando dados originais; (8A) exigir igualdade exata do rastro mecânico em 30/60/120 FPS sob inputs/seed controlados. **Precedência:** D-034 (barra fixa 1 s) e D-035 (mesma largura POINT para IA) já **IMPLEMENTADAS**, sem restaurar duração variável histórica D-033. **PENDENTES:** campos dos efeitos, proof de domínio de estados, parâmetros e limiares das baterias resistentes, precisão/quantização do relógio, ordenação de eventos e esquema dos rastros/replays. Preservadas as D-022–D-025 e D-028–D-035. **Impacto:** GDD §§4.3, 8.1.9, 20, 21 e `docs/COMBAT_SPEC.md`; índice em `docs/DECISIONS.md`. Nenhum código, save, teste ou asset modificado.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
