@@ -239,6 +239,45 @@ EN é usado para conjuração e se recupera no fim da rodada: 20% do máximo. De
 
 ---
 
+### 6.1 Rodada 8 — D-025 (5E), escala inicial dos atributos — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+**Ideia própria do diretor, 5E:** todos os **personagens e inimigos** devem iniciar
+com valores dos atributos básicos em **8 ou múltiplos de 8**. Para **Fallen**
+no início do jogo, foram expressamente definidos:
+
+| Atributo básico | Valor inicial de Fallen |
+|---|---:|
+| HP máximo | **32** |
+| EN máximo | **8** |
+| ATK | **8** |
+| MAK | **8** |
+| DEF | **8** |
+| MEF | **8** |
+| AGI | **8** |
+
+**SP não é um atributo inicial independente:** pela regra anterior,
+`SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI`; portanto, para Fallen,
+`SP_base = 32 + 8 + 8 + 8 + 8 + 8 + 8 = 80`.
+O SP temporário de batalha continua seguindo os contratos anteriores.
+
+**Não definidos nesta decisão:** fichas específicas de aliados/inimigos,
+limite máximo dos atributos, progressão, regra exata de escolha dos múltiplos
+para espécies diferentes, eventuais exceções futuras e valores de poder
+das habilidades. Não inferir que todos os personagens tenham a mesma ficha
+de Fallen ou que SP deva começar em 8. A escolha 5E responde à proposta
+de ficha de referência da Rodada 8 com uma **regra global de atributos
+iniciais**; ela não aprova uma ficha neutra de testes nem substitui
+silenciosamente a intenção de referência separada da D-024 (7C).
+
+**Divergência verificada com o código:** `UnitStats` tem valores
+padrão 10/5, e `BattleController._create_units()` ainda inicializa
+Fallen com HP 14, EN 8, ATK 7, MAK 3, DEF 5, MEF 3, AGI 6; aliados e
+inimigos também usam valores fora da nova escala. **Design aprovado,
+não implementado**. A mudança de escala exige recalibrar poderes
+físicos conforme D-019/D-021, sem alterar a fórmula autorizada.
+
+---
+
 ## 7. Ações, reações e armazenamento — **CONFIRMADO**
 
 Dois atos por personagem por rodada: 2 ações, 2 reações ou 1 de cada. Reação é
@@ -265,6 +304,30 @@ Essas decisões não modificam custos de atos, nem autorizam alteração do cód
 nesta rodada. **Estado:** somente design; implementação incompleta.
 
 Implementação parcial: ver A-01, A-03, A-04 e D-005.
+
+---
+
+### 7.2 D-025 (Rodada 8) — desempate e cancelamento de reação ofensiva — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+- **6C:** quando a ação anunciada e a reação ofensiva tiverem
+  **AGI igual**, determinar a prioridade por **identificador
+  estável do combatente**. A comparação exata dos IDs (qual
+  ID precede), requisitos de unicidade e eventual igualdade
+  de IDs permanecem **PENDENTES**; não decidir por ordem
+  alfabética ou lado por suposição.
+- **7A:** se a reação ofensiva resolver primeiro por AGI
+  (ou pelo desempate acima), só **cancela** a ação anunciada
+  quando **eliminar o executor da ação posterior** ou
+  aplicar um **efeito de interrupção explicitamente definido**.
+  Dano comum sem morte nem interrupção explícita não cancela.
+  Esta decisão **não cria** novos efeitos de interrupção
+  nem define seus tipos; continuam pendentes a semântica
+  exata de efeitos existentes, o momento dos gastos/recompensas,
+  a resolução de simultaneidade e testes de encadeamento.
+- Preservar a D-014 (prioridade por AGI), D-015 (defesa
+  POINT prevalece), D-022 (autoacerto sem reação declarada)
+  e os tetos de atos. **Código atual não implementa
+  essas prioridades ofensivas.**
 
 ---
 
@@ -629,6 +692,96 @@ implementada deve ser preservada.
 
 ---
 
+### 8.1.5 Rodada 8 — D-025: validação, aceleração, fronteiras e tempo — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+Decisões aprovadas nesta área: **1B; 2B; 3A; 4A; 8A**.
+As escolhas mantêm D-020/D-021/D-023/D-024: perfis
+válidos por construção, 8%–16% de cobertura POINT,
+ao menos 40 ms por região, duração global preservada,
+máximo de três zonas e velocidade instantânea
+até 4× a média.
+
+1. **1B — configuração sem solução:** impedir a
+   **validação/carregamento do encontro** com
+   diagnóstico explícito quando um perfil de
+   inimigo não admitir configurações válidas.
+   Não resolver arbitrariamente com fallback,
+   descarte de habilidade, duração extra ou
+   violação do mínimo temporal. **PENDENTE:**
+   como verificar essa condição quando atributos
+   variáveis durante o combate alterarem
+   duração, cobertura ou disponibilidade
+   das regiões; a validação antecipada deve
+   ser coerente com todos os estados elegíveis.
+2. **2B — aceleração:** impor
+   `|dv/dt| ≤ 12 × velocidade_média / T`,
+   onde `T` é a duração global da barra
+   e velocidade_média é a velocidade de
+   travessia total dividida por `T`.
+   O teto anterior de velocidade
+   instantânea **4× a média** permanece;
+   velocidade contínua e transições
+   suaves também. A fórmula não escolhe
+   a curva específica nem o limite
+   mínimo de velocidade.
+   Exemplo: quando `T=300 ms`, variar
+   a velocidade em 1× a média demanda
+   pelo menos **25 ms** sob aceleração
+   máxima constante.
+3. **3A — fronteiras:** exatamente na
+   fronteira entre zonas de resultados
+   diferentes, classificar com a
+   **categoria mais favorável**:
+   **POINT > BEAM > MISS**. Não acrescenta
+   tolerância temporal nem alarga zonas.
+   Mantém a precedência independente
+   da D-015 para POINT ofensivo
+   versus POINT defensivo.
+4. **4A — início do relógio:** quando
+   uma reação elegível exigir escolha,
+   **pausar a decisão** (D-014) e
+   iniciar **nova origem temporal ao
+   começar a barra**, após a escolha.
+   O tempo gasto no menu não integra
+   a duração do reflexo. O relógio
+   monotônico e o instante de
+   recebimento do evento permanecem
+   os aprovados em D-024. **PENDENTE:**
+   ponto exato de ativação da barra
+   e primeiro input elegível.
+5. **8A — independência de FPS:** em
+   cenários com **timestamps
+   controlados equivalentes** e
+   mesma seed/parâmetros resolvidos,
+   exigir **classificação mecânica
+   exatamente igual a 30, 60 e
+   120 FPS**, inclusive nas
+   fronteiras POINT/BEAM/MISS.
+   Não reivindicar igualdade de
+   frames visuais, latência física
+   do teclado ou resultados de
+   testes que não foram executados.
+   Matrizes de entradas, geração
+   de timestamps e integração
+   Godot permanecem **PENDENTES**.
+
+**Risco de incompatibilidade:** uma
+configuração válida no carregamento
+pode deixar de ser viável em execução
+quando AGI/SP alterar a duração ou
+a cobertura. A política correspondente
+não foi aprovada e não pode ser
+resolvida por prolongamento silencioso
+da barra, violação de limites ou
+cancelamento implícito de ações.
+A implementação ainda usa zonas
+fixas, `_process(delta)` e
+posição visual para classificar input;
+nenhuma mudança de código foi
+autorizada nesta rodada.
+
+---
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -928,6 +1081,28 @@ por esta decisão documental.
 
 ---
 
+**D-025 (Rodada 8):** regras aprovadas de
+validação de perfis inviáveis no carregamento,
+limite de aceleração `12 × v_média/T`,
+classificação das fronteiras a favor de POINT/BEAM,
+origem temporal no início da barra após escolha
+pausada, desempate de AGI por ID estável,
+cancelamento apenas por eliminação ou interrupção
+expressa e identidade mecânica exata em 30/60/120
+FPS com timestamps controlados. A ideia própria
+5E estabelece **atributos iniciais de personagens
+e inimigos em 8 ou múltiplos de 8**, Fallen com
+**32 HP, 8 EN e 8 nos demais cinco atributos
+básicos**; seu SP base derivado é **80**.
+**PENDENTES:** política de validade dinâmica
+quando AGI/SP mudam, ordenação de IDs,
+valores iniciais de outros personagens,
+calibração de poderes, leitura do relógio
+no Godot e testes de FPS. Regras de design
+aprovadas, ainda não implementadas.
+
+---
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -994,6 +1169,21 @@ por esta decisão documental.
     pendente e testes obrigatórios de propriedades,
     reprodução, fronteiras, integração e FPS.
     Dependências e riscos detalhados em §8.1.4.
+
+---
+
+18. **D-025 — Rodada 8:** oito decisões
+    aprovadas em design; **NÃO IMPLEMENTADAS**:
+    invalidade de configuração bloqueia
+    carregamento, limite de aceleração
+    12× v_média/T, fronteiras favoráveis,
+    relógio inicia após escolha, escala
+    inicial de atributos 8 ou múltiplos,
+    desempate por ID estável, interrupção
+    condicionada a eliminação/efeito explícito
+    e igualdade mecânica 30/60/120 FPS.
+    Riscos e pendências em §§6.1, 7.2,
+    8.1.5 e 20.
 
 ---
 
@@ -1235,6 +1425,39 @@ Formato: ID · data · decisão · estado · impacto documental.
   de criar decisão nova, reservar o próximo número; conflito com outra sessão
   sobe ao autor. **CONFIRMADO e IMPLEMENTADO.** Impacto: `docs/DECISIONS.md`
   e `AGENTS.md`.
+- **D-025 · 2026-11-21 (Rodada 8: 1B; 2B; 3A; 4A; 5E; 6C; 7A; 8A)** ·
+  **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**:
+  (1B) bloquear validação/carregamento de encontro
+  que contenha perfil sem solução válida;
+  (2B) limite de aceleração `12 × v_média/T`,
+  preservando velocidade máxima 4× v_média;
+  (3A) fronteira exata favorece
+  POINT > BEAM > MISS; (4A) tempo da barra
+  começa após a escolha pausada da reação;
+  (5E, ideia própria) atributos iniciais
+  de todos os personagens e inimigos
+  em 8 ou múltiplos de 8; Fallen
+  inicia com HP 32, EN 8 e ATK/MAK/DEF/
+  MEF/AGI 8, SP base derivado 80;
+  (6C) AGI empatada entre ação e reação
+  ofensiva: desempate por ID estável;
+  (7A) reação prioritária só cancela
+  ação posterior ao eliminar executor
+  ou produzir interrupção explicitamente
+  definida; (8A) exigir resultados
+  mecânicos idênticos a 30/60/120 FPS
+  com timestamps controlados.
+  **PENDENTES:** estados dinâmicos de
+  perfis válidos, ordem dos IDs,
+  atributos específicos das outras
+  criaturas, poderes e ficha neutra
+  de testes da D-024. Mantidas
+  D-022, D-023, D-024 e demais decisões.
+  **Impacto:** GDD §§6.1, 7.2, 8.1.5,
+  20, 21; `docs/COMBAT_SPEC.md`
+  §§Atributos, Atos e reações e
+  Sistema de ritmo; nenhuma modificação
+  de código ou testes nesta publicação.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

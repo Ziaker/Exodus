@@ -32,5 +32,10 @@ qualquer alteração em documentos ou código.
 | D-021 | 2026-11-21 (Rodada 5: 1B; 2B; 3B; 4B; 5A; 6B; 7A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: | `docs/GDD.md` Apêndice A |
 | D-022 | 2026-11-21 (continuação da pergunta 1 da Rodada 3) | A exceção de acerto automático inimigo também se aplica quando o jogador | `docs/GDD.md` Apêndice A |
 | D-023 | 2026-11-21 (Rodada 6: 1A; 2B; 3B; 4D; 5A; 6B; 7A; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: | `docs/GDD.md` Apêndice A |
+| D-024 | 2026-11-21 (Rodada 7: 1B; 2A; 3A; 4B; 5B; 6A; 7C; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: | `docs/GDD.md` Apêndice A |
+| D-025 | 2026-11-21 (Rodada 8: 1B; 2B; 3A; 4A; 5E; 6C; 7A; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: | `docs/GDD.md` Apêndice A |
+| D-028 | 2026-11-21 | Os ganhos da absorção persistem entre batalhas | `docs/GDD.md` Apêndice A |
+| D-029 | 2026-11-21 | Dificuldade do button mashing da absorção mantida | `docs/GDD.md` Apêndice A |
+| D-030 | 2026-11-21 | Índice central de IDs em `docs/DECISIONS.md`: antes | `docs/GDD.md` Apêndice A |
 
-Total: 23 decisões indexadas.
+Total: 28 decisões indexadas.
