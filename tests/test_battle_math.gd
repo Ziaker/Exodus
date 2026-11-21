@@ -60,3 +60,45 @@ func test_extra_block_rolls() -> void:
 	assert_eq(BattleMath.extra_block_rolls(0), 0)
 	assert_eq(BattleMath.extra_block_rolls(2), 1)
 	assert_eq(BattleMath.extra_block_rolls(5), 2)
+
+
+func test_critical_chance_positive_negative_and_zero_sp_gap() -> void:
+	assert_almost_eq(BattleMath.crit_chance(6, 0), 6.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(6, 2), 26.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(6, -3), 0.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(1000, 100), 100.0, 0.001)
+
+
+func test_critical_roll_is_deterministic_with_seed() -> void:
+	var a := RandomNumberGenerator.new()
+	var b := RandomNumberGenerator.new()
+	a.seed = 777
+	b.seed = 777
+	assert_eq(BattleMath.critical_roll(6, 46, 35, a),
+		BattleMath.critical_roll(6, 46, 35, b))
+
+
+func test_sp_roll_sign_follows_superiority() -> void:
+	var stronger := BattleMath.physical_damage(100, 10, 6, 5, 40, 10,
+		BattleMath.Affinity.NORMAL, _rng)
+	assert_gt(int(stronger.sp_roll), 0)
+	var weaker := BattleMath.physical_damage(100, 10, 6, 5, 10, 40,
+		BattleMath.Affinity.NORMAL, _rng)
+	assert_lt(int(weaker.sp_roll), 0)
+	var equal := BattleMath.physical_damage(100, 10, 6, 5, 20, 20,
+		BattleMath.Affinity.NORMAL, _rng)
+	assert_eq(int(equal.sp_roll), 0)
+
+
+func test_affinity_interacts_with_damage() -> void:
+	var weak := BattleMath.physical_damage(100, 10, 6, 5, 20, 20,
+		BattleMath.Affinity.WEAK, _rng)
+	var resist := BattleMath.physical_damage(100, 10, 6, 5, 20, 20,
+		BattleMath.Affinity.RESIST, _rng)
+	assert_gt(int(weak.amount), int(resist.amount))
+
+
+func test_press_turn_uses_contact_semantics() -> void:
+	# The formula itself is unchanged; the controller applies it only on contact.
+	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.WEAK), 1)
+	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), -1)

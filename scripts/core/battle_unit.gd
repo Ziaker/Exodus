@@ -12,6 +12,7 @@ var stored_acts: int = 0
 var affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL
 var is_player: bool = false
 var is_fallen: bool = false
+var absorbed: bool = false
 var sprite_path: String = ""
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,

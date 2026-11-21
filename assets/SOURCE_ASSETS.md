@@ -26,4 +26,10 @@ Asset mapping (source → project):
 | `Audio/SE`           | `assets/audio/se`              |
 | `Fonts`              | `assets/fonts`                 |
 
+Derived temporary assets:
+
+- `assets/graphics/battle_sprites/` — copies of two battlers from `Graphics/Battlers`
+  with the flat gray-green background made transparent (for the front-view battle
+  screen). The originals remain untouched in `assets/graphics/battlers/`.
+
 These assets are for prototyping only and must be replaced before any distribution.

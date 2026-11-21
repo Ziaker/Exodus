@@ -1,13 +1,17 @@
 class_name RhythmBar
 extends Control
 
-## Reflex bar for physical attacks. Zones: point 10% center, beam 20% around.
-## Styled with the fangame's VX Ace window skin.
+## Barra de reflexo para ataques fisicos. Zonas: ponto 10% central, trave 20% ao redor.
+## Desenhada apenas com primitivas do Godot — nenhum asset de imagem da fangame.
 
 signal finished(result: int)
 
 const BAR_WIDTH: float = 360.0
 const BAR_HEIGHT: float = 26.0
+const TRACK_COLOR := Color(0.05, 0.06, 0.05, 1.0)
+const BEAM_COLOR := Color(0.85, 0.65, 0.15, 0.95)
+const POINT_COLOR := Color(0.20, 0.80, 0.35, 0.95)
+const MARKER_COLOR := Color.WHITE
 
 var duration: float = 1.0
 var _elapsed: float = 0.0
@@ -24,8 +28,7 @@ func _ready() -> void:
 	size = Vector2(BAR_WIDTH, BAR_HEIGHT + 34.0)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var frame := BattleWidgets.window_frame(Vector2(0, 0), Vector2(BAR_WIDTH, BAR_HEIGHT + 32.0))
-	add_child(frame)
+	add_child(BattleWidgets.window_frame(Vector2(0, 0), Vector2(BAR_WIDTH, BAR_HEIGHT + 32.0)))
 
 	_label = BattleWidgets.styled_label("RHYTHM - Z / ENTER", 13, HORIZONTAL_ALIGNMENT_CENTER)
 	_label.position = Vector2(0, 4)
@@ -33,17 +36,17 @@ func _ready() -> void:
 	add_child(_label)
 
 	var track := ColorRect.new()
-	track.color = Color(0.05, 0.06, 0.05, 1.0)
+	track.color = TRACK_COLOR
 	track.position = Vector2(10, 28)
 	track.size = Vector2(BAR_WIDTH - 20, BAR_HEIGHT)
 	add_child(track)
 
-	var left := _make_zone(0.35, 0.10, Color(0.85, 0.65, 0.15, 0.95))
-	var center := _make_zone(0.45, 0.10, Color(0.20, 0.80, 0.35, 0.95))
-	var right := _make_zone(0.55, 0.10, Color(0.85, 0.65, 0.15, 0.95))
+	_make_zone(0.35, 0.10, BEAM_COLOR)
+	_make_zone(0.45, 0.10, POINT_COLOR)
+	_make_zone(0.55, 0.10, BEAM_COLOR)
 
 	_marker = ColorRect.new()
-	_marker.color = Color.WHITE
+	_marker.color = MARKER_COLOR
 	_marker.position = Vector2(10, 28)
 	_marker.size = Vector2(4, BAR_HEIGHT)
 	add_child(_marker)

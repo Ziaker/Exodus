@@ -1,18 +1,17 @@
 extends Control
 
-## Front-view combat prototype styled after the RPG Maker VX Ace battle screen.
-## Gameplay logic is unchanged from the first slice; only the presentation layer
-## was rebuilt using the fangame's temporary assets.
+## Combate em primeira pessoa. A unica arte na cena e o oponente e o fundo;
+## todo o HUD e desenhado em codigo, sem imagens da fangame.
+## A logica de combate permanece a do primeiro slice.
 
 signal command_chosen
 signal rhythm_done
 
 const BATTLEBACK := "res://assets/graphics/parallaxes/BB01-001.png"
 const ENEMY_SPRITES := [
-	"res://assets/graphics/battlers/Avatar Anubis.png",
-	"res://assets/graphics/battlers/Avatar Chimera.png",
+	"res://assets/graphics/battle_sprites/Avatar Anubis.png",
+	"res://assets/graphics/battle_sprites/Avatar Chimera.png",
 ]
-const ALLY_FACES := "res://assets/graphics/faces/001_daitenshi.png"
 const ENEMY_NAMES: Array[String] = ["GENETIC FOE A", "GENETIC FOE B"]
 
 class StatusRow extends Control:
@@ -22,35 +21,28 @@ class StatusRow extends Control:
 	var en_gauge: PanelContainer
 	var sp_label: Label
 
-	func setup(title: String, face_index: int) -> void:
-		var face := TextureRect.new()
-		face.texture = BattleWidgets.face_texture(ALLY_FACES, face_index)
-		face.custom_minimum_size = Vector2(48, 48)
-		face.stretch_mode = TextureRect.STRETCH_SCALE
-		face.position = Vector2(6, 6)
-		add_child(face)
-
+	func setup(title: String) -> void:
 		name_label = BattleWidgets.styled_label(title, 14)
-		name_label.position = Vector2(58, 4)
+		name_label.position = Vector2(8, 4)
 		name_label.size = Vector2(130, 20)
 		add_child(name_label)
 
 		sp_label = BattleWidgets.styled_label("SP 0", 12)
-		sp_label.position = Vector2(188, 5)
-		sp_label.size = Vector2(120, 18)
+		sp_label.position = Vector2(140, 5)
+		sp_label.size = Vector2(180, 18)
 		add_child(sp_label)
 
-		hp_gauge = BattleWidgets.gauge(132, 10, Color(0.20, 0.78, 0.36))
-		hp_gauge.position = Vector2(58, 27)
+		hp_gauge = BattleWidgets.gauge(130, 10, Color(0.20, 0.78, 0.36))
+		hp_gauge.position = Vector2(8, 27)
 		add_child(hp_gauge)
 
-		en_gauge = BattleWidgets.gauge(132, 10, Color(0.25, 0.55, 0.95))
-		en_gauge.position = Vector2(58, 43)
+		en_gauge = BattleWidgets.gauge(130, 10, Color(0.25, 0.55, 0.95))
+		en_gauge.position = Vector2(8, 43)
 		add_child(en_gauge)
 
 		number_label = BattleWidgets.styled_label("", 11)
-		number_label.position = Vector2(194, 26)
-		number_label.size = Vector2(116, 30)
+		number_label.position = Vector2(144, 26)
+		number_label.size = Vector2(176, 30)
 		add_child(number_label)
 
 	func refresh(unit: BattleUnit) -> void:
@@ -83,6 +75,7 @@ var _reaction_yes: bool = false
 var _reaction_active: bool = false
 var _mash_active: bool = false
 var _mash_count: int = 0
+var _feedback_token: int = 0
 var _fallen: BattleUnit = null
 var _ally: BattleUnit = null
 
@@ -92,16 +85,16 @@ class UnitCard extends Control:
 	var hp_gauge: PanelContainer
 
 	func setup(title: String) -> void:
-		name_label = BattleWidgets.styled_label(title, 12, HORIZONTAL_ALIGNMENT_CENTER)
+		name_label = BattleWidgets.styled_label(title, 10, HORIZONTAL_ALIGNMENT_CENTER)
 		name_label.position = Vector2(0, 0)
-		name_label.size = Vector2(120, 20)
+		name_label.size = Vector2(130, 18)
 		add_child(name_label)
-		hp_gauge = BattleWidgets.gauge(96, 7, Color(0.80, 0.28, 0.28))
-		hp_gauge.position = Vector2(12, 20)
+		hp_gauge = BattleWidgets.gauge(110, 7, Color(0.80, 0.28, 0.28))
+		hp_gauge.position = Vector2(10, 18)
 		add_child(hp_gauge)
-		hp_label = BattleWidgets.styled_label("", 10, HORIZONTAL_ALIGNMENT_CENTER)
-		hp_label.position = Vector2(0, 28)
-		hp_label.size = Vector2(120, 16)
+		hp_label = BattleWidgets.styled_label("", 9, HORIZONTAL_ALIGNMENT_CENTER)
+		hp_label.position = Vector2(0, 26)
+		hp_label.size = Vector2(130, 14)
 		add_child(hp_label)
 
 	func refresh(unit: BattleUnit) -> void:
@@ -131,7 +124,7 @@ func _build_ui() -> void:
 
 	var message_frame := BattleWidgets.window_frame(Vector2(8, 210), Vector2(528, 48))
 	add_child(message_frame)
-	log_label = BattleWidgets.styled_label("Battle start. Front view. SP is the superiority meter.", 14)
+	log_label = BattleWidgets.styled_label("Battle start. First person. SP is the superiority meter.", 14)
 	log_label.position = Vector2(20, 218)
 	log_label.size = Vector2(504, 34)
 	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -148,7 +141,7 @@ func _build_ui() -> void:
 		var row := StatusRow.new()
 		row.position = Vector2(12, 272 + i * 66)
 		row.custom_minimum_size = Vector2(330, 64)
-		row.setup("FALLEN" if i == 0 else "ALLY", i)
+		row.setup("FALLEN" if i == 0 else "ALLY")
 		add_child(row)
 		ally_rows.append(row)
 
@@ -166,37 +159,39 @@ func _build_ui() -> void:
 
 
 func _round_header() -> void:
-	var frame := BattleWidgets.window_frame(Vector2(8, 6), Vector2(210, 28))
+	var frame := BattleWidgets.window_frame(Vector2(8, 6), Vector2(300, 28))
 	add_child(frame)
-	round_label = BattleWidgets.styled_label("ROUND 1", 14)
+	round_label = BattleWidgets.styled_label("ROUND 1", 13)
 	round_label.position = Vector2(16, 10)
-	round_label.size = Vector2(196, 20)
+	round_label.size = Vector2(284, 20)
 	add_child(round_label)
 
 
 func _enemy_display() -> void:
+	# Primeira pessoa: o oponente ocupa o campo a frente do jogador.
+	# Nao ha retratos de aliados na cena — apenas texto no HUD.
 	for i in ENEMY_NAMES.size():
-		var card := UnitCard.new()
-		card.custom_minimum_size = Vector2(120, 46)
-		card.position = Vector2(110 + i * 170, 152)
-		card.setup(ENEMY_NAMES[i])
-		add_child(card)
-		enemy_cards.append(card)
-
 		var sprite := TextureRect.new()
-		sprite.texture = BattleWidgets.pose_texture(ENEMY_SPRITES[i])
-		sprite.custom_minimum_size = Vector2(93, 190)
+		sprite.texture = load(ENEMY_SPRITES[i])
+		sprite.custom_minimum_size = Vector2(210, 200)
 		sprite.stretch_mode = TextureRect.STRETCH_SCALE
-		sprite.position = Vector2(123 + i * 170, 18)
+		sprite.position = Vector2(72 + i * 200, 4)
 		add_child(sprite)
 		enemy_sprites.append(sprite)
 
+		var card := UnitCard.new()
+		card.custom_minimum_size = Vector2(130, 44)
+		card.position = Vector2(90 + i * 200, 162)
+		card.setup(ENEMY_NAMES[i])
+		enemy_cards.append(card)
+		add_child(card)
+
 
 func _build_sp_bar() -> void:
-	var frame := BattleWidgets.window_frame(Vector2(500, 52), Vector2(38, 152))
+	var frame := BattleWidgets.window_frame(Vector2(468, 52), Vector2(70, 152))
 	add_child(frame)
 	var holder := Control.new()
-	holder.position = Vector2(505, 58)
+	holder.position = Vector2(490, 58)
 	holder.custom_minimum_size = Vector2(26, 136)
 	add_child(holder)
 	foe_fill = ColorRect.new()
@@ -206,8 +201,8 @@ func _build_sp_bar() -> void:
 	fallen_fill.color = Color(0.30, 0.60, 0.95, 0.95)
 	holder.add_child(fallen_fill)
 	sp_caption = BattleWidgets.styled_label("SP", 10, HORIZONTAL_ALIGNMENT_CENTER)
-	sp_caption.position = Vector2(500, 205)
-	sp_caption.size = Vector2(38, 16)
+	sp_caption.position = Vector2(468, 205)
+	sp_caption.size = Vector2(70, 16)
 	add_child(sp_caption)
 
 
@@ -249,7 +244,7 @@ func _create_units() -> void:
 
 
 func run_battle() -> void:
-	_append_log("Battle start. Front view. SP is the superiority meter.")
+	_append_log("Battle start. First person. SP is the superiority meter.")
 	while not state.is_over():
 		state.start_round()
 		_refresh_all()
@@ -277,7 +272,9 @@ func _player_turn(actor: BattleUnit) -> void:
 	var target := _first_alive_enemy()
 	if target == null:
 		return
-	var options: Array[String] = ["ATTACK", "ITEM", "REST", "ABSORB"]
+	var options: Array[String] = ["ATTACK", "ITEM", "REST"]
+	if actor.is_fallen:
+		options.append("ABSORB")
 	var choice := await _wait_command(options)
 	match choice:
 		0:
@@ -289,11 +286,9 @@ func _player_turn(actor: BattleUnit) -> void:
 			_append_log("%s uses item: +%d HP%s." % [
 				actor.display_name, healed, " (-2 SP)" if actor.is_fallen else ""])
 		2:
-			if actor.spend_act():
-				actor.recover_en(0.2)
-				_append_log("%s rests: +20%% EN, action spent." % actor.display_name)
-			else:
-				_append_log("%s has no act left to rest." % actor.display_name)
+			# The act was already spent at the start of _player_turn.
+			actor.recover_en(0.2)
+			_append_log("%s rests: +20%% EN (1 act spent)." % actor.display_name)
 		3:
 			await _perform_absorption(actor, target)
 
@@ -305,75 +300,128 @@ func _enemy_turn(actor: BattleUnit) -> void:
 	if target == null:
 		return
 	_append_log("%s announces an attack on %s." % [actor.display_name, target.display_name])
-	await _maybe_player_reaction(target, actor)
+	var reaction_declared := await _maybe_player_reaction(target, actor)
 	if not target.is_alive():
 		return
-	await _perform_attack(actor, target, 100, false)
+	await _perform_attack(actor, target, 100, false, reaction_declared)
 
 
+## One attack, from declaration to state update. Input ownership is explicit:
+## only a player-controlled attacker/defender uses the visible rhythm bar.
 func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
-		is_reaction: bool) -> void:
+		is_reaction: bool, defense_act_paid: bool = false) -> void:
 	if not defender.is_alive():
 		return
 	var duration := BattleMath.rhythm_duration(attacker.stats.agi, defender.stats.agi,
 		attacker.current_sp, defender.current_sp)
-	rhythm.start(duration)
-	var attack_timing: int = await _wait_rhythm()
 
-	var defense_timing := BattleMath.RhythmResult.MISS
-	if attack_timing == BattleMath.RhythmResult.POINT:
-		defense_timing = await _defender_reaction(defender, attacker)
-	elif attack_timing == BattleMath.RhythmResult.BEAM:
-		defense_timing = BattleMath.RhythmResult.BEAM
+	var attack_timing := await _attack_timing(attacker, defender, duration)
+	var defense_timing := await _defense_timing(defender, attacker, duration, defense_act_paid)
+
+	# No contact: skip damage, crit, affinity and SP rolls entirely. This also
+	# avoids consuming random numbers for an outcome already determined.
+	var contact := attack_timing != BattleMath.RhythmResult.MISS \
+		and defense_timing != BattleMath.RhythmResult.POINT
+	if not contact:
+		_append_log("%s -> %s: 0 dmg (rhythm %s, def %s, NO CONTACT)" % [
+			attacker.display_name, defender.display_name,
+			_rhythm_name(attack_timing), _rhythm_name(defense_timing)])
+		_flash_feedback("DODGE" if defense_timing == BattleMath.RhythmResult.POINT else "MISS")
+		return
 
 	var result := BattleMath.physical_damage(power, attacker.stats.atk, attacker.stats.agi,
 		defender.stats.defense, attacker.current_sp, defender.current_sp,
 		defender.affinity, rng)
 
 	var amount := int(result.amount)
-	if attack_timing == BattleMath.RhythmResult.MISS or defense_timing == BattleMath.RhythmResult.POINT:
-		amount = 0
-	elif attack_timing == BattleMath.RhythmResult.BEAM or defense_timing == BattleMath.RhythmResult.BEAM:
+	if attack_timing == BattleMath.RhythmResult.BEAM \
+		or defense_timing == BattleMath.RhythmResult.BEAM:
 		amount = int(float(amount) * 0.5)
 
 	var applied := defender.take_damage(amount)
+	# Press Turn applies to a landed hit, not to a miss or a perfect dodge.
 	attacker.grant_acts(BattleMath.press_turn_acts(defender.affinity))
 	if bool(result.crit):
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-	if defender.affinity == BattleMath.Affinity.WEAK and amount > 0:
+	if defender.affinity == BattleMath.Affinity.WEAK and applied > 0:
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	if is_reaction:
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-	if defense_timing == BattleMath.RhythmResult.POINT:
-		defender.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 
-	_append_log("%s -> %s: %d dmg (rhythm %s, def %s, crit %s, affinity %s, SP roll %+d)" % [
-		attacker.display_name, defender.display_name, applied,
+	var outcome := "FULL"
+	if defense_timing == BattleMath.RhythmResult.BEAM \
+		or attack_timing == BattleMath.RhythmResult.BEAM:
+		outcome = "BLOCK"
+	if bool(result.crit):
+		outcome += " CRITICAL"
+	_flash_feedback(outcome)
+
+	_append_log("%s -> %s: %d dmg (%s, rhythm %s, def %s, crit %s, affinity %s, SP roll %+d)" % [
+		attacker.display_name, defender.display_name, applied, outcome,
 		_rhythm_name(attack_timing), _rhythm_name(defense_timing),
 		"YES" if bool(result.crit) else "no", _affinity_name(defender.affinity),
 		int(result.sp_roll)])
 
 
-func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> void:
+func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float) -> int:
+	if attacker.is_player:
+		return await _manual_rhythm(duration)
+	# AI resolves its own timing; no human input is requested for an enemy attack.
+	return _ai_roll(attacker, defender)
+
+
+func _defense_timing(defender: BattleUnit, attacker: BattleUnit, duration: float,
+		act_paid: bool) -> int:
+	if defender.is_player:
+		if not act_paid:
+			return BattleMath.RhythmResult.MISS
+		return await _manual_rhythm(duration)
+	# AI defense is resolved locally and spends one of its own acts.
+	return _defender_reaction(defender, attacker)
+
+
+func _manual_rhythm(duration: float) -> int:
+	rhythm.start(duration)
+	return await _wait_rhythm()
+
+
+## AI execution of the same POINT / BEAM / MISS zones. Advantage grants extra
+## attempts, mirroring the documented extra block rolls; no new rule is added.
+func _ai_roll(attacker: BattleUnit, defender: BattleUnit) -> int:
+	var advantage := (attacker.current_sp - defender.current_sp) \
+		+ (attacker.stats.agi - defender.stats.agi)
+	var rolls := BattleMath.extra_block_rolls(advantage) + 1
+	for _i in rolls:
+		var roll := rng.randi_range(0, 2)
+		if roll == 0:
+			return BattleMath.RhythmResult.POINT
+		if roll == 1:
+			return BattleMath.RhythmResult.BEAM
+	return BattleMath.RhythmResult.MISS
+
+
+func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 	if defender.acts_available <= 0:
-		return
+		return false
+	_feedback_token += 1
 	reaction_label.text = "REACT to %s? Press Z" % attacker.display_name
 	_reaction_active = true
 	_reaction_yes = false
 	await get_tree().create_timer(0.8).timeout
 	_reaction_active = false
 	reaction_label.text = ""
-	if _reaction_yes and defender.spend_act():
-		_append_log("%s reacts to %s." % [defender.display_name, attacker.display_name])
-		await _perform_attack(defender, attacker, 100, true)
+	if not _reaction_yes or not defender.spend_act():
+		return false
+	_append_log("%s reacts to %s (1 act spent)." % [
+		defender.display_name, attacker.display_name])
+	return true
 
 
 func _defender_reaction(defender: BattleUnit, attacker: BattleUnit) -> int:
 	if defender.acts_available <= 0:
 		return BattleMath.RhythmResult.MISS
-	if defender.is_player:
-		return BattleMath.RhythmResult.MISS
-	var rolls := BattleMath.extra_block_rolls(defender.current_sp - attacker.current_sp) + 1
+	var advantage := defender.current_sp - attacker.current_sp
+	var rolls := BattleMath.extra_block_rolls(advantage) + 1
 	for _i in rolls:
 		var roll := rng.randi_range(0, 2)
 		if roll == 0:
@@ -385,14 +433,36 @@ func _defender_reaction(defender: BattleUnit, attacker: BattleUnit) -> int:
 	return BattleMath.RhythmResult.MISS
 
 
+func _flash_feedback(text: String) -> void:
+	_feedback_token += 1
+	var token := _feedback_token
+	reaction_label.text = text
+	await get_tree().create_timer(0.7).timeout
+	if _feedback_token == token and reaction_label.text == text:
+		reaction_label.text = ""
+
+
 func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
+	if not actor.is_fallen:
+		_append_log("ABSORB failed: only Fallen can absorb.")
+		return
+	if target.absorbed:
+		_append_log("ABSORB failed: %s was already absorbed." % target.display_name)
+		return
 	_append_log("ABSORPTION: mash Z / ENTER!")
 	_mash_active = true
 	_mash_count = 0
 	for _i in 20:
 		await get_tree().create_timer(0.1).timeout
 	_mash_active = false
-	var success := clampi(_mash_count / 4, 1, 3)
+
+	# Zero presses means no success. The previous clamp awarded +1 for free.
+	var success := clampi(_mash_count / 4, 0, 3)
+	if success <= 0:
+		_append_log("ABSORB failed: no input.")
+		_flash_feedback("ABSORB FAILED")
+		return
+
 	var stat_name := target.stats.highest_combat_stat()
 	var gained: int = rng.randi_range(1, success)
 	match stat_name:
@@ -411,8 +481,10 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	actor.current_hp = mini(actor.stats.max_hp, actor.current_hp + gained)
 	actor.current_en = mini(actor.stats.max_en, actor.current_en + gained)
 	actor.restore_sp()
-	_append_log("Absorbed %d %s (+HP/+EN); SP base recalculated to %d." % [
-		gained, stat_name, actor.sp_base()])
+	target.absorbed = true
+	_flash_feedback("ABSORBED")
+	_append_log("Absorbed %d %s (+HP/+EN); %s marked absorbed; SP base %d." % [
+		gained, stat_name, target.display_name, actor.sp_base()])
 
 
 func _wait_command(options: Array[String]) -> int:
@@ -426,8 +498,7 @@ func _wait_command(options: Array[String]) -> int:
 		button.position = Vector2(i * 44 + 2, 2)
 		button.size = Vector2(38, 36)
 		button.flat = true
-		button.add_theme_font_override("font", BattleWidgets.make_font(11))
-		button.add_theme_font_size_override("font_size", 11)
+		button.add_theme_font_size_override("font_size", 9)
 		button.add_theme_color_override("font_color", Color(0.93, 0.94, 0.90))
 		button.pressed.connect(_on_command_pressed.bind(i))
 		command_box.add_child(button)

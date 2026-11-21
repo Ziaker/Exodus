@@ -33,6 +33,9 @@ func start_round() -> void:
 	for unit in units:
 		if not unit.is_alive():
 			continue
+		# ACT_CAP_CONFLICT: 2 fresh acts + stored (<=4) + superiority bonus.
+		# The maximum total remains pending a director decision; no new cap is
+		# introduced here. Only the scheduling defect is fixed.
 		var acts := 2 + unit.stored_acts
 		unit.stored_acts = 0
 		var rival := strongest_opposite(unit)
@@ -43,16 +46,26 @@ func start_round() -> void:
 	turn_order.sort_custom(_faster_first)
 	turn_index = 0
 
+
 func _faster_first(a: BattleUnit, b: BattleUnit) -> bool:
 	return a.stats.agi > b.stats.agi
 
+
+## Returns the next unit that still has an act. Each unit is offered once per
+## pass in AGI order, so 2 acts produce A,B,A,B rather than A,A,B,B.
+## Reactions spend acts through BattleUnit.spend_act() and are skipped here.
 func next_actor() -> BattleUnit:
-	while turn_index < turn_order.size():
+	var scanned: int = 0
+	while scanned < turn_order.size():
+		if turn_index >= turn_order.size():
+			turn_index = 0
 		var unit := turn_order[turn_index]
 		turn_index += 1
+		scanned += 1
 		if unit.is_alive() and unit.acts_available > 0:
 			return unit
 	return null
+
 
 func end_round() -> void:
 	for unit in units:
@@ -61,6 +74,7 @@ func end_round() -> void:
 			if unit.acts_available > 0:
 				unit.store_acts(unit.acts_available)
 				unit.acts_available = 0
+
 
 func is_over() -> bool:
 	var players_alive := false
@@ -73,6 +87,7 @@ func is_over() -> bool:
 		else:
 			enemies_alive = true
 	return not players_alive or not enemies_alive
+
 
 func player_victory() -> bool:
 	for unit in units:

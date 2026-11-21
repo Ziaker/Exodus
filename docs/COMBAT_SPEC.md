@@ -6,7 +6,11 @@
 - Inimigos do teste: 2 placeholders genéricos, sem dependência de nomes dos .rvdata.
 - Aliado do teste: placeholder genérico.
 - Idioma da UI: **inglês**.
-- Fundo da batalha: cor sólida **#333333**, visão frontal.
+- Visão frontal. Após revisão visual, o fundo plano `#333333` foi substituído por
+  battleback e janelas no estilo RPG Maker VX Ace, usando assets temporários da fangame
+  (`assets/graphics/parallaxes/BB01-001.png`, `Window.png`, battlers com fundo removido
+  em `assets/graphics/battle_sprites/`). A referência visual buscada foi a screenshot
+  oficial de batalha do VX Ace (Yanfly Channel, nov/2011).
 
 ## Atributos
 `HP`, `EN` (Energy Points), `ATK`, `MAK`, `DEF`, `MEF`, `AGI`, `SP` (Superiority Points).
@@ -14,7 +18,7 @@
 - `SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI` (soma dos 7 atributos).
 - SP ganho em batalha é **temporário**; volta ao base ao fim da luta.
 - `EN`: habilidades custam EP definido nos dados; recupera **20% do máximo por rodada**.
-- **Descanso**: abrir mão de um ato recupera **+20% do máximo de EN**.
+- **Descanso**: abrir mão de **um** ato recupera **+20% do máximo de EN**.
 - Mapeamento dos `.rvdata`: `MaxHP→HP`, `MaxMP→EN`, `ATK→ATK`, `DEF→DEF`,
   `MAT→MAK`, `MDF→MEF`, `LUK→AGI`.
 
@@ -30,12 +34,13 @@
 - **D-005 (2026-11-21): teto de 4 atos disponíveis no total por personagem**, somando
   atos novos da rodada, atos armazenados e bônus de SP/Press Turn. Vale igualmente
   para Fallen, aliados e inimigos. Substitui a interpretação de 4 armazenados
-  **mais** 2 novos simultaneamente disponíveis. O tratamento dos excedentes de
-  armazenamento e concessões de bônus permanece **PENDENTE**; não há autorização
-  nesta rodada para escolher entre descarte, adiamento ou outro comportamento.
-- Ordem de turnos por `AGI`.
+  **mais** 2 novos simultaneamente disponíveis. **CONFIRMADO como design; NÃO
+  IMPLEMENTADO.** Destino dos excedentes e ordem de aplicação dos bônus: **PENDENTE**.
+- Ordem de turnos por `AGI`. Na implementação atual, os atos são oferecidos em
+  passagens intercaladas (`A, B, A, B`), e cada ato é consumido por uma ação ou reação.
 - Quando o SP de um lado ultrapassa **70% do SP do oponente**, esse lado ganha
-  **+1 ato por rodada**.
+  **+1 ato por rodada**. **PENDENTE:** com limiar de 70%, qualquer par de SP positivos
+  concede o bônus a pelo menos um lado; a intenção de premiar superioridade exige decisão.
 - **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
   não autoriza um quinto ato. Destino de bônus excedente: **PENDENTE**. O limiar
   de 70% e o bônus de +1 não foram revisados.
@@ -56,10 +61,22 @@
 - Crítico: multiplicador **×1.5**; chance = `AGI% + 10% por ponto de diferença de SP`.
 - SP **não** multiplica o dano diretamente.
 - Ganho de SP: **+1** por crítico, desvio perfeito, acerto em fraqueza e reação.
+- Crítico, Press Turn e ganhos de SP por fraqueza/crítico só são aplicados quando
+  há **contato** (ritmo de ataque diferente de Falha e defesa diferente de Desvio).
+  Ataques que falham não consomem rolagens de dano.
+- **PENDENTE (balanceamento, sem alteração de fórmula):** `AGI + 10 × ΔSP` atinge
+  100% com ΔSP=10 para AGI=0 (ou ΔSP=4 para o Fallen de teste, AGI=6). Qualquer
+  mudança exige aprovação.
 
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
+- Entrada manual: atacante controlado pelo jogador usa a barra visível para o
+  ataque; defensor controlado pelo jogador usa a barra visível apenas quando declarou
+  reação e pagou 1 ato. Atacante e defensor controlados pela IA resolvem seu próprio
+  ritmo sem entrada humana.
 - Barra com marcador móvel; janela do oponente define as zonas.
+- **PENDENTE:** precedência quando atacante e defensor acertam POINT simultaneamente.
+  O comportamento atual do código (defesa prevalece, 0 dano) foi preservado.
 - Zonas: **Ponto = 10% central**, **Trave = 20% ao redor**, resto = falha.
 - Tecla: **Z / Enter**.
 - Duração da janela: `1s - 0,05s por ponto de AGI/SP a favor do atuante`, mínimo `0,2s`.
@@ -69,8 +86,12 @@
 
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
-- Absorção: sempre disponível, com button mashing; mais fácil quanto mais fraco o inimigo.
+- Absorção: restrita a **Fallen**; requer button mashing; **0 pressionamentos = falha,
+  sem ganhos**. Um alvo absorvido é marcado e não pode render recompensas repetidas.
 - Ganho: 1–3 pontos do maior atributo do inimigo (exceto EN/SP/HP), mais SP base, HP e EN extras.
+- **PENDENTE:** fórmula exata de dificuldade do mashing, eliminação do alvo, novas
+  tentativas após falha, limite de HP e persistência entre batalhas. Nada disso foi
+  inventado; os ganhos atuais permanecem apenas dentro da batalha.
 - Sem equipamentos e sem magia neste protótipo.
 
 ## IA
