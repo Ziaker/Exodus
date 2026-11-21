@@ -77,6 +77,9 @@ var _mash_active: bool = false
 var _mash_count: int = 0
 var _feedback_token: int = 0
 var _progress_gains: Dictionary = {}
+## Creator decision (2026-11-21): a Restart after DEFEAT starts Fallen at base
+## attributes; the saved gains are ignored for that battle but kept in the save.
+var apply_saved_gains := true
 var _fallen: BattleUnit = null
 var _ally: BattleUnit = null
 
@@ -217,9 +220,12 @@ func _create_units() -> void:
 	fallen_stats.mef = 3
 	fallen_stats.agi = 6
 	# D-028: restore absorption gains from the previous battles.
+	# Always loaded, so new absorptions add to the stored gains instead of
+	# overwriting them, even when this battle does not apply them.
 	_progress_gains = ProgressStore.load_gains()
-	for key in _progress_gains.keys():
-		fallen_stats.set(key, int(fallen_stats.get(key)) + int(_progress_gains[key]))
+	if apply_saved_gains:
+		for key in _progress_gains.keys():
+			fallen_stats.set(key, int(fallen_stats.get(key)) + int(_progress_gains[key]))
 	_fallen = BattleUnit.new(&"fallen", "FALLEN", fallen_stats, true, true)
 
 	var ally_stats := UnitStats.new()
