@@ -45,6 +45,28 @@ visual pertence exclusivamente ao diretor criativo.
   crítica extrema e recomendações para o autor decidir, e nunca afirmar nada não
   verificado. A validação visual pertence exclusivamente ao diretor.
 
+### 0.4 Protocolo de continuidade das rodadas — **CONFIRMADO**
+
+Quando uma resposta de game design, systems design, worldbuilding ou auditoria
+editorial encerrar uma etapa com decisões ainda abertas, **apresentar imediatamente
+a próxima rodada completa de perguntas na mesma resposta**. O diretor não deve
+precisar pedir para "continuar" a cada rodada.
+
+Cada pergunta deve oferecer alternativas concretas e diferenciadas, explicação
+das consequências, recomendação justificada do editor e a alternativa explícita
+**"Ideia própria"**, permitindo que o diretor escreva livremente sua solução,
+combine opções ou altere suas premissas. Não induzir aprovação automática.
+
+Priorizar questões que dependem de decisões ainda não tomadas. Consultar antes
+o estado vigente dos documentos e do repositório; não repetir perguntas resolvidas
+por decisões ou implementações posteriores. Perguntas da nova rodada são
+**PROPOSTAS/PENDÊNCIAS**, não novas regras aprovadas. Registrar no GDD apenas
+as respostas aprovadas pelo diretor.
+
+Em entregas exclusivamente técnicas ou respostas sem decisões abertas pertinentes,
+não inventar questionários artificiais. Essa exceção não permite encerrar uma
+rodada de design pendente sem apresentar a continuação.
+
 ---
 
 ## 1. Visão geral
@@ -342,6 +364,13 @@ Formato: ID · data · decisão · estado · impacto documental.
   melhorias para o autor decidir, e não afirmar nada não verificado — cada
   implementação deve ser verificada minuciosamente. **CONFIRMADO**. Impacto: `AGENTS.md`
   (raiz) e GDD §0.3. Validação visual continua exclusiva do diretor.
+
+- **D-009 · 2026-11-21** · Nas respostas que encerram rodadas de design com
+  pendências, apresentar na própria mensagem a rodada seguinte completa, com
+  alternativas, consequências, recomendação e a opção **"Ideia própria"** em
+  cada pergunta. Evitar repetição de questões já resolvidas e nunca tratar
+  alternativas como decisões antes da aprovação. **CONFIRMADO**. Impacto:
+  GDD §0.4; nenhuma alteração de mecânica, especificação ou código.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
