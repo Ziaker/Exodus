@@ -278,6 +278,48 @@ físicos conforme D-019/D-021, sem alterar a fórmula autorizada.
 
 ---
 
+### 6.2 Rodada 9 — D-031 (1A e 2B), fichas por espécie e referência neutra — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+- **1A — identidade por espécie:** cada espécie de
+  personagem ou inimigo possui **sua própria ficha
+  inicial de atributos**, respeitando a D-025:
+  **8 ou múltiplos de 8** nos atributos básicos
+  iniciais. Não unificar todas as fichas na de
+  Fallen. Valores específicos de aliados,
+  inimigos e outras espécies continuam
+  **PENDENTES**; não foram criados dados de
+  espécies nem critérios de progressão.
+- **2B — referência neutra independente:**
+  para calibração, aprovar uma **ficha de
+  laboratório separada de Fallen**, com
+  os **mesmos valores iniciais**, porém
+  **versionada separadamente**. Seus atributos
+  são HP 32, EN 8, ATK 8, MAK 8, DEF 8,
+  MEF 8 e AGI 8; seu `SP_base` derivado é
+  **80**. Igualdade dos números não autoriza
+  compartilhar o estado, o save ou a
+  progressão de Fallen com a ficha neutra.
+  Permanecem **PENDENTES** o esquema, versão
+  inicial, local de armazenamento e a futura
+  materialização da ficha de testes; esta
+  publicação é **somente documental**.
+- **Compatibilidade com D-028:** a persistência
+  de ganhos por absorção **permanece**. Os
+  múltiplos de 8 dizem respeito às
+  **fichas-base iniciais**; estatísticas
+  efetivas após progresso persistente
+  podem deixar de ser múltiplos de 8.
+  Não apagar, arredondar nem alterar os
+  ganhos salvos para forçar essa regra.
+  A ficha neutra não herda tais ganhos.
+- **Implementação atual:** `UnitStats` e a
+  criação de unidades em
+  `BattleController._create_units()` ainda
+  usam valores anteriores; o código e os
+  recursos de unidades **não foram alterados**.
+
+---
+
 ## 7. Ações, reações e armazenamento — **CONFIRMADO**
 
 Dois atos por personagem por rodada: 2 ações, 2 reações ou 1 de cada. Reação é
@@ -328,6 +370,29 @@ Implementação parcial: ver A-01, A-03, A-04 e D-005.
   POINT prevalece), D-022 (autoacerto sem reação declarada)
   e os tetos de atos. **Código atual não implementa
   essas prioridades ofensivas.**
+
+---
+
+### 7.3 Rodada 9 — D-031 (5A), desempate por ID — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+A D-025 (6C) determinou desempatar AGI
+igual por identificador estável; a D-031
+(5A) fixa **ordem lexicográfica crescente
+dos IDs estáveis dos combatentes** para
+resolver a prioridade entre ação anunciada
+e reação ofensiva. Essa ordem não depende
+do lado, de quem anunciou, da ordem
+visual da HUD ou do valor de SP.
+**PENDENTES:** padronização de maiúsculas,
+caracteres e codificação dos IDs e
+tratamento de identidades duplicadas
+ou inválidas. Não inventar resolução
+para colisões de IDs.
+Preservar a D-014 (prioridade primária
+por AGI), a D-025 (cancelamento só
+por eliminação/interrupção expressa)
+e a D-022 (autoacerto sem reação
+declarada). Nenhum código foi alterado.
 
 ---
 
@@ -782,6 +847,112 @@ autorizada nesta rodada.
 
 ---
 
+### 8.1.6 Rodada 9 — D-031: variantes, input, IA e captura de atributos — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+- **4B — variantes alternativas explícitas:**
+  um perfil de ritmo pode declarar
+  **variantes alternativas próprias**,
+  que devem ser **expressamente
+  configuradas e previamente validadas**
+  antes de serem elegíveis; selecionar a
+  variante aplicável **antes da execução**.
+  Isto trata incompatibilidades
+  **dinâmicas** produzidas por mudanças
+  de AGI/SP sem permitir fallback
+  genérico, sorteios/rejeições normais
+  ou extensão silenciosa de duração.
+  **Preservar D-025 (1B):** encontro
+  com configuração sem solução válida
+  continua bloqueado no
+  carregamento/validação. A política
+  para estados alcançáveis sem nenhuma
+  variante válida, critérios de seleção
+  e a situação de perfil primário
+  inválido mas alternativo válido
+  **permanecem PENDENTES**, sem
+  cancelamento implícito de ações.
+- **6A — primeira entrada temporal:**
+  descartar eventos de input cujo
+  instante registrado anteceda o
+  **início da barra**; aceitar
+  **novos eventos desde o instante
+  zero** da barra. A tecla usada
+  para confirmar a reação pausada
+  não pode ser reaproveitada como
+  entrada anterior à ativação.
+  Isto não cria tempo de espera,
+  buffer retrospectivo, tolerância
+  extra nem altera as regras de
+  fronteira da D-025 (3A).
+  **PENDENTES:** semântica de
+  eventos simultâneos, key repeat,
+  ativação do relógio e verificação
+  da API de input no Godot.
+- **7A — alvo temporal da IA:**
+  após escolher a região POINT
+  de **maior duração temporal
+  efetiva** (D-024), a IA visa o
+  **centro temporal dessa
+  região**. Sua distribuição de
+  erro continua **triangular
+  limitada** (D-023/D-024:
+  ±70, ±40 ou ±20 ms conforme
+  habilidade), concentrada no
+  alvo; não usar centro espacial
+  quando a cadência for variável.
+  Desempate entre regiões e
+  classificação de habilidade
+  de cada inimigo seguem
+  **PENDENTES**. Sem reação
+  declarada do jogador, prevalece
+  o acerto automático D-022.
+- **8B — congelamento por barra:**
+  capturar **AGI e SP dos
+  participantes quando a barra
+  efetivamente começar** e
+  manter **esses valores
+  constantes durante aquela
+  travessia**, para calcular
+  duração, cobertura POINT,
+  variante/cadência e avaliação
+  mecânica do timing com o
+  mesmo estado. Barras
+  subsequentes podem obter
+  nova captura. Registrar os
+  valores efetivos junto ao
+  snapshot do perfil (D-024).
+  **Não** define, por si,
+  quando estatísticas devem
+  ser consultadas para o
+  **cálculo de dano, crítico,
+  recompensas ou outras fases**
+  fora da barra; esses contratos
+  devem ser preservados ou
+  discutidos separadamente.
+  **PENDENTES:** ordem de
+  seleção/validação de variante
+  e captura de atributos no
+  início da barra, eventos
+  simultâneos nesse marco
+  temporal e integração com
+  a pausa de reação D-014.
+
+**Compatibilidade:** todos os
+perfis conservam limites de
+8%–16% de cobertura total,
+40 ms mínimos por região,
+até 3 regiões com duração
+≥300 ms, velocidade máxima
+4× a média, aceleração
+máxima 12×v_média/T e
+validação do input por
+instante de recebimento.
+As escolhas da D-031
+não implementam perfis
+dinâmicos no código atual.
+
+---
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -1103,6 +1274,51 @@ aprovadas, ainda não implementadas.
 
 ---
 
+**D-031 (Rodada 9, 3A) — poder físico
+básico aprovado como design:** o
+ataque físico **básico** terá
+**poder nominal 8**, preservando
+a fórmula física `poder × ATK/DEF`.
+Na referência neutra D-031 (2B)
+com HP 32, ATK 8 e DEF 8,
+o dano físico **nominal** é 8,
+o que exige **quatro acertos
+nominais** para zerar 32 HP,
+antes de sorteios, ±10%
+aprovados como design D-019
+(ainda pendentes em código),
+críticos, afinidades, bloqueios
+e outros efeitos. Isso não
+autoriza atribuir poder 8
+a todos os outros ataques,
+alterar o dano atual em
+código ou considerar a
+meta de 3–5 acertos
+estatisticamente verificada.
+
+**D-031 — risco de escala e SP:**
+diferentes espécies podem
+começar com múltiplos de 8
+distintos e, portanto,
+`SP_base` distintos. Como
+SP participa de ritmo,
+dano e dominância, verificar
+interação com D-007/D-019,
+economia de atos e a nova
+ficha neutra. Progressão
+por absorção da D-028
+permanece acumulativa.
+**PENDENTES:** definições
+concretas das fichas por
+espécie, esquema e versão
+da referência neutra,
+validação das variantes
+dinâmicas, momento exato
+da captura dos parâmetros
+e execução de testes.
+
+---
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -1184,6 +1400,26 @@ aprovadas, ainda não implementadas.
     e igualdade mecânica 30/60/120 FPS.
     Riscos e pendências em §§6.1, 7.2,
     8.1.5 e 20.
+
+---
+
+19. **D-031 — Rodada 9:** espécie com
+    ficha inicial própria em
+    múltiplos de 8, referência
+    neutra independente e
+    versionada com números
+    iniciais de Fallen, poder
+    básico 8, variantes de
+    ritmo declaradas/validadas,
+    desempate lexicográfico,
+    novo input desde t=0,
+    IA visando centro temporal
+    e snapshot AGI/SP no
+    início de cada barra.
+    **Design aprovado; não
+    implementado.**
+    Pendências nas §§6.2,
+    7.3, 8.1.6 e 20.
 
 ---
 
@@ -1458,6 +1694,56 @@ Formato: ID · data · decisão · estado · impacto documental.
   §§Atributos, Atos e reações e
   Sistema de ritmo; nenhuma modificação
   de código ou testes nesta publicação.
+
+- **D-031 · 2026-11-21 (Rodada 9: 1A; 2B; 3A; 4B; 5A; 6A; 7A; 8B)** ·
+  **CONFIRMADO como design; NÃO
+  IMPLEMENTADO nesta rodada**:
+  (1A) cada espécie possui
+  ficha inicial própria com
+  atributos básicos em 8
+  ou múltiplos de 8 (D-025);
+  (2B) referência neutra
+  **independente**, com os
+  mesmos valores iniciais
+  de Fallen (HP 32, EN 8,
+  ATK/MAK/DEF/MEF/AGI 8,
+  SP_base derivado 80),
+  **versionada separadamente**;
+  (3A) ataque físico básico
+  com **poder nominal 8**;
+  (4B) variantes alternativas
+  de ritmo expressamente
+  declaradas e validadas,
+  escolhidas antes da execução;
+  (5A) ordem lexicográfica
+  **crescente** de IDs estáveis
+  para desempates de AGI;
+  (6A) descartar input anterior
+  ao início da barra e aceitar
+  eventos novos desde t=0;
+  (7A) IA mira o centro
+  **temporal** do POINT de maior
+  duração; (8B) capturar AGI/SP
+  no início de cada barra e
+  manter os valores até seu
+  encerramento, com registro
+  no snapshot de execução.
+  **PENDENTES:** fichas por
+  espécie, arquivo/versão
+  de referência, parâmetros
+  de variantes e política
+  de impossibilidade dinâmica,
+  definição do instante da
+  captura e regras residuais
+  de IDs/inputs. **Preservadas**
+  D-022 a D-025 e D-028 a
+  D-030. Nenhum código,
+  teste ou asset alterado.
+  **Impacto:** GDD §§6.2,
+  7.3, 8.1.6, 20, 21;
+  `docs/COMBAT_SPEC.md`;
+  registro no índice canônico
+  `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

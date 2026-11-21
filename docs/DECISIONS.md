@@ -37,6 +37,6 @@ qualquer alteração em documentos ou código.
 | D-028 | 2026-11-21 | Os ganhos da absorção persistem entre batalhas | `docs/GDD.md` Apêndice A |
 | D-029 | 2026-11-21 | Dificuldade do button mashing da absorção mantida | `docs/GDD.md` Apêndice A |
 | D-030 | 2026-11-21 | Índice central de IDs em `docs/DECISIONS.md`: antes | `docs/GDD.md` Apêndice A |
-| D-031 | 2026-11-21 (Rodada 9) | RESERVADO — fichas iniciais, referência neutra, poder básico, variantes e ritmo | `docs/GDD.md` Apêndice A |
+| D-031 | 2026-11-21 (Rodada 9: 1A; 2B; 3A; 4B; 5A; 6A; 7A; 8B) | Fichas por espécie, referência neutra, poder básico 8, variantes e captura temporal | `docs/GDD.md` Apêndice A |
 
 Total: 29 decisões indexadas.

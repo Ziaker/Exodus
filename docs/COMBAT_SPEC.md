@@ -45,6 +45,44 @@
   base e demanda reavaliar poderes físicos
   segundo D-019/D-021. Nenhum código foi alterado.
 
+### D-031 (Rodada 9, 1A e 2B) — fichas iniciais e referência neutra; DESIGN, NÃO IMPLEMENTADO
+
+- **1A:** cada **espécie de personagem
+  ou inimigo** recebe sua **própria ficha
+  inicial**, seguindo a regra D-025 de
+  **8 ou múltiplos de 8** nos
+  atributos básicos. Não foram
+  aprovados valores particulares
+  para espécies adicionais.
+- **2B:** a **referência neutra de
+  testes** é **independente** dos dados
+  de Fallen, mas tem os mesmos
+  números iniciais: HP 32, EN 8,
+  ATK/MAK/DEF/MEF/AGI 8 e
+  `SP_base` derivado **80**.
+  Deve ser **versionada
+  separadamente**. Arquivo,
+  esquema e número inicial
+  de versão ficam pendentes;
+  nenhum recurso ou arquivo
+  de ficha foi criado.
+- **D-028 preservada:** ganhos
+  persistentes por absorção
+  podem tornar os atributos
+  efetivos posteriores diferentes
+  de múltiplos de 8. A regra
+  aplica-se às **fichas-base
+  iniciais**, sem arredondar
+  ganhos ou alterar saves.
+  Referência neutra não
+  recebe progresso de Fallen.
+- **Estado:** os defaults de
+  `UnitStats` e as fichas do
+  protótipo no controlador
+  ainda diferem destas
+  regras. Nenhum código
+  foi modificado nesta rodada.
+
 ## Atos e reações
 - Cada personagem possui **2 atos por rodada**; cada ato pode ser **Ação** ou **Reação**
   (2 ações, 2 reações ou 1 de cada).
@@ -109,6 +147,30 @@
   não é modificada. Este contrato
   **não foi implementado**.
 
+### D-031 (Rodada 9, 5A) — desempate lexicográfico; DESIGN, NÃO IMPLEMENTADO
+
+- Quando **AGI empatar**
+  entre uma ação anunciada
+  e uma reação ofensiva,
+  usar **ordem lexicográfica
+  crescente dos IDs estáveis
+  dos combatentes** para
+  decidir qual resolve primeiro.
+  Preserve o critério primário
+  por AGI (D-014) e o
+  cancelamento por eliminação
+  ou interrupção explícita
+  (D-025). Não escolher
+  lado/posição da HUD como
+  critério adicional.
+- **PENDENTES:** normalização
+  de IDs, colisões e comparação
+  exata de valores não
+  padronizados; IDs duplicados
+  não recebem desempate
+  silencioso. A regra não
+  foi implementada.
+
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
 - Resistido / nulo / absorvido: **-1 ato** cada (independente do tipo).
@@ -172,6 +234,40 @@
   Ainda não há valores aprovados para poderes nem
   HP/ATK/DEF de referência; não interpretar como número
   de rodadas.
+
+### D-031 (Rodada 9, 3A) — ataque físico básico; DESIGN, NÃO IMPLEMENTADO
+
+- O **ataque físico básico**
+  possui **poder nominal 8**,
+  mantendo a fórmula
+  `poder × ATK ÷ DEF`
+  aprovada na D-019.
+  Poderes de outros ataques/
+  habilidades continuam
+  **PENDENTES**.
+- Na ficha neutra
+  D-031 (HP 32, ATK 8,
+  DEF 8), o dano físico
+  base é **8 por acerto**;
+  **4 acertos nominais**
+  alcançam 32 HP, dentro
+  da meta D-021 de 3–5
+  acertos. Isso **não**
+  é um resultado de testes:
+  variação fixa de ±10%
+  aprovada mas não
+  implementada (D-019),
+  rolagem de SP `1dN`,
+  crítico, afinidades,
+  bloqueios e outros
+  fatores modificam
+  danos reais.
+- **DIVERGÊNCIA com código:**
+  o comando ATTACK do
+  protótipo ainda utiliza
+  poder 100. Não alterar
+  a execução até a futura
+  autorização de código.
 
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
@@ -460,6 +556,121 @@
   ainda não implementa esses
   contratos. Nenhum código,
   teste ou asset foi alterado.
+
+### D-031 (Rodada 9, 4B; 6A; 7A; 8B) — variantes e instantes de ritmo; DESIGN, NÃO IMPLEMENTADO
+
+- **4B:** permitir
+  **variantes alternativas
+  expressamente declaradas
+  no perfil de inimigo**,
+  **validadas antes de uso**
+  e selecionadas **antes
+  da execução** quando
+  necessário para respeitar
+  a duração/cobertura e
+  demais contratos com
+  AGI/SP dinâmicos.
+  D-025 ainda bloqueia
+  encontros com configurações
+  sem solução válida no
+  carregamento; variantes
+  não autorizam fallback
+  genérico, descarte
+  de ações ou relaxamento
+  de limites. **PENDENTES:**
+  seleção entre variantes,
+  ordem de validação,
+  compatibilidade com
+  estados alcançáveis,
+  política caso nenhuma
+  variante seja elegível
+  em tempo de execução e
+  se primário inválido
+  pode coexistir com
+  alternativa válida.
+- **6A:** desprezar
+  entradas registradas
+  **antes do instante
+  inicial da barra**;
+  aceitar **novos eventos
+  a partir de t=0**
+  da barra. Não aceitar
+  automaticamente
+  a tecla anterior de
+  confirmação de reação.
+  A pausa de escolha
+  da D-014 é externa
+  ao intervalo da barra.
+  Não inserir buffer
+  antecipado, tolerância
+  ou atraso obrigatório.
+  **PENDENTES:** ordem
+  de eventos em t=0,
+  teclado/auto-repeat,
+  precisão dos timestamps
+  e tratamento de eventos
+  simultâneos.
+- **7A:** após selecionar
+  a região POINT com
+  **maior janela temporal
+  efetiva** (D-024),
+  a IA mira seu **centro
+  temporal**, não o
+  centro espacial.
+  Aplicar erro triangular
+  limitado da D-023/D-024
+  em torno desse instante;
+  critérios de desempate
+  entre regiões e categoria
+  da IA continuam pendentes.
+  D-022 preserva acerto
+  automático inimigo sem
+  reação declarada.
+- **8B:** capturar AGI e
+  SP dos participantes
+  **no instante de início
+  de cada barra**, mantendo
+  esses valores **fixos
+  até seu término** para
+  duração, geometria,
+  variante, trajetória
+  e julgamento temporal;
+  registrar os atributos
+  capturados no snapshot
+  reproduzível D-024.
+  Próxima barra realiza
+  nova captura. **Não**
+  alterar por inferência
+  os instantes de consulta
+  das estatísticas para
+  cálculo de dano ou
+  outros efeitos fora
+  da execução da barra.
+  **PENDENTES:** relação
+  precisa entre captura
+  e escolha da variante,
+  eventos simultâneos
+  de buffs/SP no início
+  e integração com
+  a pausa de reação.
+- **Compatibilidade:**
+  preservar D-020 a
+  D-025 — cobertura
+  8%–16%, 40 ms mínimos
+  por região, máximo 3
+  regiões (≥300 ms para
+  usar 3), velocidades
+  contínuas e limites
+  de 4× velocidade média
+  e 12×v_média/T de
+  aceleração, avaliação
+  por tempo de input e
+  fronteiras POINT>BEAM>MISS.
+  Perfis atuais da cena
+  ainda não implementam
+  D-031. Nenhuma alteração
+  em scripts, testes ou
+  recursos nesta rodada.
 
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
