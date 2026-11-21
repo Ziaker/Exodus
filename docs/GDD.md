@@ -203,6 +203,31 @@ implementação ainda está pendente. Os valores numéricos de 1A e
 
 ---
 
+### 5.2 D-021 — calibração crítica aprovada na Rodada 5 — **NÃO IMPLEMENTADO**
+
+**1B; 2B; 3B:** para os novos críticos, a diferença de SP positiva concede
+**+2 pontos percentuais por ponto**, com **bônus máximo de +20 p.p.** e
+**chance crítica final limitada a 50%**. Desvantagem de SP não diminui a
+base de AGI, mantendo esse aspecto anterior da D-016. O novo teto final
+também restringe AGI elevada.
+
+Expressão de design:
+`chance_crit(%) = min(50, AGI + min(20, max(SP_atacante−SP_alvo,0) × 2))`.
+
+Exemplos aritméticos, não resultados de testes: AGI 6 e ΔSP +5 → **16%**;
+AGI 6 e ΔSP +10 → **26%**; AGI 40 e ΔSP +10 → **50%**.
+O multiplicador ×1.5, a exigência de contato e os demais contratos
+de crítico não foram alterados.
+
+**Rastreabilidade:** D-021 quantifica a direção da D-019 e substitui
+os parâmetros da D-016 **como design futuro**. A implementação atual
+ainda usa +10 p.p./SP, bônus máximo +30 p.p. e teto final 100%;
+a D-016 deve permanecer no histórico, sem ser reclassificada como
+não executada. A variação de dano fixada pela D-019 em ±10%
+também permanece pendente de implementação.
+
+---
+
 ## 6. Atributos e recursos — **CONFIRMADO**
 
 HP, EN (Energy Points), ATK, MAK (magic attack), DEF, MEF (magic defense), AGI e SP.
@@ -339,6 +364,44 @@ atual sorteia resultados discretos. Esses comportamentos
 permanecem **IMPLEMENTADOS NO PROTÓTIPO, não conformes ao novo
 design D-020**. Nenhum código, teste ou recurso visual foi
 alterado nesta rodada.
+
+---
+
+### 8.1.2 D-021 — largura e tempo POINT — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+**4B:** largura-base da **cobertura total POINT = 10% da linha**;
+ajustar **±1 ponto percentual a cada 10 pontos de diferença de AGI**,
+a favor do executante com maior AGI.
+
+**5A:** ajustar **±1 ponto percentual a cada 5 pontos de diferença
+de SP**, no máximo **±2 p.p. por SP**, a favor do executante com maior SP.
+Aplicar o intervalo total aprovado na D-020 de **8% a 16%** após
+os ajustes, preservando o compartilhamento entre múltiplas zonas.
+Exemplos para diferenças múltiplas: ΔAGI +10 e ΔSP +5 → 12%;
+ΔAGI −20 e ΔSP −10 → 6% bruto, limitado a 8%.
+**PENDENTES:** política de frações/restos de AGI/SP, leitura temporal
+dos atributos e divisão entre zonas individuais; não definir
+arredondamento por suposição.
+
+**6B:** cada região POINT **individual** deve representar pelo
+menos **40 ms de tempo real de passagem do marcador**, independentemente
+da largura espacial. Perfil incompatível com essa condição e
+com a duração global e a cobertura da D-020 é **inválido**.
+Não elevar automaticamente a duração da barra, não exceder a
+cobertura de 8%–16% e não reduzir os 40 ms.
+**PENDENTES:** geração e rejeição de perfis inválidos, limites
+de velocidade e critérios de avaliação com latência e FPS.
+
+Risco concreto: uma região de 8% do percurso sob velocidade
+uniforme em barra de 0,2 s oferece **16 ms**, violando o mínimo.
+Duas zonas devem oferecer pelo menos **80 ms no total**,
+sendo 40 ms para cada uma; velocidades compensadas podem
+alterar o tempo local sem alterar o tempo global.
+Não confundir porcentagem de espaço com porcentagem de tempo.
+
+**Estado do código:** `BattleMath.rhythm_zone()` ainda usa
+POINT central fixo e `RhythmBar` tem progressão uniforme;
+a D-021 não foi implementada nesta entrega.
 
 ---
 
@@ -591,6 +654,17 @@ de cobertura não representa automaticamente percentual de tempo.
 
 ---
 
+**D-021 (7A) — objetivo inicial de balanceamento:** um inimigo de
+força aproximadamente equivalente ao jogador deve ser derrotado
+em **3 a 5 ataques físicos bem-sucedidos**, no cenário de referência
+**sem bloqueios ou críticos**. Isso não equivale a 3–5 rodadas;
+a quantidade real depende de atos, reações e Press Turn.
+Não foram aprovados novos poderes dos ataques, nem estatísticas
+de referência; esses números dependem de calibração posterior.
+Preservar `poder × ATK ÷ DEF` conforme D-019.
+
+---
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -623,6 +697,16 @@ de cobertura não representa automaticamente percentual de tempo.
     mínimos temporais das zonas, distribuição em múltiplos POINT,
     perfil de erro temporal da IA e derivação/reprodução da seed.
     O risco crítico é a janela útil subquadro em durações curtas.
+
+---
+
+14. **D-021 — Rodada 5:** números críticos (+2 p.p./SP, máximo
+    +20 p.p., teto total 50%); largura POINT base 10%,
+    ajustes ±1 p.p./10 AGI e ±1 p.p./5 SP (até ±2 p.p.);
+    mínimo de 40 ms por região POINT; objetivo de 3–5
+    ataques físicos bem-sucedidos contra equivalentes.
+    **Design aprovado; não implementado.** Pendentes:
+    arredondamento, seleção de perfis válidos e poderes.
 
 ---
 
@@ -769,6 +853,22 @@ Formato: ID · data · decisão · estado · impacto documental.
   da IA e detalhes da seed. **Impacto:** GDD §§8.1.1, 20, 21
   e `docs/COMBAT_SPEC.md` §Sistema de ritmo. Demais documentos,
   código, testes, HUD e recursos preservados.
+
+- **D-021 · 2026-11-21 (Rodada 5: 1B; 2B; 3B; 4B; 5A; 6B; 7A)** ·
+  **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**:
+  crítico +2 p.p./SP positivo, bônus SP máximo +20 p.p.
+  e teto final 50%; cobertura POINT inicial 10%,
+  ±1 p.p. por 10 AGI, ±1 p.p. por 5 SP até ±2 p.p.;
+  mínimo temporal de 40 ms **por zona POINT**, com
+  invalidação de perfis incompatíveis; meta de 3–5
+  ataques físicos bem-sucedidos para derrotar oponente
+  aproximadamente equivalente, sem bloqueio ou crítico.
+  Complementa D-019/D-020 e substitui parâmetros de D-016
+  apenas como **design futuro**; D-016 ainda está implementada.
+  **PENDENTES:** diferenças não múltiplas de AGI/SP,
+  geração de perfis válidos, poder dos ataques e validação.
+  **Impacto:** GDD §§5.2, 8.1.2, 20, 21 e
+  `docs/COMBAT_SPEC.md`; código, testes, assets intactos.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

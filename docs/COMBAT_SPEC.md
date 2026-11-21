@@ -110,6 +110,28 @@
   `AGI + 10 × ΔSP`, que chegava a 100% com ΔSP=4 para o Fallen de teste. O limite
   geral de 0–100% e o multiplicador ×1.5 permanecem. **IMPLEMENTADO.**
 
+### D-021 (Rodada 5) — calibração aprovada, não implementada
+
+- **1B; 2B; 3B:** chance crítica futura:
+  `min(50%, AGI% + min(20 p.p., max(ΔSP,0) × 2 p.p.))`.
+  São **+2 pontos percentuais por SP de vantagem**,
+  com bônus SP de até **+20 p.p.** e
+  **teto crítico final de 50%**. Desvantagem de SP não
+  reduz a chance base de AGI. Teto final vale mesmo
+  para AGI superior a 50. Não alterar multiplicador
+  ×1.5, condição de contato ou outras regras.
+- A fórmula **D-016** descrita acima permanece
+  **implementada no código atual**, mas foi substituída
+  como parâmetro para a futura implementação por D-021.
+  Preservar histórico e não alterar testes/código nesta rodada.
+- **7A:** mantendo `poder × ATK ÷ DEF`, calibrar os
+  poderes para que inimigo aproximadamente equivalente
+  demande **3–5 ataques físicos bem-sucedidos**,
+  sem bloqueios ou críticos no cenário de referência.
+  Ainda não há valores aprovados para poderes nem
+  HP/ATK/DEF de referência; não interpretar como número
+  de rodadas.
+
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
 - Entrada manual: atacante controlado pelo jogador usa a barra visível para o
@@ -126,6 +148,37 @@
 - Ao atacar: Ponto → dano integral; Trave → oponente bloqueia; Falha → sem dano.
 - Ao defender: Trave → bloqueia; Ponto → desvia e ganha +1 SP; Falha → dano integral.
 - Bloqueio extra: **+1 rolagem de bloqueio a cada 2 pontos de SP de vantagem**.
+
+### D-021 (Rodada 5) — zonas especiais calibradas; não implementadas
+
+- **4B:** cobertura total POINT inicial **10%**;
+  ajustar **±1 ponto percentual por 10 pontos de
+  diferença de AGI** em favor da AGI superior
+  do executante do timing.
+- **5A:** ajustar **±1 ponto percentual por 5 pontos
+  de diferença de SP**, limitado a **±2 p.p. de SP**,
+  em favor do executante com mais SP.
+  Cobertura final compartilhada entre zonas múltiplas
+  e limitada a **8%–16%** conforme D-020.
+  Exemplo: ΔAGI +10, ΔSP +5 → 12%;
+  ΔAGI −20, ΔSP −10 → 8% após limite.
+  Arredondamento para diferenças não múltiplas
+  e leitura de atributos durante ação: **PENDENTES**.
+- **6B:** cada região POINT requer **40 ms mínimos
+  de passagem efetiva**; se o perfil, a duração
+  total existente e a cobertura de 8%–16%
+  não puderem coexistir, o **perfil é inválido**.
+  Não prolongar duração, alargar zonas fora dos
+  limites ou diminuir janela temporal silenciosamente.
+  **PENDENTES:** geração/rejeição de perfis inválidos,
+  limites de cadência, medição por tempo real,
+  sincronização e testes sob FPS/latência diversos.
+- O movimento uniforme atual pode oferecer
+  apenas 16 ms de passagem por 8% do trajeto
+  quando a barra completa dura 0,2 s;
+  por isso **não atende automaticamente à D-021**.
+  `RhythmBar` e `BattleMath.rhythm_zone()`
+  continuam sob as regras do protótipo anterior.
 
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
