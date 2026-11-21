@@ -9,6 +9,8 @@ enum RhythmResult { POINT, BEAM, MISS }
 const SP_GAIN_PER_EVENT: int = 1
 const BLOCK_ROLLS_PER_SP: int = 2
 const THRESHOLD_RATIO: float = 0.7
+const MAX_AVAILABLE_ACTS: int = 4
+const MAX_STORED_ACTS: int = 4
 const BASE_VARIATION: float = 0.10
 const VARIATION_PER_SP: float = 0.02
 const CRIT_MULTIPLIER: float = 1.5
@@ -46,6 +48,15 @@ static func rhythm_zone(marker_position: float) -> RhythmResult:
 	if distance <= BEAM_HALF_WIDTH:
 		return RhythmResult.BEAM
 	return RhythmResult.MISS
+
+## Dominance ratio: share of the combined SP held by one combatant.
+## Two positive values cannot both exceed the threshold (ratios sum to 1).
+static func dominance_ratio(own_sp: int, rival_sp: int) -> float:
+	var total := own_sp + rival_sp
+	if total <= 0:
+		return 0.0
+	return float(own_sp) / float(total)
+
 
 static func extra_block_rolls(advantage: int) -> int:
 	if advantage <= 0:

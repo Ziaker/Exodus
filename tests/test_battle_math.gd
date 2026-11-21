@@ -98,6 +98,14 @@ func test_affinity_interacts_with_damage() -> void:
 	assert_gt(int(weak.amount), int(resist.amount))
 
 
+func test_dominance_ratio_requires_seventy_percent_share() -> void:
+	assert_almost_eq(BattleMath.dominance_ratio(20, 20), 0.5, 0.001)
+	assert_almost_eq(BattleMath.dominance_ratio(46, 45), 0.5056, 0.001)
+	assert_almost_eq(BattleMath.dominance_ratio(60, 10), 0.8571, 0.001)
+	assert_almost_eq(BattleMath.dominance_ratio(10, 60), 0.1429, 0.001)
+	assert_almost_eq(BattleMath.dominance_ratio(0, 0), 0.0, 0.001)
+
+
 func test_press_turn_uses_contact_semantics() -> void:
 	# The formula itself is unchanged; the controller applies it only on contact.
 	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.WEAK), 1)

@@ -38,11 +38,21 @@ func spend_act() -> bool:
 	acts_available -= 1
 	return true
 
+## D-005: at most 4 acts may be available at once. Positive overflow is
+## deferred to the act stock; negative values only reduce available acts.
 func grant_acts(amount: int) -> void:
-	acts_available = clampi(acts_available + amount, 0, 8)
+	if amount < 0:
+		acts_available = maxi(0, acts_available + amount)
+		return
+	var room := BattleMath.MAX_AVAILABLE_ACTS - acts_available
+	var applied := clampi(amount, 0, maxi(0, room))
+	acts_available += applied
+	var overflow := amount - applied
+	if overflow > 0:
+		store_acts(overflow)
 
 func store_acts(amount: int) -> void:
-	stored_acts = clampi(stored_acts + amount, 0, 4)
+	stored_acts = clampi(stored_acts + amount, 0, BattleMath.MAX_STORED_ACTS)
 
 func add_sp(amount: int) -> void:
 	current_sp = maxi(0, current_sp + amount)

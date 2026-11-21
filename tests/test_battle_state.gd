@@ -164,6 +164,62 @@ func test_superiority_bonus_still_grants_one_act() -> void:
 	assert_eq(weak.acts_available, 2)
 
 
+func test_d005_cap_defers_surplus_acts() -> void:
+	var state := BattleState.new()
+	var hero := _make_unit(&"hero", true, 20, 9)
+	hero.store_acts(4)
+	state.add_unit(hero)
+	state.add_unit(_make_unit(&"foe", false, 20, 2))
+	state.start_round()
+	assert_eq(hero.acts_available, 4)
+	assert_eq(hero.stored_acts, 2, "2 fresh acts are deferred when stored is full")
+
+
+func test_d005_grant_overflow_is_deferred() -> void:
+	var unit := _make_unit(&"hero", true, 20, 5)
+	unit.acts_available = 4
+	unit.grant_acts(2)
+	assert_eq(unit.acts_available, 4)
+	assert_eq(unit.stored_acts, 2)
+
+
+func test_d005_penalty_only_reduces_available_acts() -> void:
+	var unit := _make_unit(&"hero", true, 20, 5)
+	unit.acts_available = 2
+	unit.grant_acts(-1)
+	assert_eq(unit.acts_available, 1)
+	unit.grant_acts(-5)
+	assert_eq(unit.acts_available, 0)
+	assert_eq(unit.stored_acts, 0)
+
+
+func test_deferred_acts_reappear_next_round() -> void:
+	var state := BattleState.new()
+	var hero := _make_unit(&"hero", true, 20, 9)
+	hero.store_acts(2)
+	state.add_unit(hero)
+	state.add_unit(_make_unit(&"foe", false, 20, 2))
+	state.start_round()
+	assert_eq(hero.acts_available, 4)
+	assert_eq(hero.stored_acts, 0)
+	hero.spend_act()
+	hero.spend_act()
+	state.end_round()
+	assert_eq(hero.stored_acts, 2)
+	state.start_round()
+	assert_eq(hero.acts_available, 4)
+	assert_eq(hero.stored_acts, 0)
+
+
+func test_dominance_requires_real_superiority() -> void:
+	var state := BattleState.new()
+	var nearly_equal := _make_unit(&"a", true, 46, 9)
+	state.add_unit(nearly_equal)
+	state.add_unit(_make_unit(&"b", false, 45, 2))
+	state.start_round()
+	assert_eq(nearly_equal.acts_available, 2)
+
+
 func test_battle_ends_when_one_side_is_down() -> void:
 	var state := _equal_state()
 	assert_false(state.is_over())

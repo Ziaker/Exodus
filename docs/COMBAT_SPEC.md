@@ -34,23 +34,24 @@
 - **D-005 (2026-11-21): teto de 4 atos disponíveis no total por personagem**, somando
   atos novos da rodada, atos armazenados e bônus de SP/Press Turn. Vale igualmente
   para Fallen, aliados e inimigos. Substitui a interpretação de 4 armazenados
-  **mais** 2 novos simultaneamente disponíveis. **CONFIRMADO como design; NÃO
-  IMPLEMENTADO.** Destino dos excedentes e ordem de aplicação dos bônus: **PENDENTE**.
-- Ordem de turnos por `AGI`. Na implementação atual, os atos são oferecidos em
-  passagens intercaladas (`A, B, A, B`), e cada ato é consumido por uma ação ou reação.
-- Quando o SP de um lado ultrapassa **70% do SP do oponente**, esse lado ganha
-  **+1 ato por rodada**. **PENDENTE:** com limiar de 70%, qualquer par de SP positivos
-  concede o bônus a pelo menos um lado; a intenção de premiar superioridade exige decisão.
+  **mais** 2 novos simultaneamente disponíveis. **IMPLEMENTADO:** o excedente é
+  **adiado** ao estoque (`stored_acts`), limitado a 4, e pode reaparecer em rodada
+  posterior. Atos novos e bônus entram primeiro; o que sobrar volta ao estoque.
+- Ordem de turnos por `AGI`. Os atos são oferecidos em passagens intercaladas
+  (`A, B, A, B`), e cada ato é consumido por uma ação ou reação.
+- **D-007 (2026-11-21): limiar de superioridade por dominância em razão.** Ganha
+  **+1 ato** quem possui `SP_próprio / (SP_próprio + SP_rival) > 0,7`. Substitui a
+  interpretação literal `SP_próprio > 0,7 × SP_rival`, que premiava ambos os lados
+  para qualquer par de SP positivo. **IMPLEMENTADO.**
 - **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
-  não autoriza um quinto ato. Destino de bônus excedente: **PENDENTE**. O limiar
-  de 70% e o bônus de +1 não foram revisados.
+  não autoriza um quinto ato. O excedente é adiado ao estoque pela mesma regra.
 
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
 - Resistido / nulo / absorvido: **-1 ato** cada (independente do tipo).
 - **Consequência de D-005:** o +1 por fraqueza também respeita o teto de 4 atos
-  disponíveis. Destino do +1 concedido no teto e ordem de aplicação com outros
-  bônus: **PENDENTE**. A penalidade de -1 não foi alterada.
+  disponíveis; o excedente é adiado ao estoque. A penalidade de -1 não foi alterada
+  e apenas reduz atos disponíveis.
 - Afinidades consideradas: Weak, Normal, Resist, Null, Absorb.
 
 ## Dano (sem magia neste protótipo)

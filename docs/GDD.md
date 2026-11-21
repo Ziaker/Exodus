@@ -114,7 +114,7 @@ narrativa — ainda não foi definido.
 | ID | Gravidade | Achado | Estado |
 |---|---|---|---|
 | A-01 | CRÍTICO | `next_actor()` oferecia cada unidade uma única vez por rodada. | **CORRIGIDO:** passagens intercaladas por AGI; atos consumidos por ações e reações; 12 testes de estado. |
-| A-02 | ALTO | Limiar de 70% usa `SP_atual > SP_rival * 0,7`; qualquer par positivo premia ao menos um lado. | **PENDENTE:** regra inalterada; requer decisão de design. |
+| A-02 | ALTO | Limiar literal `SP_atual > 0,7 × SP_rival` premiava ambos os lados. | **CORRIGIDO:** D-007 substitui por dominância em razão. |
 | A-03 | MÉDIO | Reação do jogador não era utilizável para defesa; ataques inimigos exigiam entrada manual. | **CORRIGIDO:** entrada manual apenas para personagens do jogador; IA resolve seus próprios tempos; defesa manual exige reação declarada e 1 ato. |
 | A-04 | MÉDIO | IA não tinha resolução própria de ritmo. | **IMPLEMENTADO como execução provisória:** mesmas zonas POINT/BEAM/MISS com tentativas extras por vantagem; sem nova regra de design. |
 | A-05 | MÉDIO | Trave = 50% de dano, sem registro documental. | **REGISTRADO:** comportamento preservado; decisão pendente. |
@@ -123,7 +123,7 @@ narrativa — ainda não foi definido.
 | A-08 | BAIXO | Item de cura fixo, sem inventário. | **PENDENTE:** fora do escopo da correção. |
 | A-09 | ALTO | Crítico e Press Turn concediam recompensas sem contato. | **CORRIGIDO:** recompensas e rolagens apenas em ataque com contato. |
 | A-10 | ALTO | Absorção rendia com 0 pressionamentos e não impedia repetição. | **CORRIGIDO:** restrita a Fallen, falha sem entrada, alvo marcado; dificuldade exata permanece pendente. |
-| A-11 | ALTO | D-005 (teto de 4 atos no total) não implementado. | **PENDENTE:** decisão de design preservada; nenhum limite extra foi introduzido nas correções. |
+| A-11 | ALTO | D-005 (teto de 4 atos no total) não implementado. | **CORRIGIDO:** teto aplicado; excedente adiado ao estoque. |
 
 ---
 
@@ -133,8 +133,9 @@ narrativa — ainda não foi definido.
 Fórmulas de dado, variação, crítico e limiar: `docs/COMBAT_SPEC.md`.
 
 SP define superioridade, sorteio de dano extra, rolagens de bloqueio e vantagem geral.
-Quando um lado ultrapassa 70% do SP do oponente, ganha +1 ato por rodada — a
-implementação atual desse limiar está sob A-02.
+**D-007:** ganha +1 ato quem tem `SP_próprio / (SP_próprio + SP_rival) > 0,7`.
+Isso substitui a leitura literal de 70% do SP alheio e impede que ambos os lados
+recebam o bônus na mesma rodada. **IMPLEMENTADO.**
 
 ---
 
@@ -156,8 +157,8 @@ reagem. Atos não usados podem ser armazenados até 4 para a próxima rodada.
 
 **D-005:** teto de **4 atos disponíveis no total** por personagem, somando atos novos,
 armazenados e bônus de SP/Press Turn; aplica-se a Fallen, aliados e inimigos.
-**CONFIRMADO como design; NÃO IMPLEMENTADO.** Destino dos excedentes e ordem dos bônus:
-**PENDENTE**. Substitui a soma de até 4 armazenados com 2 novos simultaneamente.
+**IMPLEMENTADO:** excedente é **adiado** ao estoque (máximo 4) e pode voltar em rodada
+posterior. Substitui a soma de até 4 armazenados com 2 novos simultaneamente.
 
 Implementação parcial: ver A-01, A-03, A-04 e D-005.
 
@@ -288,7 +289,7 @@ Nenhum número de balanceamento deve ser considerado oficial sem decisão do dir
 
 ## 21. Riscos e pendências consolidadas
 
-1. **A-02** — limiar de 70% não exige superioridade; decisão pendente.
+1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
 2. A-05 — precedência POINT/POINT e resultado de Trave; preservado, sem decisão formal.
 3. A-07/A-10 — dificuldade de absorção, eliminação do alvo e persistência entre
    batalhas permanecem indefinidas.
@@ -297,8 +298,7 @@ Nenhum número de balanceamento deve ser considerado oficial sem decisão do dir
 6. Alterações locais permanecem não publicadas conforme decisão anterior do diretor.
 7. Toda a narrativa além da premissa está indefinida.
 8. Sem magia, equipamentos, save/load ou loop de jogo completo.
-9. **D-005** — teto de 4 atos disponíveis confirmado como design, ainda não
-   implementado; destino de excedentes e bônus pendente.
+9. **D-005/D-007** - implementadas; nenhuma pendência restante nessas regras.
 
 ---
 
@@ -320,14 +320,18 @@ Formato: ID · data · decisão · estado · impacto documental.
 - **D-005 · 2026-11-21 (Rodada 1)** · O máximo de atos disponíveis por personagem é
   **4 no total**, incluindo atos recebidos por rodada, acumulados e bônus concedidos
   por SP ou Press Turn; aplica-se a todos os combatentes. Substitui a interpretação
-  de até 4 armazenados somados a 2 novos simultaneamente disponíveis. **CONFIRMADO
-  como design; NÃO IMPLEMENTADO.** **PENDENTE:** destino dos atos excedentes e ordem
-  de aplicação dos bônus ao alcançar o teto. Impacto: §§4.1, 5, 7, 21 e
-  `docs/COMBAT_SPEC.md`; nenhum arquivo de código.
+  de até 4 armazenados somados a 2 novos simultaneamente disponíveis. **CONFIRMADO e
+  IMPLEMENTADO:** excedente adiado ao estoque (máx. 4), podendo retornar em rodada
+  posterior. Impacto: §§4.1, 5, 7, 21, `docs/COMBAT_SPEC.md`, `BattleUnit` e `BattleState`.
 - **D-006 · 2026-11-21** · Correções inequívocas de economia de atos, ritmo, descanso,
   resolução de dano e absorção, executadas sob a missão de correção integral. Nenhuma
   nova regra de design foi criada. **EXECUTADO**; impacto: `COMBAT_SPEC.md`, `GDD.md`,
   scripts de combate e testes.
+- **D-007 · 2026-11-21** · Limiar de superioridade passa a ser **dominância em razão**:
+  +1 ato se `SP_próprio / (SP_próprio + SP_rival) > 0,7`. Substitui a interpretação
+  literal de 70% do SP do oponente, que premiava ambos os lados. **CONFIRMADO e
+  IMPLEMENTADO**. Impacto: `BattleMath.dominance_ratio`, `BattleState.start_round`,
+  `COMBAT_SPEC.md` §Atos, GDD §5.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

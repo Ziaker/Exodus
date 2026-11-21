@@ -33,15 +33,16 @@ func start_round() -> void:
 	for unit in units:
 		if not unit.is_alive():
 			continue
-		# ACT_CAP_CONFLICT: 2 fresh acts + stored (<=4) + superiority bonus.
-		# The maximum total remains pending a director decision; no new cap is
-		# introduced here. Only the scheduling defect is fixed.
+		# D-005: 2 fresh acts + stored acts + dominance bonus, capped at 4.
+		# Excess is deferred back into the stock instead of being discarded.
 		var acts := 2 + unit.stored_acts
-		unit.stored_acts = 0
 		var rival := strongest_opposite(unit)
-		if rival != null and float(unit.current_sp) > float(rival.current_sp) * BattleMath.THRESHOLD_RATIO:
+		if rival != null and BattleMath.dominance_ratio(unit.current_sp, rival.current_sp) \
+			> BattleMath.THRESHOLD_RATIO:
 			acts += 1
-		unit.acts_available = clampi(acts, 0, 8)
+		unit.stored_acts = 0
+		unit.acts_available = clampi(acts, 0, BattleMath.MAX_AVAILABLE_ACTS)
+		unit.store_acts(maxi(0, acts - BattleMath.MAX_AVAILABLE_ACTS))
 		turn_order.append(unit)
 	turn_order.sort_custom(_faster_first)
 	turn_index = 0
