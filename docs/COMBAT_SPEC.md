@@ -419,6 +419,11 @@
 - **2A:** para efeito participante, após **todos os modificadores e o arredondamento final**, se houve **contato** e a afinidade permite dano, aplicar **`max(dano_arredondado, 1)`**. Sem contato, ou com afinidade **Null/Absorb**, não aplicar piso e não criar dano artificial. Não alterar SP `1dN`, crítico D-021, variação ±10% D-019 e demais contratos. O código `BattleMath.physical_damage()` ainda usa `maxi(0, int(round(amount)))` e não possui metadados de participação por efeito.
 - **3D:** separar a validação do **resistente de laboratório D-033** (HP 40, DEF 8, SP_base 88) em **duas baterias**: **SP igual** entre atacante de referência e alvo, para isolar HP/DEF; e **SP 80 do atacante contra SP 88 do alvo** para avaliar o impacto de `−1d8`. Manter ataque básico poder 8 e o objetivo resistente 5–7 acertos como referência, sem garantir que seja atingido. **PENDENTES:** valor de SP igual no primeiro cenário, controle do estado, quantidade de amostras, seeds, demais condições de ensaio e **taxa de aprovação de cada bateria**. O requisito de ≥95% em 10.000 casos da D-032/D-033 aplica-se ao **ensaio neutro**, não automaticamente a estas duas novas baterias. Não foram executados testes.
 
+### D-037 (Rodada 13, 3C; 8C) — piso por pacote e validação resistente; DESIGN, NÃO IMPLEMENTADO
+
+- **3C:** o piso final de 1 dano da D-033/D-036 incide **por pacote mecânico de dano identificado e associado aos efeitos de dano participantes**. Cada efeito conserva a declaração individual de participação no piso (D-036 1D), mas vários efeitos no **mesmo pacote** não produzem automaticamente vários pisos. Aplicar uma vez ao resultado final do pacote após modificadores e arredondamento, somente com contato e afinidade que permita dano; não criar dano para efeitos de status, sem contato ou em **Null/Absorb**. Pacotes independentes e casos com mistura de efeitos participantes/não participantes carecem de contrato de agrupamento, identificação e resolução; sem inventar multiplicação por quantidade de efeitos.
+- **8C:** para o **resistente de laboratório D-033** (HP 40, DEF 8, SP_base 88), a bateria com **SP igual** exige **≥95% de casos** concluídos em **5–7 acertos físicos bem-sucedidos**. A bateria com **SP 80 versus SP 88**, já aprovada na D-036, é **somente diagnóstica**, sem limiar estatístico aprovado. Quantidade de casos por bateria, valor igual de SP, demais controles/seeds e critério de contagem permanecem **PENDENTES**; não copiar automaticamente os **10.000 casos** do teste neutro D-032/D-033. A diferença de SP pode alongar o combate; nenhum teste foi executado.
+
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
 - Entrada manual: atacante controlado pelo jogador usa a barra visível para o
@@ -987,6 +992,16 @@
 - **Precedência:** a **D-034 implementada** substitui a **duração variável D-033** por barra **fixa de 1 s**; AGI afeta largura POINT, SP continua com faixas vigentes, e a **D-035 implementada** aplica mesma largura POINT na IA. Não restaurar fórmulas de duração antigas ou cadência variável sem nova aprovação. A IA atual ainda usa amostragem de posição, e `RhythmBar` classifica input pela posição do último quadro — **não** atendem ainda à exigência de rastro e relógio temporal. A D-036 não altera código, assets ou testes.
 - **Consequência aritmética da D-034:** em travessia uniforme de 1 s, ≥40 ms por região implica largura espacial individual ≥4%. Para três regiões POINT, exige-se cobertura total ≥12%, mesmo que o intervalo global permita 8%–16%. Isso deve constar da prova de viabilidade, não ser assumido automaticamente como implementado.
 
+### D-037 (Rodada 13, 1A; 2B; 4A; 5A; 6B; 7A) — velocidade, IA, certificados e rastros; DESIGN, NÃO IMPLEMENTADO
+
+- **1A:** **todos os perfis** seguem velocidade **uniforme**, com duração de **1 s** da **D-034 implementada**, inclusive chefes e perfis especiais. A variedade dos especiais vem de **posição, largura e número das regiões POINT**, sem aceleração/desaceleração, preservando os limites temporais e espaciais ainda aplicáveis. Não restaurar D-020/D-023 de cadência variável ou duração variável D-032/D-033. Com 1 s uniforme, mínimo de 40 ms por região exige **≥4% de largura espacial por região**; três regiões exigem **≥12% no total**, dentro do intervalo de 8%–16%. Múltiplas regiões ainda não implementadas.
+- **2B:** IA comum mantém **D-035 implementada**: amostragem uniforme de posição, classificação por largura POINT compartilhada com o jogador. Nos **perfis especiais**, IA mira o **centro temporal da região de maior janela efetiva** e aplica erro **temporal triangular limitado** de D-023/D-024, sem mudar a largura POINT aplicável ao combatente. Rolagens extras por SP e **autoacerto inimigo sem reação** (D-022) prevalecem. Classificação dos perfis, atribuição de habilidade e lógica do erro especial **PENDENTES**, sem alterar a IA comum.
+- **4A:** a prova intervalar do domínio alcançável deve produzir **certificado por intervalo** com limites, condições verificadas, variantes que garantem cobertura e **contraexemplo em caso de falha**. Deve refletir regras vigentes D-034/D-035, não curvas/duração histórica. Formato e método matemático **PENDENTES**; amostragem não comprova universalidade.
+- **5A:** ordenar eventos mecânicos com mesmo timestamp por **número de sequência estável atribuído ao serem comprometidos**. Preservar resolução dos eventos já comprometidos antes de capturar atributos e ativar barra (D-036). A atribuição de sequência deve ser determinística e independente da ordem acidental de callbacks; escopo/unicidade e eventos derivados **PENDENTES**. Esta ordem de eventos não substitui prioridade de AGI/ID entre combatentes.
+- **6B:** snapshots JSON registram tempos mecânicos em **inteiros de microssegundos** (D-036), usando **arredondamento ao microssegundo mais próximo**; exemplo 0,1234567 s → **123457 µs**. A **regra para empates de metade de microssegundo** ainda **não foi escolhida**; resolução física e conversão do relógio continuam pendentes. Não inferir precisão física de captura.
+- **7A:** cada evento do rastro mecânico canônico deve conter **identidade do evento, sequência, timestamp em µs, tipo, participantes, alterações de estado, decisões mecânicas, configuração/versão e dados de RNG necessários à reprodução**. Preservar o registro de seed, snapshots completos, versões de esquema/resolvedor e a exigência de **rastro exatamente igual em 30/60/120 FPS** sob inputs e seeds controlados (D-036). Campos, forma de dados de RNG, IDs e esquema de serialização **PENDENTES**. Nenhum JSON ou teste foi produzido.
+- **Estado técnico:** `BattleMath.rhythm_duration()` e `RhythmBar` já refletem a duração fixa/uniforme D-034; `BattleController._ai_roll()` já utiliza amostragem comum D-035. A barra ainda julga input pela posição do último frame; IA especial triangular, múltiplas zonas, certificados e rastros completos **não estão implementados**. D-037 é apenas documental.
+
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
 - **1E (ideia própria do diretor):** a **barra de ritmo** determina
@@ -1086,6 +1101,11 @@
   regra documentada de +1 rolagem a cada 2 pontos de vantagem.
   **IMPLEMENTADO** em `BattleController._zone_roll()`, `_ai_roll()` e
   `_defender_reaction()`.
+
+### D-037 (Rodada 13, 2B) — fronteira entre IA comum e especial; DESIGN, NÃO IMPLEMENTADO
+
+- O comportamento comum da D-035 permanece **implementado e vigente**: posição sorteada uniformemente sobre a mesma largura POINT disponível ao jogador.
+- **Somente perfis especiais** utilizarão o contrato de timing temporal triangular D-023/D-024 com escolha da melhor janela temporal D-031, preservando geometria POINT, rolagens extras por SP e D-022. A regra não implica que o caminho especial esteja implementado; distinção de perfis e parâmetros concretos continuam pendentes.
 
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), oração de humanos,

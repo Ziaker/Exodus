@@ -43,6 +43,6 @@ qualquer alteração em documentos ou código.
 | D-034 | 2026-11-21 (mudança de planos do diretor) | A barra de ritmo | `docs/GDD.md` Apêndice A |
 | D-035 | 2026-11-21 | A IA passa a usar a mesma largura de POINT | `docs/GDD.md` Apêndice A |
 | D-036 | 2026-11-21 (Rodada 12: 1D; 2A; 3D; 4A; 5A; 6A; 7A; 8A) | Participação e piso final por efeito, duas baterias resistentes, domínio de estados, eventos e replay determinístico | `docs/GDD.md` Apêndice A |
-| D-037 | 2026-11-21 (Rodada 13) | RESERVADO — perfis uniformes, IA especial, pacotes de dano, prova, eventos e replay | `docs/GDD.md` Apêndice A |
+| D-037 | 2026-11-21 (Rodada 13: 1A; 2B; 3C; 4A; 5A; 6B; 7A; 8C) | Barra uniforme, IA temporal especial, piso por pacote, certificados, sequência, microssegundos, rastro e baterias | `docs/GDD.md` Apêndice A |
 
 Total: 35 decisões indexadas.
