@@ -43,6 +43,10 @@
   **+1 ato** quem possui `SP_próprio / (SP_próprio + SP_rival) > 0,7`. Substitui a
   interpretação literal `SP_próprio > 0,7 × SP_rival`, que premiava ambos os lados
   para qualquer par de SP positivo. **IMPLEMENTADO.**
+- **D-019 (Rodada 3, 5B):** em confrontos contra múltiplos oponentes,
+  cada combatente compara a própria dominância com o **adversário vivo de maior SP**.
+  Este é o comportamento já implementado em `BattleState.strongest_opposite()`.
+  Não confundir com a referência visual contextual de SP definida no GDD.
 - **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
   não autoriza um quinto ato. O excedente é adiado ao estoque pela mesma regra.
 
@@ -67,13 +71,37 @@
 
 ## Dano (sem magia neste protótipo)
 - Físico: `poder × ATK ÷ DEF`.
+- **D-019 (Rodada 3, 3A):** a fórmula física acima é **preservada**;
+  devem ser recalibrados os **valores de poder dos ataques/habilidades**.
+  Novos valores específicos ainda não foram aprovados.
 - Modificador de SP: rolar `1dN` onde `N = |SP_atuante - SP_alvo|`;
   soma se o atuante tem mais SP, subtrai se tem menos.
-- Variação: `±10% ± 2% por ponto de diferença de SP` (sinal conforme vantagem).
-- Crítico: multiplicador **×1.5**; chance = `AGI% + clamp(ΔSP × 10%, 0%, 30%)`,
-  limitada a 0–100% (**D-016**). Desvantagem de SP não reduz a chance abaixo do AGI.
+- **Implementação anterior da variação:** `±10% ± 2% por ponto de diferença de SP`
+  (sinal conforme vantagem); ainda presente no código, mas **SUBSTITUÍDA
+  como design** pela D-019.
+- **D-019 (Rodada 3, 2C) — novo design, NÃO IMPLEMENTADO:** a
+  variação percentual aleatória do dano passa a ser **fixa em ±10%**,
+  independente da diferença de SP, **preservando separadamente a
+  rolagem `1dN` de superioridade**. Não alterou a ordem dos demais
+  modificadores do dano.
+- **Crítico — implementação vigente D-016:** multiplicador **×1.5**; chance =
+  `AGI% + clamp(ΔSP × 10%, 0%, 30%)`, limitada a 0–100%.
+  Desvantagem de SP não reduz a chance abaixo de AGI. Esta continua
+  sendo a fórmula **no código atual**, não o novo design.
+- **D-019 (Rodada 3, 1A) — novo design, NÃO IMPLEMENTADO:**
+  a contribuição crítica por **ponto de vantagem de SP deve diminuir**
+  em relação aos +10 pontos percentuais atuais e a **chance final de
+  crítico deve ter um teto inferior a 100%**. O valor exato por ponto,
+  o teto numérico global e a eventual revisão do limite de bônus
+  +30 p.p. da D-016 permanecem **PENDENTES DE CALIBRAÇÃO**. A D-019
+  substitui parcialmente a intenção anterior de D-016, sem reescrever
+  seu histórico ou inventar novos valores.
 - SP **não** multiplica o dano diretamente.
 - Ganho de SP: **+1** por crítico, desvio perfeito, acerto em fraqueza e reação.
+- **D-019 (Rodada 3, 4C):** manter essas fontes existentes e seus
+  ganhos de **+1 SP**, sem introduzir limite extra por batalha nem
+  ganhos decrescentes. O balanceamento da influência do SP deve
+  ocorrer nas fórmulas; a mecânica de ganho continua igual.
 - Crítico, Press Turn e ganhos de SP por fraqueza/crítico só são aplicados quando
   há **contato** (ritmo de ataque diferente de Falha e defesa diferente de Desvio).
   Ataques que falham não consomem rolagens de dano.
@@ -110,6 +138,12 @@
   mas opta por não declarar reação.
 - **2A:** um **bloqueio na Trave reduz 50% do dano**. Percentual
   já praticado no código e agora confirmado como regra de design.
+- **D-019 (Rodada 3, 6A):** quando a exceção de D-014 garantir acerto
+  de ataque inimigo por **impossibilidade de reação**, o ataque ainda
+  pode causar **crítico pela chance normal**. Não é crítico
+  automático, nem recebe bônus adicional. Usa-se a fórmula crítica
+  implementada até a calibração aprovada na D-019 (1A).
+  A exceção de autoacerto ainda precisa ser implementada.
 - **3A e 4A:** sem atos não há bloqueio/desvio; com reação elegível,
   pausar a escolha e manter o tempo de execução da barra.
 - A precedência POINT/POINT foi fixada por **D-015**: a defesa prevalece

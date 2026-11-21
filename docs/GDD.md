@@ -165,6 +165,42 @@ SP define superioridade, sorteio de dano extra, rolagens de bloqueio e vantagem 
 Isso substitui a leitura literal de 70% do SP alheio e impede que ambos os lados
 recebam o bônus na mesma rodada. **IMPLEMENTADO.**
 
+### 5.1 Rodada 3 — efeitos do SP no dano e crítico (D-019) — **CONFIRMADO como design**
+
+- **1A:** reduzir a influência de **cada ponto de vantagem de SP** sobre
+  a chance crítica e instituir **teto final inferior a 100%**. A taxa por
+  ponto e o teto percentual exato **não foram aprovados** e dependem de
+  calibração. Essa direção **substitui parcialmente D-016**, que limitava
+  o bônus total a +30 p.p., mas mantinha +10 p.p. por ponto de SP e
+  admitia 100% de chance final. **O código ainda usa D-016**.
+- **2C:** manter somente **±10% de variação percentual aleatória fixa**
+  no dano, **independente da diferença de SP**. Preservar em separado
+  a rolagem de superioridade `1dN` já definida na especificação. A
+  amplitude variável anterior (`±10% + 2% × |ΔSP|`) fica
+  **SUBSTITUÍDA como design**, mas permanece no código até futura
+  implementação autorizada.
+- **3A:** manter a fórmula de dano físico `poder × ATK ÷ DEF`
+  e **recalibrar os poderes das habilidades/ataques**. Não há
+  valores, tabelas, alvos de TTK ou escalas aprovados nesta rodada.
+- **4C:** preservar os ganhos existentes de **+1 SP** pelas fontes
+  já documentadas; controlar a sensibilidade por meio das fórmulas
+  em vez de criar um teto extra ou ganhos decrescentes de SP.
+- **5B:** para bônus de dominância em confrontos múltiplos,
+  comparar com o **adversário vivo de maior SP** (por combatente).
+  Essa regra **já corresponde** a `BattleState.strongest_opposite()`.
+  A decisão não altera a barra contextual de SP da HUD, definida
+  em §§17.1–17.2.
+- **6A:** ataque inimigo que acerte automaticamente por
+  **impossibilidade de reação do jogador** continua **elegível a
+  crítico pela chance normal**. Não há crítico automático, bônus
+  especial de crítico ou mudança de afinidades.
+
+**Estado da implementação:** 3A, 4C e 5B preservam regras ou
+direções existentes; 1A e 2C exigem alterações futuras de fórmulas;
+6A é consequência aprovada da exceção de acerto da D-014, cuja
+implementação ainda está pendente. Os valores numéricos de 1A e
+3A devem ser aprovados em rodada posterior antes de mudar código.
+
 ---
 
 ## 6. Atributos e recursos — **CONFIRMADO**
@@ -266,6 +302,11 @@ Implementado em `BattleMath.has_contact()`.
 **PENDENTE:** decidir se o ataque inimigo acerta
 automaticamente quando a reação **seria possível**, mas o jogador
 **escolhe não reagir**. Essa situação é diferente de não poder reagir.
+
+**D-019 (6A):** o acerto automático já aprovado quando **não é
+possível reagir** admite uma rolagem **normal de crítico**; não
+concede crítico obrigatório. O cálculo concreto deve respeitar a
+fórmula crítica vigente até a calibração da nova regra D-019 (1A).
 
 **Conflitos com o protótipo:** hoje a IA ainda pode falhar seu timing
 mesmo contra personagem incapaz de reagir; a escolha de reação usa
@@ -470,6 +511,14 @@ Existem testes de execução das fórmulas e da cena, mas não há critérios ap
 dificuldade, curva de dano, tempo de combate, taxa de acerto ou orçamento de atos.
 Nenhum número de balanceamento deve ser considerado oficial sem decisão do diretor.
 
+**D-019 (Rodada 3):** calibrar a contribuição crítica de SP e o teto
+crítico abaixo de 100%, validar a adoção de ±10% fixos no dano mantendo
+`1dN`, e ajustar os poderes das habilidades com amostras de combate.
+**PENDENTES de números:** ganho crítico por ponto de SP, teto crítico
+global, poderes de referência e métricas de duração de combate.
+Os números do código atual não são parâmetros aprovados para a nova
+calibração. Não foram executadas simulações ou testes nesta rodada.
+
 ---
 
 ## 21. Riscos e pendências consolidadas
@@ -492,6 +541,12 @@ Nenhum número de balanceamento deve ser considerado oficial sem decisão do dir
     SP/AGI e compatibilidade com as regras fixas atuais.
 11. HUD Tactical Altar aprovado em rodadas visuais (§§17.1–17.2), ainda não
     implementado no motor; a validação visual final pertence ao diretor.
+12. **D-019 (Rodada 3):** especificação aprovada para reduzir impacto
+    crítico por ponto de SP com teto inferior a 100% (valores pendentes);
+    ±10% de variação fixa no dano; recalibração dos poderes de ataques;
+    manutenção de ganhos +1 SP; comparação de dominância com adversário
+    vivo de maior SP; críticos normais em acertos inimigos garantidos.
+    Novas fórmulas e poderes ainda **não implementados**.
 
 ---
 
@@ -604,6 +659,24 @@ Formato: ID · data · decisão · estado · impacto documental.
   `tools/setup_placeholder_assets.py`, com validação dos arquivos exigidos.
   **CONFIRMADO e IMPLEMENTADO.** Impacto: `.gitignore`, `assets/SOURCE_ASSETS.md`,
   `tests/test_asset_manifest.gd`, GDD §21.
+
+- **D-019 · 2026-11-21 (Rodada 3, 1A; 2C; 3A; 4C; 5B; 6A)** ·
+  **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**:
+  (1A) contribuição crítica por ponto de SP menor que a vigente e teto
+  crítico final **abaixo de 100%**, ambos numericamente pendentes;
+  substituição parcial de D-016 apenas quanto à fórmula futura;
+  (2C) dano com variação aleatória fixa **±10%**, mantendo a rolagem
+  de SP `1dN` separada, em substituição à amplitude variável;
+  (3A) preservar `poder × ATK ÷ DEF` e calibrar os poderes;
+  (4C) preservar fontes existentes de **+1 SP** sem teto extra;
+  (5B) dominância contra adversário vivo de **maior SP**, já
+  presente em `BattleState.strongest_opposite()`;
+  (6A) ataques inimigos garantidos quando não há possibilidade
+  de reação podem obter crítico **pela chance normal**.
+  **PENDENTES:** taxa crítica por SP, teto crítico, novos poderes
+  e implementação da exceção de acerto da D-014.
+  **Impacto:** GDD §§5.1, 8.2, 20, 21 e
+  `docs/COMBAT_SPEC.md`; código, testes e arquivos locais intactos.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
