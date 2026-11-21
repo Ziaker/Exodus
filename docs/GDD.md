@@ -148,7 +148,7 @@ narrativa — ainda não foi definido.
 | A-03 | MÉDIO | Reação do jogador não era utilizável para defesa; ataques inimigos exigiam entrada manual. | **CORRIGIDO:** entrada manual apenas para personagens do jogador; IA resolve seus próprios tempos; defesa manual exige reação declarada e 1 ato. |
 | A-04 | MÉDIO | IA não tinha resolução própria de ritmo. | **IMPLEMENTADO como execução provisória:** mesmas zonas POINT/BEAM/MISS com tentativas extras por vantagem; sem nova regra de design. |
 | A-05 | MÉDIO | Trave = 50% de dano, sem registro documental. | **HOMOLOGADO pela D-014 (2A):** bloqueio Trave reduz 50% do dano, comportamento já presente no código. |
-| A-06 | MÉDIO | Descanso consumia 2 atos. | **CORRIGIDO:** 1 ato, gasto antes da escolha do comando; teste de regressão. |
+| A-06 | MÉDIO | Descanso consumia 2 atos. | **CORRIGIDO historicamente:** 1 ato, gasto antes da escolha do comando; teste de regressão. **SUBSTITUÍDO no design pela D-038** (REST sem gasto de ato, +2 EN fixos e armazenamento de atos); o motor ainda usa a regra anterior. |
 | A-07 | BAIXO | "SP base extra" da absorção ambíguo. | **PENDENTE:** implementação recalcula SP pela soma dos atributos. |
 | A-08 | BAIXO | Item de cura fixo, sem inventário. | **PENDENTE:** fora do escopo da correção. |
 | A-09 | ALTO | Crítico e Press Turn concediam recompensas sem contato. | **CORRIGIDO:** recompensas e rolagens apenas em ataque com contato. |
@@ -274,8 +274,10 @@ altera o cálculo de SP base.
 ## 6. Atributos e recursos — **CONFIRMADO**
 
 HP, EN (Energy Points), ATK, MAK (magic attack), DEF, MEF (magic defense), AGI e SP.
-EN é usado para conjuração e se recupera no fim da rodada: 20% do máximo. Descanso:
-+20% do máximo ao abrir mão de um ato. Mapeamento dos `.rvdata`: `LUK → AGI`,
+EN é usado para conjuração e se recupera automaticamente no fim da rodada: 20% do
+máximo (regra distinta, não modificada aqui). **REST (D-038)** não consome ato:
+recupera **2 EN fixos**, limitado ao máximo de EN, e guarda os atos ainda disponíveis
+para a próxima rodada conforme D-005. Mapeamento dos `.rvdata`: `LUK → AGI`,
 `MAT → MAK`, `MDF → MEF`. Detalhes em `docs/COMBAT_SPEC.md`.
 
 ---
@@ -416,6 +418,21 @@ reagem. Atos não usados podem ser armazenados até 4 para a próxima rodada.
 armazenados e bônus de SP/Press Turn; aplica-se a Fallen, aliados e inimigos.
 **IMPLEMENTADO:** excedente é **adiado** ao estoque (máximo 4) e pode voltar em rodada
 posterior. Substitui a soma de até 4 armazenados com 2 novos simultaneamente.
+
+**REST — D-038 (DESIGN CONFIRMADO, NÃO IMPLEMENTADO):** é o comando usado para
+**guardar as ações restantes**. Ao escolhê-lo, o personagem **encerra sua
+participação na rodada sem gastar nenhum ACT**, conserva os atos ainda disponíveis
+no estoque para a próxima rodada (máximo de 4, respeitando D-005) e recupera
+**exatamente 2 EN**, sem porcentagem e sem ultrapassar o EN máximo. REST não
+realiza ataque, não consome um ato por si só e não concede uma nova ação imediata.
+O encerramento da participação evita múltiplas recuperações de REST na mesma
+rodada pelo mesmo personagem. O REST **substitui apenas** a regra anterior de
+custo de 1 ato e recuperação de 20% pela escolha de descanso (histórico D-006);
+**não altera** a regeneração automática no fim da rodada, as regras gerais
+de armazenamento ou outros comandos. **Divergência de implementação:**
+`BattleController._player_turn()` gasta o ato antes da escolha e ainda usa
+`actor.recover_en(0.2)` para REST; o HTML jogável anterior também ainda
+executa o comportamento antigo. Alterações no motor/HTML e testes são pendentes.
 
 ### 7.1 Reações — decisões da Rodada 2 (D-014) — **CONFIRMADO como design**
 
@@ -2189,6 +2206,19 @@ Formato: ID · data · decisão · estado · impacto documental.
 - **D-036 · 2026-11-21 (Rodada 12: 1D; 2A; 3D; 4A; 5A; 6A; 7A; 8A)** · **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**: (1D) cada efeito danoso declara participação no piso mínimo; (2A) piso 1 após modificadores e arredondamento, somente com contato e afinidade válida, excluindo Null/Absorb; (3D) duas baterias resistentes separadas, com SP igual e SP 80 vs 88, sem limiar estatístico novo; (4A) domínio de estados dos limites efetivos do motor e transições permitidas, sem teto inventado; (5A) resolver eventos já comprometidos antes da captura de atributos/seleção atômica; (6A) snapshots JSON guardam tempos como inteiros em microssegundos; (7A) recusar replay exato sem versão mecânica disponível, preservando dados originais; (8A) exigir igualdade exata do rastro mecânico em 30/60/120 FPS sob inputs/seed controlados. **Precedência:** D-034 (barra fixa 1 s) e D-035 (mesma largura POINT para IA) já **IMPLEMENTADAS**, sem restaurar duração variável histórica D-033. **PENDENTES:** campos dos efeitos, proof de domínio de estados, parâmetros e limiares das baterias resistentes, precisão/quantização do relógio, ordenação de eventos e esquema dos rastros/replays. Preservadas as D-022–D-025 e D-028–D-035. **Impacto:** GDD §§4.3, 8.1.9, 20, 21 e `docs/COMBAT_SPEC.md`; índice em `docs/DECISIONS.md`. Nenhum código, save, teste ou asset modificado.
 
 - **D-037 · 2026-11-21 (Rodada 13: 1A; 2B; 3C; 4A; 5A; 6B; 7A; 8C)** · **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**: (1A) travessia uniforme e fixa em 1 segundo para todo perfil, preservando D-034; (2B) IA comum preserva D-035 e IA especial usa erro temporal triangular D-023/D-024, com mesma largura POINT e autoacerto sem reação D-022; (3C) piso de 1 por **pacote mecânico de dano identificado**, associado a efeitos que declaram participação, sem multiplicação por efeito; (4A) prova de cobertura em certificados por intervalo com contraexemplo de falha; (5A) eventos mecânicos simultâneos ordenados por sequência estável atribuída no comprometimento; (6B) quantização ao microssegundo inteiro mais próximo, **política de empate ainda pendente**; (7A) rastro canônico com ID, sequência, tempo, tipo, participantes, alterações, decisões, configuração/versão e RNG necessário; (8C) **≥95%** de casos com SP igual e 5–7 acertos para resistente, mas bateria SP 80/88 **apenas diagnóstica**, sem limiar. **PENDENTES:** amostragem, política de empate de microssegundos, pacotes/identidades de efeitos, prova intervalar, esquema de trace/seed e implementação de IA temporal. **Preservadas** D-022–D-025 e D-028–D-036; D-034/D-035 seguem **IMPLEMENTADAS** no que já consta do código. **Impacto:** GDD §§4.4, 8.1.10, 20, 21; `docs/COMBAT_SPEC.md`; `docs/DECISIONS.md`. Nenhum código, teste, asset ou save modificado.
+
+- **D-038 · 2026-11-21** · **REST / guardar ações — CONFIRMADO como design; NÃO
+  IMPLEMENTADO:** escolher REST **não gasta ACT**, encerra a participação daquele
+  personagem na rodada, guarda os atos ainda não utilizados para a próxima rodada
+  (estoque até 4, respeitando D-005) e recupera **2 EN fixos**, limitado ao EN
+  máximo. Não usar percentual para a recuperação concedida pelo REST nem permitir
+  recuperar 2 EN repetidamente sem encerrar sua participação. Esta decisão
+  **SUBSTITUI** somente o custo de um ato e a recuperação de 20% do REST
+  documentados anteriormente (D-006). A regeneração automática de 20% do EN no
+  fim da rodada permanece como regra separada; PASS e demais comandos não são
+  modificados. **DIVERGÊNCIA:** código Godot e HTML anterior mantêm o REST antigo;
+  implementação e testes permanecem pendentes. Impacto documental: GDD §§4.1,
+  6, 7 e `docs/COMBAT_SPEC.md`; ID registrado em `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
