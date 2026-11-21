@@ -28,6 +28,13 @@ func _run() -> void:
 		return
 	var battle := _new_battle()
 	_check(battle.hud.mode == "command", "Real battle must wait for a command")
+	# D-034: the compact bar must draw the configured POINT width, not a fixed 10%.
+	var track: float = battle.rhythm.BAR_WIDTH - 20.0
+	for half in [BattleMath.POINT_MIN_HALF_WIDTH, BattleMath.POINT_MAX_HALF_WIDTH]:
+		battle.rhythm.configure(half)
+		_check(is_equal_approx(battle.rhythm._point_zone.size.x, track * half * 2.0), "Compact POINT width must follow configure(%s)" % half)
+		_check(is_equal_approx(battle.rhythm._point_zone.position.x + battle.rhythm._point_zone.size.x / 2.0, 10.0 + track / 2.0), "Compact POINT must stay centered")
+	battle.rhythm.configure(BattleMath.POINT_HALF_WIDTH)
 	_check(battle.hud.players[0] == battle.state.units[0], "HUD must reference real units")
 	_check(battle.hud.players[0].current_hp == 14, "HUD must show live HP")
 	battle._fallen.current_hp = 1

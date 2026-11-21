@@ -318,7 +318,7 @@ func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
 	return attack_result
 
 
-func _manual_rhythm(duration: float) -> int:
+func _manual_rhythm(duration: float, point_half: float) -> int:
 	hud.mode = "timing"
 	if timing_role == "DEFEND":
 		rhythm._label.text = "DEFEND: %s vs %s | Z" % [short_name(action_defender), short_name(action_attacker)]
@@ -326,7 +326,7 @@ func _manual_rhythm(duration: float) -> int:
 		rhythm._label.text = "ATTACK: %s -> %s | Z" % [short_name(action_attacker), short_name(action_defender)]
 	hud.message = rhythm._label.text
 	hud.feedback = "Z / Enter or click: stop marker in the center"
-	var result: int = await super._manual_rhythm(duration)
+	var result: int = await super._manual_rhythm(duration, point_half)
 	hud.feedback = timing_role + ": " + _rhythm_name(result)
 	hud.mode = "busy"
 	return result
@@ -451,7 +451,7 @@ func handle_confirm() -> void:
 		"target": submit_target(hud.target)
 		"timing":
 			if rhythm._running:
-				rhythm._finish(BattleMath.rhythm_zone(rhythm._elapsed / rhythm.duration))
+				rhythm._finish(BattleMath.rhythm_zone(rhythm._elapsed / rhythm.duration, rhythm._point_half_width))
 		"react": answer_reaction(true)
 		"absorb":
 			if _mash_active:
