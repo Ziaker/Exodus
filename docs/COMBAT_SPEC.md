@@ -70,15 +70,17 @@
 - Modificador de SP: rolar `1dN` onde `N = |SP_atuante - SP_alvo|`;
   soma se o atuante tem mais SP, subtrai se tem menos.
 - Variação: `±10% ± 2% por ponto de diferença de SP` (sinal conforme vantagem).
-- Crítico: multiplicador **×1.5**; chance = `AGI% + 10% por ponto de diferença de SP`.
+- Crítico: multiplicador **×1.5**; chance = `AGI% + clamp(ΔSP × 10%, 0%, 30%)`,
+  limitada a 0–100% (**D-016**). Desvantagem de SP não reduz a chance abaixo do AGI.
 - SP **não** multiplica o dano diretamente.
 - Ganho de SP: **+1** por crítico, desvio perfeito, acerto em fraqueza e reação.
 - Crítico, Press Turn e ganhos de SP por fraqueza/crítico só são aplicados quando
   há **contato** (ritmo de ataque diferente de Falha e defesa diferente de Desvio).
   Ataques que falham não consomem rolagens de dano.
-- **PENDENTE (balanceamento, sem alteração de fórmula):** `AGI + 10 × ΔSP` atinge
-  100% com ΔSP=10 para AGI=0 (ou ΔSP=4 para o Fallen de teste, AGI=6). Qualquer
-  mudança exige aprovação.
+- **D-016 (2026-11-21):** o bônus de SP no crítico foi limitado a **+30 pontos
+  percentuais** (`BattleMath.CRIT_SP_BONUS_CAP`). Substitui a fórmula irrestrita
+  `AGI + 10 × ΔSP`, que chegava a 100% com ΔSP=4 para o Fallen de teste. O limite
+  geral de 0–100% e o multiplicador ×1.5 permanecem. **IMPLEMENTADO.**
 
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
@@ -87,8 +89,9 @@
   reação e pagou 1 ato. Atacante e defensor controlados pela IA resolvem seu próprio
   ritmo sem entrada humana.
 - Barra com marcador móvel; janela do oponente define as zonas.
-- **PENDENTE:** precedência quando atacante e defensor acertam POINT simultaneamente.
-  O comportamento atual do código (defesa prevalece, 0 dano) foi preservado.
+- **D-015 (2026-11-21):** quando atacante e defensor acertam **POINT** simultaneamente,
+  a **defesa prevalece**: não há contato, o dano é 0 e não há crítico, Press Turn nem
+  ganho de SP. **IMPLEMENTADO** em `BattleMath.has_contact()`.
 - Zonas: **Ponto = 10% central**, **Trave = 20% ao redor**, resto = falha.
 - Tecla: **Z / Enter**.
 - Duração da janela: `1s - 0,05s por ponto de AGI/SP a favor do atuante`, mínimo `0,2s`.
@@ -109,10 +112,9 @@
   já praticado no código e agora confirmado como regra de design.
 - **3A e 4A:** sem atos não há bloqueio/desvio; com reação elegível,
   pausar a escolha e manter o tempo de execução da barra.
-- A resposta **1E** não fixa o resultado quando ataque e defesa
-  têm ambos **POINT** numa situação com reação. A precedência
-  exata continua **PENDENTE**, mesmo que o código atual dê
-  prioridade ao desvio (0 dano).
+- A precedência POINT/POINT foi fixada por **D-015**: a defesa prevalece
+  (0 dano, sem recompensas). O restante da resposta **1E** segue pendente
+  conforme registrado no GDD §4.1.
 - As zonas fixas descritas acima representam o **protótipo vigente**;
   os perfis variáveis de ritmo por inimigo e seus limites ainda
   estão em elaboração no GDD §8.1. D-014 não os cancela.
@@ -125,10 +127,13 @@
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
 - Absorção: restrita a **Fallen**; requer button mashing; **0 pressionamentos = falha,
   sem ganhos**. Um alvo absorvido é marcado e não pode render recompensas repetidas.
+- **D-017 (2026-11-21): uma absorção bem-sucedida sempre elimina o alvo** (`current_hp =
+  0`), que deixa de agir e pode encerrar o combate se for o último inimigo.
+  **IMPLEMENTADO.**
 - Ganho: 1–3 pontos do maior atributo do inimigo (exceto EN/SP/HP), mais SP base, HP e EN extras.
-- **PENDENTE:** fórmula exata de dificuldade do mashing, eliminação do alvo, novas
-  tentativas após falha, limite de HP e persistência entre batalhas. Nada disso foi
-  inventado; os ganhos atuais permanecem apenas dentro da batalha.
+- **PENDENTE:** fórmula exata de dificuldade do mashing, novas tentativas após falha,
+  limite de HP e persistência entre batalhas. Nada disso foi inventado; os ganhos
+  atuais permanecem apenas dentro da batalha.
 - Sem equipamentos e sem magia neste protótipo.
 
 ## IA

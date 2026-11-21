@@ -1,0 +1,32 @@
+{
+  "note": "Temporary visual placeholders from Shin Megami Tensei VX - The Genesis. Not for distribution.",
+  "source_env": "EXODUS_ASSET_SOURCE",
+  "default_source": "Shin Megami Tensei VX The Genesis/Shin Megami Tensei The Genesis",
+  "mappings": [
+    { "source": "Graphics/Animations", "dest": "assets/graphics/animations" },
+    { "source": "Graphics/Battlers", "dest": "assets/graphics/battlers" },
+    { "source": "Graphics/Characters", "dest": "assets/graphics/characters" },
+    { "source": "Graphics/Faces", "dest": "assets/graphics/faces" },
+    { "source": "Graphics/Parallaxes", "dest": "assets/graphics/parallaxes" },
+    { "source": "Graphics/Pictures", "dest": "assets/graphics/pictures" },
+    { "source": "Graphics/System", "dest": "assets/graphics/system" },
+    { "source": "Audio/BGM", "dest": "assets/audio/bgm" },
+    { "source": "Audio/BGS", "dest": "assets/audio/bgs" },
+    { "source": "Audio/ME", "dest": "assets/audio/me" },
+    { "source": "Audio/SE", "dest": "assets/audio/se" },
+    { "source": "Fonts", "dest": "assets/fonts" }
+  ],
+  "derived": [
+    { "source": "_prepared/battle_sprites/Avatar Anubis.png", "dest": "assets/graphics/battle_sprites/Avatar Anubis.png" },
+    { "source": "_prepared/battle_sprites/Avatar Chimera.png", "dest": "assets/graphics/battle_sprites/Avatar Chimera.png" }
+  ],
+  "required": [
+    "assets/graphics/faces/001_daitenshi.png",
+    "assets/graphics/parallaxes/BB01-001.png",
+    "assets/graphics/system/Window.png",
+    "assets/fonts/msgothic.ttf",
+    "assets/audio/bgm/DDS1_01.ogg",
+    "assets/graphics/battle_sprites/Avatar Anubis.png",
+    "assets/graphics/battle_sprites/Avatar Chimera.png"
+  ]
+}

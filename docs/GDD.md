@@ -259,10 +259,11 @@ com perfis especiais e testes de sincronização entre cursor visual e resultado
 - **4A:** escolher reação com o combate pausado, mas executar a barra
   com temporização e precisão normais.
 
-**PENDENTE:** interação entre POINT ofensivo e POINT defensivo quando
-ambos possam ocorrer; a resposta 1E reformulou a questão de precedência,
-mas não homologou uma ordem específica para resultados simultâneos.
-Também permanece pendente decidir se o ataque inimigo acerta
+**D-015:** POINT ofensivo contra POINT defensivo resolve a favor da
+**defesa** — sem contato, 0 dano e nenhum crítico, Press Turn ou ganho de SP.
+Implementado em `BattleMath.has_contact()`.
+
+**PENDENTE:** decidir se o ataque inimigo acerta
 automaticamente quando a reação **seria possível**, mas o jogador
 **escolhe não reagir**. Essa situação é diferente de não poder reagir.
 
@@ -288,7 +289,8 @@ ser tratados como regras oficiais sem confirmação documental neste GDD.
 
 Fallen absorve adversários; ganha 1–3 pontos do maior atributo do inimigo (exceto
 EN/SP/HP), mais pontos de SP base, HP e EN. Realizada por button mashing, mais fácil
-quanto maior a superioridade do jogador. Detalhes em `docs/COMBAT_SPEC.md`.
+quanto maior a superioridade do jogador. **D-017:** a absorção bem-sucedida
+elimina o alvo. Detalhes em `docs/COMBAT_SPEC.md`.
 Ambiguidade pendente em A-07. Implementação atual é protótipo, sem o sistema completo
 de mashing escalonado.
 
@@ -473,11 +475,14 @@ Nenhum número de balanceamento deve ser considerado oficial sem decisão do dir
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
-2. **D-014:** bloqueio Trave homologado em 50%. Permanecem pendentes a precedência POINT/POINT, a escolha voluntária de não reagir, os empates de AGI e as regras de interrupção.
-3. A-07/A-10 — dificuldade de absorção, eliminação do alvo e persistência entre
-   batalhas permanecem indefinidas.
+2. **D-014:** bloqueio Trave homologado em 50%. **D-015** resolve a precedência
+   POINT/POINT; permanecem pendentes a escolha voluntária de não reagir, os empates
+   de AGI e as regras de interrupção.
+3. A-07/A-10 - dificuldade de absorção e persistência entre batalhas permanecem
+   indefinidas; **D-017** homologou a eliminação do alvo.
 4. A-08 — inventário de itens não implementado.
-5. Reprodução de assets — cena depende de arquivos ignorados pelo Git.
+5. Reprodução de assets — **D-018:** placeholders visuais permanecem, com
+   manifesto e script de setup locais; nenhum asset de terceiros é publicado.
 6. Alterações locais permanecem não publicadas conforme decisão anterior do diretor.
 7. Toda a narrativa além da premissa está indefinida.
 8. Sem magia, equipamentos, save/load ou loop de jogo completo.
@@ -578,6 +583,27 @@ Formato: ID · data · decisão · estado · impacto documental.
   opção voluntária de não reagir, empate de AGI e interrupção/cancelamento.
   **Impacto:** GDD §§4.1, 7.1, 8.2, 21; COMBAT_SPEC §§Atos e reações,
   Sistema de ritmo. Código, testes e demais documentos não alterados.
+
+- **D-015 · 2026-11-21** · Precedência POINT/POINT: **a defesa prevalece** —
+  ataque e defesa perfeitos resultam em 0 dano, sem crítico, Press Turn ou SP.
+  **CONFIRMADO e IMPLEMENTADO.** Impacto: `BattleMath.has_contact()`,
+  `battle_controller.gd`, GDD §8.2, `COMBAT_SPEC.md` §Sistema de ritmo.
+- **D-016 · 2026-11-21** · Chance de crítico passa a ser
+  `AGI% + clamp(ΔSP × 10%, 0%, 30%)`, limitada a 0–100%. Desvantagem de SP não
+  reduz o valor abaixo do AGI; multiplicador ×1.5 inalterado. **CONFIRMADO e
+  IMPLEMENTADO.** Impacto: `BattleMath.crit_chance`, `CRIT_SP_BONUS_CAP`,
+  `COMBAT_SPEC.md` §Dano, GDD §5.
+- **D-017 · 2026-11-21** · Uma absorção bem-sucedida **sempre elimina o alvo**
+  (`current_hp = 0`), impedindo novas ações e recompensas repetidas; se for o
+  último inimigo, o combate termina. **CONFIRMADO e IMPLEMENTADO.** Impacto:
+  `BattleUnit.consume_by_absorption()`, `battle_controller.gd`,
+  `COMBAT_SPEC.md` §Itens e absorção, GDD §10.
+- **D-018 · 2026-11-21** · Os assets temporários **continuam sendo usados apenas
+  como placeholder visual**; não são publicados nem substituídos nesta etapa.
+  Reprodutibilidade por `assets/ASSET_MANIFEST.json` e
+  `tools/setup_placeholder_assets.py`, com validação dos arquivos exigidos.
+  **CONFIRMADO e IMPLEMENTADO.** Impacto: `.gitignore`, `assets/SOURCE_ASSETS.md`,
+  `tests/test_asset_manifest.gd`, GDD §21.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

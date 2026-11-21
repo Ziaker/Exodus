@@ -320,8 +320,7 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 
 	# No contact: skip damage, crit, affinity and SP rolls entirely. This also
 	# avoids consuming random numbers for an outcome already determined.
-	var contact := attack_timing != BattleMath.RhythmResult.MISS \
-		and defense_timing != BattleMath.RhythmResult.POINT
+	var contact := BattleMath.has_contact(attack_timing, defense_timing)
 	if not contact:
 		_append_log("%s -> %s: 0 dmg (rhythm %s, def %s, NO CONTACT)" % [
 			attacker.display_name, defender.display_name,
@@ -449,6 +448,9 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	if target.absorbed:
 		_append_log("ABSORB failed: %s was already absorbed." % target.display_name)
 		return
+	if not target.is_alive():
+		_append_log("ABSORB failed: %s is already defeated." % target.display_name)
+		return
 	_append_log("ABSORPTION: mash Z / ENTER!")
 	_mash_active = true
 	_mash_count = 0
@@ -481,9 +483,9 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	actor.current_hp = mini(actor.stats.max_hp, actor.current_hp + gained)
 	actor.current_en = mini(actor.stats.max_en, actor.current_en + gained)
 	actor.restore_sp()
-	target.absorbed = true
+	target.consume_by_absorption()
 	_flash_feedback("ABSORBED")
-	_append_log("Absorbed %d %s (+HP/+EN); %s marked absorbed; SP base %d." % [
+	_append_log("Absorbed %d %s (+HP/+EN); %s eliminated; SP base %d." % [
 		gained, stat_name, target.display_name, actor.sp_base()])
 
 

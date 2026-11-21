@@ -13,5 +13,6 @@ Godot_v*.exe
 assets/**
 !assets/
 !assets/SOURCE_ASSETS.md
+!assets/ASSET_MANIFEST.json
 data/extracted/
 captures/

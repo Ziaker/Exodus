@@ -63,6 +63,13 @@ func restore_sp() -> void:
 func recover_en(fraction: float) -> void:
 	current_en = mini(stats.max_en, current_en + int(float(stats.max_en) * fraction))
 
+## D-017: a successful absorption consumes the target. It cannot act again,
+## cannot be absorbed twice and no longer counts as a living enemy.
+func consume_by_absorption() -> void:
+	absorbed = true
+	current_hp = 0
+
+
 func take_damage(amount: int) -> int:
 	var applied := mini(current_hp, maxi(0, amount))
 	current_hp -= applied

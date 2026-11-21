@@ -14,6 +14,7 @@ const MAX_STORED_ACTS: int = 4
 const BASE_VARIATION: float = 0.10
 const VARIATION_PER_SP: float = 0.02
 const CRIT_MULTIPLIER: float = 1.5
+const CRIT_SP_BONUS_CAP: float = 30.0
 const MAX_RHYTHM_SECONDS: float = 1.0
 const MIN_RHYTHM_SECONDS: float = 0.2
 const RHYTHM_SECONDS_PER_POINT: float = 0.05
@@ -31,9 +32,19 @@ static func affinity_multiplier(affinity: Affinity) -> float:
 		_:
 			return 1.0
 
+## D-016: SP contributes at most +30 percentage points. A disadvantage never
+## lowers the chance below the AGI base. Final result stays within 0..100.
 static func crit_chance(agi: int, sp_difference: int) -> float:
-	var chance := float(agi) + float(sp_difference) * 10.0
-	return clampf(chance, 0.0, 100.0)
+	var sp_bonus := clampf(float(sp_difference) * 10.0, 0.0, CRIT_SP_BONUS_CAP)
+	return clampf(float(agi) + sp_bonus, 0.0, 100.0)
+
+
+## D-015: a perfect defense overrides a perfect attack. Contact is the only
+## gate for damage, Press Turn and SP rewards.
+static func has_contact(attack_timing: RhythmResult,
+		defense_timing: RhythmResult) -> bool:
+	return attack_timing != RhythmResult.MISS \
+		and defense_timing != RhythmResult.POINT
 
 static func rhythm_duration(attacker_agi: int, defender_agi: int,
 		attacker_sp: int, defender_sp: int) -> float:

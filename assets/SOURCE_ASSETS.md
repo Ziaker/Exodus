@@ -33,3 +33,19 @@ Derived temporary assets:
   screen). The originals remain untouched in `assets/graphics/battlers/`.
 
 These assets are for prototyping only and must be replaced before any distribution.
+
+## Reprodutibilidade (placeholders visuais)
+
+Os arquivos continuam sendo **apenas placeholders visuais temporários** e não são
+versionados. `assets/ASSET_MANIFEST.json` lista os diretórios mapeados e os arquivos
+necessários para a cena de combate. Para preparar um checkout limpo:
+
+```
+python tools/setup_placeholder_assets.py [RAIZ_DO_SOURCE] [--force]
+```
+
+A raiz pode ser informada como argumento ou pela variável `EXODUS_ASSET_SOURCE`;
+sem isso, usa-se `Shin Megami Tensei VX The Genesis/Shin Megami Tensei The Genesis`.
+Os dois battlers derivados (`avatar` com fundo removido) devem estar em
+`_prepared/battle_sprites/` dentro da raiz — o script copia e valida todos os arquivos
+exigidos. Nada é baixado e nenhum asset de terceiros é publicado.

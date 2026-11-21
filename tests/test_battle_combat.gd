@@ -120,18 +120,19 @@ func test_absorption_without_input_grants_nothing() -> void:
 	assert_eq(battle._fallen.stats.max_hp, before_hp)
 
 
-func test_absorption_success_marks_target_once() -> void:
+func test_absorption_success_eliminates_target_once() -> void:
 	var battle := await _fresh_battle()
 	var target: BattleUnit = battle.state.units[2]
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 12)
 	_choose(battle, 3)
 	await get_tree().create_timer(2.4).timeout
 	assert_true(target.absorbed)
-	var marked := 0
+	assert_false(target.is_alive(), "a successful absorption consumes the target")
+	var eliminated := 0
 	for line in battle.log_history:
-		if line.contains("marked absorbed"):
-			marked += 1
-	assert_eq(marked, 1)
+		if line.contains("eliminated"):
+			eliminated += 1
+	assert_eq(eliminated, 1)
 	battle._perform_absorption(battle._fallen, target)
 	await get_tree().process_frame
 	var repeated := 0
@@ -139,6 +140,20 @@ func test_absorption_success_marks_target_once() -> void:
 		if line.contains("already absorbed"):
 			repeated += 1
 	assert_eq(repeated, 1)
+
+
+func test_absorption_of_last_enemy_ends_battle() -> void:
+	var battle := await _fresh_battle()
+	var first: BattleUnit = battle.state.units[2]
+	var last: BattleUnit = battle.state.units[3]
+	last.take_damage(last.current_hp)
+	assert_false(last.is_alive())
+	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 12)
+	_choose(battle, 3)
+	await get_tree().create_timer(2.4).timeout
+	assert_false(first.is_alive())
+	assert_true(battle.state.is_over())
+	assert_true(battle.state.player_victory())
 
 
 func test_ally_cannot_absorb() -> void:
