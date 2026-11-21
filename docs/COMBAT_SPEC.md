@@ -83,6 +83,58 @@
   regras. Nenhum código
   foi modificado nesta rodada.
 
+### D-032 (Rodada 10, 2A e 3A) — composição de SP e fichas de teste; DESIGN APROVADO, NÃO IMPLEMENTADO
+
+- **2A:** preservar
+  `SP_base = HP + EN +
+  ATK + MAK + DEF + MEF +
+  AGI` com sete
+  atributos inteiros;
+  HP e EN entram
+  integralmente. Sem
+  novos pesos/tetos.
+  D-007, D-021 e
+  D-028 permanecem.
+- **3A:** três **fichas
+  exclusivamente de
+  laboratório**, com
+  atributos iniciais
+  em múltiplos de 8:
+  - **Ágil:** HP 24,
+    EN 8, ATK 16,
+    MAK 8, DEF 8,
+    MEF 8, AGI 16;
+    **SP_base=88**.
+  - **Equilibrada:** HP 32,
+    EN 8, ATK 8,
+    MAK 8, DEF 8,
+    MEF 8, AGI 8;
+    **SP_base=80**.
+  - **Resistente:** HP 48,
+    EN 8, ATK 8,
+    MAK 8, DEF 16,
+    MEF 8, AGI 8;
+    **SP_base=104**.
+  Nenhum perfil
+  altera a ficha
+  canônica da espécie
+  ou o save de Fallen.
+  Referência neutra
+  versionada da
+  D-031 permanece
+  independente.
+- **Risco:** diferença
+  de SP de +24 da
+  ficha resistente
+  contra a equilibrada
+  também afeta dano,
+  críticos, dominância
+  e duração do ritmo.
+  Não impor
+  balanceamento
+  sem validação
+  matemática.
+
 ## Atos e reações
 - Cada personagem possui **2 atos por rodada**; cada ato pode ser **Ação** ou **Reação**
   (2 ações, 2 reações ou 1 de cada).
@@ -268,6 +320,86 @@
   poder 100. Não alterar
   a execução até a futura
   autorização de código.
+
+### D-032 (Rodada 10, 4A e 8A) — metas de acertos e aceitação estatística; DESIGN, NÃO IMPLEMENTADO
+
+- **4A:** metas iniciais
+  de durabilidade em
+  **ataques físicos
+  bem-sucedidos**:
+  frágeis **2–3**,
+  equivalentes **3–5**
+  (D-021), resistentes
+  **5–7**. A meta
+  não define duração
+  em rodadas e não
+  afirma que as
+  fichas 3A já
+  estão balanceadas.
+- **CONFLITO registrado:**
+  poder básico 8
+  (D-031) e
+  atacante ATK 8
+  contra DEF 16
+  da ficha resistente
+  provocam dano-base
+  `8 × 8 ÷ 16 = 4`.
+  Com HP 48, são
+  **12 acertos nominais**,
+  enquanto o alvo
+  aprovado é **5–7**.
+  O SP resistente
+  104 contra SP
+  equilibrado 80
+  pode introduzir
+  `1d24` de
+  penalidade no dano
+  do atacante inferior
+  em SP. Não alterar
+  regras, estatísticas
+  ou metas por
+  suposição; é
+  **pendência de
+  balanceamento**.
+- **8A:** exigir,
+  em **10.000 casos
+  controlados** contra
+  a referência
+  equivalente, que
+  **≥95% (≥9.500)**
+  terminem com
+  **3–5 ataques
+  físicos bem-sucedidos**
+  para derrotar o alvo.
+  Os testes deverão
+  explicitar as
+  condições de
+  controle, incluindo
+  ausência de bloqueio
+  e crítico, SP
+  inicial e afinidade,
+  sorteios/seeds,
+  arredondamentos e
+  contagem de acertos,
+  antes de serem
+  considerados
+  evidência. Nenhuma
+  distribuição/seed
+  foi homologada
+  implicitamente.
+- A variação aleatória
+  fixa de ±10%
+  (D-019) segue
+  **aprovada em
+  design, mas não
+  implementada**;
+  o código atual
+  usa a amplitude
+  variável anterior.
+  **Nenhuma simulação
+  foi executada** por
+  esta decisão
+  documental.
 
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
@@ -671,6 +803,146 @@
   D-031. Nenhuma alteração
   em scripts, testes ou
   recursos nesta rodada.
+
+### D-032 (Rodada 10, 1C; 5A; 6A; 7A) — duração, variantes e replay; DESIGN, NÃO IMPLEMENTADO
+
+- **1C:** recalibrar
+  `BattleMath.rhythm_duration()`
+  de **50 ms por
+  ponto combinado**
+  de ΔAGI+ΔSP para
+  **50 ms por 8
+  pontos combinados**.
+  Preservar base
+  **1 s**, limites
+  **0,2–1 s**, sinais
+  e duração fixa
+  durante cada barra.
+  Para diferenças
+  múltiplas de oito:
+  `T = clamp(1 -
+  0.05 × ((ΔAGI+ΔSP)/8),
+  0.2, 1)`.
+  Exemplo: ΔAGI=0,
+  ΔSP=+24 resulta
+  em **0,85 s**,
+  comparado com
+  **0,2 s** no
+  protótipo.
+  **PENDENTE:**
+  tratamento dos
+  grupos incompletos
+  (fração proporcional
+  ou somente grupos
+  inteiros) antes
+  de implementar.
+  Não modificar
+  o teto 4× da
+  velocidade, o
+  limite de
+  aceleração ou
+  os 40 ms por
+  região POINT.
+- **5A:** a validação
+  antecipada deve
+  **comprovar** que
+  existe **ao menos
+  uma variante
+  explicitamente
+  declarada e
+  válida para
+  cada estado
+  de atributos
+  alcançável**
+  no encontro.
+  Conservar
+  D-023/D-025/
+  D-031 e bloquear
+  carregamento de
+  encontro que
+  não satisfaça
+  esse contrato.
+  **PENDENTES:**
+  domínio exato de
+  estados alcançáveis,
+  limites de
+  progressão e
+  modificadores
+  existentes,
+  método de prova
+  de cobertura
+  e desempenho
+  do validador.
+  Não inventar
+  fallback, reduzir
+  limites ou
+  alterar saves
+  D-028.
+- **6A:** dentre
+  variantes
+  elegíveis,
+  selecionar a
+  **primeira na
+  ordem de
+  prioridade
+  explicitamente
+  declarada pelo
+  perfil** antes
+  da execução.
+  Não usar sorteio
+  nem maior número
+  de regiões
+  como regra
+  implícita.
+  Manter a captura
+  AGI/SP da
+  D-031 no início
+  da barra;
+  precedência
+  exata entre
+  captura e
+  elegibilidade
+  segue pendente.
+- **7A:** registrar
+  snapshots em
+  **JSON versionado,
+  independentes da
+  apresentação
+  visual**.
+  Preservar o
+  conteúdo do
+  registro
+  reproduzível
+  D-023/D-024/
+  D-031: seed,
+  IDs, índice
+  de execução,
+  parâmetros
+  resolvidos
+  completos,
+  AGI/SP capturados
+  e marcos de
+  timing/inputs.
+  Esquema, versão
+  inicial, precisão
+  numérica e
+  compatibilidade
+  entre resolvedores
+  permanecem
+  **PENDENTES**.
+  Não foi criado
+  arquivo JSON.
+- **Estado do motor:**
+  a duração ainda
+  usa 0,05 s por
+  ponto combinado,
+  as zonas são
+  fixas e a
+  avaliação depende
+  da posição visual
+  do marcador.
+  D-032 não
+  altera código.
 
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 

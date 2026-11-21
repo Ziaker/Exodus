@@ -230,6 +230,29 @@ reclassificada como não executada. A variação de dano da D-019 em
 
 ---
 
+### 5.3 Rodada 10 — D-032 (2A), preservação da composição do SP — **CONFIRMADO como design**
+
+**2A:** preservar **integralmente** a regra vigente
+`SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI`;
+HP e EN contam com o **valor integral** na soma
+dos sete atributos. Não reduzir seus pesos, não
+excluir nenhum termo e não estabelecer teto de
+SP por inferência. A D-007 (dominância por razão),
+os ganhos de +1 SP, a fórmula crítica D-021
+**já implementada** e a persistência de atributos
+D-028 permanecem inalterados.
+
+**Risco conhecido:** HP maior também aumenta o
+SP base, podendo favorecer durabilidade, rolagem
+de dano por diferença de SP, chance crítica,
+cadência do ritmo e economia de atos. A resposta
+2A preserva essa relação, mas **não comprova**
+seu equilíbrio nas novas fichas. A fórmula de
+duração é objeto da escolha separada 1C e não
+altera o cálculo de SP base.
+
+---
+
 ## 6. Atributos e recursos — **CONFIRMADO**
 
 HP, EN (Energy Points), ATK, MAK (magic attack), DEF, MEF (magic defense), AGI e SP.
@@ -317,6 +340,38 @@ físicos conforme D-019/D-021, sem alterar a fórmula autorizada.
   `BattleController._create_units()` ainda
   usam valores anteriores; o código e os
   recursos de unidades **não foram alterados**.
+
+---
+
+### 6.3 Rodada 10 — D-032 (3A), três fichas de laboratório — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+**3A:** estabelecer três **perfis de teste** para
+avaliação da escala, **sem criar espécies
+canônicas ou alterar combatentes do jogo**.
+Fichas iniciais seguem a D-025/D-031, em
+múltiplos de 8:
+
+| Perfil de teste | HP | EN | ATK | MAK | DEF | MEF | AGI | SP_base derivado |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Ágil | 24 | 8 | 16 | 8 | 8 | 8 | 16 | **88** |
+| Equilibrado | 32 | 8 | 8 | 8 | 8 | 8 | 8 | **80** |
+| Resistente | 48 | 8 | 8 | 8 | 16 | 8 | 8 | **104** |
+
+A referência neutra **independente e versionada**
+da D-031 (HP 32, EN 8, demais atributos 8)
+permanece; a coincidência com a linha equilibrada
+não autoriza acoplar seus arquivos ou estados.
+A D-028 preserva os ganhos de absorção; fichas
+de laboratório não herdam progresso persistente
+de Fallen.
+
+**PENDENTES:** representação e versionamento das
+três fichas, identidade e categoria de
+habilidade dos inimigos reais, amostras de
+teste e compatibilidade efetiva com as metas
+de durabilidade da escolha 4A. Estes valores
+são **referências de laboratório**, não novas
+fichas de inimigos já publicadas no jogo.
 
 ---
 
@@ -953,6 +1008,116 @@ dinâmicos no código atual.
 
 ---
 
+### 8.1.7 Rodada 10 — D-032 (1C; 5A; 6A; 7A), duração e perfis reproduzíveis — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+1. **1C — recalibração da duração global:** substituir
+   a taxa anterior de **50 ms por ponto** de vantagem
+   combinada (`ΔAGI + ΔSP`) por **50 ms para cada
+   8 pontos de vantagem combinada**.
+   Manter o tempo-base de **1 s**, os limites
+   de **0,2–1 s**, o sinal da vantagem e a
+   referência atacante/defensor já adotada.
+   Para diferenças múltiplas de 8, o
+   contrato é inequívoco:
+   `T = clamp(1 − 0,05 × ((ΔAGI + ΔSP)/8), 0,2, 1)`
+   em segundos, interpretando o quociente
+   exatamente nos casos múltiplos.
+   Exemplo com ΔAGI=0, ΔSP=+24:
+   **T = 0,85 s**, contra **0,2 s** da
+   implementação anterior.
+   **PENDENTE:** se valores combinados
+   que **não** forem múltiplos de 8
+   usam contribuição proporcional
+   fracionária ou apenas grupos
+   completos, inclusive sinais
+   negativos; não homologar
+   arredondamento por suposição.
+   A decisão **substitui explicitamente**
+   a taxa da função atual
+   `BattleMath.rhythm_duration()`,
+   mas **não foi implementada**.
+   Preservar a D-020: o tempo calculado
+   permanece constante durante a barra,
+   mesmo com cadência variável.
+2. **5A — cobertura total de variantes:**
+   o validador de um encontro deve
+   **comprovar antecipadamente** que
+   existe **pelo menos uma variante
+   expressamente declarada e válida**
+   para **cada estado de atributos
+   permitido e alcançável naquele
+   encontro**, antes de disponibilizá-lo.
+   Preservar D-023 (válido por construção),
+   D-025 (bloquear carregamento de
+   encontro impossível), D-031
+   (alternativas explícitas), os
+   limites de cadência e as
+   condições de três zonas.
+   **PENDENTES:** o conjunto exato de
+   estados alcançáveis, limites/
+   representação de modificadores
+   de AGI/SP e método verificável
+   de demonstração de cobertura.
+   A absorção persistente da
+   D-028 pode ampliar substancialmente
+   esse espaço; não inventar
+   um limite de progressão para
+   facilitar a prova. Não autorizar
+   fallback genérico ou descarte
+   silencioso de ação.
+3. **6A — escolha entre variantes
+   elegíveis:** cada perfil declara
+   uma **lista ordenada de prioridade**
+   das variantes. Se mais de uma
+   variante já validada for elegível,
+   selecionar a **primeira nessa
+   ordem** antes da execução.
+   Não priorizar automaticamente
+   maior número de regiões, sorteio
+   por seed ou proximidade geométrica.
+   Manter o snapshot dos
+   parâmetros resolvidos D-024
+   e a captura AGI/SP D-031;
+   a ordem entre captura, avaliação
+   de elegibilidade, escolha e
+   início da barra exige contrato
+   operacional próprio, ainda
+   **PENDENTE**.
+4. **7A — formato de replay:** registrar
+   snapshots em **JSON versionado,
+   independente da apresentação
+   visual**, preservando como dados
+   necessários os parâmetros
+   resolvidos completos do perfil
+   (D-024), identidade/seed/índice
+   (D-023), AGI/SP capturados (D-031)
+   e instantes relevantes de input
+   e classificação mecânica.
+   Não declarar esquema, nomes de
+   campos, versão inicial, algoritmo
+   de serialização, precisão dos
+   números ou compatibilidade
+   entre versões como aprovados;
+   esses detalhes permanecem
+   **PENDENTES**. Não foi criado
+   arquivo JSON nesta rodada.
+
+**Risco de integração:** a nova
+taxa de duração melhora o
+intervalo útil contra diferenças
+de SP elevadas, mas estados
+persistentes de D-028 ainda podem
+saturar os limites de duração.
+A cobertura formal exigida em
+5A precisa considerar essa
+realidade sem modificar
+silenciosamente a progressão
+nem enfraquecer as garantias
+de temporização de D-021/D-025.
+Nenhum script foi alterado.
+
+---
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -1319,6 +1484,75 @@ e execução de testes.
 
 ---
 
+**D-032 (Rodada 10, 4A) — metas de durabilidade:**
+para testes de **ataques físicos bem-sucedidos**,
+manter alvos iniciais de **2–3 acertos para
+inimigos frágeis**, **3–5 para equivalentes**
+(D-021) e **5–7 para resistentes**. Trata-se
+de **critério de balanceamento**, não
+garantia de que as fichas aprovadas em
+3A já o satisfaçam, nem de duração
+em rodadas. Preservar o poder 8
+do ataque físico básico (D-031) e a
+fórmula `poder × ATK / DEF` (D-019).
+
+**CONFLITO QUANTITATIVO NÃO RESOLVIDO:**
+com o atacante de referência (ATK 8,
+poder 8), a ficha de laboratório
+resistente aprovada em D-032 (3A)
+tem HP 48 e DEF 16: dano-base
+`8 × 8 / 16 = 4`, exigindo
+**12 acertos nominais** para
+zerar 48 HP — fora da meta de
+**5–7**. Além disso, o SP base
+resistente é **104**, contra
+**80** no equilibrado, e a
+regra `1d24` de diferença
+de SP pode reduzir ainda mais
+o dano de quem tem SP menor.
+**Não corrigir** os atributos
+nem mudar o poder básico,
+o modificador de SP, a
+fórmula ou as metas
+sem decisão adicional do
+diretor. Esse conflito
+impede homologar como
+balanceado o cenário
+resistente proposto.
+
+**D-032 (Rodada 10, 8A) — aceitação estatística:**
+em uma bateria de **10.000
+casos controlados** contra a
+referência equivalente, exigir
+que **pelo menos 95%**
+(`≥9.500` casos) resultem em
+derrota com **3–5 ataques
+físicos bem-sucedidos**.
+Preservar a finalidade
+dos testes de referência
+sem bloqueios/críticos
+e a separação de rolagens
+de SP e variação de dano.
+**PENDENTES:** especificação
+completa do experimento
+(afinidade, atributos,
+estado inicial de SP,
+seeds, arredondamento,
+efeitos permitidos, forma
+de contagem dos acertos
+e ferramenta executável)
+e validação da variação
+fixa de ±10% da D-019,
+que **ainda não está
+implementada**.
+O limiar de 95% foi
+**aprovado como meta**;
+não foram executadas
+10.000 simulações nesta
+rodada.
+
+---
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -1420,6 +1654,30 @@ e execução de testes.
     implementado.**
     Pendências nas §§6.2,
     7.3, 8.1.6 e 20.
+
+---
+
+20. **D-032 — Rodada 10:** taxa
+    de duração de 50 ms/8
+    pontos combinados,
+    preservação de SP base
+    com sete atributos,
+    três fichas de teste,
+    metas de 2–3/3–5/5–7
+    acertos, prova de
+    cobertura de variantes,
+    prioridade declarada,
+    snapshots JSON versionados
+    e limiar ≥95% em 10.000
+    simulações controladas.
+    **Design aprovado; NÃO
+    IMPLEMENTADO.** O
+    conflito de 12 acertos
+    nominais contra a ficha
+    resistente está detalhado
+    em §20 e exige decisão
+    futura, sem modificação
+    desta rodada.
 
 ---
 
@@ -1744,6 +2002,69 @@ Formato: ID · data · decisão · estado · impacto documental.
   `docs/COMBAT_SPEC.md`;
   registro no índice canônico
   `docs/DECISIONS.md`.
+
+- **D-032 · 2026-11-21 (Rodada 10: 1C; 2A; 3A; 4A; 5A; 6A; 7A; 8A)** ·
+  **CONFIRMADO como design;
+  NÃO IMPLEMENTADO nesta
+  rodada**: (1C) reduzir
+  influência combinada de
+  AGI/SP na duração de
+  50 ms por ponto para
+  **50 ms por 8 pontos**,
+  preservando duração-base,
+  limites e congelamento
+  de barra; frações de
+  grupos de oito pendentes;
+  (2A) preservar soma
+  integral de HP, EN,
+  ATK, MAK, DEF, MEF e AGI
+  no SP base; (3A) três
+  fichas de laboratório:
+  ágil (SP 88),
+  equilibrada (SP 80)
+  e resistente (SP 104),
+  com atributos completos
+  em §6.3; (4A) metas
+  frágeis 2–3, equivalentes
+  3–5, resistentes 5–7
+  acertos físicos;
+  (5A) comprovar
+  antecipadamente variante
+  válida para todos os
+  estados alcançáveis;
+  (6A) escolher primeira
+  variante elegível
+  por prioridade declarada;
+  (7A) snapshots JSON
+  versionados independentes
+  de apresentação visual;
+  (8A) ao menos 95%
+  de 10.000 casos controlados
+  com derrota em 3–5
+  acertos equivalentes.
+  **Conflito preservado:**
+  ficha resistente exige
+  12 acertos nominais
+  do ataque básico e
+  não atende à meta 5–7.
+  **PENDENTES:** taxa
+  para diferenças
+  não múltiplas de oito,
+  domínio/prova de cobertura
+  de variantes, esquema JSON,
+  cenário estatístico e
+  reconciliação do caso
+  resistente. D-022–D-025,
+  D-028–D-031 preservadas.
+  **Impacto:** GDD §§5.3,
+  6.3, 8.1.7, 20, 21;
+  `docs/COMBAT_SPEC.md`;
+  ID reservado e indexado
+  em `docs/DECISIONS.md`.
+  Nenhum código, teste,
+  dado de criatura ou
+  arquivo JSON alterado
+  nesta rodada.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
