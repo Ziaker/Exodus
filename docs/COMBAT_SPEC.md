@@ -439,6 +439,11 @@
 - **3C:** o piso final de 1 dano da D-033/D-036 incide **por pacote mecânico de dano identificado e associado aos efeitos de dano participantes**. Cada efeito conserva a declaração individual de participação no piso (D-036 1D), mas vários efeitos no **mesmo pacote** não produzem automaticamente vários pisos. Aplicar uma vez ao resultado final do pacote após modificadores e arredondamento, somente com contato e afinidade que permita dano; não criar dano para efeitos de status, sem contato ou em **Null/Absorb**. Pacotes independentes e casos com mistura de efeitos participantes/não participantes carecem de contrato de agrupamento, identificação e resolução; sem inventar multiplicação por quantidade de efeitos.
 - **8C:** para o **resistente de laboratório D-033** (HP 40, DEF 8, SP_base 88), a bateria com **SP igual** exige **≥95% de casos** concluídos em **5–7 acertos físicos bem-sucedidos**. A bateria com **SP 80 versus SP 88**, já aprovada na D-036, é **somente diagnóstica**, sem limiar estatístico aprovado. Quantidade de casos por bateria, valor igual de SP, demais controles/seeds e critério de contagem permanecem **PENDENTES**; não copiar automaticamente os **10.000 casos** do teste neutro D-032/D-033. A diferença de SP pode alongar o combate; nenhum teste foi executado.
 
+### D-039 (Rodada 14, 3A; 7A) — pacote tipado e bateria resistente; DESIGN, NÃO IMPLEMENTADO
+
+- **3A:** futuros pacotes mecânicos de dano usarão **Resource tipado** com **ID estável** e associações explícitas aos efeitos, cada um com declaração de participação no piso da D-036. O piso aplica-se **uma vez por pacote**, após modificadores/arredondamento, somente com contato e afinidade que permita dano; nunca criar dano em Null/Absorb, sem contato ou por status puro. A estrutura real dos Moves deve ser auditada antes de estabelecer nomes de classes/arquivos/recursos; migração, associações e deduplicação ainda **PENDENTES**. Nenhum Resource foi criado.
+- **7A:** na bateria **resistente com SP igual** da D-037, exigir **10.000 casos controlados**, com **≥95% (≥9.500 casos)** terminando em **5–7 ataques físicos bem-sucedidos**, usando a ficha resistente de laboratório D-033 (HP 40, DEF 8, SP_base 88). Valor igual de SP, controle de teste e seeds permanecem **PENDENTES**. A bateria SP 80 contra 88 **continua diagnóstica**, sem tamanho/limiar homologados. Nenhum teste foi executado.
+
 ## Sistema de ritmo (ataques físicos)
 - Aplica-se a **todos os ataques físicos**, de ambas as partes.
 - Entrada manual: atacante controlado pelo jogador usa a barra visível para o
@@ -1017,6 +1022,12 @@
 - **7A:** cada evento do rastro mecânico canônico deve conter **identidade do evento, sequência, timestamp em µs, tipo, participantes, alterações de estado, decisões mecânicas, configuração/versão e dados de RNG necessários à reprodução**. Preservar o registro de seed, snapshots completos, versões de esquema/resolvedor e a exigência de **rastro exatamente igual em 30/60/120 FPS** sob inputs e seeds controlados (D-036). Campos, forma de dados de RNG, IDs e esquema de serialização **PENDENTES**. Nenhum JSON ou teste foi produzido.
 - **Estado técnico:** `BattleMath.rhythm_duration()` e `RhythmBar` já refletem a duração fixa/uniforme D-034; `BattleController._ai_roll()` já utiliza amostragem comum D-035. A barra ainda julga input pela posição do último frame; IA especial triangular, múltiplas zonas, certificados e rastros completos **não estão implementados**. D-037 é apenas documental.
 
+### D-039 (Rodada 14, 4A; 5B; 6A) — IDs de eventos, quantização e autoacerto; DESIGN, NÃO IMPLEMENTADO
+
+- **4A:** sequência **inteira monotônica e única por encontro**, vinculada ao **ID estável do encontro**. Reinicia a cada novo combate, mantendo identidade do conjunto dos eventos. Cada número é atribuído quando um evento mecânico fica comprometido (D-037), com ordem de compromisso fundada nas regras mecânicas, não em callbacks visuais. Valor inicial, IDs de encontro e simultaneidade residual **PENDENTES**.
+- **5B:** armazenar tempo em **microssegundos inteiros**, arredondando ao mais próximo; em empate exato, utilizar **inteiro par** (*round half to even*). Ex.: `123456,5 µs→123456`; `123457,5 µs→123458`. Exigir implementação explícita e testes, sem presumir o comportamento de `round()` do motor ou equivalência física de input.
+- **6A:** **sem reação declarada pelo jogador**, resolver **primeiro** a exceção de autoacerto inimigo D-014/D-022; erro triangular da IA especial **não pode resultar em MISS**. Não conceder crítico automático, nem alterar sorteios SP/efeitos sem autorização; detalhes de consumo RNG ainda **PENDENTES**. Preservar D-034 (1 s uniforme), D-035 (IA comum uniforme), D-037 (timing triangular exclusivamente especial).
+
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
 - **1E (ideia própria do diretor):** a **barra de ritmo** determina
@@ -1121,6 +1132,12 @@
 
 - O comportamento comum da D-035 permanece **implementado e vigente**: posição sorteada uniformemente sobre a mesma largura POINT disponível ao jogador.
 - **Somente perfis especiais** utilizarão o contrato de timing temporal triangular D-023/D-024 com escolha da melhor janela temporal D-031, preservando geometria POINT, rolagens extras por SP e D-022. A regra não implica que o caminho especial esteja implementado; distinção de perfis e parâmetros concretos continuam pendentes.
+
+### D-039 (Rodada 14, 1A; 2A; 8A) — plano de implementação por fases e liberação; DESIGN, NÃO EXECUTADO
+
+- **1A:** quatro fases futuras: **(1) base de avaliação temporal e testes; (2) perfis POINT múltiplos/IA especial; (3) pacote tipado de dano; (4) replay JSON, certificados por intervalo e integração mecânica**. Testar cada fase conforme o próprio escopo, sem adiar a verificação fundamental à fase 4.
+- **2A:** antes de alterar código, exigir auditoria do **HEAD vigente**, `AGENTS.md`, implementação existente, dados de Moves, dependências/scripts, decisões ainda vigentes versus substituídas e testes atuais; produzir mapa de contratos e plano de alterações restrito aos arquivos comprovadamente pertinentes.
+- **8A:** liberar cada fase somente com **parse executado, testes unitários e de integração pertinentes, diff auditado, conformidade com design vigente e evidência real**. A fase concluída não implica aprovação de balanceamento/visual. Preservar D-038 (REST sem ACT, +2 EN fixos e guarda de atos) como decisão independente e **fora das fases D-039**; a implementação dessa regra não foi autorizada. Nada foi implementado/testado nesta rodada documental.
 
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), oração de humanos,

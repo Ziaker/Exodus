@@ -175,6 +175,12 @@ narrativa — ainda não foi definido.
 
 **Risco de múltiplos impactos:** quatro efeitos de dano dentro do **mesmo pacote** não significam automaticamente quatro aplicações do piso. Pacotes mecânicos realmente distintos podem ter resoluções distintas, conforme configuração a definir. **PENDENTES:** estrutura e identidade estável dos pacotes, associação/ordem dos efeitos, limites do agrupamento, distribuição de afinidades por pacote, comportamento de pacotes sem efeitos participantes e tratamento de entregas duplicadas em replays. Nenhuma ficha, Resource, script ou teste foi alterado.
 
+### 4.5 D-039 (Rodada 14, 3A) — Resource mecânico tipado para pacotes de dano — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+**3A:** cada pacote mecânico de dano (D-037, 3C) deverá ser representado por **Resource mecânico tipado**, com **identificador estável**, referência/associação aos **efeitos participantes** e a **declaração individual de participação de cada efeito no piso mínimo de 1** da D-036. O piso continua incidindo **uma vez por pacote**, após todos os modificadores e arredondamento final, somente com contato e afinidade que permita dano; não inventar dano para Null/Absorb, status puro ou ataque sem contato.
+
+**Pré-condição técnica:** inspecionar a estrutura existente dos dados de Moves antes de escolher classes, nomes de Resources, arquivos, migrações ou integrações. Esta aprovação **não implica** que um Resource tipado já exista nem autoriza criar um segundo pipeline paralelo incompatível com o motor. **PENDENTES:** esquema/tipos e valor-padrão da declaração por efeito, identidade de instâncias, associações entre impactos/pacotes, deduplicação de entrega e regras para pacotes mistos. Nenhum Resource/código foi criado nesta rodada.
+
 ## 5. Superiority Points — **CONFIRMADO**
 
 `SP_base` = soma de HP, EN, ATK, MAK, DEF, MEF e AGI. SP ganho em batalha é temporário.
@@ -1202,6 +1208,14 @@ Nenhum script foi alterado.
 
 **Compatibilidade com a implementação atual:** `BattleMath.rhythm_duration()` já retorna 1 s e `point_half_width()` implementa o cálculo D-034; `RhythmBar` mantém movimento uniforme, mas ainda julga entrada pela posição do último quadro renderizado. A IA usa sorteio uniforme da D-035; o modo especial triangular, os certificados, os timestamps e a trilha canônica **não foram implementados** por esta decisão.
 
+### 8.1.11 D-039 (Rodada 14, 4A; 5B; 6A) — sequência, microssegundos e autoacerto — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+- **4A — sequência por encontro:** manter **contador inteiro monotônico próprio de cada encontro**, começando no início do combate e associado a **ID estável do encontro**. Cada evento mecânico recebe seu número estável quando comprometido (D-037), para formar ordem total reproduzível **no mesmo encontro**. Um novo encontro pode reiniciar o contador porque a identidade do encontro o distingue. A numeração deve resultar das regras mecânicas, não da ordem incidental dos callbacks ou quadros. **PENDENTES:** valor inicial, identidade única do encontro e atribuição em compromissos simultâneos/derivados. Preservar o desempate por AGI/ID entre combatentes (D-025/D-031).
+- **5B — empate exato em µs:** converter tempos dos snapshots e rastros JSON para **microssegundos inteiros**, arredondando ao inteiro mais próximo; quando o valor estiver **exatamente na metade**, arredondar para o **inteiro par** (*round half to even*). Exemplos: `123456,5 µs → 123456 µs` e `123457,5 µs → 123458 µs`. Essa regra deve ser implementada **explicitamente**; não assumir sem teste que o `round()` do motor se comporta assim. A quantização do registro **não altera por si só a autoridade do instante mecânico original** nem prova que o teclado mede microssegundos físicos.
+- **6A — autoacerto prioritário:** se o jogador **não declarar reação**, executar a exceção D-014/D-022 com **precedência sobre o erro temporal triangular da IA especial**: tal erro não pode produzir MISS. Isso **não cria crítico automático** e não altera as demais rolagens de SP/efeitos por suposição. **PENDENTE:** contrato de consumo e isolamento de RNG para essa exceção, inclusive rastreabilidade da avaliação que foi dispensada.
+
+**Compatibilidade vigente:** D-034 fixa todas as barras em **1 s de travessia uniforme**; D-035 implementa IA comum por posição uniforme; D-037 estabelece IA especial triangular apenas como design. D-039 não restaura cadência variável, nem reimplementa perfis especiais ou avaliação temporal de input.
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -1427,6 +1441,23 @@ A fangame fornece 128 arquivos OGG temporários, não publicados no repositório
   visual atual. Decisão registrada no §17; correção pendente.
 
 ---
+
+### 19.1 D-039 (Rodada 14, 1A; 2A; 8A) — fases e portões obrigatórios — **PLANO CONFIRMADO; NÃO EXECUTADO**
+
+**1A — fases sequenciais de implementação futura:**
+
+1. **Base temporal e testes:** tornar a avaliação temporal independente do último quadro renderizado, preservando duração e velocidade fixas D-034 e IA comum D-035; testar relógio, fronteiras e inputs controlados.
+2. **Perfis POINT especiais e IA:** introduzir múltiplas regiões POINT, seleção/validação de perfis e IA especial triangular sob D-037, preservando a geometria e exceção D-022.
+3. **Pacotes de dano:** introduzir Resource tipado com identidade e efeitos participantes (D-039 3A), piso por pacote D-036/D-037 e testes de contato/afinidades.
+4. **Replay, certificados e integração:** integrar snapshots JSON versionados, rastros com sequência por encontro, certificados intervalares com contraexemplos e igualdade mecânica em 30/60/120 FPS para seeds/inputs controlados.
+
+A fase 4 **não dispensa** instrumentação e testes pertinentes já nas fases anteriores. Nenhuma fase foi iniciada por este registro.
+
+**2A — antes da primeira mudança de código:** auditar **HEAD remoto/local realmente acessível**, `AGENTS.md`, decisão vigente versus histórica/superada, estrutura de dados e código de Moves, dependências, configurações, scripts e **estado dos testes**, identificando os arquivos reais. Produzir **mapa de contratos por componente** e plano estritamente restrito ao necessário, com conflitos e riscos explícitos. Não pressupor arquitetura, funções ou Resources não verificados.
+
+**8A — portão de liberação de cada fase:** exigir **parse executado**, testes **unitários e de integração pertinentes**, inspeção do diff e escopo, fidelidade às decisões vigentes e **evidência verificável** antes de declarar conclusão. Falhas exigem correção seguida de nova validação; sucesso de testes não substitui homologação visual ou estatística. Preservar o combate já jogável e todas as regras externas ao escopo, inclusive a **D-038 (REST sem gasto de ACT, +2 EN fixos e armazenamento dos atos remanescentes)**, cuja implementação **não foi incluída nem autorizada** nestas fases.
+
+**Estado:** esta decisão apenas documenta a sequência e os portões; nenhuma fase, teste Godot, diff local, migração, Resource ou alteração de código foi executada nesta rodada.
 
 ## 20. Critérios de balanceamento e validação — **PENDENTE**
 
@@ -1654,6 +1685,10 @@ rodada.
 **Risco de teste pouco discriminante:** com SP igual, ataque de poder 8, ATK/DEF 8 e variação ±10%, um ataque causa aproximadamente **7–9 de dano** sob arredondamento atual, de modo que 40 HP são eliminados em **5 ou 6 acertos** nas condições controladas sem outras alterações. Portanto, ≥95% dentro de 5–7 acertos pode verificar uma propriedade aritmética esperada, mas **não comprova equilíbrio** contra SP desigual. Não houve execução das baterias, testes de integração ou medições de distribuição nesta publicação.
 
 **D-037 — riscos de integração:** não combinar silenciosamente cadência variável da D-023 com D-034; a IA especial temporal da 2B ainda diverge da IA uniforme implementada D-035; o piso por pacote carece de identidade mecânica; o validador ainda não oferece prova intervalar nem contraexemplo; a atribuição de sequência e conversão de timestamps precisam de contratos determinísticos antes de exigir comparação real de rastros. A documentação registra a direção aprovada, não funcionamento ou testes concluídos.
+
+**D-039 (Rodada 14, 7A) — amostra de resistência com SP igual:** a bateria resistente da D-037 com **SP igual** terá **10.000 casos controlados**. Para aprovação, exigir **≥95% (≥9.500 casos)** de derrotas em **5–7 ataques físicos bem-sucedidos** contra a ficha resistente de laboratório D-033 (HP 40, DEF 8, SP_base 88), preservando o ataque físico básico de poder 8 e as demais condições a especificar. **PENDENTES:** qual SP igual usar e como isolá-lo sem alterar ficha por inferência, seeds, reinicialização e condições de teste. A bateria de **SP 80 vs 88** continua **somente diagnóstica**, sem limiar ou quantidade obrigatória aprovados. Não transferir esse limiar para outros encontros. Nenhum caso foi executado.
+
+**Riscos e regressões da estratégia D-039:** `RhythmBar` ainda julga input pelo marcador do último frame; a IA especial triangular, os pacotes de dano e a prova por certificado intervalar não estão implementados. A ordem de RNG no autoacerto ainda não está fixada. D-038 estabelece REST sem gasto de ato no design, mas o código antigo ainda consome ato; esse sistema **permanece fora do escopo das quatro fases**, e não foi modificado. O critério de portão de testes deve impedir que mudanças de ritmo/dano provoquem regressões nesses subsistemas.
 
 ## 21. Riscos e pendências consolidadas
 
@@ -2219,6 +2254,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   modificados. **DIVERGÊNCIA:** código Godot e HTML anterior mantêm o REST antigo;
   implementação e testes permanecem pendentes. Impacto documental: GDD §§4.1,
   6, 7 e `docs/COMBAT_SPEC.md`; ID registrado em `docs/DECISIONS.md`.
+
+- **D-039 · 2026-11-21 (Rodada 14: 1A; 2A; 3A; 4A; 5B; 6A; 7A; 8A)** · **CONFIRMADO como design/plano; NÃO IMPLEMENTADO nesta rodada**: (1A) quatro fases sequenciais: base temporal/testes; perfis POINT/IA especial; pacotes de dano; replay/certificados/integração; (2A) antes de mudar código, auditoria do HEAD, mapa de decisões vigentes e plano de arquivos/validação; (3A) **Resource mecânico tipado** para pacote de dano, com ID estável e efeitos individualmente associados/participantes; (4A) **sequência inteira monotônica por encontro**, associada à identidade do encontro; (5B) **empate para o inteiro par** na quantização em µs; (6A) **autoacerto D-022 tem precedência** sobre erro temporal da IA especial, sem crítico automático; (7A) resistência com SP igual: **10.000 casos, ≥95% (≥9.500)** concluídos em **5–7 ataques**, bateria SP 80/88 permanece só diagnóstica; (8A) cada fase exige **parse, testes unitários/integração, diff, fidelidade às decisões e evidência real** antes da liberação. **PENDENTES:** viabilidade/estrutura real de Moves, eventos/IDs, RNG, relógio, testes e implementação futura. **Preservadas** D-022–D-025, D-028–D-038, especialmente D-034/D-035 vigentes e D-038 (REST) fora do escopo desta sequência. **Impacto documental:** GDD §§4.5, 8.1.11, 19.1, 20 e `docs/COMBAT_SPEC.md`; índice `docs/DECISIONS.md`. Nenhum código, save, teste, asset ou Resource modificado.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
