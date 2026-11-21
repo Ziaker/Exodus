@@ -287,8 +287,9 @@ com perfis especiais e testes de sincronização entre cursor visual e resultado
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
   ataque**, tanto do jogador como do inimigo. **Exceção explícita:** um
   ataque inimigo **sempre acerta quando o jogador não pode reagir**.
-  Essa garantia se refere ao **acerto**, não é aprovação para dano máximo,
-  crítico obrigatório ou modificação de afinidade.
+  **D-020 estende a exceção:** também acerta quando o jogador *pode*
+  reagir e escolhe não declarar reação. A garantia se refere ao
+  **acerto**, não a dano máximo, crítico obrigatório ou afinidade.
 - **2A:** o **bloqueio na Trave reduz o dano em 50%**. A redução já
   estava implementada e agora está homologada como regra.
 - **3A:** combatente sem atos não tem direito a bloqueio ou desvio.
@@ -546,7 +547,8 @@ calibração. Não foram executadas simulações ou testes nesta rodada.
     ±10% de variação fixa no dano; recalibração dos poderes de ataques;
     manutenção de ganhos +1 SP; comparação de dominância com adversário
     vivo de maior SP; críticos normais em acertos inimigos garantidos.
-    Novas fórmulas e poderes ainda **não implementados**.
+    Novas fórmulas e poderes ainda **não implementados**. O autoacerto
+    sem reação foi implementado por **D-020**.
 
 ---
 
@@ -677,6 +679,13 @@ Formato: ID · data · decisão · estado · impacto documental.
   e implementação da exceção de acerto da D-014.
   **Impacto:** GDD §§5.1, 8.2, 20, 21 e
   `docs/COMBAT_SPEC.md`; código, testes e arquivos locais intactos.
+- **D-020 · 2026-11-21 (continuação da pergunta 1 da Rodada 3)** ·
+  A exceção de acerto automático inimigo também se aplica quando o jogador
+  **pode reagir e opta por não declarar reação**. O acerto é normal — sem
+  crítico automático, dano máximo ou bônus extra. **CONFIRMADO e
+  IMPLEMENTADO.** Impacto: `BattleController._enemy_turn()`,
+  `_attack_timing()` e `_perform_attack()`, `tests/test_battle_combat.gd`,
+  GDD §8.2, `COMBAT_SPEC.md` §Sistema de ritmo.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

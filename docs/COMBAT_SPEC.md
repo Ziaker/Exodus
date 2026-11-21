@@ -134,8 +134,8 @@
   **Exceção:** o ataque inimigo **sempre acerta quando o jogador não
   pode reagir**. O acerto garantido não significa dano máximo,
   crítico automático ou alteração de modificadores de dano e afinidade.
-  **PENDENTE:** qual o comportamento quando o jogador *pode* reagir,
-  mas opta por não declarar reação.
+  **D-020:** se o jogador *pode* reagir mas opta por não declarar reação,
+  o ataque inimigo **também acerta automaticamente**. **IMPLEMENTADO.**
 - **2A:** um **bloqueio na Trave reduz 50% do dano**. Percentual
   já praticado no código e agora confirmado como regra de design.
 - **D-019 (Rodada 3, 6A):** quando a exceção de D-014 garantir acerto
@@ -143,7 +143,8 @@
   pode causar **crítico pela chance normal**. Não é crítico
   automático, nem recebe bônus adicional. Usa-se a fórmula crítica
   implementada até a calibração aprovada na D-019 (1A).
-  A exceção de autoacerto ainda precisa ser implementada.
+  A exceção de autoacerto foi **implementada** por D-020 em
+  `BattleController._attack_timing()`.
 - **3A e 4A:** sem atos não há bloqueio/desvio; com reação elegível,
   pausar a escolha e manter o tempo de execução da barra.
 - A precedência POINT/POINT foi fixada por **D-015**: a defesa prevalece
@@ -152,10 +153,9 @@
 - As zonas fixas descritas acima representam o **protótipo vigente**;
   os perfis variáveis de ritmo por inimigo e seus limites ainda
   estão em elaboração no GDD §8.1. D-014 não os cancela.
-- **DIVERGÊNCIA COM O CÓDIGO:** o inimigo ainda pode falhar seu
-  próprio timing quando o jogador não pode reagir; a pausa para
-  escolha e a prioridade ofensiva por AGI ainda não foram
-  implementadas. Nenhuma mudança de código foi autorizada.
+- **DIVERGÊNCIA RESTANTE:** a pausa para escolha de reação e a prioridade
+  ofensiva por AGI ainda não foram implementadas. O autoacerto sem reação
+  foi implementado por D-020.
 
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.

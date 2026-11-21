@@ -59,6 +59,38 @@ func test_enemy_attack_never_opens_an_attack_bar() -> void:
 	assert_true(has_damage, "enemy attack still resolves")
 
 
+func test_enemy_attack_hits_when_no_reaction_is_possible() -> void:
+	var battle := await _fresh_battle()
+	battle._fallen.acts_available = 0
+	battle.rng.seed = 999
+	battle._enemy_turn(battle.state.units[2])
+	for _i in range(40):
+		await get_tree().create_timer(0.05).timeout
+	var hit := false
+	var no_contact := false
+	for line in battle.log_history:
+		if line.contains("NO CONTACT"):
+			no_contact = true
+		if line.contains("dmg") and line.contains("rhythm POINT"):
+			hit = true
+	assert_false(no_contact, "guaranteed hit cannot produce NO CONTACT")
+	assert_true(hit, "enemy lands a normal hit without a possible reaction")
+
+
+func test_enemy_attack_hits_when_player_declines_reaction() -> void:
+	var battle := await _fresh_battle()
+	battle._fallen.acts_available = 2
+	battle.rng.seed = 1001
+	battle._enemy_turn(battle.state.units[2])
+	for _i in range(40):
+		await get_tree().create_timer(0.05).timeout
+	var hit := false
+	for line in battle.log_history:
+		if line.contains("dmg") and line.contains("rhythm POINT"):
+			hit = true
+	assert_true(hit, "declining a possible reaction still lets the enemy hit")
+
+
 func test_player_defense_is_available_when_a_reaction_is_declared() -> void:
 	var battle := await _fresh_battle()
 	battle._fallen.acts_available = 1

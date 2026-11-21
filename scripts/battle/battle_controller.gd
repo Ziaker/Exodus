@@ -303,19 +303,23 @@ func _enemy_turn(actor: BattleUnit) -> void:
 	var reaction_declared := await _maybe_player_reaction(target, actor)
 	if not target.is_alive():
 		return
-	await _perform_attack(actor, target, 100, false, reaction_declared)
+	# D-020: no declared reaction means the enemy attack is guaranteed to hit,
+	# whether the player had no acts or simply chose not to react.
+	await _perform_attack(actor, target, 100, false, reaction_declared,
+			not reaction_declared)
 
 
 ## One attack, from declaration to state update. Input ownership is explicit:
 ## only a player-controlled attacker/defender uses the visible rhythm bar.
 func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
-		is_reaction: bool, defense_act_paid: bool = false) -> void:
+		is_reaction: bool, defense_act_paid: bool = false,
+		auto_hit: bool = false) -> void:
 	if not defender.is_alive():
 		return
 	var duration := BattleMath.rhythm_duration(attacker.stats.agi, defender.stats.agi,
 		attacker.current_sp, defender.current_sp)
 
-	var attack_timing := await _attack_timing(attacker, defender, duration)
+	var attack_timing := await _attack_timing(attacker, defender, duration, auto_hit)
 	var defense_timing := await _defense_timing(defender, attacker, duration, defense_act_paid)
 
 	# No contact: skip damage, crit, affinity and SP rolls entirely. This also
@@ -362,9 +366,14 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 		int(result.sp_roll)])
 
 
-func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float) -> int:
+func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
+		auto_hit: bool = false) -> int:
 	if attacker.is_player:
 		return await _manual_rhythm(duration)
+	# D-014/D-020: without a declared reaction the hit is guaranteed. POINT is a
+	# normal landed hit — it grants no automatic critical and no extra bonus.
+	if auto_hit:
+		return BattleMath.RhythmResult.POINT
 	# AI resolves its own timing; no human input is requested for an enemy attack.
 	return _ai_roll(attacker, defender)
 
