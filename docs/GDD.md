@@ -40,6 +40,10 @@ visual pertence exclusivamente ao diretor criativo.
 - `assets/SOURCE_ASSETS.md` — proveniência dos assets temporários.
 - Apêndice A deste arquivo — registro cronológico de decisões (substitui um arquivo
   separado por decisão do diretor).
+- `AGENTS.md` (raiz) — **regra principal** para todos os agentes que mexerem no projeto:
+  auditar sempre, caçar erros e esquecimentos, corrigir até ficar entregável, deixar
+  crítica extrema e recomendações para o autor decidir, e nunca afirmar nada não
+  verificado. A validação visual pertence exclusivamente ao diretor.
 
 ---
 
@@ -332,6 +336,12 @@ Formato: ID · data · decisão · estado · impacto documental.
   literal de 70% do SP do oponente, que premiava ambos os lados. **CONFIRMADO e
   IMPLEMENTADO**. Impacto: `BattleMath.dominance_ratio`, `BattleState.start_round`,
   `COMBAT_SPEC.md` §Atos, GDD §5.
+- **D-008 · 2026-11-21** · Regra principal de todos os agentes: auditar sempre as
+  próprias implementações, caçar erros e esquecimentos, corrigir imediatamente até
+  ficar completamente entregável, deixar sempre crítica extrema com recomendações e
+  melhorias para o autor decidir, e não afirmar nada não verificado — cada
+  implementação deve ser verificada minuciosamente. **CONFIRMADO**. Impacto: `AGENTS.md`
+  (raiz) e GDD §0.3. Validação visual continua exclusiva do diretor.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
