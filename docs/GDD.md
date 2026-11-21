@@ -157,6 +157,12 @@ narrativa — ainda não foi definido.
 
 ---
 
+### 4.2 D-033 (Rodada 11, 3B) — piso de dano em ataques com contato — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+**3B:** preservar o modificador de SP `1dN` (`N=|SP_atacante−SP_alvo|`) e sua contribuição com sinal conforme vantagem. Um **ataque que cause dano**, faça **contato** e tenha **afinidade que permita dano** deve causar **pelo menos 1 de dano final**, mesmo quando a desvantagem de SP zeraria ou tornaria negativo o total. Não alterar a amplitude do dado, não conceder contato quando houver MISS/desvio POINT e não aplicar esse piso a **Null/Absorb**. Preservar crítico D-021, variação fixa ±10% aprovada em D-019 (ainda não implementada) e demais contratos.
+
+**PENDENTES:** interação com Moves sem dano nominal ou de poder zero e estágios de processamento dos efeitos futuros. O motor atual `BattleMath.physical_damage()` usa `maxi(0, int(round(amount)))` e pode produzir dano zero. **Código não alterado**.
+
 ## 5. Superiority Points — **CONFIRMADO**
 
 `SP_base` = soma de HP, EN, ATK, MAK, DEF, MEF e AGI. SP ganho em batalha é temporário.
@@ -374,6 +380,18 @@ são **referências de laboratório**, não novas
 fichas de inimigos já publicadas no jogo.
 
 ---
+
+### 6.4 D-033 (Rodada 11, 2C) — revisão somente da ficha resistente de laboratório — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+**2C:** substituir somente a ficha **resistente de laboratório** da D-032, alterando HP de **48 para 40** e DEF de **16 para 8**; EN/ATK/MAK/MEF/AGI permanecem **8**. Assim, `SP_base = 40+8+8+8+8+8+8 = 88`, em vez de 104.
+
+| Ficha de laboratório revisada | HP | EN | ATK | MAK | DEF | MEF | AGI | SP_base |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Resistente — **D-033 vigente** | **40** | 8 | 8 | 8 | **8** | 8 | 8 | **88** |
+
+**Rastreabilidade:** a D-032 (3A) continua documentando o perfil anterior (HP 48, DEF 16, SP 104), mas está **substituída para novos testes**. Perfis ágil/equilibrado, referência neutra separada, Fallen, espécies reais e progresso persistente da D-028 **não foram alterados**.
+
+Com poder básico 8 e ATK/DEF 8, o dano-base nominal é 8 e **cinco acertos nominais** vencem 40 HP: agora atende nominalmente à meta resistente 5–7. Porém, atacante SP 80 contra resistente SP 88 sofre **−1d8** de dano antes dos demais modificadores. O piso de 1 (D-033 3B) **não garante** que a derrota ocorra em 5–7 acertos efetivos. **Balanceamento ainda não homologado**.
 
 ## 7. Ações, reações e armazenamento — **CONFIRMADO**
 
@@ -1121,6 +1139,17 @@ Nenhum script foi alterado.
 
 ---
 
+### 8.1.8 D-033 (Rodada 11, 1A; 4B; 5A; 7A) — duração, validação e replay — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+- **1A — interpolação contínua:** completar a D-032 eliminando arredondamento de blocos de oito. Duração em segundos:
+  `T=clamp(1−0,00625×(ΔAGI+ΔSP),0,2,1)`.
+  **6,25 ms por ponto combinado**, com os sinais e participantes já definidos. Exemplo: vantagem +5 → **0,96875 s** (redução de 31,25 ms). Preservar limites 0,2–1 s, captura AGI/SP no começo e duração fixa na travessia. A implementação atual ainda utiliza 0,05 s por ponto; não alterada.
+- **4B — cobertura por prova intervalar:** particionar **todos os estados de atributos alcançáveis** em intervalos e **demonstrar matematicamente** que, em cada intervalo, há pelo menos uma variante expressamente declarada e válida (D-032 5A). Avaliar pontos de corte e limites de duração, cobertura 8%–16%, ≥40 ms por zona, três zonas somente com ≥300 ms, velocidade ≤4× média, aceleração ≤12×média/T e alterações de SP/AGI. Não substituir prova por amostras estatísticas. **PENDENTES:** domínio formal alcançável (inclusive progresso D-028), método/certificado de prova e representação das curvas; não inventar teto de progressão para tornar a validação trivial.
+- **5A — marco atômico:** após eventual escolha pausada de reação, **capturar AGI/SP**, **avaliar a elegibilidade**, **selecionar a primeira variante válida** pela prioridade declarada (D-032 6A) e **só então iniciar o relógio monotônico de input em t=0**, sem permitir mudança de estado entre esses passos. Os atributos capturados valem para toda a barra (D-031), respeitando o primeiro input desde t=0. **PENDENTES:** ordenação de eventos simultâneos e o tratamento de ausência de variante elegível; não inventar fallback.
+- **7A — identidade dupla de replay:** snapshots **JSON versionados** (D-032 7A) devem registrar **versão do esquema JSON e versão explícita do resolvedor mecânico como identificadores separados**, além da seed, IDs, índice da execução, AGI/SP capturados, trajetória/parâmetros completos e eventos de timing. **PENDENTES:** valores iniciais, nomes/tipos dos campos, precisão, compatibilidade e disponibilidade de resolvedores antigos; registrar a versão não significa poder executar automaticamente motores históricos. Nenhum JSON criado nesta rodada.
+
+**Compatibilidade:** D-013 a D-025 e D-031/D-032 preservadas; nenhuma modificação de código, cadência, avaliação temporal ou HUD.
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -1556,6 +1585,12 @@ rodada.
 
 ---
 
+**D-033 (Rodada 11, 6A) — cenário do ensaio de 10.000 casos:** referência neutra contra cópia equivalente (HP 32, ATK 8, DEF 8, SP iguais), ataque físico básico poder 8, **afinidade Normal, sem críticos nem bloqueios, variação fixa ±10%** conforme D-019. Exigir a meta D-032 de **≥95% (≥9.500 casos)** com derrota após **3–5 ataques físicos bem-sucedidos**. Não aplicar vantagens de SP inexistentes; sem eventos extras não definidos no ensaio. **PENDENTES:** seeds, reinicialização dos estados, método de contagem, algoritmo de amostragem e execução real do teste. **Nenhuma simulação executada.** Dedução aritmética condicional: com arredondamento `int(round())`, dano-base 8 e ±10% produzem danos 7–9, levando a derrota em quatro ou cinco acertos; isso não comprova equilíbrio fora do cenário neutro.
+
+**D-033 (Rodada 11, 8A) — validação integrada:** exigir testes de **duelos e combates contra múltiplos inimigos** com fichas distintas, verificando economia e armazenamento de atos (D-005), seleção e prioridade de reações (D-014/D-025/D-031), fraquezas/Press Turn, SP/dominância (D-007), duração e perfis de ritmo, sem dispensar os testes de propriedades, seeds, fronteiras e equivalência mecânica em 30/60/120 FPS (D-024/D-025). **PENDENTES:** matriz executável, seeds, métricas e expectativas por cenário.
+
+**Revisão do conflito D-032:** a decisão posterior D-033 (2C) **substitui somente a ficha resistente de laboratório**, de HP 48/DEF 16/SP 104 para **HP 40/DEF 8/SP 88**. Isso corrige o cálculo **nominal** de 12 para 5 acertos com poder 8 e ATK 8, mas **não resolve o risco de desbalanceamento efetivo**: a diferença SP 80 versus 88 introduz `−1d8`, podendo resultar em mínimo de 1 por ataque. O teste neutro de 95% não cobre essa situação. Não ajustar outros poderes, atributos ou regras sem aprovação.
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -1685,6 +1720,10 @@ rodada.
     +1 p.p. por ponto de vantagem; SP mantém faixas da D-021.
     **IMPLEMENTADO.** Substitui a taxa de duração da D-032 como direção
     vigente; a D-032 permanece registrada no histórico.
+
+---
+
+21. **D-033 — Rodada 11:** interpolação contínua da duração; ficha resistente de laboratório revisada para HP 40, DEF 8 e SP_base 88; piso de 1 dano sob contato e afinidade válida; demonstração intervalar de cobertura das variantes; transição atômica de captura/seleção/início; ensaio neutro de 10.000 casos; versões separadas de esquema JSON e resolvedor; testes completos de duelos e múltiplos inimigos. **Aprovado como design; NÃO IMPLEMENTADO.** Conflito nominal da D-032 corrigido somente na ficha de laboratório; risco de SP persiste (ver §§4.2, 6.4, 8.1.8 e 20).
 
 ---
 
@@ -2084,6 +2123,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   `COMBAT_SPEC.md` §Sistema de ritmo. Substitui a regra de duração variável
   por AGI/SP e o ajuste de largura por AGI da D-021; D-032 permanece no
   histórico como direção anterior, não executada.
+- **D-033 · 2026-11-21 (Rodada 11: 1A; 2C; 3B; 4B; 5A; 6A; 7A; 8A)** · **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**: (1A) duração `clamp(1−0,00625×(ΔAGI+ΔSP),0,2,1)`; (2C) revisar apenas a ficha resistente de laboratório para HP 40, DEF 8 e SP_base 88, sem mudar espécies; (3B) manter `1dN` de SP e piso final de **1 dano** com contato e afinidade que permita dano, excluindo Null/Absorb; (4B) demonstrar matematicamente a cobertura integral das variantes em intervalos de estados alcançáveis; (5A) capturar AGI/SP, escolher variante válida e só então iniciar o relógio, em transição atômica; (6A) cenário neutro controlado para 10.000 casos com ±10%, Normal, sem crítico/bloqueio, meta ≥95% em 3–5 acertos; (7A) snapshots JSON com versão de esquema e versão de resolvedor distintas; (8A) testes de duelos e múltiplos inimigos cobrindo atos, reações, fraquezas, SP e duração. **PENDENTES:** implementação, testes, prova de intervalos, Moves sem dano nominal, semântica de timestamps e versões de replay. D-022–D-025 e D-028–D-032 preservadas; a ficha resistente antiga da D-032 permanece apenas no histórico. **Impacto:** GDD §§4.2, 6.4, 8.1.8, 20, 21; `docs/COMBAT_SPEC.md`; `docs/DECISIONS.md`. Nenhum código, recurso, save ou teste alterado.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

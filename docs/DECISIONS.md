@@ -39,6 +39,7 @@ qualquer alteração em documentos ou código.
 | D-030 | 2026-11-21 | Índice central de IDs em `docs/DECISIONS.md`: antes | `docs/GDD.md` Apêndice A |
 | D-031 | 2026-11-21 (Rodada 9: 1A; 2B; 3A; 4B; 5A; 6A; 7A; 8B) | CONFIRMADO como design; NÃO | `docs/GDD.md` Apêndice A |
 | D-032 | 2026-11-21 (Rodada 10: 1C; 2A; 3A; 4A; 5A; 6A; 7A; 8A) | CONFIRMADO como design; | `docs/GDD.md` Apêndice A |
+| D-033 | 2026-11-21 (Rodada 11: 1A; 2C; 3B; 4B; 5A; 6A; 7A; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) duração `clamp(1−0,00625×... | `docs/GDD.md` Apêndice A |
 | D-034 | 2026-11-21 (mudança de planos do diretor) | A barra de ritmo | `docs/GDD.md` Apêndice A |
 
-Total: 31 decisões indexadas.
+Total: 32 decisões indexadas.
