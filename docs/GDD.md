@@ -1216,6 +1216,20 @@ Nenhum script foi alterado.
 
 **Compatibilidade vigente:** D-034 fixa todas as barras em **1 s de travessia uniforme**; D-035 implementa IA comum por posição uniforme; D-037 estabelece IA especial triangular apenas como design. D-039 não restaura cadência variável, nem reimplementa perfis especiais ou avaliação temporal de input.
 
+### 8.1.12 D-040 (Rodada 15, 1A–7A) — contrato temporal de input e RNG — **DESIGN APROVADO, NÃO IMPLEMENTADO**
+
+Rodada 15: **1A; 2A; 3A; 4A; 5A; 6A; 7A; 8A**. A escolha detalha a **Fase 1** de D-039; não autoriza código nesta rodada.
+
+- **1A — registro imediato:** capturar, **na entrada do handler de input**, a leitura do **relógio monotônico** correspondente ao **recebimento** do evento, relativa à origem temporal da barra (D-024). Não julgar pela posição do último quadro, pelo próximo tick de física nem pelo momento físico estimado do dispositivo. **PENDENTES:** API, resolução e latência real do Godot, sem alegar precisão inexistente.
+- **2A — ativação conjunta:** concluída a preparação atômica de D-033/D-036 (eventos comprometidos resolvidos, AGI/SP capturados e variante selecionada), **iniciar o relógio e aceitar entradas novas no mesmo marco, desde t=0**, sem aguardar novo frame/tick. O evento anterior usado para confirmar a reação não deve contar como input novo de ritmo (D-031).
+- **3A — primeiro evento único:** **somente o primeiro pressionamento novo e elegível** decide o resultado; **fechar imediatamente** a barra para entradas posteriores, impedindo `echo`, repetições, eventos tardios e múltiplas resoluções de uma execução. Preservar identidade/deduplicação dos eventos D-037/D-039.
+- **4A — deadline:** input cujo timestamp relativo satisfaça **t ≤ 1 segundo (1.000.000 µs)** tem precedência sobre o evento de **timeout** e é classificado normalmente. Input com **t > 1 s** não é elegível. Em t=1 s, a extremidade do percurso uniforme vigente é **MISS**; distinguir no rastro o MISS produzido por input e o timeout. **PENDENTE:** processamento/ordenação da fila quando callbacks de input e timeout chegarem fora da ordem mecânica, sem fazer a ordem de renderização decidir.
+- **5A — linha temporal única:** uma **linha temporal mecânica autoritativa** calcula o progresso uniforme da barra fixa em **1 s** (D-034); a **renderização apenas consulta esse progresso para posicionar o marcador e não determina o resultado**. Não introduzir dois relógios independentes nem mexer na largura POINT por AGI/SP (D-034) ou IA comum (D-035).
+- **6A — julgamento antes da gravação:** avaliar o input pelo **instante monotônico capturado com sua precisão efetiva**, somente depois convertendo para **microssegundos inteiros no registro JSON**, com arredondamento ao próximo e desempate para inteiro par da D-039. **Não modificar retroativamente o resultado** por quantização. **PENDÊNCIA CRÍTICA:** instantes distintos em lados diferentes de uma fronteira podem ser serializados no mesmo µs; armazenar µs por si só pode ser insuficiente para reproduzir o julgamento exato. Necessidade de evidência complementar deve ser decidida antes de garantir replay.
+- **7A — RNG de autoacerto:** quando o jogador **não declara reação**, a D-014/D-022 prevalece e a **rolagem triangular de timing dispensada não é executada nem consome RNG**. Exigir **fluxos de RNG separados por finalidade**, de modo a não deslocar rolagens de dano/crítico; a chance crítica não se torna automática e outros sorteios conservam seus contratos. **PENDENTES:** derivação e identidade exatas dos fluxos a partir das seeds D-023, estado a serializar, ordem de sorteios e integração posterior com IA especial D-037. Não interpretar esta decisão como implementação imediata da IA especial na Fase 1.
+
+**Divergência verificada no código:** `RhythmBar._unhandled_input()` ainda usa a posição de `_marker`, avançada por `_process(delta)`, para classificar o input. O novo modelo não está implementado. D-034/D-035 permanecem vigentes. **D-038 REST (sem ACT, +2 EN fixos e guarda dos atos) permanece separada e não implementada**, sem alteração nesta rodada.
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -1459,6 +1473,18 @@ A fase 4 **não dispensa** instrumentação e testes pertinentes já nas fases a
 
 **Estado:** esta decisão apenas documenta a sequência e os portões; nenhuma fase, teste Godot, diff local, migração, Resource ou alteração de código foi executada nesta rodada.
 
+### 19.2 D-040 (Rodada 15, 8A) — matriz mínima da Fase 1 — **CRITÉRIOS APROVADOS; NÃO EXECUTADOS**
+
+**8A:** a liberação da Fase 1 depende de **parse executado**, testes **unitários e de integração pertinentes**, diff/escopo auditados, fidelidade às decisões vigentes e evidência real, conforme D-039. Exigir a seguinte **matriz mínima**:
+
+- **Fronteiras mecânicas POINT/BEAM/MISS**, inclusive igualdade exata e ajustes de largura AGI/SP D-034, **t=0** e **deadline t=1 s** com input/timeout simultâneos ou com chegada fora de ordem; input posterior ao limite;
+- **Primeiro input único**, `echo`, duplicidade, reentrância, evento anterior de confirmação de reação, fechamento único e nenhuma emissão duplicada;
+- **Pausa e ativação**, relógio monotônico, avaliação pelo timestamp recebido e marcador visual subordinado ao mesmo progresso mecânico;
+- **FPS 30/60/120** com timestamps controlados, exigindo **mesmas classificações e resultados mecânicos** nos casos comparáveis; regressões de combate, atos, reações e autoacerto D-022, preservando barra uniforme D-034 e IA comum D-035;
+- **Fluxos de RNG**: quando a exceção D-022 dispensar erro triangular, não consumir esse sorteio nem deslocar rolagens de dano/crítico. A IA especial completa pertence à Fase 2.
+
+A **comparação do rastro canônico completo** de D-036/D-037 é requisito da **Fase 4**. Na Fase 1, usar instrumentação suficiente para demonstrar os resultados pertinentes, sem afirmar que JSON/replay integral já existe. **PENDENTES:** harness real de input controlado, APIs/timestamps, evidência e testes executados. A divergência anterior de REST D-038 deve ser relatada como fora do escopo, não corrigida silenciosamente.
+
 ## 20. Critérios de balanceamento e validação — **PENDENTE**
 
 Existem testes de execução das fórmulas e da cena, mas não há critérios aprovados de
@@ -1689,6 +1715,10 @@ rodada.
 **D-039 (Rodada 14, 7A) — amostra de resistência com SP igual:** a bateria resistente da D-037 com **SP igual** terá **10.000 casos controlados**. Para aprovação, exigir **≥95% (≥9.500 casos)** de derrotas em **5–7 ataques físicos bem-sucedidos** contra a ficha resistente de laboratório D-033 (HP 40, DEF 8, SP_base 88), preservando o ataque físico básico de poder 8 e as demais condições a especificar. **PENDENTES:** qual SP igual usar e como isolá-lo sem alterar ficha por inferência, seeds, reinicialização e condições de teste. A bateria de **SP 80 vs 88** continua **somente diagnóstica**, sem limiar ou quantidade obrigatória aprovados. Não transferir esse limiar para outros encontros. Nenhum caso foi executado.
 
 **Riscos e regressões da estratégia D-039:** `RhythmBar` ainda julga input pelo marcador do último frame; a IA especial triangular, os pacotes de dano e a prova por certificado intervalar não estão implementados. A ordem de RNG no autoacerto ainda não está fixada. D-038 estabelece REST sem gasto de ato no design, mas o código antigo ainda consome ato; esse sistema **permanece fora do escopo das quatro fases**, e não foi modificado. O critério de portão de testes deve impedir que mudanças de ritmo/dano provoquem regressões nesses subsistemas.
+
+**D-040 — risco principal para a Fase 1:** `RhythmBar` ainda julga pelo último frame; entradas em fronteiras, confirmações reaproveitadas e timeout podem divergir do timestamp de recebimento. **A serialização inteira em µs com empate para par não preserva necessariamente toda a informação para repetir decisões feitas em precisão temporal superior**; é preciso decidir contrato de reprodução de fronteiras antes de declarar rastros idênticos. Fluxos de RNG por finalidade também exigem derivação e persistência explícitas. Critérios documentados não equivalem a testes concluídos.
+
+**Preservação:** D-034 mantém barra de um segundo uniforme; D-035 mantém IA comum; D-038 continua REST sem gasto de ACT, +2 EN e guarda de atos, mas **não implementada e fora das alterações previstas na Fase 1**. Nenhum código, teste, asset, save ou Resource foi alterado por esta decisão.
 
 ## 21. Riscos e pendências consolidadas
 
@@ -2256,6 +2286,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   6, 7 e `docs/COMBAT_SPEC.md`; ID registrado em `docs/DECISIONS.md`.
 
 - **D-039 · 2026-11-21 (Rodada 14: 1A; 2A; 3A; 4A; 5B; 6A; 7A; 8A)** · **CONFIRMADO como design/plano; NÃO IMPLEMENTADO nesta rodada**: (1A) quatro fases sequenciais: base temporal/testes; perfis POINT/IA especial; pacotes de dano; replay/certificados/integração; (2A) antes de mudar código, auditoria do HEAD, mapa de decisões vigentes e plano de arquivos/validação; (3A) **Resource mecânico tipado** para pacote de dano, com ID estável e efeitos individualmente associados/participantes; (4A) **sequência inteira monotônica por encontro**, associada à identidade do encontro; (5B) **empate para o inteiro par** na quantização em µs; (6A) **autoacerto D-022 tem precedência** sobre erro temporal da IA especial, sem crítico automático; (7A) resistência com SP igual: **10.000 casos, ≥95% (≥9.500)** concluídos em **5–7 ataques**, bateria SP 80/88 permanece só diagnóstica; (8A) cada fase exige **parse, testes unitários/integração, diff, fidelidade às decisões e evidência real** antes da liberação. **PENDENTES:** viabilidade/estrutura real de Moves, eventos/IDs, RNG, relógio, testes e implementação futura. **Preservadas** D-022–D-025, D-028–D-038, especialmente D-034/D-035 vigentes e D-038 (REST) fora do escopo desta sequência. **Impacto documental:** GDD §§4.5, 8.1.11, 19.1, 20 e `docs/COMBAT_SPEC.md`; índice `docs/DECISIONS.md`. Nenhum código, save, teste, asset ou Resource modificado.
+
+- **D-040 · 2026-11-21 (Rodada 15: 1A; 2A; 3A; 4A; 5A; 6A; 7A; 8A)** · **DESIGN APROVADO; NÃO IMPLEMENTADO nesta rodada:** (1A) capturar timestamp monotônico do recebimento no handler; (2A) início do relógio e elegibilidade de input no mesmo marco t=0 após preparação atômica, sem reaproveitar confirmação; (3A) primeiro input novo e elegível resolve uma única vez, com bloqueio de `echo`/duplicidade; (4A) input com t≤1 s prevalece sobre timeout e é classificado normalmente, após deadline não elegível; (5A) linha temporal mecânica determina o progresso, renderização apenas observa; (6A) julgar com precisão capturada, arredondar para µs somente na gravação, preservar resultado; (7A) dispensar rolagem triangular no autoacerto D-022 e usar fluxos RNG separados por finalidade para não afetar dano/crítico; (8A) portão de Fase 1 exige testes de fronteiras, duplicação, pausa/ativação, timeout, 30/60/120 FPS, regressões, parse e diff. **PENDÊNCIAS:** captura efetiva no Godot, ordenação de input/timeout, fidelidade de replay em fronteiras após quantização, derivação de RNG e evidência de testes. **D-034/D-035 permanecem vigentes; D-038 (REST) preservada e fora do escopo.** Impacto documental: GDD §§8.1.12, 19.2 e 20; `docs/COMBAT_SPEC.md`; índice `docs/DECISIONS.md`. Nenhuma alteração de código ou execução de testes.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

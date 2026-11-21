@@ -1028,6 +1028,18 @@
 - **5B:** armazenar tempo em **microssegundos inteiros**, arredondando ao mais próximo; em empate exato, utilizar **inteiro par** (*round half to even*). Ex.: `123456,5 µs→123456`; `123457,5 µs→123458`. Exigir implementação explícita e testes, sem presumir o comportamento de `round()` do motor ou equivalência física de input.
 - **6A:** **sem reação declarada pelo jogador**, resolver **primeiro** a exceção de autoacerto inimigo D-014/D-022; erro triangular da IA especial **não pode resultar em MISS**. Não conceder crítico automático, nem alterar sorteios SP/efeitos sem autorização; detalhes de consumo RNG ainda **PENDENTES**. Preservar D-034 (1 s uniforme), D-035 (IA comum uniforme), D-037 (timing triangular exclusivamente especial).
 
+### D-040 (Rodada 15, 1A–7A) — input temporal e RNG da Fase 1; DESIGN, NÃO IMPLEMENTADO
+
+- **1A:** capturar **relógio monotônico imediatamente na entrada do handler** e usar o instante de **recebimento relativo ao início da barra**, nunca último pixel desenhado/tick físico. API/resolução/latência do Godot não verificadas em execução.
+- **2A:** após preparação atômica, ativar relógio e aceitar **novos inputs desde t=0**, mesmo antes do primeiro frame; não reaproveitar o evento anterior que confirmou a reação.
+- **3A:** somente **primeiro pressionamento novo e elegível** decide a classificação; fechar imediatamente avaliação e impedir `echo`, eventos repetidos/atrasados e dupla emissão.
+- **4A:** input com **t≤1.000.000 µs** vence o **timeout** e é classificado normalmente; t>1 s é inválido. Em t=1 s o percurso termina em **MISS**, mas distinguir input de timeout nos eventos. Fila/ordenação quando callback do timeout ocorre antes de input mecanicamente válido continua pendente; callbacks não podem decidir.
+- **5A:** a **linha temporal mecânica** é a autoridade; UI visualiza o progresso, **sem determinar resultado**. Preservar duração/velocidade fixa D-034 e largura POINT D-034/D-035.
+- **6A:** julgar por **instante monotônico capturado** e só então serializar em **µs inteiros** com arredondamento ao próximo e empate para o par D-039, sem mudar resultado. Registro só em µs pode colapsar instantes de lados opostos das fronteiras; **replay exato nesses casos ainda pendente**.
+- **7A:** sem reação declarada (D-022), **não fazer rolagem triangular dispensada nem consumir seu RNG**; exigir **fluxos de RNG separados por finalidade**, preservando rolagens de dano/crítico e crítico não automático. Derivação de seeds/estados e IA especial ainda pendentes. Esta decisão **não implementa IA triangular**.
+
+D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4 de replay. REST D-038 permanece **design não implementado**, separado e sem autorização de mudança nesta publicação.
+
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
 - **1E (ideia própria do diretor):** a **barra de ritmo** determina
@@ -1138,6 +1150,12 @@
 - **1A:** quatro fases futuras: **(1) base de avaliação temporal e testes; (2) perfis POINT múltiplos/IA especial; (3) pacote tipado de dano; (4) replay JSON, certificados por intervalo e integração mecânica**. Testar cada fase conforme o próprio escopo, sem adiar a verificação fundamental à fase 4.
 - **2A:** antes de alterar código, exigir auditoria do **HEAD vigente**, `AGENTS.md`, implementação existente, dados de Moves, dependências/scripts, decisões ainda vigentes versus substituídas e testes atuais; produzir mapa de contratos e plano de alterações restrito aos arquivos comprovadamente pertinentes.
 - **8A:** liberar cada fase somente com **parse executado, testes unitários e de integração pertinentes, diff auditado, conformidade com design vigente e evidência real**. A fase concluída não implica aprovação de balanceamento/visual. Preservar D-038 (REST sem ACT, +2 EN fixos e guarda de atos) como decisão independente e **fora das fases D-039**; a implementação dessa regra não foi autorizada. Nada foi implementado/testado nesta rodada documental.
+
+### D-040 (Rodada 15, 8A) — critérios executáveis de liberação da Fase 1; DESIGN, NÃO EXECUTADO
+
+- **8A:** exigir **parse, testes unitários e integração pertinente, diff auditado e evidências verificáveis** de aderência a D-034/D-035/D-039 antes de liberar a Fase 1.
+- Matriz mínima: **POINT/BEAM/MISS** com fronteiras, largura AGI/SP, **t=0**, **t=1 s com timeout**, inputs posteriores; primeiro input único, `echo`, reentrância; confirmação de reação anterior à barra; pausa/ativação; linha temporal visual subordinada; resultados mecânicos equivalentes a **30/60/120 FPS** sob timestamps controlados; regressões do combate (incluindo D-022, D-034, D-035) e isolamento de fluxos RNG quando erro triangular for dispensado.
+- **Não alegar** cobertura de replay/rastro completo antes da Fase 4. **PENDENTES:** harness, API de tempo, política de simultaneidade de callbacks e dados adicionais de replay para instantes de fronteira. Nenhuma execução/alteração de código nesta rodada.
 
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), oração de humanos,

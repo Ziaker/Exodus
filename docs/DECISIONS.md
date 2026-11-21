@@ -47,6 +47,6 @@ qualquer alteração em documentos ou código.
 
 | D-038 | 2026-11-21 | REST não gasta ACT; recupera 2 EN fixos e guarda atos não utilizados para próxima rodada (substitui custo e percentual anteriores do REST) | `docs/GDD.md` Apêndice A |
 | D-039 | 2026-11-21 (Rodada 14: 1A; 2A; 3A; 4A; 5B; 6A; 7A; 8A) | Fases e critérios de liberação, Resource de dano, sequência por encontro, arredondamento par, autoacerto e bateria resistente | `docs/GDD.md` Apêndice A |
-| D-040 | 2026-11-21 (Rodada 15) | RESERVADO — relógio de input, instante zero, primeiro input, timeout, RNG e testes da Fase 1 | `docs/GDD.md` Apêndice A |
+| D-040 | 2026-11-21 (Rodada 15: 1A; 2A; 3A; 4A; 5A; 6A; 7A; 8A) | Fase 1: tempo monotônico, t=0, input único, deadline, visual subordinado, RNG separado e testes | `docs/GDD.md` Apêndice A |
 
 Total: 38 decisões indexadas.
