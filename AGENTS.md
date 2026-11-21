@@ -36,6 +36,9 @@ o autor decidir explicitamente.
 9. **Parada e autoridade.** Parar somente quando não restar defeito identificável e toda
    pendência estiver explicitamente registrada para o autor. Conflito entre fontes de
    autoridade sobe ao autor antes de qualquer alteração de regra.
+10. **Numeração de decisões.** Antes de registrar uma decisão nova, reservar o ID em
+    `docs/DECISIONS.md` (índice canônico). Conflito com ID usado por outra sessão sobe
+    ao autor; nunca renomear decisão alheia.
 
 ## Evidência mínima por tipo de trabalho
 

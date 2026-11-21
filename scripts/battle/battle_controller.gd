@@ -76,6 +76,7 @@ var _reaction_active: bool = false
 var _mash_active: bool = false
 var _mash_count: int = 0
 var _feedback_token: int = 0
+var _progress_gains: Dictionary = {}
 var _fallen: BattleUnit = null
 var _ally: BattleUnit = null
 
@@ -215,6 +216,10 @@ func _create_units() -> void:
 	fallen_stats.defense = 5
 	fallen_stats.mef = 3
 	fallen_stats.agi = 6
+	# D-028: restore absorption gains from the previous battles.
+	_progress_gains = ProgressStore.load_gains()
+	for key in _progress_gains.keys():
+		fallen_stats.set(key, int(fallen_stats.get(key)) + int(_progress_gains[key]))
 	_fallen = BattleUnit.new(&"fallen", "FALLEN", fallen_stats, true, true)
 
 	var ally_stats := UnitStats.new()
@@ -492,6 +497,11 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	actor.current_hp = mini(actor.stats.max_hp, actor.current_hp + gained)
 	actor.current_en = mini(actor.stats.max_en, actor.current_en + gained)
 	actor.restore_sp()
+	# D-028: persist the acquired stat deltas for the next battle.
+	_progress_gains[String(stat_name)] = int(_progress_gains.get(String(stat_name), 0)) + gained
+	_progress_gains["max_hp"] = int(_progress_gains.get("max_hp", 0)) + gained
+	_progress_gains["max_en"] = int(_progress_gains.get("max_en", 0)) + gained
+	ProgressStore.save_gains(_progress_gains)
 	target.consume_by_absorption()
 	_flash_feedback("ABSORBED")
 	_append_log("Absorbed %d %s (+HP/+EN); %s eliminated; SP base %d." % [

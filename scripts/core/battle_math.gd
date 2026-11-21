@@ -14,7 +14,9 @@ const MAX_STORED_ACTS: int = 4
 const BASE_VARIATION: float = 0.10
 const VARIATION_PER_SP: float = 0.02
 const CRIT_MULTIPLIER: float = 1.5
-const CRIT_SP_BONUS_CAP: float = 30.0
+const CRIT_PER_SP_POINT: float = 2.0
+const CRIT_SP_BONUS_CAP: float = 20.0
+const CRIT_FINAL_CAP: float = 50.0
 const MAX_RHYTHM_SECONDS: float = 1.0
 const MIN_RHYTHM_SECONDS: float = 0.2
 const RHYTHM_SECONDS_PER_POINT: float = 0.05
@@ -32,11 +34,12 @@ static func affinity_multiplier(affinity: Affinity) -> float:
 		_:
 			return 1.0
 
-## D-016: SP contributes at most +30 percentage points. A disadvantage never
-## lowers the chance below the AGI base. Final result stays within 0..100.
+## D-021: +2 percentage points per SP advantage, capped at +20, and a final
+## chance of at most 50%. A disadvantage never lowers the AGI base.
 static func crit_chance(agi: int, sp_difference: int) -> float:
-	var sp_bonus := clampf(float(sp_difference) * 10.0, 0.0, CRIT_SP_BONUS_CAP)
-	return clampf(float(agi) + sp_bonus, 0.0, 100.0)
+	var advantage := maxi(0, sp_difference)
+	var sp_bonus := clampf(float(advantage) * CRIT_PER_SP_POINT, 0.0, CRIT_SP_BONUS_CAP)
+	return clampf(float(agi) + sp_bonus, 0.0, CRIT_FINAL_CAP)
 
 
 ## D-015: a perfect defense overrides a perfect attack. Contact is the only

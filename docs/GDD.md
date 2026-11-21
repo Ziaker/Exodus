@@ -46,6 +46,8 @@ visual pertence exclusivamente ao diretor criativo.
   decidir, anexar evidência verificável, buscar `origin` antes de commit e nunca afirmar
   nada não verificado. A validação visual pertence exclusivamente ao diretor.
 - `CLAUDE.md` (raiz) — ponteiro curto para `AGENTS.md`; não duplica a regra.
+- `docs/DECISIONS.md` (raiz de `docs/`) — **índice canônico de IDs**; o texto
+  completo permanece neste Apêndice A. Nova decisão reserva ID no índice.
 
 ### 0.4 Protocolo de continuidade das rodadas — **CONFIRMADO**
 
@@ -203,7 +205,7 @@ implementação ainda está pendente. Os valores numéricos de 1A e
 
 ---
 
-### 5.2 D-021 — calibração crítica aprovada na Rodada 5 — **NÃO IMPLEMENTADO**
+### 5.2 D-021 — calibração crítica aprovada na Rodada 5 — **IMPLEMENTADA**
 
 **1B; 2B; 3B:** para os novos críticos, a diferença de SP positiva concede
 **+2 pontos percentuais por ponto**, com **bônus máximo de +20 p.p.** e
@@ -219,12 +221,12 @@ AGI 6 e ΔSP +10 → **26%**; AGI 40 e ΔSP +10 → **50%**.
 O multiplicador ×1.5, a exigência de contato e os demais contratos
 de crítico não foram alterados.
 
-**Rastreabilidade:** D-021 quantifica a direção da D-019 e substitui
-os parâmetros da D-016 **como design futuro**. A implementação atual
-ainda usa +10 p.p./SP, bônus máximo +30 p.p. e teto final 100%;
-a D-016 deve permanecer no histórico, sem ser reclassificada como
-não executada. A variação de dano fixada pela D-019 em ±10%
-também permanece pendente de implementação.
+**Rastreabilidade:** D-021 quantifica a direção da D-019 e substituiu
+os parâmetros da D-016. A fórmula acima está **implementada** em
+`BattleMath.crit_chance()` e coberta por `test_battle_math.gd`.
+A D-016 permanece no histórico como implementação anterior, sem ser
+reclassificada como não executada. A variação de dano da D-019 em
+±10% permanece pendente — não foi alterada aqui.
 
 ---
 
@@ -965,11 +967,10 @@ por esta decisão documental.
 ---
 
 14. **D-021 — Rodada 5:** números críticos (+2 p.p./SP, máximo
-    +20 p.p., teto total 50%); largura POINT base 10%,
-    ajustes ±1 p.p./10 AGI e ±1 p.p./5 SP (até ±2 p.p.);
-    mínimo de 40 ms por região POINT; objetivo de 3–5
-    ataques físicos bem-sucedidos contra equivalentes.
-    **Design aprovado; não implementado.** Pendentes:
+    +20 p.p., teto total 50%) — **IMPLEMENTADOS**;
+    largura POINT base 10%, ajustes ±1 p.p./10 AGI e ±1 p.p./5 SP,
+    mínimo de 40 ms por região POINT e objetivo de 3–5 ataques
+    — **design aprovado, não implementado**. Pendentes:
     arredondamento, seleção de perfis válidos e poderes.
 
 ---
@@ -1156,12 +1157,16 @@ Formato: ID · data · decisão · estado · impacto documental.
   invalidação de perfis incompatíveis; meta de 3–5
   ataques físicos bem-sucedidos para derrotar oponente
   aproximadamente equivalente, sem bloqueio ou crítico.
-  Complementa D-019/D-020 e substitui parâmetros de D-016
-  apenas como **design futuro**; D-016 ainda está implementada.
+  Complementa D-019/D-020 e substituiu os parâmetros de D-016.
+  **Atualização posterior:** os números críticos (+2 p.p./SP,
+  bônus +20 p.p., teto 50%) foram **IMPLEMENTADOS** em
+  `BattleMath.crit_chance()`; os parâmetros de POINT/tempo
+  seguem como design, não implementados. D-016 permanece no
+  histórico como implementação anterior.
   **PENDENTES:** diferenças não múltiplas de AGI/SP,
   geração de perfis válidos, poder dos ataques e validação.
   **Impacto:** GDD §§5.2, 8.1.2, 20, 21 e
-  `docs/COMBAT_SPEC.md`; código, testes, assets intactos.
+  `docs/COMBAT_SPEC.md`.
 
 - **D-023 · 2026-11-21 (Rodada 6: 1A; 2B; 3B; 4D; 5A; 6B; 7A; 8A)** ·
   **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**:
@@ -1215,6 +1220,21 @@ Formato: ID · data · decisão · estado · impacto documental.
   `docs/COMBAT_SPEC.md` §Sistema de ritmo.
   Preserva D-022/D-023. Nenhuma mudança de
   código, testes ou assets nesta publicação.
+
+- **D-028 · 2026-11-21** · Os ganhos da absorção **persistem entre batalhas**
+  em arquivo de save versionado (`user://exodus_progress.json`). Apenas os
+  deltas de atributos são gravados; nenhuma regra nova de progressão foi
+  inventada. **CONFIRMADO e IMPLEMENTADO.** Impacto: `ProgressStore`,
+  `BattleController._create_units()` e `_perform_absorption()`,
+  `tests/test_progress_store.gd`, GDD §10, `COMBAT_SPEC.md` §Itens e absorção.
+- **D-029 · 2026-11-21** · Dificuldade do button mashing da absorção mantida
+  em **4 apertos = +1 ponto, 8 = +2, 12 = +3** (limiar fixo). **CONFIRMADO;
+  nenhuma alteração de código necessária.** Impacto: `COMBAT_SPEC.md`
+  §Itens e absorção.
+- **D-030 · 2026-11-21** · Índice central de IDs em `docs/DECISIONS.md`: antes
+  de criar decisão nova, reservar o próximo número; conflito com outra sessão
+  sobe ao autor. **CONFIRMADO e IMPLEMENTADO.** Impacto: `docs/DECISIONS.md`
+  e `AGENTS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

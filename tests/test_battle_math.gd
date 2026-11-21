@@ -21,7 +21,7 @@ func test_sp_is_sum_of_seven_stats() -> void:
 
 func test_crit_chance_uses_agi_and_sp_difference() -> void:
 	assert_almost_eq(BattleMath.crit_chance(6, 0), 6.0, 0.001)
-	assert_almost_eq(BattleMath.crit_chance(6, 2), 26.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(6, 2), 10.0, 0.001)
 	assert_almost_eq(BattleMath.crit_chance(6, -3), 6.0, 0.001)
 
 
@@ -64,17 +64,18 @@ func test_extra_block_rolls() -> void:
 
 func test_critical_chance_positive_negative_and_zero_sp_gap() -> void:
 	assert_almost_eq(BattleMath.crit_chance(6, 0), 6.0, 0.001)
-	assert_almost_eq(BattleMath.crit_chance(6, 2), 26.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(6, 2), 10.0, 0.001)
 	assert_almost_eq(BattleMath.crit_chance(6, -3), 6.0, 0.001)
-	assert_almost_eq(BattleMath.crit_chance(1000, 100), 100.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(1000, 100), 50.0, 0.001)
 
 
-func test_critical_sp_bonus_is_capped_at_thirty_points() -> void:
-	assert_almost_eq(BattleMath.crit_chance(6, 3), 36.0, 0.001)
-	assert_almost_eq(BattleMath.crit_chance(6, 10), 36.0, 0.001)
-	assert_almost_eq(BattleMath.crit_chance(6, 100), 36.0, 0.001)
-	assert_almost_eq(BattleMath.crit_chance(0, 2), 20.0, 0.001)
+func test_critical_uses_d021_bonus_and_final_caps() -> void:
+	assert_almost_eq(BattleMath.crit_chance(6, 3), 12.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(6, 10), 26.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(6, 100), 26.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(0, 2), 4.0, 0.001)
 	assert_almost_eq(BattleMath.crit_chance(0, -5), 0.0, 0.001)
+	assert_almost_eq(BattleMath.crit_chance(40, 10), 50.0, 0.001)
 
 
 func test_point_against_point_gives_no_contact() -> void:

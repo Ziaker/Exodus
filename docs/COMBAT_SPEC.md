@@ -84,18 +84,13 @@
   independente da diferença de SP, **preservando separadamente a
   rolagem `1dN` de superioridade**. Não alterou a ordem dos demais
   modificadores do dano.
-- **Crítico — implementação vigente D-016:** multiplicador **×1.5**; chance =
-  `AGI% + clamp(ΔSP × 10%, 0%, 30%)`, limitada a 0–100%.
-  Desvantagem de SP não reduz a chance abaixo de AGI. Esta continua
-  sendo a fórmula **no código atual**, não o novo design.
-- **D-019 (Rodada 3, 1A) — novo design, NÃO IMPLEMENTADO:**
-  a contribuição crítica por **ponto de vantagem de SP deve diminuir**
-  em relação aos +10 pontos percentuais atuais e a **chance final de
-  crítico deve ter um teto inferior a 100%**. O valor exato por ponto,
-  o teto numérico global e a eventual revisão do limite de bônus
-  +30 p.p. da D-016 permanecem **PENDENTES DE CALIBRAÇÃO**. A D-019
-  substitui parcialmente a intenção anterior de D-016, sem reescrever
-  seu histórico ou inventar novos valores.
+- **Crítico — implementação vigente D-021:** multiplicador **×1.5**; chance =
+  `min(50%, AGI% + min(20%, max(ΔSP, 0) × 2%))`. Desvantagem de SP não reduz
+  a chance abaixo de AGI. **IMPLEMENTADO** em `BattleMath.crit_chance()`.
+- **D-019 (Rodada 3, 1A) — direção de design, já quantificada por D-019/2026-11-21
+  e implementada pela D-021:** a contribuição crítica por SP foi reduzida
+  e o teto final passou a 50%. O histórico da D-019 é preservado; os
+  números vigentes são os da D-021 acima.
 - SP **não** multiplica o dano diretamente.
 - Ganho de SP: **+1** por crítico, desvio perfeito, acerto em fraqueza e reação.
 - **D-019 (Rodada 3, 4C):** manter essas fontes existentes e seus
@@ -105,12 +100,11 @@
 - Crítico, Press Turn e ganhos de SP por fraqueza/crítico só são aplicados quando
   há **contato** (ritmo de ataque diferente de Falha e defesa diferente de Desvio).
   Ataques que falham não consomem rolagens de dano.
-- **D-016 (2026-11-21):** o bônus de SP no crítico foi limitado a **+30 pontos
-  percentuais** (`BattleMath.CRIT_SP_BONUS_CAP`). Substitui a fórmula irrestrita
-  `AGI + 10 × ΔSP`, que chegava a 100% com ΔSP=4 para o Fallen de teste. O limite
-  geral de 0–100% e o multiplicador ×1.5 permanecem. **IMPLEMENTADO.**
+- **D-016 (2026-11-21, histórico):** limitou o bônus de SP a +30 p.p. e manteve
+  teto 100%. **IMPLEMENTADO naquela rodada; SUBSTITUÍDO pela D-021** na
+  implementação atual. O multiplicador ×1.5 permanece.
 
-### D-021 (Rodada 5) — calibração aprovada, não implementada
+### D-021 (Rodada 5) — calibração crítica aprovada e IMPLEMENTADA
 
 - **1B; 2B; 3B:** chance crítica futura:
   `min(50%, AGI% + min(20 p.p., max(ΔSP,0) × 2 p.p.))`.
@@ -120,10 +114,9 @@
   reduz a chance base de AGI. Teto final vale mesmo
   para AGI superior a 50. Não alterar multiplicador
   ×1.5, condição de contato ou outras regras.
-- A fórmula **D-016** descrita acima permanece
-  **implementada no código atual**, mas foi substituída
-  como parâmetro para a futura implementação por D-021.
-  Preservar histórico e não alterar testes/código nesta rodada.
+- A fórmula **D-016** foi **implementada na rodada original** e depois
+  substituída pela D-021, que agora está no código. O histórico é preservado
+  em `BattleMath.crit_chance()` e nos testes de `test_battle_math.gd`.
 - **7A:** mantendo `poder × ATK ÷ DEF`, calibrar os
   poderes para que inimigo aproximadamente equivalente
   demande **3–5 ataques físicos bem-sucedidos**,
@@ -439,10 +432,14 @@
 - **D-017 (2026-11-21): uma absorção bem-sucedida sempre elimina o alvo** (`current_hp =
   0`), que deixa de agir e pode encerrar o combate se for o último inimigo.
   **IMPLEMENTADO.**
-- Ganho: 1–3 pontos do maior atributo do inimigo (exceto EN/SP/HP), mais SP base, HP e EN extras.
-- **PENDENTE:** fórmula exata de dificuldade do mashing, novas tentativas após falha,
-  limite de HP e persistência entre batalhas. Nada disso foi inventado; os ganhos
-  atuais permanecem apenas dentro da batalha.
+- Ganho: 1-3 pontos do maior atributo do inimigo (exceto EN/SP/HP), mais SP base, HP e EN extras.
+- **D-029:** limiar de mashing mantido em **4 apertos = +1, 8 = +2, 12 = +3**;
+  nenhuma dificuldade escalonada foi inventada.
+- **D-028 (2026-11-21): os ganhos persistem entre batalhas.** Os deltas de
+  atributos são salvos em `user://exodus_progress.json` com versão e validação
+  contra corrupção, e reaplicados ao Fallen ao criar a próxima batalha.
+  **IMPLEMENTADO.**
+- **PENDENTE:** novas tentativas após falha e limite de HP. Não foram inventadas.
 - Sem equipamentos e sem magia neste protótipo.
 
 ## IA
