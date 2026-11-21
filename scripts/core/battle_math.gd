@@ -17,11 +17,17 @@ const CRIT_MULTIPLIER: float = 1.5
 const CRIT_PER_SP_POINT: float = 2.0
 const CRIT_SP_BONUS_CAP: float = 20.0
 const CRIT_FINAL_CAP: float = 50.0
-const MAX_RHYTHM_SECONDS: float = 1.0
-const MIN_RHYTHM_SECONDS: float = 0.2
-const RHYTHM_SECONDS_PER_POINT: float = 0.05
+const RHYTHM_FIXED_SECONDS: float = 1.0
 const POINT_HALF_WIDTH: float = 0.05
 const BEAM_HALF_WIDTH: float = 0.15
+## D-034: AGI advantage widens POINT by 1 percentage point per point; SP keeps
+## the D-021 band adjustment (1 point per 5 SP, up to +/-2). Total coverage is
+## bounded by the already approved D-023 range of 8% to 16%.
+const POINT_PP_PER_AGI: float = 0.01
+const POINT_SP_STEP: int = 5
+const POINT_SP_MAX_STEPS: int = 2
+const POINT_MIN_HALF_WIDTH: float = 0.04
+const POINT_MAX_HALF_WIDTH: float = 0.08
 
 static func affinity_multiplier(affinity: Affinity) -> float:
 	match affinity:
@@ -49,15 +55,27 @@ static func has_contact(attack_timing: RhythmResult,
 	return attack_timing != RhythmResult.MISS \
 		and defense_timing != RhythmResult.POINT
 
-static func rhythm_duration(attacker_agi: int, defender_agi: int,
-		attacker_sp: int, defender_sp: int) -> float:
-	var advantage := (attacker_agi - defender_agi) + (attacker_sp - defender_sp)
-	var duration := MAX_RHYTHM_SECONDS - float(advantage) * RHYTHM_SECONDS_PER_POINT
-	return clampf(duration, MIN_RHYTHM_SECONDS, MAX_RHYTHM_SECONDS)
+## D-034: the bar has its own fixed speed. AGI and SP no longer change time.
+static func rhythm_duration(_attacker_agi: int, _defender_agi: int,
+		_attacker_sp: int, _defender_sp: int) -> float:
+	return RHYTHM_FIXED_SECONDS
 
-static func rhythm_zone(marker_position: float) -> RhythmResult:
+
+## Half-width of POINT for the combatant controlling the bar.
+static func point_half_width(own_agi: int, rival_agi: int,
+		own_sp: int, rival_sp: int) -> float:
+	var total := 2.0 * POINT_HALF_WIDTH
+	total += float(maxi(0, own_agi - rival_agi)) * POINT_PP_PER_AGI
+	var sp_steps := clampi((own_sp - rival_sp) / POINT_SP_STEP,
+		-POINT_SP_MAX_STEPS, POINT_SP_MAX_STEPS)
+	total += float(sp_steps) * POINT_PP_PER_AGI
+	return clampf(total * 0.5, POINT_MIN_HALF_WIDTH, POINT_MAX_HALF_WIDTH)
+
+
+static func rhythm_zone(marker_position: float,
+		point_half: float = POINT_HALF_WIDTH) -> RhythmResult:
 	var distance := absf(marker_position - 0.5)
-	if distance <= POINT_HALF_WIDTH:
+	if distance <= point_half:
 		return RhythmResult.POINT
 	if distance <= BEAM_HALF_WIDTH:
 		return RhythmResult.BEAM

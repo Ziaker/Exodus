@@ -380,7 +380,9 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
 		auto_hit: bool = false) -> int:
 	if attacker.is_player:
-		return await _manual_rhythm(duration)
+		var point_half := BattleMath.point_half_width(attacker.stats.agi,
+			defender.stats.agi, attacker.current_sp, defender.current_sp)
+		return await _manual_rhythm(duration, point_half)
 	# D-014/D-022: without a declared reaction the hit is guaranteed. POINT is a
 	# normal landed hit — it grants no automatic critical and no extra bonus.
 	if auto_hit:
@@ -394,12 +396,15 @@ func _defense_timing(defender: BattleUnit, attacker: BattleUnit, duration: float
 	if defender.is_player:
 		if not act_paid:
 			return BattleMath.RhythmResult.MISS
-		return await _manual_rhythm(duration)
+		var point_half := BattleMath.point_half_width(defender.stats.agi,
+			attacker.stats.agi, defender.current_sp, attacker.current_sp)
+		return await _manual_rhythm(duration, point_half)
 	# AI defense is resolved locally and spends one of its own acts.
 	return _defender_reaction(defender, attacker)
 
 
-func _manual_rhythm(duration: float) -> int:
+func _manual_rhythm(duration: float, point_half: float) -> int:
+	rhythm.configure(point_half)
 	rhythm.start(duration)
 	return await _wait_rhythm()
 

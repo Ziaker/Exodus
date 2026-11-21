@@ -25,10 +25,26 @@ func test_crit_chance_uses_agi_and_sp_difference() -> void:
 	assert_almost_eq(BattleMath.crit_chance(6, -3), 6.0, 0.001)
 
 
-func test_rhythm_duration_is_bounded() -> void:
-	assert_almost_eq(BattleMath.rhythm_duration(6, 4, 20, 10), 0.4, 0.001)
-	assert_almost_eq(BattleMath.rhythm_duration(100, 1, 100, 1), 0.2, 0.001)
+func test_rhythm_duration_is_fixed_at_one_second() -> void:
+	assert_almost_eq(BattleMath.rhythm_duration(6, 4, 20, 10), 1.0, 0.001)
+	assert_almost_eq(BattleMath.rhythm_duration(100, 1, 100, 1), 1.0, 0.001)
 	assert_almost_eq(BattleMath.rhythm_duration(1, 100, 1, 100), 1.0, 0.001)
+
+
+func test_point_width_uses_agi_advantage_and_sp_bands() -> void:
+	# Creator decision D-033: +1 p.p. of POINT per AGI advantage, SP keeps D-021.
+	assert_almost_eq(BattleMath.point_half_width(10, 5, 20, 20), 0.075, 0.001)
+	assert_almost_eq(BattleMath.point_half_width(5, 5, 20, 20), 0.05, 0.001)
+	assert_almost_eq(BattleMath.point_half_width(6, 10, 20, 20), 0.05, 0.001)
+	assert_almost_eq(BattleMath.point_half_width(5, 5, 25, 20), 0.055, 0.001)
+	assert_almost_eq(BattleMath.point_half_width(5, 5, 40, 20), 0.06, 0.001)
+
+
+func test_point_width_is_bounded_and_changes_the_zone() -> void:
+	assert_almost_eq(BattleMath.point_half_width(100, 0, 20, 20), 0.08, 0.001)
+	assert_almost_eq(BattleMath.point_half_width(0, 100, 0, 100), 0.04, 0.001)
+	assert_eq(BattleMath.rhythm_zone(0.44, 0.075), BattleMath.RhythmResult.POINT)
+	assert_eq(BattleMath.rhythm_zone(0.42, 0.075), BattleMath.RhythmResult.BEAM)
 
 
 func test_rhythm_zones() -> void:

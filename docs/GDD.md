@@ -552,11 +552,14 @@ alterado nesta rodada.
 
 ---
 
-### 8.1.2 D-021 — largura e tempo POINT — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+### 8.1.2 D-021 — largura e tempo POINT — **PARCIALMENTE IMPLEMENTADA**
 
-**4B:** largura-base da **cobertura total POINT = 10% da linha**;
-ajustar **±1 ponto percentual a cada 10 pontos de diferença de AGI**,
-a favor do executante com maior AGI.
+**D-034 substitui o ajuste de AGI abaixo:** a diferença de AGI agora vale
+**+1 p.p. por ponto de vantagem** e a barra tem duração fixa de 1,0 s.
+O ajuste de SP (5A) permanece e está implementado.
+
+**4B (histórico):** largura-base da **cobertura total POINT = 10% da linha**;
+antes, ±1 p.p. a cada 10 pontos de diferença de AGI.
 
 **5A:** ajustar **±1 ponto percentual a cada 5 pontos de diferença
 de SP**, no máximo **±2 p.p. por SP**, a favor do executante com maior SP.
@@ -1678,6 +1681,10 @@ rodada.
     em §20 e exige decisão
     futura, sem modificação
     desta rodada.
+21. **D-034:** barra fixa em 1,0 s; AGI aumenta a cobertura POINT em
+    +1 p.p. por ponto de vantagem; SP mantém faixas da D-021.
+    **IMPLEMENTADO.** Substitui a taxa de duração da D-032 como direção
+    vigente; a D-032 permanece registrada no histórico.
 
 ---
 
@@ -2065,6 +2072,18 @@ Formato: ID · data · decisão · estado · impacto documental.
   dado de criatura ou
   arquivo JSON alterado
   nesta rodada.
+
+- **D-034 · 2026-11-21 (mudança de planos do diretor)** · A barra de ritmo
+  passa a ter **velocidade própria e fixa de 1,0 segundo**. Diferença de AGI
+  **não** altera mais a duração; ela passa a aumentar a **cobertura do POINT**
+  em **+1 ponto percentual por ponto de AGI de vantagem**. O SP mantém os
+  ajustes por faixa da D-021 (±1 p.p. por 5 SP, até ±2 p.p.) e a cobertura
+  total respeita o limite de 8%–16% da D-023. **CONFIRMADO e IMPLEMENTADO.**
+  Impacto: `BattleMath.rhythm_duration()`, `BattleMath.point_half_width()`,
+  `RhythmBar.configure()`, `battle_controller.gd`, `test_battle_math.gd`,
+  `COMBAT_SPEC.md` §Sistema de ritmo. Substitui a regra de duração variável
+  por AGI/SP e o ajuste de largura por AGI da D-021; D-032 permanece no
+  histórico como direção anterior, não executada.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

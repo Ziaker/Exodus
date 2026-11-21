@@ -18,6 +18,10 @@ var _elapsed: float = 0.0
 var _running: bool = false
 var _marker: ColorRect
 var _label: Label
+var _beam_left: ColorRect
+var _point_zone: ColorRect
+var _beam_right: ColorRect
+var _point_half_width: float = BattleMath.POINT_HALF_WIDTH
 
 func _ready() -> void:
 	anchor_left = 0.0
@@ -41,9 +45,10 @@ func _ready() -> void:
 	track.size = Vector2(BAR_WIDTH - 20, BAR_HEIGHT)
 	add_child(track)
 
-	_make_zone(0.35, 0.10, BEAM_COLOR)
-	_make_zone(0.45, 0.10, POINT_COLOR)
-	_make_zone(0.55, 0.10, BEAM_COLOR)
+	_beam_left = _make_zone(0.35, 0.10, BEAM_COLOR)
+	_point_zone = _make_zone(0.45, 0.10, POINT_COLOR)
+	_beam_right = _make_zone(0.55, 0.10, BEAM_COLOR)
+	_layout_zones()
 
 	_marker = ColorRect.new()
 	_marker.color = MARKER_COLOR
@@ -60,6 +65,25 @@ func _make_zone(start_fraction: float, width_fraction: float, color: Color) -> C
 	zone.size = Vector2((BAR_WIDTH - 20) * width_fraction, BAR_HEIGHT)
 	add_child(zone)
 	return zone
+
+
+func _layout_zones() -> void:
+	var track_width := BAR_WIDTH - 20.0
+	var half := _point_half_width
+	var beam := BattleMath.BEAM_HALF_WIDTH
+	_beam_left.position.x = 10.0 + track_width * (0.5 - beam)
+	_beam_left.size.x = track_width * (beam - half)
+	_point_zone.position.x = 10.0 + track_width * (0.5 - half)
+	_point_zone.size.x = track_width * half * 2.0
+	_beam_right.position.x = 10.0 + track_width * (0.5 + half)
+	_beam_right.size.x = track_width * (beam - half)
+
+
+## D-034: AGI/SP change POINT width, not bar speed.
+func configure(point_half: float) -> void:
+	_point_half_width = clampf(point_half,
+		BattleMath.POINT_MIN_HALF_WIDTH, BattleMath.POINT_MAX_HALF_WIDTH)
+	_layout_zones()
 
 
 func start(seconds: float) -> void:
@@ -87,7 +111,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var key := event as InputEventKey
 		if key.keycode == KEY_Z or key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER:
 			var progress := (_marker.position.x - 10.0) / (BAR_WIDTH - 20.0)
-			_finish(BattleMath.rhythm_zone(progress))
+			_finish(BattleMath.rhythm_zone(progress, _point_half_width))
 			accept_event()
 
 

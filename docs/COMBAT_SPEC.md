@@ -413,16 +413,23 @@
   ganho de SP. **IMPLEMENTADO** em `BattleMath.has_contact()`.
 - Zonas: **Ponto = 10% central**, **Trave = 20% ao redor**, resto = falha.
 - Tecla: **Z / Enter**.
-- Duração da janela: `1s - 0,05s por ponto de AGI/SP a favor do atuante`, mínimo `0,2s`.
+- **D-034 (2026-11-21): a barra tem velocidade própria e fixa de 1,0 segundo.**
+  AGI e SP **não** alteram mais a duração. A diferença de AGI passa a alterar
+  o **tamanho da zona POINT**: base 10% + **1 ponto percentual por ponto de
+  AGI de vantagem**; o SP mantém os ajustes por faixa da D-021 (±1 p.p. por
+  5 SP, até ±2 p.p.). Cobertura total limitada a 8%–16% (D-023).
+  **IMPLEMENTADO** em `BattleMath.rhythm_duration()`, `point_half_width()` e
+  `RhythmBar.configure()`. Substitui a regra anterior de duração variável.
 - Ao atacar: Ponto → dano integral; Trave → oponente bloqueia; Falha → sem dano.
 - Ao defender: Trave → bloqueia; Ponto → desvia e ganha +1 SP; Falha → dano integral.
 - Bloqueio extra: **+1 rolagem de bloqueio a cada 2 pontos de SP de vantagem**.
 
 ### D-021 (Rodada 5) — zonas especiais calibradas; não implementadas
 
-- **4B:** cobertura total POINT inicial **10%**;
-  ajustar **±1 ponto percentual por 10 pontos de
-  diferença de AGI** em favor da AGI superior
+- **4B (histórico; ajuste de AGI substituído por D-034):** cobertura total
+  POINT inicial **10%**; antes, ±1 p.p. por 10 de diferença de AGI.
+  Agora a diferença de AGI vale **+1 p.p. por ponto**, conforme D-034;
+  o ajuste por SP desta decisão permanece.
   do executante do timing.
 - **5A:** ajustar **±1 ponto percentual por 5 pontos
   de diferença de SP**, limitado a **±2 p.p. de SP**,
