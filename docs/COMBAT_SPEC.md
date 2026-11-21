@@ -256,6 +256,110 @@
   Os contratos da D-023 **não foram
   implementados nesta rodada**.
 
+### D-024 (Rodada 7) — parâmetros e critérios de aceitação; DESIGN APROVADO, NÃO IMPLEMENTADO
+
+- **1B:** a **velocidade instantânea máxima**
+  do marcador é **4× a velocidade média**
+  da travessia completa, relativa à duração
+  global calculada. Manter transições
+  suaves e continuidade da D-023; limites
+  de aceleração, velocidade mínima e
+  curvas específicas são **PENDENTES**.
+- **2A:** perfis com **3 regiões POINT**
+  exigem **duração global ≥300 ms**.
+  Perfis de 1–2 zonas preservam a
+  duração global preexistente, sempre
+  sujeitos aos **40 ms mínimos por
+  região** e à validação de viabilidade.
+  Não prolongar a barra para forçar
+  três zonas. Não criar fallback para
+  configurações inválidas sem aprovação.
+- **3A:** na distribuição triangular
+  temporal limitada da IA (D-023),
+  usar amplitudes iniciais por habilidade:
+  **iniciante ±70 ms**, **comum ±40 ms**
+  e **profissional ±20 ms**, em torno
+  do instante alvo. Categoria de
+  cada inimigo, moda exata e detalhes
+  do modelo permanecem **PENDENTES**.
+  A exceção de autoacerto das D-014/D-022
+  prevalece quando **não há reação
+  declarada**, sem crítico automático.
+- **4B:** quando houver várias regiões
+  POINT, a IA prioriza a que ofereça a
+  **maior duração efetiva de passagem**
+  do marcador. Critério de desempate
+  e escolha do instante-alvo dentro
+  da região ainda **PENDENTES**.
+- **5B:** para replay e rastreabilidade,
+  além de seed do encontro, IDs estáveis
+  de inimigo e perfil e índice da execução
+  da D-023, registrar **cópia completa
+  dos parâmetros resolvidos do perfil**.
+  Esquema, versionamento e algoritmo
+  de derivação de seed são **PENDENTES**;
+  não supor que o snapshot por si
+  preserve compatibilidade entre
+  versões diferentes do resolvedor.
+- **6A:** julgar o input por relógio
+  **monotônico, relativo ao início
+  da barra**, registrando o instante
+  **em que o evento é recebido**.
+  O último frame renderizado nunca
+  é fonte mecânica do resultado;
+  verificar relógio e resolução
+  reais disponíveis na API antes
+  de implementar. Pausas, bordas,
+  sincronização e tolerâncias
+  permanecem **PENDENTES**. O instante
+  de recebimento não deve ser
+  confundido com o instante físico
+  da tecla.
+- **7C:** usar uma **ficha neutra de
+  referência para calibrar poderes**,
+  com **valores e estrutura a homologar
+  separadamente**. A meta permanece
+  **3–5 ataques físicos bem-sucedidos**
+  contra equivalente sem bloqueios
+  ou críticos; fórmula `poder×ATK÷DEF`
+  preservada. Não foi criada ficha
+  nem aprovado poder numérico.
+- **8A:** antes de declarar a nova
+  execução conforme, exigir **testes
+  de propriedades matemáticas,
+  replay determinístico por seed,
+  testes de fronteira, integração e
+  comparações entre taxas de FPS**.
+  Abranger cobertura, duração, picos
+  de velocidade, 40 ms mínimos por
+  zona, relógio de input, IA,
+  contato, crítico, SP e reações.
+  Cenários, taxas específicas,
+  limiares e tolerâncias dos
+  critérios de aceitação **PENDENTES**.
+  Nenhum desses testes foi executado
+  nesta publicação documental.
+- **Risco de viabilidade:** para
+  três zonas em barra de 300 ms,
+  é necessário tempo total de
+  pelo menos **120 ms em POINT**,
+  com até 180 ms restantes fora.
+  O teto 4× não demonstra sozinho
+  que perfis arbitrários com
+  transições suaves sejam válidos;
+  respeitar geração válida por
+  construção de D-023.
+- **Implementação corrente:** 
+  `RhythmBar` usa progressão
+  uniforme e posição visual para
+  julgamento, `BattleMath.rhythm_zone()`
+  usa zonas fixas e `_ai_roll()`
+  sorteia resultados discretos.
+  D-024 exige trabalho posterior
+  em código, não autorizado nesta
+  rodada. D-022 autoacerto sem
+  reação já implementado permanece.
+
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
 - **1E (ideia própria do diretor):** a **barra de ritmo** determina

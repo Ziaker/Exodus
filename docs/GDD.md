@@ -502,6 +502,131 @@ no código remoto, deve ser preservado.
 
 ---
 
+### 8.1.4 Rodada 7 — D-024: limites, IA, reprodução e validação — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+O diretor aprovou **1B; 2A; 3A; 4B; 5B; 6A; 7C; 8A**,
+detalhando D-020, D-021 e D-023. As decisões preservam os
+40 ms mínimos por região POINT, o orçamento espacial de
+8%–16%, a duração total calculada por AGI/SP, a
+geração válida por construção, os perfis distintos
+de ataque/defesa e as exceções D-014/D-022.
+
+1. **1B — pico de velocidade:** limitar a velocidade
+   instantânea do marcador a **4 vezes a velocidade
+   média da travessia completa** do perfil, medida
+   para a duração total vigente. Manter velocidade
+   contínua e transições suaves de D-023.
+   **PENDENTES:** velocidade mínima, aceleração
+   máxima, função/segmentação concreta e prova
+   de viabilidade do gerador sob esses limites.
+2. **2A — três regiões:** perfis especiais com
+   **3 regiões POINT** só são elegíveis se a
+   **duração total da barra for ≥300 ms**.
+   Com 1 ou 2 regiões, permanece a duração
+   global já calculada e seu mínimo vigente
+   no protótipo (0,2 s), condicionada
+   à validade temporal de cada região.
+   Não estender automaticamente uma barra
+   de menor duração para autorizar 3 regiões;
+   configurações impossíveis são inválidas
+   conforme D-021/D-023. **PENDENTE:** política
+   operacional para perfis sem configuração válida.
+3. **3A — habilidade da IA:** para o **erro
+   temporal triangular limitado** de D-023,
+   amplitudes iniciais **iniciante ±70 ms;
+   comum ±40 ms; profissional ±20 ms**,
+   concentradas no alvo temporal escolhido.
+   **PENDENTES:** quais inimigos pertencem
+   a cada categoria, modo da distribuição,
+   especificação do gerador triangular e
+   regras de eventual modificação por
+   outros atributos. Quando não há reação
+   declarada pelo jogador, prevalece
+   o acerto automático das D-014/D-022:
+   não permitir falha produzida pelo erro
+   temporal nesses casos.
+4. **4B — região pretendida pela IA:** quando
+   houver várias zonas POINT, priorizar
+   aquela de **maior duração temporal
+   efetiva**, não necessariamente a mais
+   larga espacialmente. **PENDENTES:**
+   desempate e cálculo do alvo temporal
+   dentro dessa região.
+5. **5B — reprodução de padrões:** conservar
+   a derivação por **seed do encontro,
+   IDs estáveis do inimigo e do perfil
+   e índice da execução** da D-023,
+   e **registrar também cópia completa
+   dos parâmetros resolvidos do perfil**
+   para permitir análise/reprodução
+   mesmo quando os dados originais mudarem.
+   **PENDENTES:** formato, versionamento
+   da configuração/motor, algoritmo de
+   derivação e dados adicionais de estado
+   exigidos para replay fiel.
+6. **6A — relógio de input:** usar
+   **relógio monotônico relativo ao início
+   da barra** e **registrar o instante em
+   que o evento de input for recebido**
+   como base do julgamento temporal.
+   Não usar a posição do último quadro.
+   Não afirmar que o instante de recebimento
+   corresponde ao momento físico da tecla.
+   **PENDENTES:** API e precisão disponíveis,
+   associação entre recebimento e início,
+   tratamento de pausa/reinício, empates
+   de fronteira e eventuais tolerâncias;
+   nenhum bônus de latência foi aprovado.
+7. **7C — ficha neutra de calibração:** criar
+   uma **referência estatística neutra
+   específica para testes**, a ser
+   **homologada separadamente pelo diretor**.
+   A decisão não aprova os valores de HP,
+   ATK, DEF ou poder nem a estrutura de
+   arquivo de uma ficha; não cria arquivo
+   ou autoriza alterar dados do jogo.
+   Manter a meta D-021 de 3–5 ataques
+   físicos bem-sucedidos contra equivalente,
+   **sem bloqueios nem críticos**.
+8. **8A — critérios de validação:** exigir
+   **testes de propriedades matemáticas,
+   reprodução por seed, testes de fronteira,
+   testes de integração e comparação entre
+   diferentes FPS** antes de declarar o
+   novo sistema conforme. Verificar os
+   limites de velocidade e cobertura,
+   duração total, tempo mínimo por zona,
+   classificação pelo instante temporal,
+   distribuição/erro da IA e conservação
+   das regras de contato, crítico, SP e
+   reações. **PENDENTES:** matriz de
+   cenários, taxas de FPS, amostragem,
+   metas/tolerâncias mensuráveis e comandos
+   executáveis. Esta decisão é um
+   **critério de aceitação**, não
+   evidência de testes já executados.
+
+**Viabilidade condicionada:** a restrição de 3 zonas
+em ≥300 ms oferece pelo menos 120 ms somados
+dentro das zonas (D-021) e até 180 ms restantes
+para os outros trechos, mas isso **não prova**
+que qualquer distribuição, curva ou limite
+de velocidade produza perfil válido. Com
+teto de 4× a velocidade média, a geração
+válida por construção deve demonstrar
+factibilidade considerando a continuidade
+e os limites de aceleração ainda pendentes.
+
+**Estado da implementação:** `RhythmBar`,
+`BattleMath.rhythm_zone()` e
+`BattleController._ai_roll()` ainda não
+implementam perfis dinâmicos e avaliação
+temporal. D-024 não altera código, testes
+ou assets nesta rodada; a exceção D-022
+implementada deve ser preservada.
+
+---
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -780,6 +905,27 @@ pode ser anulada pelo modelo de erro da IA.
 
 ---
 
+**D-024 (Rodada 7):** calibrados teto instantâneo
+de **4× velocidade média**, restrição de **3 zonas
+POINT apenas com duração ≥300 ms**, erros
+triangulares de IA (**±70/40/20 ms** por
+iniciante/comum/profissional), alvo de maior
+tempo POINT, registro completo dos parâmetros
+resolvidos para replay, relógio monotônico
+com instante de recebimento de input, ficha
+neutra a homologar e requisitos de teste de
+propriedades, seeds, fronteiras, integração
+e FPS. **PENDENTES:** curvas e acelerações
+máximas, viabilidade dos domínios por
+construção, classe de cada inimigo, esquema
+de replay/seed, semântica real do relógio,
+aprovação dos atributos da ficha neutra
+e parâmetros de aceitação dos testes.
+Nenhum teste ou implementação foi realizado
+por esta decisão documental.
+
+---
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -835,6 +981,18 @@ pode ser anulada pelo modelo de erro da IA.
     triangular da IA, seeds derivadas e
     julgamento temporal dos reflexos.
     Detalhes e pendências em §8.1.3.
+
+---
+
+17. **D-024 — Rodada 7:** design aprovado, **NÃO
+    IMPLEMENTADO**; limites de velocidade, três
+    zonas condicionadas a ≥300 ms, amplitudes de
+    erro temporal da IA, prioridade por janela
+    temporal, snapshot integral para replay,
+    relógio monotônico de input, ficha neutra
+    pendente e testes obrigatórios de propriedades,
+    reprodução, fronteiras, integração e FPS.
+    Dependências e riscos detalhados em §8.1.4.
 
 ---
 
@@ -1030,6 +1188,33 @@ Formato: ID · data · decisão · estado · impacto documental.
   implementada de autoacerto sem reação; não
   houve alteração de código, testes, assets
   ou documentação fora do escopo.
+
+- **D-024 · 2026-11-21 (Rodada 7: 1B; 2A; 3A; 4B; 5B; 6A; 7C; 8A)** ·
+  **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**:
+  (1B) pico máximo de 4× a velocidade média;
+  (2A) três regiões POINT apenas com duração
+  de barra ≥300 ms; (3A) amplitude do erro
+  triangular da IA iniciante ±70 ms, comum
+  ±40 ms e profissional ±20 ms; (4B) IA
+  prioriza a região de maior tempo efetivo
+  de passagem; (5B) snapshot completo de
+  parâmetros resolvidos, além da seed e
+  identidades D-023; (6A) relógio monotônico
+  relativo ao início da barra, registrando
+  instante do recebimento de input;
+  (7C) ficha estatística neutra para
+  calibração, **homologação separada**;
+  (8A) exigir testes matemáticos,
+  reprodutibilidade por seed, fronteiras,
+  integração e comparação entre FPS.
+  **PENDENTES:** limite de aceleração,
+  prova de validade do gerador, precisão
+  da API temporal, valores de referência
+  e métricas/tolerâncias dos testes.
+  **Impacto:** GDD §§8.1.4, 20, 21 e
+  `docs/COMBAT_SPEC.md` §Sistema de ritmo.
+  Preserva D-022/D-023. Nenhuma mudança de
+  código, testes ou assets nesta publicação.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
