@@ -157,6 +157,48 @@
   escolha e a prioridade ofensiva por AGI ainda não foram
   implementadas. Nenhuma mudança de código foi autorizada.
 
+### Perfis especiais de ritmo — D-013 e D-020 (Rodada 4; design aprovado, não implementado)
+
+- **Escopo preservado de D-013:** determinados inimigos possuem
+  perfis variáveis de **posição, número de zonas POINT e cadência**,
+  com padrões distintos quando recebem ataques e quando os executam;
+  padrão descoberto durante a execução. Nenhuma regra visual
+  existente de HUD foi substituída.
+- **D-020 (2026-11-21, 1B):** a **AGI define a largura-base POINT**,
+  com ajustes por **faixas de superioridade SP**. Fórmulas, cortes,
+  sinais e limites além do intervalo global abaixo ainda são
+  **PENDENTES**; não derivar um coeficiente linear por suposição.
+- **D-020 (2A e 3B):** quando existir mais de uma zona POINT, suas
+  larguras **compartilham a mesma cobertura total**, cujo limite
+  aprovado é **8% a 16% do percurso da linha** para perfis
+  especiais. A distribuição entre zonas e largura mínima por
+  região continuam **PENDENTES**; a cobertura não é
+  automaticamente uma proporção equivalente de tempo.
+- **D-020 (4A):** manter a **duração total** calculada pelas
+  regras existentes e variar a cadência/velocidade do marcador
+  dentro da travessia, **compensando** acelerações e desacelerações.
+  Funções e extremos de velocidade permanecem **PENDENTES**.
+- **D-020 (5A):** IA resolve perfis especiais simulando
+  a **execução temporal** com erros de timing associados a
+  sua habilidade; distribuição/escala desses erros ainda
+  requerem aprovação. Respeitar a D-014 quando o jogador não
+  puder reagir: o acerto inimigo garantido **prevalece**
+  sobre uma falha simulada; crítico segue as regras da D-019.
+- **D-020 (6B):** padrões variam por **seed de encontro**,
+  preservando identidade e reprodutibilidade. A origem,
+  persistência e derivação da seed e a variação entre ações
+  do encontro ficam **PENDENTES**.
+- **Limitação importante:** zona POINT de 8% em uma barra
+  de duração total de 0,2 s equivale a **16 ms somente se
+  a velocidade for constante**; aceleração local pode reduzir
+  ainda mais a janela. Não há aprovação de duração mínima
+  por zona ou de compensações automáticas para latência/FPS.
+- **Compatibilidade:** POINT central fixo de 10%,
+  `BattleMath.rhythm_zone()`, `RhythmBar` com movimento
+  uniforme e sorteio discreto da IA continuam descrevendo
+  **o código vigente**, não a execução dos perfis especiais
+  D-013/D-020. Nenhuma implementação foi autorizada.
+
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
 - Absorção: restrita a **Fallen**; requer button mashing; **0 pressionamentos = falha,

@@ -280,6 +280,66 @@ sobreposição das múltiplas zonas, função de SP/AGI sobre as larguras, prece
 entre a duração já calculada por SP/AGI e a cadência variável, comportamento da IA
 com perfis especiais e testes de sincronização entre cursor visual e resultado real.
 
+### 8.1.1 Rodada 4 — contrato dos perfis especiais (D-020) — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+Decisões do diretor em 2026-11-21 (**1B; 2A; 3B; 4A; 5A; 6B**),
+que complementam a D-013 sem alterar seus padrões distintos de ataque/defesa:
+
+1. **1B — AGI/SP e largura:** **AGI define a largura-base** da zona
+   POINT, e **SP aplica ajustes por faixas de superioridade**.
+   Fórmula, grandeza relativa utilizada, limites das faixas e efeitos
+   exatos de cada uma permanecem **PENDENTES**. Não inferir automaticamente
+   crescimento linear nem direção/sinal de todos os ajustes.
+2. **2A — múltiplas zonas:** quando um perfil apresenta várias regiões
+   POINT, elas **dividem um orçamento único de cobertura total**.
+   Multiplicar o número de zonas não multiplica a cobertura conjunta.
+   Divisão igual ou desigual, larguras mínimas e prevenção de
+   sobreposição permanecem **PENDENTES**.
+3. **3B — cobertura POINT:** a **soma** das regiões POINT ocupa
+   **8% a 16% do percurso da linha** para os perfis dinâmicos.
+   A zona central de 10% do protótipo cabe dentro desse intervalo,
+   mas **não** substitui a obrigação futura de implementar perfis
+   variáveis. Trata-se de extensão **espacial**, não garantia de
+   8% a 16% da duração temporal total.
+4. **4A — cadência/duração:** conservar a **duração total calculada**
+   pelas regras já existentes e introduzir acelerações/desacelerações
+   compensadas dentro dela, mantendo a travessia completa no mesmo
+   tempo. Não definir arbitrariamente picos de velocidade,
+   curvas de aceleração nem efeitos adicionais de AGI/SP.
+5. **5A — execução da IA:** simular a execução **temporal** do
+   marcador e aplicar erros de timing coerentes com a habilidade
+   do inimigo, em vez de resolver o perfil especial apenas
+   escolhendo POINT/BEAM/MISS sem relação com a linha.
+   Distribuição, escala, limites e habilidade por perfil são
+   **PENDENTES**. Preservar a exceção de acerto garantido da
+   D-014 quando o jogador **não pode reagir**: essa regra tem
+   precedência sobre um erro simulado da IA.
+6. **6B — variação reproduzível:** o perfil pode variar por
+   **seed de encontro**, preservando a identidade do inimigo
+   e permitindo reprodução controlada dos padrões. Ficam
+   **PENDENTES** derivação e armazenamento da seed, limites
+   da variação entre ações do mesmo encontro e política
+   para não tornar a dificuldade arbitrária.
+
+**Risco crítico de calibragem:** com duração global mínima
+de 0,2 s (protótipo), percorrer uma zona correspondente a
+8% do trajeto sob velocidade constante equivale a apenas
+16 ms de janela temporal. Uma aceleração local pode reduzir
+ainda mais o tempo útil. A cobertura espacial de 8%–16%
+**não homologa nenhuma janela mínima em milissegundos**,
+nem autoriza ajustes ocultos. É necessária decisão e teste
+específicos para justiça, taxa de quadros, latência de entrada,
+legibilidade, integração ao HUD (D-012) e sincronização da
+janela visual com a avaliação do timing.
+
+**Conflito documentado com a implementação atual:** 
+`BattleMath.rhythm_zone()` usa POINT central fixo de 10% e
+`RhythmBar` percorre o eixo em velocidade uniforme; a IA
+atual sorteia resultados discretos. Esses comportamentos
+permanecem **IMPLEMENTADOS NO PROTÓTIPO, não conformes ao novo
+design D-020**. Nenhum código, teste ou recurso visual foi
+alterado nesta rodada.
+
 ---
 
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
@@ -519,6 +579,16 @@ global, poderes de referência e métricas de duração de combate.
 Os números do código atual não são parâmetros aprovados para a nova
 calibração. Não foram executadas simulações ou testes nesta rodada.
 
+**D-020 (Rodada 4):** cobertura total POINT entre **8% e 16%**
+nos perfis especiais, dividida entre regiões múltiplas, e duração
+global preservada com cadência variável compensada. A duração
+mínima do protótipo (0,2 s) pode resultar em janelas úteis muito
+curtas: 8% do percurso, sob velocidade uniforme e em 0,2 s,
+equivale a **16 ms**. **PENDENTES**: limites temporais de
+acerto, função AGI/SP por faixas, erro da IA, seed, distribuição
+das regiões e critérios de teste de responsividade. O percentual
+de cobertura não representa automaticamente percentual de tempo.
+
 ---
 
 ## 21. Riscos e pendências consolidadas
@@ -547,6 +617,12 @@ calibração. Não foram executadas simulações ou testes nesta rodada.
     manutenção de ganhos +1 SP; comparação de dominância com adversário
     vivo de maior SP; críticos normais em acertos inimigos garantidos.
     Novas fórmulas e poderes ainda **não implementados**.
+13. **D-020 (Rodada 4):** perfis especiais de ritmo aprovados como design
+    em §8.1.1 e na especificação técnica, **NÃO IMPLEMENTADOS**.
+    Contratos pendentes: largura-base por AGI, faixas de SP,
+    mínimos temporais das zonas, distribuição em múltiplos POINT,
+    perfil de erro temporal da IA e derivação/reprodução da seed.
+    O risco crítico é a janela útil subquadro em durações curtas.
 
 ---
 
@@ -677,6 +753,22 @@ Formato: ID · data · decisão · estado · impacto documental.
   e implementação da exceção de acerto da D-014.
   **Impacto:** GDD §§5.1, 8.2, 20, 21 e
   `docs/COMBAT_SPEC.md`; código, testes e arquivos locais intactos.
+
+- **D-020 · 2026-11-21 (Rodada 4, 1B; 2A; 3B; 4A; 5A; 6B)** ·
+  **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**:
+  (1B) AGI define largura-base de POINT, SP ajusta por faixas;
+  (2A) múltiplas zonas compartilham a cobertura POINT total;
+  (3B) cobertura total de **8% a 16% do percurso**;
+  (4A) cadência variável com compensação, preservando a
+  duração global da barra;
+  (5A) IA simula a execução temporal com erros por habilidade,
+  respeitando a exceção de acerto automático da D-014;
+  (6B) variação de perfil por seed de encontro reproduzível.
+  **PENDENTES:** faixas e funções AGI/SP, divisão e largura
+  mínima das zonas, janela temporal mínima, modelo de erro
+  da IA e detalhes da seed. **Impacto:** GDD §§8.1.1, 20, 21
+  e `docs/COMBAT_SPEC.md` §Sistema de ritmo. Demais documentos,
+  código, testes, HUD e recursos preservados.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
