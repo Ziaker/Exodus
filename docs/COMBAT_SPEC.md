@@ -22,6 +22,29 @@
 - Mapeamento dos `.rvdata`: `MaxHP→HP`, `MaxMP→EN`, `ATK→ATK`, `DEF→DEF`,
   `MAT→MAK`, `MDF→MEF`, `LUK→AGI`.
 
+### D-025 (Rodada 8, 5E) — atributos iniciais (design aprovado; não implementado)
+
+- **Todos os personagens e inimigos:** atributos básicos
+  iniciais definidos em **8 ou múltiplos de 8**;
+  a decisão não atribui a mesma ficha a cada espécie
+  nem homologa os valores dos outros personagens.
+- **Fallen no início do jogo:** `HP máximo = 32`,
+  `EN máximo = 8`, `ATK = 8`, `MAK = 8`,
+  `DEF = 8`, `MEF = 8`, `AGI = 8`.
+- `SP_base = 32 + 8 + 8 + 8 + 8 + 8 + 8 = 80`,
+  **calculado**, não uma estatística básica
+  atribuída separadamente em 8.
+- **PENDENTES:** valores específicos dos demais
+  personagens e inimigos, progressão, limites
+  superiores e ficha neutra de calibração
+  da D-024 (7C), que continua sendo
+  homologação separada.
+- **DIVERGÊNCIA:** defaults de `UnitStats` e
+  `BattleController._create_units()` não
+  correspondem à regra; a escala altera SP
+  base e demanda reavaliar poderes físicos
+  segundo D-019/D-021. Nenhum código foi alterado.
+
 ## Atos e reações
 - Cada personagem possui **2 atos por rodada**; cada ato pode ser **Ação** ou **Reação**
   (2 ações, 2 reações ou 1 de cada).
@@ -60,6 +83,31 @@
   ação anunciada depende de **AGI**. Desempate, interrupção/cancelamento
   e detalhes de encadeamento permanecem **PENDENTES**. Nenhuma alteração
   implícita em custo ou comando foi autorizada.
+
+### D-025 (Rodada 8, 6C e 7A) — prioridade ofensiva; design, não implementado
+
+- **6C:** quando AGI empatar, desempatar
+  ação anunciada versus reação ofensiva
+  por **identificador estável do
+  combatente**. O sentido da ordenação,
+  empates residuais e requisitos de
+  identidade são **PENDENTES**.
+  Preservar prioridade por AGI (D-014).
+- **7A:** reação ofensiva que resolve
+  primeiro só **cancela** a ação
+  anunciada se **eliminar o executor**
+  ou provocar **interrupção por efeito
+  explicitamente definido**.
+  Dano sem morte/interrupção não cancela.
+  Não criar novos efeitos, custos ou
+  recompensas por inferência. Ordem
+  detalhada de gastos/eventos e
+  efeitos interruptivos continuam
+  **PENDENTES**.
+- A exceção de autoacerto inimigo
+  sem reação declarada da **D-022**
+  não é modificada. Este contrato
+  **não foi implementado**.
 
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
@@ -359,6 +407,66 @@
   em código, não autorizado nesta
   rodada. D-022 autoacerto sem
   reação já implementado permanece.
+
+### D-025 (Rodada 8, 1B; 2B; 3A; 4A; 8A) — validação e tempo; design não implementado
+
+- **1B:** se um perfil do encontro
+  não possui configuração válida
+  conforme D-020/D-021/D-023/D-024,
+  **bloquear validação/carregamento do
+  encontro** com diagnóstico explícito.
+  Nenhum fallback automático foi
+  aprovado. Quando AGI/SP mudarem
+  em tempo de execução, a política
+  de viabilidade continua **PENDENTE**.
+- **2B:** `|dv/dt| ≤ 12 × v_média/T`,
+  com `T` igual à duração total da
+  travessia e `v_média` igual à
+  distância total sobre `T`.
+  Preservar teto de velocidade
+  instantânea **4× v_média** e
+  transições suaves D-023.
+  Nenhuma curva específica foi
+  aprovada. Exemplo: com barra
+  de 300 ms, mudança de 1×
+  v_média exige pelo menos 25 ms
+  sob aceleração máxima.
+- **3A:** a fronteira exata entre
+  resultados pertence à zona
+  mais favorável: **POINT > BEAM
+  > MISS**. Sem tolerância temporal
+  adicional, sem mudança na
+  precedência POINT/POINT D-015.
+- **4A:** para reação escolhida
+  com combate pausado, iniciar
+  **origem monotônica nova ao
+  começar a barra após a escolha**,
+  excluindo o tempo de menu
+  da duração do reflexo.
+  A implementação atual da
+  escolha pausada ainda está
+  pendente de acordo com D-014;
+  a ativação e a primeira entrada
+  elegível requerem definição.
+- **8A:** exigir **resultado
+  mecânico exatamente idêntico**
+  sob **30, 60 e 120 FPS** com
+  **timestamps controlados
+  equivalentes**, mesma seed
+  e parâmetros resolvidos.
+  Testar inclusive fronteiras.
+  Isso não exige igualdade
+  visual quadro a quadro nem
+  presume precisão física do
+  hardware. Matriz e harness
+  de teste ficam pendentes.
+- **DIVERGÊNCIA atual:** `RhythmBar`
+  usa a posição renderizada do
+  marcador e `BattleMath.rhythm_zone()`
+  aplica zonas fixas; o motor
+  ainda não implementa esses
+  contratos. Nenhum código,
+  teste ou asset foi alterado.
 
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
