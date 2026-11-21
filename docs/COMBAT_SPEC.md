@@ -180,6 +180,82 @@
   `RhythmBar` e `BattleMath.rhythm_zone()`
   continuam sob as regras do protótipo anterior.
 
+### D-023 (Rodada 6) — contrato de perfis especiais, design aprovado; NÃO IMPLEMENTADO
+
+- **1A:** interpolação contínua dos ajustes de
+  largura POINT definidos na D-021:
+  **0,1 p.p. por ΔAGI** e **0,2 p.p. por ΔSP**,
+  com base de **10%**, parcela de SP limitada
+  a **±2 p.p.** e cobertura total limitada
+  a **8%–16% do percurso**. Sem arredondar
+  diferenças AGI/SP a faixas completas.
+  Exemplo: ΔAGI +7, ΔSP +3 → **11,3%**.
+  Essa quantificação é a regra posterior
+  aplicável à largura, apesar da formulação
+  anterior por faixas da D-020.
+- **2B:** máximo de **3 regiões POINT por perfil**,
+  sem obrigação de usar todas.
+- **3B:** o **perfil do inimigo declara**
+  como dividir o orçamento total entre
+  as regiões; não impor igualdade.
+  A soma respeita 8%–16%, e cada região
+  deve oferecer **≥40 ms de tempo efetivo**.
+- **4D:** domínio do gerador restringido
+  **desde a origem a configurações
+  comprovadamente válidas**, sem depender
+  de sorteio seguido de rejeição repetida.
+  Verificar simultaneamente duração global,
+  cobertura, número de regiões, cadência
+  e mínimo temporal. Configuração sem
+  solução: tratamento operacional **PENDENTE**,
+  sem fallback inventado.
+- **5A:** cadência com acelerações e
+  desacelerações em **segmentos de
+  transições suaves**, velocidade
+  **contínua**, travessia normalizada
+  à mesma duração global da D-020.
+  Limites/funções de velocidade e
+  aceleração são **PENDENTES**.
+- **6B:** IA executa timing com
+  **erro temporal triangular limitado**
+  e concentrado junto ao alvo,
+  dependente da habilidade. Valores
+  e amplitude de erro **PENDENTES**.
+  O autoacerto inimigo da **D-014/D-022**
+  tem precedência quando o jogador
+  **não declara reação**, seja porque
+  não pode ou porque escolheu não fazê-lo.
+  Não inferir crítico automático.
+- **7A:** seed do encontro combinada
+  com **IDs estáveis do inimigo e do
+  perfil e índice de execução**;
+  algoritmo de derivação, versão,
+  formato/registro e isolamento
+  de sequências RNG **PENDENTES**.
+- **8A:** julgamento mecânico pelo
+  **instante registrado da entrada**,
+  não pela posição do último quadro
+  renderizado; apresentação segue
+  a posição do marcador correspondente
+  ao mesmo referencial temporal.
+  Relógio, precisão, tratamento de
+  bordas e tolerâncias **PENDENTES**.
+- **Viabilidade:** três regiões POINT
+  em barra total de 0,2 s demandam
+  **ao menos 120 ms de passagem
+  somados nas regiões**. A regra
+  de largura 8%–16% não garante
+  esse tempo; o gerador e a curva
+  precisam demonstrar validade,
+  sem alterar os limites aprovados.
+- **Estado atual:** `RhythmBar`
+  avança uniformemente e avalia
+  a posição do marcador em input,
+  `BattleMath.rhythm_zone()` é fixo
+  e `_ai_roll()` sorteia resultados.
+  Os contratos da D-023 **não foram
+  implementados nesta rodada**.
+
 ### Acerto, bloqueio e exceção sem reação — D-014 (Rodada 2)
 
 - **1E (ideia própria do diretor):** a **barra de ritmo** determina

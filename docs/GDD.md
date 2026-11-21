@@ -405,6 +405,103 @@ a D-021 não foi implementada nesta entrega.
 
 ---
 
+### 8.1.3 Rodada 6 — D-023: geração e avaliação temporal dos perfis — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
+O diretor aprovou **1A; 2B; 3B; 4D; 5A; 6B; 7A; 8A**.
+Estas decisões detalham D-013, D-020 e D-021, sem reabrir os
+limites anteriores de cobertura, duração ou a direção visual da HUD.
+
+1. **1A — interpolação contínua:** a cobertura total POINT
+   parte de **10% do percurso** e recebe **0,1 ponto
+   percentual por ponto de diferença de AGI**, mais
+   **0,2 ponto percentual por ponto de diferença de SP**.
+   O sinal da diferença favorece o combatente que executa
+   o timing. A parcela SP permanece limitada a **±2 p.p.**
+   e o resultado total a **8%–16%**. Não arredondar
+   diferenças a faixas completas de 10 AGI ou 5 SP.
+   Exemplo: ΔAGI +7 e ΔSP +3 → 10%+0,7%+0,6%
+   = **11,3% de cobertura POINT**.
+   Para o cálculo da largura, esta regra quantitativa
+   da D-021/D-023 **especifica e prevalece** sobre a
+   descrição anterior por faixas da D-020, sem
+   remover o registro histórico.
+2. **2B — quantidade máxima:** perfis especiais podem ter
+   **até 3 regiões POINT**. Não exige exatamente três
+   zonas em todos os casos.
+3. **3B — distribuição por perfil:** as regiões POINT
+   dividem o mesmo orçamento espacial total e a
+   **divisão entre elas é declarada pelo perfil
+   do inimigo**. Não pressupor divisões iguais;
+   proporções específicas continuam dados pendentes
+   para cada perfil. Cada região deve satisfazer
+   seus **40 ms mínimos** da D-021.
+4. **4D — geração válida por construção:** o domínio
+   do gerador deve admitir **somente configurações
+   comprovadamente válidas** quanto à cobertura,
+   número de zonas, cadência, duração total e
+   **tempo mínimo efetivo por zona**, sem sorteio
+   irrestrito seguido de múltiplas tentativas de
+   rejeição. O procedimento para configurações de
+   autoria sem solução e as provas de viabilidade
+   permanecem **PENDENTES**. Não introduzir
+   fallback, extensão de duração ou relaxamento
+   de limites não aprovados.
+5. **5A — cadência:** acelerações e desacelerações
+   organizadas em **segmentos de transição suave**
+   com **velocidade contínua**, mantendo a
+   duração total aprovada pela D-020 por
+   normalização da travessia. Curvas específicas,
+   limites de velocidade/aceleração e distribuição
+   de segmentos continuam **PENDENTES**.
+6. **6B — erro de IA:** simular instante temporal
+   de atuação com **erro triangular limitado**,
+   concentrado em torno do alvo, ajustado à
+   habilidade do inimigo. Não estabelecer
+   silenciosamente a amplitude nem a escala
+   de habilidade. A exceção de autoacerto
+   das **D-014/D-022** prevalece quando o
+   jogador **não declara reação**, seja por
+   impossibilidade ou por escolha voluntária.
+   Essa exceção não concede crítico automático.
+7. **7A — seed de padrão:** combinar a **seed do
+   encontro**, **IDs estáveis do inimigo e do
+   perfil** e o **índice da execução**.
+   O algoritmo de combinação, a versão do
+   perfil, o formato/registro dos IDs, a
+   independência de sequências de RNG e
+   os dados necessários ao replay continuam
+   **PENDENTES**.
+8. **8A — resultado pelo tempo de input:** julgar
+   POINT/BEAM/MISS usando o **instante temporal
+   registrado da entrada**, calculando a posição
+   mecânica correspondente; o último frame
+   apresentado não determina o resultado.
+   O relógio, a precisão disponível na API
+   de input, a política de bordas e eventuais
+   tolerâncias requerem verificação/decisão.
+   Nenhuma tolerância adicional é aprovada.
+
+**Interdependência crítica:** três zonas POINT em
+barra de 0,2 s necessitam de **pelo menos 120 ms
+somados dentro das zonas**, embora juntas
+ocupem somente 8%–16% do percurso. O gerador
+válido por construção e as curvas suaves
+precisam comprovar a viabilidade sob os
+futuros limites de velocidade. O mínimo
+de 40 ms por zona não pode ser desrespeitado.
+
+**Divergência técnica verificada em leitura de código:**
+`RhythmBar._process(delta)` desloca o marcador
+por progressão uniforme, e `_unhandled_input()`
+julga a posição visual mais recente;
+`BattleMath.rhythm_zone()` usa zonas fixas,
+e `BattleController._ai_roll()` usa sorteios
+discretos. Os perfis D-023 **não estão
+implementados**. O autoacerto D-022, já presente
+no código remoto, deve ser preservado.
+
+---
+
 ### 8.2 Autoridade da barra e bloqueio — Rodada 2 (D-014) — **CONFIRMADO como design**
 
 - **1E (ideia própria):** a **barra de ritmo determina acerto ou erro do
@@ -666,6 +763,23 @@ Preservar `poder × ATK ÷ DEF` conforme D-019.
 
 ---
 
+**D-023 (Rodada 6):** interpolação contínua AGI/SP,
+até três zonas POINT por perfil, distribuição
+espacial declarada pelo inimigo, geração válida
+por construção, curvas suaves normalizadas,
+erro triangular limitado para IA, seed derivada
+de encontro/IDs/índice de execução e resolução
+por tempo registrado do input. **PENDENTES:**
+parâmetros e prova de validade do gerador,
+limites de velocidade, erro e habilidade da IA,
+algoritmo/identidade para seeds, captura de
+instantes de entrada e testes de sincronização
+em taxas de quadros variadas. A exceção
+D-014/D-022 de autoacerto sem reação não
+pode ser anulada pelo modelo de erro da IA.
+
+---
+
 ## 21. Riscos e pendências consolidadas
 
 1. **A-02** - resolvido por D-007 (dominância em razão); sem pendência.
@@ -711,6 +825,16 @@ Preservar `poder × ATK ÷ DEF` conforme D-019.
     ataques físicos bem-sucedidos contra equivalentes.
     **Design aprovado; não implementado.** Pendentes:
     arredondamento, seleção de perfis válidos e poderes.
+
+---
+
+16. **D-023 — Rodada 6:** aprovada como design,
+    **NÃO IMPLEMENTADA**. Interpolação contínua,
+    até três zonas por perfil, geração válida
+    por construção, cadência suave, erro
+    triangular da IA, seeds derivadas e
+    julgamento temporal dos reflexos.
+    Detalhes e pendências em §8.1.3.
 
 ---
 
@@ -880,6 +1004,32 @@ Formato: ID · data · decisão · estado · impacto documental.
   geração de perfis válidos, poder dos ataques e validação.
   **Impacto:** GDD §§5.2, 8.1.2, 20, 21 e
   `docs/COMBAT_SPEC.md`; código, testes, assets intactos.
+
+- **D-023 · 2026-11-21 (Rodada 6: 1A; 2B; 3B; 4D; 5A; 6B; 7A; 8A)** ·
+  **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**:
+  (1A) interpolação contínua de cobertura POINT:
+  0,1 p.p. por ΔAGI e 0,2 p.p. por ΔSP, preservando
+  os limites D-021; (2B) máximo de 3 regiões POINT;
+  (3B) divisão de cobertura declarada por perfil;
+  (4D) geração restrita por construção a configurações
+  válidas, sem sorteio e rejeição iterativa;
+  (5A) segmentos de aceleração/desaceleração com
+  transições suaves e duração global mantida;
+  (6B) IA com erro temporal triangular limitado,
+  preservando a exceção de autoacerto D-014/D-022;
+  (7A) seed de encontro combinada com IDs estáveis
+  de inimigo/perfil e índice de execução; (8A)
+  acerto julgado pelo instante registrado do input,
+  não pela posição do último quadro.
+  **PENDENTES:** viabilidade do gerador, limites de
+  velocidade, parâmetros da IA, combinação de seed
+  e contratos temporais de entrada.
+  **Impacto:** GDD §§8.1.3, 20, 21 e
+  `docs/COMBAT_SPEC.md` §Sistema de ritmo.
+  D-022 já pertence à decisão aprovada e
+  implementada de autoacerto sem reação; não
+  houve alteração de código, testes, assets
+  ou documentação fora do escopo.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
