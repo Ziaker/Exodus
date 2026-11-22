@@ -297,14 +297,14 @@ func short_name(unit: BattleUnit) -> String:
 	return "FOE " + char(65 + index) if index >= 0 else unit.display_name
 
 
-func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, auto_hit: bool = false) -> void:
+func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, auto_hit: bool = false, chain: bool = false) -> void:
 	action_attacker = attacker
 	action_defender = defender
 	phase_text = "ATTACK" if attacker.is_player else "ENEMY ATTACK"
 	if is_reaction: phase_text = "REACTION ATTACK"
 	hud.feedback = ""
 	var hp_before := defender.current_hp
-	await super._perform_attack(attacker, defender, power, is_reaction, defense_act_paid, auto_hit)
+	await super._perform_attack(attacker, defender, power, is_reaction, defense_act_paid, auto_hit, chain)
 	var damage := hp_before - defender.current_hp
 	var outcome := "HIT"
 	if defense_result == BattleMath.RhythmResult.POINT: outcome = "DODGE"
@@ -324,14 +324,14 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_
 	_refresh_all()
 
 
-func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float, auto_hit: bool = false) -> int:
+func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float, auto_hit: bool = false, chain: bool = false) -> int:
 	timing_role = "ATTACK"
 	phase_text = "ATTACK" if attacker.is_player else "ENEMY ATTACK"
-	attack_result = await super._attack_timing(attacker, defender, duration, auto_hit)
+	attack_result = await super._attack_timing(attacker, defender, duration, auto_hit, chain)
 	return attack_result
 
 
-func _manual_rhythm(duration: float, point_half: float) -> int:
+func _manual_rhythm(duration: float, point_half: float, chain: bool = false) -> int:
 	hud.mode = "timing"
 	if timing_role == "DEFEND":
 		rhythm.place(hud.defense_rail_rect(hud.players.find(action_defender)), "defense")
@@ -343,7 +343,12 @@ func _manual_rhythm(duration: float, point_half: float) -> int:
 		rhythm._label.text = "ATTACK: %s -> %s | Z" % [short_name(action_attacker), short_name(action_defender)]
 	hud.message = rhythm._label.text
 	hud.feedback = "Z / Enter or click: stop marker in the center"
-	var result: int = await super._manual_rhythm(duration, point_half)
+	rhythm.configure(point_half)
+	if chain:
+		rhythm.start_chain(duration)
+	else:
+		rhythm.start(duration)
+	var result: int = await _wait_rhythm()
 	hud.feedback = timing_role + ": " + _rhythm_name(result)
 	hud.mode = "busy"
 	return result
