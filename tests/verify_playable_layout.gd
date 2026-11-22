@@ -74,7 +74,8 @@ func _run() -> void:
 	battle = _new_battle()
 	battle._fallen.current_en = 0
 	battle.submit_command(2)
-	_check(battle._fallen.current_en == 1, "Rest must recover actual EN")
+	_check(battle._fallen.current_en == BattleMath.REST_EN_RECOVERY, "D-038: REST must recover exactly 2 EN flat")
+	_check(battle._fallen.acts_available == 0 and battle._fallen.stored_acts == 2, "D-038: REST spends no act, stores the remaining two and ends participation")
 	battle.queue_free()
 	await process_frame
 	battle = _new_battle()

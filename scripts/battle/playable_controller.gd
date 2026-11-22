@@ -205,6 +205,10 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false)
 	elif command == "ITEM" and reacting:
 		defender = await _wait_target("player")
 		if defender == null: return false
+	# D-038: REST never spends an act — it ends participation and stores the
+	# remaining ones. Handle it before the shared spend_act() gate below.
+	if command == "REST":
+		return _execute_rest(unit, reacting)
 	if not unit.spend_act(): return false
 	action_attacker = unit
 	action_defender = defender if defender != null else unit
@@ -219,12 +223,6 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false)
 			if unit.is_fallen: unit.add_sp(-2)
 			_append_log("%s uses item on %s: +%d HP%s." % [unit.display_name, recipient.display_name, healed, " (-2 SP)" if unit.is_fallen else ""])
 			if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-		"REST":
-			var before := unit.current_en
-			unit.recover_en(0.2)
-			fx.play("REST", unit, unit.current_en - before)
-			_append_log("%s %s: +20%% EN (1 act spent)." % [unit.display_name, "reacts with REST" if reacting else "rests"])
-			if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 		"ABSORB":
 			var was_absorbed := defender.absorbed
 			await _perform_absorption(unit, defender)
@@ -233,9 +231,31 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false)
 		"DEFEND":
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 			_append_log("%s reacts with DEFEND (1 act spent)." % unit.display_name)
-	if command != "ATTACK":
-		if command == "REST": hud.feedback = "%s: EN %d/%d | 1 ACT spent" % [unit.display_name, unit.current_en, unit.stats.max_en]
-		elif command == "ITEM": hud.feedback = "%s: HP %d/%d | 1 ACT spent" % [action_defender.display_name, action_defender.current_hp, action_defender.stats.max_hp]
+	if command == "ITEM":
+		hud.feedback = "%s: HP %d/%d | 1 ACT spent" % [action_defender.display_name, action_defender.current_hp, action_defender.stats.max_hp]
+	_refresh_all()
+	return true
+
+
+## D-038: REST consome zero ACT, encerra a participação na rodada, guarda os
+## atos restantes (teto D-005) e recupera exatamente 2 EN — a mesma regra do
+## controlador base e da interface jogável.
+func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
+	var remaining: int = unit.acts_available
+	unit.store_acts(remaining)
+	unit.acts_available = 0
+	var before: int = unit.current_en
+	unit.recover_en_flat(BattleMath.REST_EN_RECOVERY)
+	action_attacker = unit
+	action_defender = unit
+	phase_text = "REST"
+	fx.play("REST", unit, unit.current_en - before)
+	_append_log("%s %s: +%d EN, %d act(s) stored; round participation ended." % [
+		unit.display_name, "reacts with REST" if reacting else "rests",
+		BattleMath.REST_EN_RECOVERY, remaining])
+	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	hud.feedback = "%s: EN %d/%d | 0 ACT spent, %d stored" % [
+		unit.display_name, unit.current_en, unit.stats.max_en, remaining]
 	_refresh_all()
 	return true
 

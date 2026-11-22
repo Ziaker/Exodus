@@ -74,16 +74,27 @@ func _run() -> void:
 	check(battle.hud.mode == "react", "Enemy announcement must open a reaction prompt")
 	for reaction in 2:
 		battle.select_reactor(0)
-		battle._fallen.current_en = 0
 		battle.answer_reaction(true)
 		check(battle.hud.command_options.has("ATTACK") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps every command plus DEFEND as a reaction")
-		battle.submit_command(battle.hud.command_options.find("REST"))
-		check(battle._fallen.current_en == 1, "Off-turn rest must recover real energy")
+		battle.submit_command(0)  # counter-attack: D-038 REST no longer spends acts
+		battle.submit_target(0)
+		battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 		check(battle._fallen.acts_available == 1 - reaction, "Each reaction must spend exactly one shared act")
 		check(battle.state.round_number == 1, "Both reactions must occur in round one")
 		if reaction == 0:
 			battle.proceed()
 			check(battle.hud.mode == "react", "A second enemy announcement must offer the remaining reaction")
+	battle.queue_free(); await process_frame
+	# D-038: REST como reação também consome zero ACT, guarda os atos e dá 2 EN fixos.
+	battle = fresh()
+	reserve(battle); reserve(battle)
+	battle.select_reactor(0)
+	battle.answer_reaction(true)
+	battle._fallen.current_en = 0
+	battle.submit_command(battle.hud.command_options.find("REST"))
+	check(battle._fallen.current_en == BattleMath.REST_EN_RECOVERY, "D-038: REST reaction must recover exactly 2 EN flat")
+	check(battle._fallen.acts_available == 0 and battle._fallen.stored_acts == 2, "D-038: REST reaction must store both acts and end participation")
+	check(battle.log_history.any(func(line: String) -> bool: return line.contains("+2 EN, 2 act(s) stored")), "D-038: REST log must report 2 EN and stored acts, never a spent act")
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle); reserve(battle)
@@ -162,7 +173,10 @@ func _run() -> void:
 	var hits2: int = battle.fx.history.count("HIT") + battle.fx.history.count("CRITICAL")
 	check(hits2 == 2, "D-047: second combo attack draws another damage number (got %d)" % hits2)
 	battle.queue_free(); await process_frame
-	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, shared acts, ally response, full reaction commands, D-022 auto-hit, D-047 enemy combo" % checks)
+	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, shared acts, ally response, full reaction commands, D-022 auto-hit, D-038 REST, D-047 enemy combo" % checks)
+	# Let queued battle nodes and their pending coroutines release before exit.
+	await process_frame
+	await process_frame
 	quit(0)
 
 func _finalize() -> void:
