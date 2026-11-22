@@ -50,4 +50,6 @@ qualquer alteração em documentos ou código.
 | D-041 | 2026-11-21 (Rodada 16: 1A; 2A; 3A; 4A; 5A; 6C; 7B; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) `Time.get_ticks_usec()` n... | `docs/GDD.md` Apêndice A |
 | D-042 | 2026-11-21 (Rodada 17: 1A; 2A; 3A; 4A; 5A; 6A; 7D; 8A) | Orçamento combinado 30%, geometria POINT/BEAM especial, perfis independentes e erro triangular da IA | `docs/GDD.md` Apêndice A |
 
-Total: 40 decisões indexadas.
+| D-043 | 2026-11-21 | Planejamento conjunto de até quatro comandos, ACT comprometidos em verde e reflexos ofensivos encadeados; ordem perante turnos intercalados pendente | `docs/GDD.md` Apêndice A |
+
+Total: 41 decisões indexadas.
