@@ -79,8 +79,10 @@ func _input(_event: InputEvent) -> void:
 
 
 func _wait_command(options: Array[String]) -> int:
+	# HTML renderMenu: keep the cursor on the same command name, else the first row.
+	var previous: String = hud.command_options[hud.command_index] if hud.command_index >= 0 and hud.command_index < hud.command_options.size() else ""
 	hud.command_options = options
-	hud.command_index = clampi(hud.command_index, 0, options.size() - 1)
+	hud.command_index = maxi(0, options.find(previous))
 	hud.mode = "command"
 	phase_text = "REACTION COMMAND" if in_reaction else "PLAYER COMMAND"
 	hud.feedback = "Z: confirm | X: back"
@@ -95,6 +97,8 @@ func submit_command(index: int) -> void:
 	if hud.mode != "command" or index < 0 or index >= hud.command_options.size():
 		return
 	_chosen = index
+	hud.command_index = index
+	hud.press_command(index, "confirm")
 	command_chosen.emit()
 
 
@@ -144,6 +148,7 @@ func run_battle() -> void:
 	while not state.is_over():
 		waiting_players.clear()
 		state.start_round()
+		if state.round_number > 1: hud.announce("ROUND %02d" % state.round_number)
 		_refresh_all()
 		var unit := _next_live_actor()
 		while unit != null:
@@ -173,7 +178,12 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 	var options: Array[String] = ["ATTACK", "ITEM", "REST"]
 	if unit.is_fallen: options.append("ABSORB")
 	if reacting:
-		if unit == reaction_defender: options.append("DEFEND")
+		# D-043: only the attacked character may block (DEFEND) or use any command;
+		# another reactor may only counter-attack or use an item.
+		if unit != reaction_defender:
+			var limited: Array[String] = ["ATTACK", "ITEM"]
+			return limited
+		options.append("DEFEND")
 	else:
 		options.append("REACT")
 	return options
@@ -255,9 +265,13 @@ func _enemy_turn(unit: BattleUnit) -> void:
 	action_attacker = unit
 	action_defender = defender
 	phase_text = "ENEMY ATTACK"
-	fx.play("ANNOUNCE", unit)
+	# Creator decision 2026-11-21: no TARGET01 "SEARCH" cue; the attacker whitens and
+	# shows a red "!" while the announcement is on screen.
+	# Creator decision 2026-11-21: RPG Maker XP whiten on the attacker at the announcement.
+	fx.play("WHITEN", unit)
 	hud.feedback = ""
 	_append_log("%s announces an attack on %s." % [unit.display_name, defender.display_name])
+	hud.announce_attack("NO REACTION AVAILABLE" if eligible_reactors().is_empty() else "%s → %s" % [short_name(unit), short_name(defender)], unit)
 	if eligible_reactors().is_empty():
 		hud.mode = "announce"
 		hud.feedback = "No reaction acts left. Z / Enter: resolve attack"
@@ -313,13 +327,16 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_
 func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float, auto_hit: bool = false) -> int:
 	timing_role = "ATTACK"
 	phase_text = "ATTACK" if attacker.is_player else "ENEMY ATTACK"
-	if attacker.is_player: fx.play("ATTACK", attacker)
 	attack_result = await super._attack_timing(attacker, defender, duration, auto_hit)
 	return attack_result
 
 
 func _manual_rhythm(duration: float, point_half: float) -> int:
 	hud.mode = "timing"
+	if timing_role == "DEFEND":
+		rhythm.place(hud.defense_rail_rect(hud.players.find(action_defender)), "defense")
+	else:
+		rhythm.place(hud.attack_rail_rect(hud.opponents.find(action_defender)), "attack")
 	if timing_role == "DEFEND":
 		rhythm._label.text = "DEFEND: %s vs %s | Z" % [short_name(action_defender), short_name(action_attacker)]
 	else:
@@ -361,6 +378,7 @@ func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 		phase_text = "ENEMY ATTACK"
 		_reaction_active = true
 		hud.mode = "react"
+		hud.react_index = 0
 		hud.message = "%s ATTACKS %s" % [short_name(attacker), short_name(defender)]
 		hud.feedback = "Tab: choose reactor | Z: reaction commands | X: deny"
 		_refresh_all()
@@ -414,6 +432,7 @@ func answer_reaction(yes: bool) -> void:
 
 func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	hud.mode = "absorb"
+	hud.announce("ABSORB")
 	var was_absorbed := defender.absorbed
 	fx.play("ABSORB", defender)
 	await super._perform_absorption(unit, defender)
@@ -436,6 +455,7 @@ func proceed() -> void:
 func _show_result() -> void:
 	_append_log("VICTORY." if state.player_victory() else "DEFEAT.")
 	phase_text = "VICTORY" if state.player_victory() else "DEFEAT"
+	hud.announce(phase_text)
 	hud.feedback = "Battle finished. Z / Enter: play again. X: stay."
 	hud.mode = "result"
 	_refresh_all()
@@ -452,7 +472,7 @@ func handle_confirm() -> void:
 		"timing":
 			if rhythm._running:
 				rhythm._finish(BattleMath.rhythm_zone(rhythm._elapsed / rhythm.duration, rhythm._point_half_width))
-		"react": answer_reaction(true)
+		"react": answer_reaction(hud.react_index == 0)
 		"absorb":
 			if _mash_active:
 				_mash_count += 1
@@ -464,7 +484,9 @@ func handle_confirm() -> void:
 
 func handle_back() -> void:
 	match hud.mode:
-		"target": cancel_target()
+		"target":
+			hud.press_command(hud.command_index, "reject")
+			cancel_target()
 		"react": answer_reaction(false)
 		"command":
 			if in_reaction: cancel_reaction_command()

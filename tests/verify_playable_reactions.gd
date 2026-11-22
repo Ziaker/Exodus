@@ -80,7 +80,7 @@ func _run() -> void:
 		battle.select_reactor(0)
 		battle._fallen.current_en = 0
 		battle.answer_reaction(true)
-		check(battle.hud.command_options.has("ATTACK") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB"), "Fallen must have every existing command as a reaction")
+		check(battle.hud.command_options.has("ATTACK") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-043: the attacked Fallen keeps every command plus DEFEND as a reaction")
 		battle.submit_command(battle.hud.command_options.find("REST"))
 		check(battle._fallen.current_en == 1, "Off-turn rest must recover real energy")
 		check(battle._fallen.acts_available == 1 - reaction, "Each reaction must spend exactly one shared act")
@@ -94,6 +94,7 @@ func _run() -> void:
 	battle.select_reactor(1)
 	battle.answer_reaction(true)
 	check(not battle.hud.command_options.has("ABSORB"), "Ally must not receive Fallen-only absorption")
+	check(battle.reaction_defender == battle._fallen and battle.hud.command_options == ["ATTACK", "ITEM"], "D-043: a reactor who is not the target may only counter-attack or use an item (got %s)" % [battle.hud.command_options])
 	battle.submit_command(0); battle.submit_target(0)
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	check(battle._ally.acts_available == 1 and battle._fallen.acts_available == 2, "Ally may react when Fallen is attacked, spending only Ally's act")

@@ -2327,6 +2327,15 @@ Formato: ID · data · decisão · estado · impacto documental.
 
 - **D-041 · 2026-11-21 (Rodada 16: 1A; 2A; 3A; 4A; 5A; 6C; 7B; 8A)** · **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**: (1A) `Time.get_ticks_usec()` na origem e no handler de input com verificação da API real; (2A) arbitragem por tempo mecânico e input elegível prioritário ao timeout em t=1 s, sem dependência dos callbacks; (3A) somente novas transições de tecla após ativação, sem reaproveitar confirmação nem `echo`; (4A) para replay de fronteiras, registrar instante capturado na precisão de origem disponível, limites resolvidos, resultado e versão além do µs arredondado; (5A) testes de avaliador puro com tempos injetados **e** integração de cena a 30/60/120 FPS; (6C) perfis **especiais declaram BEAM explícito** validado junto às regiões POINT, sem mudar BEAM comum; (7B) POINT total de D-034 dividido proporcionalmente por **pesos autorais** do perfil, invalidando variantes com região <4% sem fallback; (8A) streams de RNG independentes derivados de seed, IDs estáveis, perfil, índice de execução e propósito. **PENDENTES:** protocolo de eventos input/timeout, intervalos/overlaps BEAM, domínio de pesos, cobertura de estados por variantes, algoritmo/estado/versão de RNG, esquema JSON de replay e testes reais. **Preservadas** D-022–D-025 e D-028–D-040, especialmente D-034/D-035 vigentes, D-038 REST fora do escopo. **Impacto exclusivamente documental:** GDD §§8.1.13, 19.3, 20; `docs/COMBAT_SPEC.md`; `docs/DECISIONS.md`. Código, testes, recursos e saves não alterados.
 
+- **D-043 · 2026-11-21** · **Reação de quem não é o alvo — CONFIRMADO e IMPLEMENTADO:**
+  quando um inimigo anuncia um ataque, só o personagem **atacado** pode bloquear
+  (DEFEND) e mantém todos os comandos como reação. Um aliado que **não é o alvo** não
+  pode bloquear o ataque com sua reação: ela deve ser **contra-ataque (ATTACK) ou
+  item/magia (ITEM)**; REST e ABSORB deixam de ser oferecidos a ele como reação.
+  Implementado em `playable_controller.gd` (`_commands()`), com teste de regressão em
+  `tests/verify_playable_reactions.gd`. Impacto: `COMBAT_SPEC.md` (Atos e reações) e
+  `docs/DECISIONS.md`.
+
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
 `docs/COMBAT_SPEC.md`. Este apêndice não as duplica.

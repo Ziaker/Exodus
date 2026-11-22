@@ -153,8 +153,10 @@
   (2 ações, 2 reações ou 1 de cada).
 - Ação = executada no próprio turno. Reação = qualquer ação fora do turno, declarada
   em resposta ao anúncio de uma ação inimiga (inclusive mirando outro aliado).
-- Todos os comandos podem ser usados como Reação. Inimigos também possuem 2 atos e
-  também podem declarar Reações.
+- Todos os comandos podem ser usados como Reação pelo **personagem atacado**, que
+  também pode bloquear (DEFEND). **D-043:** um aliado que **não é o alvo** do ataque
+  anunciado não pode bloquear; sua reação é **contra-ataque (ATTACK) ou item/magia
+  (ITEM)**. Inimigos também possuem 2 atos e também podem declarar Reações.
 - Atos não usados podem ser **armazenados até 4** para a próxima rodada
   (podem guardar todos de uma vez); inimigos também.
 - **REST (D-038):** serve para guardar os atos remanescentes: escolher REST encerra

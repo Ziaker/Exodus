@@ -28,13 +28,40 @@ func _run() -> void:
 		return
 	var battle := _new_battle()
 	_check(battle.hud.mode == "command", "Real battle must wait for a command")
-	# D-034: the compact bar must draw the configured POINT width, not a fixed 10%.
-	var track: float = battle.rhythm.BAR_WIDTH - 20.0
+	# D-034: the drawn rail must use the configured POINT width, not a fixed 10%.
 	for half in [BattleMath.POINT_MIN_HALF_WIDTH, BattleMath.POINT_MAX_HALF_WIDTH]:
 		battle.rhythm.configure(half)
-		_check(is_equal_approx(battle.rhythm._point_zone.size.x, track * half * 2.0), "Compact POINT width must follow configure(%s)" % half)
-		_check(is_equal_approx(battle.rhythm._point_zone.position.x + battle.rhythm._point_zone.size.x / 2.0, 10.0 + track / 2.0), "Compact POINT must stay centered")
+		var spans: Array[Vector2] = battle.rhythm.zone_spans()
+		_check(is_equal_approx(spans[1].y - spans[1].x, half * 2.0), "Drawn POINT width must follow configure(%s)" % half)
+		_check(is_equal_approx((spans[1].x + spans[1].y) / 2.0, 0.5), "Drawn POINT must stay centered")
+		_check(is_equal_approx(spans[0].x, 0.5 - BattleMath.BEAM_HALF_WIDTH) and is_equal_approx(spans[2].y, 0.5 + BattleMath.BEAM_HALF_WIDTH), "Drawn BEAM must use the real width")
 	battle.rhythm.configure(BattleMath.POINT_HALF_WIDTH)
+	# exodus_feedback_lab.html geometry (544 x 416).
+	var hud: Control = battle.hud
+	_check(hud.enemy_column(0) == Rect2(37, 86, 220, 206) and hud.enemy_column(1) == Rect2(287, 86, 220, 206), "Enemy columns must follow the HTML space-evenly layout")
+	for i in 2:
+		var art: Rect2 = hud.enemy_sprite_rect(i)
+		var box := Rect2(hud.enemy_column(i).position + Vector2(32, 0), Vector2(156, 166))
+		_check(box.grow(0.01).encloses(art) and is_equal_approx(art.end.y, box.end.y), "Silhouette %d must fit the HTML sprite box and stand on its floor" % i)
+		_check(hud.STAGE_RECT.encloses(art), "Silhouette must be on the stage")
+	_check(hud.STATUS_RECTS[0] == Rect2(8, 332, 168, 77) and hud.STATUS_RECTS[1] == Rect2(182, 332, 168, 77), "Status windows must follow the HTML")
+	_check(hud.COMMAND_RECT == Rect2(356, 332, 180, 77), "Command window must follow the HTML")
+	_check(hud._round_caption() == "ROUND 01", "Header must show the HTML round label")
+	await process_frame
+	await process_frame
+	_check(hud._menu_rows().size() == 5 and hud._menu_rows()[4] == "REACT", "Fallen menu lists five commands")
+	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-command:0")[0].rect
+	_check(first_row.position.y == 337, "Creator decision: with five commands the title is hidden and rows start at the top")
+	# Silhouettes: opaque pixels plus enclosed dither holes become one solid mask.
+	var ring := Image.create_empty(5, 5, false, Image.FORMAT_RGBA8)
+	for p in [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(1, 2), Vector2i(3, 2), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]:
+		ring.set_pixelv(p, Color.RED)
+	var mask: Image = hud.make_silhouette(ring)
+	_check(mask.get_pixel(2, 2).a == 1.0 and mask.get_pixel(1, 1) == Color.WHITE, "Enclosed holes must be filled; shape pixels become the white mask")
+	_check(mask.get_pixel(0, 0).a == 0.0 and mask.get_pixel(4, 2).a == 0.0, "Outside transparency must stay transparent")
+	_check(hud.silhouettes.size() == 2 and hud.silhouettes[0].get_size() == hud.battler_regions[0].size, "One silhouette per SMT battler, same size as its art")
+	# Silhouette: drawn with a black modulate; the whiten ghost starts at alpha 128/255.
+	_check(is_equal_approx(battle.fx.whiten_alpha(0.0), 128.0 / 255.0) and is_equal_approx(battle.fx.whiten_alpha(0.026), 118.0 / 255.0) and battle.fx.whiten_alpha(0.33) == 0.0 and battle.fx.whiten_alpha(0.41) == 0.0, "Whiten must follow RPG::Sprite#whiten (128, -10/frame at 40 fps)")
 	_check(battle.hud.players[0] == battle.state.units[0], "HUD must reference real units")
 	_check(battle.hud.players[0].current_hp == 14, "HUD must show live HP")
 	battle._fallen.current_hp = 1

@@ -3,7 +3,11 @@ extends Control
 ## Silent visual effects only: no sound loading or audio playback.
 ## Presentation only. Never changes battle resources or combat outcomes.
 
-const FLASH_SHADER := "shader_type canvas_item; uniform vec4 flash_color : source_color = vec4(1.0); uniform float flash_mix = 0.0; void fragment(){vec4 c = texture(TEXTURE, UV) * COLOR; COLOR = vec4(mix(c.rgb, flash_color.rgb, flash_mix), c.a);}"
+## Enemies are black silhouettes (exodus_feedback_lab.html): the ghost flashes from black.
+const FLASH_SHADER := "shader_type canvas_item; uniform vec4 flash_color : source_color = vec4(1.0); uniform float flash_mix = 0.0; void fragment(){vec4 c = texture(TEXTURE, UV) * COLOR; COLOR = vec4(mix(vec3(0.0), flash_color.rgb, flash_mix), c.a);}"
+## RPG Maker XP RPG::Sprite#whiten: color (255,255,255,128), alpha -10 per frame, 16 frames at 40 fps.
+const WHITEN_FRAMES := 16
+const WHITEN_FPS := 40.0
 
 var battle: Control
 var library: Dictionary
@@ -39,7 +43,7 @@ func has_target_sprite(unit: BattleUnit) -> bool:
 
 func is_busy() -> bool:
 	for effect in effects:
-		if effect.kind not in ["ANNOUNCE", "ATTACK", "ABSORB"]: return true
+		if effect.kind not in ["ANNOUNCE", "ATTACK", "ABSORB", "WHITEN"]: return true
 	return false
 
 
@@ -54,7 +58,7 @@ func _unit_rect(unit: BattleUnit) -> Rect2:
 	var index: int = battle.hud.players.find(unit)
 	if index >= 0: return battle.hud.STATUS_RECTS[index]
 	index = battle.hud.opponents.find(unit)
-	return battle.hud._enemy_art_rect(168.0 + index * 208.0, battle.hud.battler_regions[index % 2])
+	return battle.hud.enemy_sprite_rect(index)
 
 
 func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = null) -> void:
@@ -66,11 +70,11 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		"ABSORB": profile_name = "absorb"
 		"HEAL", "REST", "ABSORBED": profile_name = "heal_flash"
 	var profile: Dictionary = library.profiles[profile_name]
-	if kind in ["MISS", "DODGE"]:
+	if kind in ["MISS", "DODGE", "WHITEN"]:
 		# No impact cells, hurt flashes or hit sounds for a non-contact result.
 		profile = {"frames": [[], [], [], [], [], [], [], [], []], "sheets": ["", ""], "timings": []}
 	var target_rect := _unit_rect(unit)
-	var clip_rect := target_rect if unit.is_player else target_rect.grow(30).intersection(battle.hud.BACKGROUND_RECT)
+	var clip_rect := target_rect if unit.is_player else target_rect.grow(30).intersection(battle.hud.STAGE_RECT)
 	var container := Control.new()
 	container.position = clip_rect.position
 	container.size = clip_rect.size
@@ -87,14 +91,12 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 	var ghost: Sprite2D = null
 	if not unit.is_player:
 		var index: int = battle.hud.opponents.find(unit)
-		var atlas := AtlasTexture.new()
-		atlas.atlas = battle.hud.battler_textures[index % 2]
-		atlas.region = battle.hud.battler_regions[index % 2]
+		var silhouette: Texture2D = battle.hud.silhouettes[index % battle.hud.silhouettes.size()]
 		ghost = Sprite2D.new()
-		ghost.texture = atlas
+		ghost.texture = silhouette
 		ghost.centered = false
 		ghost.position = target_rect.position - clip_rect.position
-		ghost.scale = target_rect.size / atlas.region.size
+		ghost.scale = target_rect.size / silhouette.get_size()
 		ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		var shader := Shader.new()
 		shader.code = FLASH_SHADER
@@ -104,6 +106,8 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		container.add_child(ghost)
 		container.move_child(ghost, 0)
 	var effect := {"kind": kind, "unit": unit, "amount": amount, "age": 0.0, "duration": profile.frames.size() / float(library.fps), "profile": profile, "container": container, "sprites": cell_sprites, "target_rect": target_rect, "clip_rect": clip_rect, "last_frame": -1, "flash_left": 0.0, "flash_duration": 1.0, "flash_color": Color.WHITE, "ghost": ghost, "dying": not unit.is_alive(), "fit": minf(1.0, target_rect.size.y / 190.0)}
+	if kind == "WHITEN":
+		effect.duration = WHITEN_FRAMES / WHITEN_FPS
 	effects.append(effect)
 	_update_effect(effect, 0.0)
 	queue_redraw()
@@ -169,18 +173,29 @@ func _update_effect(effect: Dictionary, delta: float) -> void:
 			played_cells += 1
 		effect.last_frame = frame_index
 	var intensity: float = effect.flash_color.a * effect.flash_left / maxf(0.001, effect.flash_duration)
+	if effect.kind == "WHITEN":
+		effect.flash_color = Color.WHITE
+		intensity = whiten_alpha(effect.age)
 	if effect.ghost != null:
 		var ghost: Sprite2D = effect.ghost
 		ghost.material.set_shader_parameter("flash_color", effect.flash_color)
 		ghost.material.set_shader_parameter("flash_mix", intensity)
-		ghost.modulate.a = clampf((effect.duration - effect.age) / 0.3, 0, 1) if effect.dying else intensity
+		# Opaque silhouette while flashing (RMXP Sprite#color blends over the sprite itself).
+		ghost.modulate.a = clampf((effect.duration - effect.age) / 0.3, 0, 1) if effect.dying else (1.0 if intensity > 0.0 else 0.0)
+
+
+## Displayed whiten alpha for an age in seconds: 128, 118, ... clamped at 0.
+static func whiten_alpha(age: float) -> float:
+	var frame := int(age * WHITEN_FPS)
+	if frame >= WHITEN_FRAMES: return 0.0
+	return maxf(0.0, 128.0 - 10.0 * frame) / 255.0
 
 
 func _draw() -> void:
 	for flash in screen_flashes:
 		var color: Color = flash.color
 		color.a *= flash.left / maxf(0.001, flash.duration)
-		draw_rect(battle.hud.BACKGROUND_RECT, color)
+		draw_rect(battle.hud.STAGE_RECT, color)
 	for effect in effects:
 		var r: Rect2 = effect.target_rect
 		if effect.unit.is_player and effect.flash_left > 0:
