@@ -211,8 +211,14 @@ func _draw() -> void:
 			"REST": label = "+%d EN" % effect.amount
 			"ABSORBED": label = "ABSORBED"
 		if label.is_empty(): continue
-		var font: Font = battle.hud.font
-		var pos := r.get_center() + Vector2(-label.length() * 4, -minf(16, effect.age * 18))
-		pos.y = clampf(pos.y, r.position.y + 14, r.end.y - 2)
-		draw_string(font, pos + Vector2.ONE, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.BLACK)
-		draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("ece9dc"))
+		var font: Font = battle.hud.ui_bold if battle.hud.ui_bold != null else battle.hud.font
+		# Damage values are slightly larger and outlined so they read over any battler.
+		var size: int = 22 if label[0] == "-" or label[0].is_digit() else 17
+		var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
+			-minf(18, effect.age * 18))
+		pos.y = clampf(pos.y, r.position.y + 16, r.end.y - size)
+		for offset in [Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(0, -1.5), Vector2(0, 1.5)]:
+			draw_string(font, pos + offset, label, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				size, Color(0, 0, 0, 0.92))
+		draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, size,
+			Color("fff3d0"))
