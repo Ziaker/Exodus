@@ -211,7 +211,7 @@ func _draw() -> void:
 			"REST": label = "+%d EN" % effect.amount
 			"ABSORBED": label = "ABSORBED"
 		if label.is_empty(): continue
-		var font: Font = battle.hud.ui_bold if battle.hud.ui_bold != null else battle.hud.font
+		var font: Font = battle.hud.font
 		# Damage values are slightly larger and outlined so they read over any battler.
 		var size: int = 22 if label[0] == "-" or label[0].is_digit() else 17
 		var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
