@@ -44,7 +44,7 @@ class DamageLayer extends Control:
 				continue
 			var size: int = 30 if label.begins_with("-") or label.begins_with("+") else 20
 			var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
-				-minf(18, effect.age * 18))
+				-minf(34, effect.age * 34) - 10)
 			pos.y = clampf(pos.y, r.position.y + 16, r.end.y - size)
 			for offset in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
 				draw_string(font, pos + offset, label, HORIZONTAL_ALIGNMENT_LEFT, -1,
@@ -61,7 +61,7 @@ func _ready() -> void:
 	damage_layer.fx = self
 	damage_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	damage_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	damage_layer.z_index = 10
+	damage_layer.z_index = 100
 	add_child(damage_layer)
 	library = JSON.parse_string(FileAccess.get_file_as_string("res://assets/data/smt_combat_fx.json"))
 	assert(not library.is_empty(), "Extract local SMT FX data before running")
