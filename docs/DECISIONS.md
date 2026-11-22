@@ -50,7 +50,7 @@ qualquer alteração em documentos ou código.
 | D-041 | 2026-11-21 (Rodada 16: 1A; 2A; 3A; 4A; 5A; 6C; 7B; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) `Time.get_ticks_usec()` n... | `docs/GDD.md` Apêndice A |
 | D-042 | 2026-11-21 (Rodada 17: 1A; 2A; 3A; 4A; 5A; 6A; 7D; 8A) | DESIGN APROVADO; NÃO IMPLEMENTADO nesta rodada: (1A) cobertura combinada POINT+BEAM d... | `docs/GDD.md` Apêndice A |
 | D-043 | 2026-11-21 | Fila de comandos e ritmo de ataques encadeados: | `docs/GDD.md` Apêndice A |
-| D-043 | 2026-11-21 | Reação de quem não é o alvo | `docs/GDD.md` Apêndice A |
 | D-044 | 2026-11-21 (decisão do diretor sobre a ordem da fila D-043) | Os atos de um combatente são executados em bloco contínuo: o mesmo | `docs/GDD.md` Apêndice A |
+| D-045 | 2026-11-21 | Reação de quem não é o alvo (renumerada de D-043 por conflito de ID, decisão do autor) | `docs/GDD.md` Apêndice A |
 
 Total: 43 decisões indexadas.

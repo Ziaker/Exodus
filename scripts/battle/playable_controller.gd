@@ -178,7 +178,7 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 	var options: Array[String] = ["ATTACK", "ITEM", "REST"]
 	if unit.is_fallen: options.append("ABSORB")
 	if reacting:
-		# D-043: only the attacked character may block (DEFEND) or use any command;
+		# D-045: only the attacked character may block (DEFEND) or use any command;
 		# another reactor may only counter-attack or use an item.
 		if unit != reaction_defender:
 			var limited: Array[String] = ["ATTACK", "ITEM"]

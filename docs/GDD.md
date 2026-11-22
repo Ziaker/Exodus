@@ -2397,7 +2397,7 @@ Formato: ID · data · decisão · estado · impacto documental.
 
 **COLISÃO DE ID:** D-043 foi usado por duas decisões diferentes. Ambas preservadas até decisão do autor.
 
-- **D-043 · 2026-11-21** · **Reação de quem não é o alvo — CONFIRMADO e IMPLEMENTADO:**
+- **D-045 · 2026-11-21** · **Reação de quem não é o alvo — CONFIRMADO e IMPLEMENTADO** (registrada antes como D-043; renumerada por conflito de ID, decisão do autor):
   quando um inimigo anuncia um ataque, só o personagem **atacado** pode bloquear
   (DEFEND) e mantém todos os comandos como reação. Um aliado que **não é o alvo** não
   pode bloquear o ataque com sua reação: ela deve ser **contra-ataque (ATTACK) ou
