@@ -213,7 +213,7 @@ func _draw() -> void:
 		if label.is_empty(): continue
 		var font: Font = battle.hud.font
 		# Damage values are slightly larger and outlined so they read over any battler.
-		var size: int = 22 if label[0] == "-" or label[0].is_digit() else 17
+		var size: int = 30 if label.begins_with("-") or label.begins_with("+") else 20
 		var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
 			-minf(18, effect.age * 18))
 		pos.y = clampf(pos.y, r.position.y + 16, r.end.y - size)
