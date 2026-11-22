@@ -23,11 +23,27 @@ const OWN_FILL := Color("36aa6d")
 const FOE_FILL := Color("bb3d48")
 const UP_MARK := Color("b5efc4")
 const ALERT_RED := Color("bb3d48")
+## Creator 2026-11-21: SP arrows drawn as shapes, green #36aa6d up / red #bb3d48 down,
+## then reduced 25% (40 -> 30 px tall, head 30 -> 22.5 px); the alert "!" stays 40 px.
+const SP_UP := Color("36aa6d")
+const SP_DOWN := Color("bb3d48")
+const SIGN_HEIGHT := 40.0
+const ARROW_HEIGHT := 30.0
+const ARROW_HEAD := Vector2(22.5, 15)
+const ARROW_SHAFT := 7.5
+## Creator 2026-11-21: the arrow sits 4 px right of the art, top-aligned with it, and is
+## labelled "SP" (bold 12 px, arrow colour) to its right.
+const SIGN_GAP := 4.0
+## Tahoma bold cap height is ~0.727 em, so this size draws a 40 px tall "!".
+const ALERT_PX := 55
 const TARGET_SHEET := "res://assets/graphics/animations/TARGET01.png"
 ## TARGET01 bracket cells (192 px tiles): 7 top-left, 8 top-right, 5 bottom-left, 6 bottom-right.
 ## Only the stroke band (y 73..119) is drawn; additive blend, opacity 200/255 as in the source.
 const BRACKET_TILES := [7, 8, 5, 6]
 const BRACKET_BAND := Vector2(73, 46)
+## Creator 2026-11-21: smaller brackets on status panels. 7 px tall keeps each stroke
+## inside the panel's 7 px padding, clear of the name, ACT, SP and pip text.
+const PANEL_BRACKET_HEIGHT := 7.0
 ## Drawn at rest (the source converge frames spilled over the log on small panels).
 const DOWN_MARK := Color("f2a7a5")
 
@@ -36,6 +52,9 @@ var players: Array[BattleUnit] = []
 var opponents: Array[BattleUnit] = []
 var command_options: Array[String] = []
 var command_index := 0
+## D-046: linhas do plano (comandos + EXEC + UNDO) no mesmo menu desenhado.
+var plan_options: Array[String] = []
+var plan_index := 0
 var react_index := 0
 ## Kept for the controller and diagnostics; only the log line is drawn (HTML has one line).
 var feedback := ""
@@ -49,6 +68,13 @@ var alert_unit: BattleUnit
 
 # Presentation-only animation state (HTML keyframes).
 var time := 0.0
+## Background prototypes (prototypes/battle-bg) turn this off and paint the stage
+## from a node behind the HUD. The game itself always draws the lab backdrop.
+var stage_backdrop := true
+## Background prototypes: enemies drawn farther away in perspective. 1.0 = as
+## designed; below 1.0 the art and its shadow shrink towards enemy_horizon.
+var enemy_depth := 1.0
+var enemy_horizon := 214.0
 var announcement_text := ""
 var announcement_age := 99.0
 var _log_shown := ""
@@ -62,9 +88,18 @@ var _press_row := -1
 var _press_age := 99.0
 var _corner_index := -2
 var _corner_age := 99.0
-var _hp_anim: Dictionary = {}
 var _sp_anim := {"from": 0.5, "to": 0.5, "age": 99.0}
 var _unit_seen: Dictionary = {}
+## D-049 perfect interruption (creator 2026-11-22): the scenery flashes white for 3
+## frames (enemy silhouettes stay drawn over it) and the interrupted sprite/card
+## shakes horizontally 4 px, alternating every ~2 frames (30 Hz), for 0.4 s.
+const IMPACT_SECONDS := 3.0 / 60.0
+const SHAKE_SECONDS := 0.4
+const SHAKE_PX := 4.0
+const SHAKE_HZ := 30.0
+var impact_left := 0.0
+var shake_unit: BattleUnit = null
+var shake_age := 99.0
 
 
 func _ready() -> void:
@@ -120,8 +155,9 @@ func _process(delta: float) -> void:
 	_menu_age += delta
 	_press_age += delta
 	_corner_age += delta
-	for key in _hp_anim: _hp_anim[key].age += delta
 	_sp_anim.age += delta
+	impact_left = maxf(0.0, impact_left - delta)
+	shake_age += delta
 	for key in _unit_seen:
 		_unit_seen[key].sp_age += delta
 		_unit_seen[key].acts_age += delta
@@ -168,7 +204,7 @@ func _draw_marks() -> void:
 	var targets := mark_targets()
 	for key in targets:
 		var r: Rect2 = targets[key]
-		var s := r.size.x / 448.0
+		var s := PANEL_BRACKET_HEIGHT / BRACKET_BAND.y if String(key).begins_with("player:") else r.size.x / 448.0
 		var piece := Vector2(192, BRACKET_BAND.y) * s
 		var corners := [r.position, Vector2(r.end.x - piece.x, r.position.y), Vector2(r.position.x, r.end.y - piece.y), r.end - piece]
 		for i in 4:
@@ -176,9 +212,33 @@ func _draw_marks() -> void:
 			var source := Rect2((tile % 5) * 192, (tile / 5) * 192 + BRACKET_BAND.x, 192, BRACKET_BAND.y)
 			marks.draw_texture_rect_region(target_sheet, Rect2(corners[i], piece), source, Color(1, 1, 1, 200.0 / 255.0))
 
+func impact_flash() -> void:
+	impact_left = IMPACT_SECONDS
+
+
+func shake(unit: BattleUnit) -> void:
+	shake_unit = unit
+	shake_age = 0.0
+
+
+## Horizontal shake offset for a unit's sprite or card.
+func shake_offset(unit: BattleUnit) -> Vector2:
+	if unit == null or unit != shake_unit or shake_age >= SHAKE_SECONDS: return Vector2.ZERO
+	return Vector2(SHAKE_PX if int(shake_age * SHAKE_HZ) % 2 == 0 else -SHAKE_PX, 0)
+
+
+## D-049 rails: [top = opponent (red), bottom = player (white)].
+func counter_rail_rects(kind: String, index: int) -> Array[Rect2]:
+	var bottom: Rect2 = defense_rail_rect(index) if kind == "panel" else attack_rail_rect(index)
+	var top := Rect2(bottom.position - Vector2(0, bottom.size.y + 3), bottom.size)
+	var rails: Array[Rect2] = [top, bottom]
+	return rails
+
+
 func announce(text: String) -> void:
 	announcement_text = text
 	announcement_age = 0.0
+	alert_unit = null # only announce_attack() shows the red "!"
 
 
 func press_command(row: int, kind: String) -> void:
@@ -202,7 +262,15 @@ func enemy_sprite_rect(index: int) -> Rect2:
 	var factor := minf(SPRITE_BOX.x / region.size.x, SPRITE_BOX.y / region.size.y)
 	var art := region.size * factor
 	var box := Rect2(column.position + Vector2((COLUMN_SIZE.x - SPRITE_BOX.x) * 0.5, 0), SPRITE_BOX)
-	return Rect2(Vector2(box.get_center().x - art.x * 0.5, box.end.y - art.y), art)
+	var rect := Rect2(Vector2(box.get_center().x - art.x * 0.5, box.end.y - art.y), art)
+	var top := _depth_point(rect.position, rect.get_center().x)
+	return Rect2(top, rect.size * enemy_depth)
+
+
+## Perspective push: scale about the horizon point straight above/below `pivot_x`.
+func _depth_point(p: Vector2, pivot_x: float) -> Vector2:
+	var pivot := Vector2(pivot_x, enemy_horizon)
+	return pivot + (p - pivot) * enemy_depth
 
 
 func attack_rail_rect(index: int) -> Rect2:
@@ -309,11 +377,19 @@ func _draw() -> void:
 	for who in players.size():
 		_character(who, STATUS_RECTS[who])
 	_menu()
-	if mode in ["timing", "absorb", "continue", "announce", "turn", "result"]:
+	if mode in ["timing", "counter", "absorb", "continue", "announce", "turn", "result"]:
 		hitboxes.append({"rect": Rect2(0, 0, 544, 416), "key": "live-confirm"})
 
 
 func _backdrop() -> void:
+	if impact_left > 0.0:
+		draw_rect(STAGE_RECT, Color.WHITE)
+		draw_polygon(PackedVector2Array([Vector2(0, 297), Vector2(544, 297), Vector2(544, 416), Vector2(0, 416)]), PackedColorArray([Color("2a111a"), Color("2a111a"), Color("210d16"), Color("210d16")]))
+		return
+	if not stage_backdrop:
+		# Prototype hook: a node behind the HUD paints the stage; keep only the footer.
+		draw_polygon(PackedVector2Array([Vector2(0, 297), Vector2(544, 297), Vector2(544, 416), Vector2(0, 416)]), PackedColorArray([Color("2a111a"), Color("2a111a"), Color("210d16"), Color("210d16")]))
+		return
 	# exodus_feedback_lab.html .bg svg (viewBox 544 x 251 stretched to 298 px).
 	var sky := [Color("280b14"), Color("5c1c2b"), Color("431a26")]
 	var mid := 298.0 * 0.54
@@ -354,8 +430,8 @@ func _svg_poly(spec: String, color: Color) -> void:
 
 
 func _header() -> void:
+	# Creator 2026-11-21: no "Exodus" title; the header line carries the announcements.
 	draw_line(Vector2(8, 29.5), Vector2(536, 29.5), Color(1, 1, 1, 0.32))
-	_str("Exodus", 10, 20, TEXT, 12, true)
 	_str(_round_caption(), 534, 20, TEXT, 12, true, HORIZONTAL_ALIGNMENT_RIGHT)
 
 
@@ -421,15 +497,17 @@ func _enemy(_x: float, index: int) -> void:
 	if not unit.is_alive(): return
 	var column := enemy_column(index)
 	var art := enemy_sprite_rect(index)
+	art.position += shake_offset(unit)
 	var texture := silhouettes[index % silhouettes.size()]
 	var region := Rect2(Vector2.ZERO, texture.get_size())
 	var box := Rect2(column.position + Vector2((COLUMN_SIZE.x - SPRITE_BOX.x) * 0.5, 0), SPRITE_BOX)
 	# Ground shadow from the HTML silhouettes (ellipse rx 44 ry 6 at 111/119), filled black.
 	var k := SPRITE_BOX.x / 112.0
-	draw_set_transform(Vector2(box.position.x + 55 * k, box.position.y + 111 * k + 8), 0, Vector2(1, 6.0 / 44.0))
-	draw_circle(Vector2.ZERO, 44 * k, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
-	draw_set_transform(Vector2(box.position.x + 55 * k, box.position.y + 111 * k), 0, Vector2(1, 6.0 / 44.0))
-	draw_circle(Vector2.ZERO, 44 * k, Color.BLACK)
+	var shadow_x := box.position.x + 55 * k
+	draw_set_transform(_depth_point(Vector2(shadow_x, box.position.y + 111 * k + 8), shadow_x), 0, Vector2(1, 6.0 / 44.0))
+	draw_circle(Vector2.ZERO, 44 * k * enemy_depth, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
+	draw_set_transform(_depth_point(Vector2(shadow_x, box.position.y + 111 * k), shadow_x), 0, Vector2(1, 6.0 / 44.0))
+	draw_circle(Vector2.ZERO, 44 * k * enemy_depth, Color.BLACK)
 	draw_set_transform(Vector2.ZERO)
 	# drop-shadow(0 8px 2px rgba(24,17,26,.45)) and the silhouette (fill:#000).
 	draw_texture_rect_region(texture, Rect2(art.position + Vector2(0, 8), art.size), region, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
@@ -438,46 +516,53 @@ func _enemy(_x: float, index: int) -> void:
 	if alert_visible() and alert_unit == unit:
 		var t := announcement_age / 0.75
 		var alpha := _ease(t / 0.23) if t < 0.23 else (1.0 if t < 0.8 else 1.0 - _ease((t - 0.8) / 0.2))
-		_str("!", art.position.x - 4, art.position.y + 20, Color(ALERT_RED, alpha), 20, true, HORIZONTAL_ALIGNMENT_RIGHT, Color(0, 0, 0, 0.65 * alpha))
-	if not selected:
+		_str("!", art.position.x - 4, art.position.y + SIGN_HEIGHT, Color(ALERT_RED, alpha), ALERT_PX, true, HORIZONTAL_ALIGNMENT_RIGHT, Color(0, 0, 0, 0.65 * alpha))
+	# Creator 2026-11-21: SP arrows hide while a field announcement is on screen.
+	var announcing := not announcement_text.is_empty() and announcement_age < 0.75
+	if not selected and not announcing:
 		var own: BattleUnit = _sp_pair()[0]
 		if own != null:
-			var mark := "=" if own.current_sp == unit.current_sp else ("↑" if own.current_sp > unit.current_sp else "↓")
-			_str(mark, column.end.x - 10, column.position.y + 48, UP_MARK if own.current_sp >= unit.current_sp else DOWN_MARK, 20, true, HORIZONTAL_ALIGNMENT_RIGHT, Color(0, 0, 0, 0.65))
+			var left := art.end.x + SIGN_GAP
+			var color: Color = UP_MARK
+			var label_x := left
+			if own.current_sp == unit.current_sp:
+				label_x += _str("=", left, art.position.y + 20, UP_MARK, 20, true, HORIZONTAL_ALIGNMENT_LEFT, Color(0, 0, 0, 0.65))
+			else:
+				var up := own.current_sp > unit.current_sp
+				color = SP_UP if up else SP_DOWN
+				_sp_arrow(Vector2(left + ARROW_HEAD.x * 0.5, art.position.y), up)
+				label_x += ARROW_HEAD.x
+			_str("SP", label_x + SIGN_GAP, art.position.y + ARROW_HEIGHT * 0.5 + 4, color, 12, true, HORIZONTAL_ALIGNMENT_LEFT, Color(0, 0, 0, 0.65))
 	_str(battle.short_name(unit), column.get_center().x, column.end.y - 30, Color("fffaf5"), 13, true, HORIZONTAL_ALIGNMENT_CENTER, Color("1f0e14"))
-	var fraction := float(unit.current_hp) / maxf(1.0, unit.stats.max_hp)
-	var anim: Dictionary = _hp_anim.get(index, {"from": fraction, "to": fraction, "age": 99.0})
-	if not is_equal_approx(fraction, anim.to):
-		anim = {"from": lerpf(anim.from, anim.to, _stepped(anim.age, 0.22, 8)), "to": fraction, "age": 0.0}
-	_hp_anim[index] = anim
-	var hp_bar := Rect2(column.position.x + 52, column.end.y - 17, 112, 5)
-	draw_rect(hp_bar, Color(0, 0, 0, 0.45))
-	var inner := hp_bar.grow(-1)
-	draw_rect(Rect2(inner.position, Vector2(roundf(inner.size.x * lerpf(anim.from, anim.to, _stepped(anim.age, 0.22, 8))), inner.size.y)), Color("ede0d7"))
-	draw_rect(Rect2(hp_bar.position + Vector2(0.5, 0.5), hp_bar.size - Vector2.ONE), Color(1, 1, 1, 0.7), false, 1)
-	if selected:
-		_str("%d/%d" % [unit.current_hp, unit.stats.max_hp], column.end.x - 3, column.end.y - 2, Color("fffaf5"), 10, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	# Creator 2026-11-22: enemy HP is never shown (no bar, no value).
 	if mode == "target" and battle.target_side == "enemy":
 		hitboxes.append({"rect": Rect2(column.position, Vector2(COLUMN_SIZE.x, COLUMN_SIZE.y)), "key": "target:" + str(index)})
 
 
+## SP comparison arrow: top-centre anchor, ARROW_HEIGHT tall, head ARROW_HEAD, shaft ARROW_SHAFT.
+func _sp_arrow(top: Vector2, up: bool) -> void:
+	var h := ARROW_HEIGHT
+	var head := ARROW_HEAD
+	var w := ARROW_SHAFT * 0.5
+	var pts := PackedVector2Array()
+	if up:
+		pts = PackedVector2Array([top, top + Vector2(head.x * 0.5, head.y), top + Vector2(w, head.y), top + Vector2(w, h), top + Vector2(-w, h), top + Vector2(-w, head.y), top + Vector2(-head.x * 0.5, head.y)])
+	else:
+		var tip := top + Vector2(0, h)
+		pts = PackedVector2Array([tip, tip + Vector2(-head.x * 0.5, -head.y), tip + Vector2(-w, -head.y), top + Vector2(-w, 0), top + Vector2(w, 0), tip + Vector2(w, -head.y), tip + Vector2(head.x * 0.5, -head.y)])
+	var shadow := PackedVector2Array()
+	for point in pts: shadow.append(point + Vector2(0, 1))
+	draw_colored_polygon(shadow, Color(0, 0, 0, 0.65))
+	draw_colored_polygon(pts, SP_UP if up else SP_DOWN)
+
+
+## Creator 2026-11-21: announcements sit centred in the header line, fade only (same
+## 0.75 s keyframe opacity), no slide and no underline.
 func _announcement() -> void:
 	var t := announcement_age / 0.75
 	if t >= 1.0 or announcement_text.is_empty(): return
-	var alpha := 0.0
-	var offset := 0.0
-	if t < 0.23:
-		var e := _ease(t / 0.23)
-		alpha = e
-		offset = lerpf(-22, 0, e)
-	else:
-		offset = lerpf(0, -7, _ease((t - 0.23) / 0.77))
-		alpha = 1.0 if t < 0.8 else 1.0 - _ease((t - 0.8) / 0.2)
-	var center := FIELD_RECT.get_center().x
-	var y := FIELD_RECT.position.y + 3 + offset
-	_str(announcement_text, center, y + 12, Color("fff9f2", alpha), 12, true, HORIZONTAL_ALIGNMENT_CENTER, Color("14080a", alpha))
-	var underline := 165.0 * _bezier(clampf(announcement_age / 0.48, 0, 1), 0, 0, 0.58, 1)
-	draw_rect(Rect2(center - underline * 0.5, y + 18, underline, 1), Color("f1e6dd", alpha))
+	var alpha := _ease(t / 0.23) if t < 0.23 else (1.0 if t < 0.8 else 1.0 - _ease((t - 0.8) / 0.2))
+	_str(announcement_text, 272, 20, Color("fff9f2", alpha), 12, true, HORIZONTAL_ALIGNMENT_CENTER, Color("14080a", alpha))
 
 
 func _log_text() -> String:
@@ -514,7 +599,9 @@ func _character(who: int, r: Rect2) -> void:
 		seen.acts = unit.acts_available
 		seen.acts_age = 0.0
 	var highlighted := _panel_highlighted(unit, who)
-	var defending: bool = mode == "timing" and battle.timing_role == "DEFEND" and unit == battle.action_defender
+	var defending: bool = (mode == "timing" and battle.timing_role == "DEFEND" and unit == battle.action_defender) \
+		or (mode == "counter" and battle.counter.style == "panel" and unit == battle.action_attacker)
+	draw_set_transform(shake_offset(unit))
 	var top := Color(1, 1, 1, 1) if highlighted or defending else Color(1, 1, 1, 0.35)
 	draw_line(Vector2(r.position.x, r.position.y + 0.5), Vector2(r.end.x, r.position.y + 0.5), top)
 	if defending:
@@ -553,6 +640,12 @@ func _character(who: int, r: Rect2) -> void:
 			draw_rect(pip, Color("e7ddd4"))
 		else:
 			draw_rect(Rect2(pip.position + Vector2(0.5, 0.5), pip.size - Vector2.ONE), Color(1, 1, 1, 0.66), false, 1)
+	# D-046: atos comprometidos no plano ficam verdes acima dos pips de ACT.
+	var planned: int = battle.planned_acts_for(unit)
+	if planned > 0:
+		for i in mini(planned, 4):
+			draw_rect(Rect2(right - 52 + i * 14, r.position.y + 49, 10, 3), Color("36aa6d"))
+	draw_set_transform(Vector2.ZERO)
 	if mode == "target" and battle.target_side == "player":
 		hitboxes.append({"rect": r, "key": "player-target:" + str(who)})
 	elif mode == "react":
@@ -568,6 +661,7 @@ func _panel_highlighted(unit: BattleUnit, who: int) -> bool:
 func _menu_rows() -> Array[String]:
 	var rows: Array[String] = []
 	if mode == "react": rows.assign(["REACT", "DENY"])
+	elif mode == "plan": rows.assign(plan_options)
 	elif mode in ["command", "target"]: rows.assign(command_options)
 	return rows
 
@@ -590,10 +684,13 @@ func _menu() -> void:
 		_str("Command / %s" % who.display_name, r.position.x + 7, r.position.y + 17, TEXT, 12, true)
 	if not expanded: return
 	var visible_bottom := r.position.y + _menu_height
-	var y0 := r.position.y + 5 + (16 if show_title else 0)
-	var current := react_index if mode == "react" else command_index
+	var y0 := r.position.y + (3 if mode == "plan" else 5) + (16 if show_title else 0)
+	# D-046: sete linhas (comandos + EXEC + UNDO) cabem na janela de 77 px com passo 10.
+	var row_h := 10.0 if mode == "plan" else 14.0
+	var row_px := 9 if mode == "plan" else 11
+	var current := react_index if mode == "react" else (plan_index if mode == "plan" else command_index)
 	for i in rows.size():
-		var row := Rect2(r.position.x + 3, y0 + i * 14, r.size.x - 6, 14)
+		var row := Rect2(r.position.x + 3, y0 + i * row_h, r.size.x - 6, row_h)
 		if row.end.y > visible_bottom: break
 		var shift := 0.0
 		var press_bg := 0.0
@@ -608,9 +705,10 @@ func _menu() -> void:
 			draw_rect(row, Color(0, 0, 0, press_bg))
 		if i == current:
 			var bob := 1.5 if fmod(time + 0.325, 1.3) >= 0.65 else 0.0
-			_str("›", row.position.x + 6 + bob + shift, row.position.y + 11, Color.WHITE, 11)
-		_str(rows[i], row.position.x + 19 + shift, row.position.y + 11, Color.WHITE, 11)
-		hitboxes.append({"rect": row, "key": ("live-react-row:" if mode == "react" else "live-command:") + str(i)})
+			_str("›", row.position.x + 6 + bob + shift, row.position.y + row_h - 3, Color.WHITE, row_px)
+		_str(rows[i], row.position.x + 19 + shift, row.position.y + row_h - 3, Color.WHITE, row_px)
+		var key_prefix := "live-react-row:" if mode == "react" else ("live-plan:" if mode == "plan" else "live-command:")
+		hitboxes.append({"rect": row, "key": key_prefix + str(i)})
 
 
 # ---------------------------------------------------------------- input
@@ -625,6 +723,8 @@ func _input(event: InputEvent) -> void:
 			if key.begins_with("live-command:") and mode == "command":
 				command_index = int(key.split(":")[1])
 				battle.submit_command(command_index)
+			elif key.begins_with("live-plan:") and mode == "plan":
+				battle.submit_plan(int(key.split(":")[1]))
 			elif key.begins_with("target:") and mode == "target":
 				battle.submit_target(int(key.split(":")[1]))
 			elif key.begins_with("player-target:") and mode == "target":
@@ -644,7 +744,14 @@ func _input(event: InputEvent) -> void:
 		if event.keycode in [KEY_Z, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
 			battle.handle_confirm()
 		elif event.keycode in [KEY_X, KEY_ESCAPE]:
-			battle.handle_back()
+			if mode == "plan":
+				battle.exec_plan()
+			else:
+				battle.handle_back()
+		elif mode == "plan" and event.keycode == KEY_BACKSPACE:
+			battle.undo_plan()
+		elif mode == "plan" and event.keycode in [KEY_UP, KEY_DOWN]:
+			plan_index = posmod(plan_index + (1 if event.keycode == KEY_DOWN else -1), plan_options.size())
 		elif mode == "react" and event.keycode in [KEY_UP, KEY_DOWN]:
 			react_index = 1 - react_index
 		elif mode == "react" and event.keycode in [KEY_TAB, KEY_LEFT, KEY_RIGHT]:

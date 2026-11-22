@@ -35,7 +35,7 @@ qualquer alteração em documentos ou código.
 | D-024 | 2026-11-21 (Rodada 7: 1B; 2A; 3A; 4B; 5B; 6A; 7C; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: | `docs/GDD.md` Apêndice A |
 | D-025 | 2026-11-21 (Rodada 8: 1B; 2B; 3A; 4A; 5E; 6C; 7A; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: | `docs/GDD.md` Apêndice A |
 | D-028 | 2026-11-21 | Os ganhos da absorção persistem entre batalhas | `docs/GDD.md` Apêndice A |
-| D-029 | 2026-11-21 | Dificuldade do button mashing da absorção mantida | `docs/GDD.md` Apêndice A |
+| D-029 | 2026-11-21 | **REVOGADA pela D-051 (o criador nunca aprovou).** Dificuldade do button mashing da absorção mantida | `docs/GDD.md` Apêndice A |
 | D-030 | 2026-11-21 | Índice central de IDs em `docs/DECISIONS.md`: antes | `docs/GDD.md` Apêndice A |
 | D-031 | 2026-11-21 (Rodada 9: 1A; 2B; 3A; 4B; 5A; 6A; 7A; 8B) | CONFIRMADO como design; NÃO | `docs/GDD.md` Apêndice A |
 | D-032 | 2026-11-21 (Rodada 10: 1C; 2A; 3A; 4A; 5A; 6A; 7A; 8A) | CONFIRMADO como design; | `docs/GDD.md` Apêndice A |
@@ -53,8 +53,11 @@ qualquer alteração em documentos ou código.
 | D-044 | 2026-11-21 (decisão do diretor sobre a ordem da fila D-043) | Os atos de um combatente são executados em bloco contínuo: o mesmo | `docs/GDD.md` Apêndice A |
 | D-045 | 2026-11-21 | Reação de quem não é o alvo | `docs/GDD.md` Apêndice A |
 | D-046 | 2026-11-21 (implementação da fila D-043 no Godot) | O Fallen pode planejar de 1 a 4 comandos antes da resolução. | `docs/GDD.md` Apêndice A |
-| D-047 | 2026-11-22 (decisão do criador) | Combo inimigo: dois ataques anunciados por turno, com reação e número de dano próprios. | `docs/GDD.md` Apêndice A |
+| D-047 | 2026-11-22 (decisão do criador) | Combo inimigo: dois ataques anunciados por turno, com reação e número de dano próprios. **Corrigida pela D-051: o inimigo não gasta sempre dois atos em ataques.** | `docs/GDD.md` Apêndice A |
 | D-048 | 2026-11-22 (decisão do criador) | Reza de Yoch (PP no lugar da EN, teto 8, Refuah/Haganah/Ra'am), raças e renome do aliado para Yoch. | `docs/GDD.md` Apêndice A |
 | D-049 | 2026-11-22 (decisão do criador) | Contra-ataque com duas barras de ritmo e interrupção (perfeita: 16 SP; BLAST/POINT antes: 4 SP; +1 ato por comando da fila perdido). | `docs/GDD.md` Apêndice A |
+| D-050 | 2026-11-22 (roteiro do criador) | Prólogo: cutscenes de abertura, primeiro combate (fichas e habilidades dos 2 inimigos), resgate pelo humano, absorção tutorial (+2 MEF, +2 MAK) e saída para oeste/leste. | `docs/PROLOGUE_SCRIPT.md` e `docs/GDD.md` Apêndice A |
 
-Total: 47 decisões indexadas.
+| D-051 | 2026-11-22 (correção do criador) | Absorção por disputa de SP (múltiplos de 8, até +2 ou +1/+1, 10 apertos, até 20 SP, sucesso ao esgotar o SP inimigo), revoga a D-029; respostas ao prólogo D-050; inimigo não ataca sempre duas vezes. | `docs/GDD.md` Apêndice A |
+
+Total: 49 decisões indexadas.

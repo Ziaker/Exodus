@@ -27,7 +27,7 @@ func _run() -> void:
 		quit(1)
 		return
 	var battle := _new_battle()
-	_check(battle.hud.mode == "command", "Real battle must wait for a command")
+	_check(battle.hud.mode == "plan", "Real battle must wait for the D-046 plan")
 	# D-034: the drawn rail must use the configured POINT width, not a fixed 10%.
 	for half in [BattleMath.POINT_MIN_HALF_WIDTH, BattleMath.POINT_MAX_HALF_WIDTH]:
 		battle.rhythm.configure(half)
@@ -49,9 +49,9 @@ func _run() -> void:
 	_check(hud._round_caption() == "ROUND 01", "Header must show the HTML round label")
 	await process_frame
 	await process_frame
-	_check(hud._menu_rows().size() == 5 and hud._menu_rows()[4] == "REACT", "Fallen menu lists five commands")
-	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-command:0")[0].rect
-	_check(first_row.position.y == 337, "Creator decision: with five commands the title is hidden and rows start at the top")
+	_check(hud._menu_rows().size() == 7 and hud._menu_rows()[4] == "REACT", "D-046: Fallen menu lists five commands plus EXEC and UNDO")
+	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-plan:0")[0].rect
+	_check(first_row.position.y == 335, "D-046: the title is hidden and plan rows start at the top of the command window")
 	# Silhouettes: opaque pixels plus enclosed dither holes become one solid mask.
 	var ring := Image.create_empty(5, 5, false, Image.FORMAT_RGBA8)
 	for p in [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(1, 2), Vector2i(3, 2), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]:
@@ -83,20 +83,27 @@ func _run() -> void:
 	key.pressed = true
 	key.keycode = KEY_DOWN
 	battle.hud._input(key)
-	_check(battle.hud.command_index == 1, "Down key must navigate real commands")
+	_check(battle.hud.plan_index == 1, "Down key must navigate the D-046 plan rows")
 	key.keycode = KEY_UP
 	battle.hud._input(key)
 	key.keycode = KEY_Z
 	battle.hud._input(key)
-	_check(battle.hud.mode == "target", "Attack must ask for a real target")
+	_check(battle._planned.size() == 1, "Z must commit the highlighted plan command")
+	battle.exec_plan()
+	_check(battle.hud.mode == "target", "Executing an ATTACK plan must ask for a real target")
 	battle.cancel_target()
-	_check(battle.hud.mode == "command", "Cancel target must return to command menu")
+	_check(battle.hud.mode == "plan", "Cancel target must return to the D-046 plan")
 	_check(battle._fallen.acts_available == 2, "Opening/canceling a menu must not spend an act")
 	battle.submit_command(0)
 	battle.submit_target(1)
-	_check(battle.hud.mode == "timing", "Attack must start real rhythm input")
-	_check(battle.rhythm._running, "Real rhythm timer must run")
-	battle.rhythm._finish(BattleMath.RhythmResult.POINT)
+	# D-049: the attacked enemy may counter-attack (33%), opening the two rails instead.
+	_check(battle.hud.mode in ["timing", "counter"], "Attack must start real rhythm input")
+	if battle.hud.mode == "timing":
+		_check(battle.rhythm._running, "Real rhythm timer must run")
+		battle.rhythm._finish(BattleMath.RhythmResult.POINT)
+	else:
+		_check(battle.counter.running, "Real counter rails must run")
+		battle.counter.finish(BattleMath.RhythmResult.POINT, BattleMath.RhythmResult.MISS)
 	_check(battle.log_history.any(func(line: String) -> bool: return line.contains("FALLEN -> GENETIC FOE B")), "Chosen enemy must receive the actual attack")
 	_check(battle.state.units[2].current_hp == 12, "Unselected enemy must stay untouched")
 	battle.queue_free()
@@ -119,9 +126,10 @@ func _run() -> void:
 	battle = _new_battle()
 	for frame in 2400:
 		match battle.hud.mode:
-			"command": battle.submit_command(0)
+			"command", "plan": battle.submit_command(0)
 			"target": battle.submit_target(battle.first_living_target())
 			"timing": battle.rhythm._finish(BattleMath.RhythmResult.POINT)
+			"counter": battle.counter.finish(BattleMath.RhythmResult.POINT, BattleMath.RhythmResult.MISS)
 			"react": battle.answer_reaction(true)
 			"continue", "announce": battle.proceed()
 			"result": break
@@ -135,9 +143,10 @@ func _run() -> void:
 	# A second full run with failed physical input and no defense exercises defeat.
 	for frame in 2400:
 		match battle.hud.mode:
-			"command": battle.submit_command(0)
+			"command", "plan": battle.submit_command(0)
 			"target": battle.submit_target(battle.first_living_target())
 			"timing": battle.rhythm._finish(BattleMath.RhythmResult.MISS)
+			"counter": battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.POINT)
 			"react": battle.answer_reaction(false)
 			"continue", "announce": battle.proceed()
 			"result": break
@@ -149,7 +158,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	battle = current_scene
-	_check(battle != null and battle.hud.mode == "command", "Restart must launch a fresh playable battle")
+	_check(battle != null and battle.hud.mode == "plan", "Restart must launch a fresh playable battle (D-046 planning)")
 	_check(battle._fallen.current_hp == 14 and battle.state.round_number == 1, "Restart must restore battle resources")
 	# Creator decision: Restart after DEFEAT starts at base attributes but keeps the save.
 	var kept: Dictionary = ProgressStore.load_gains()

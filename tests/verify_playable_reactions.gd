@@ -6,6 +6,8 @@ class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
 		return BattleMath.RhythmResult.MISS
 	func _defender_reaction(_defender: BattleUnit, _attacker: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
+	func _enemy_counter_roll(_e: BattleUnit) -> bool:
+		return false  # D-049 counters are covered by verify_playable_counter.gd
 	# These checks isolate act economy, so enemy attacks must never land. D-022
 	# auto-hit is disabled here and covered by AutoHitBattle below.
 	func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, _auto_hit: bool = false, _chain: bool = false) -> void:
@@ -17,6 +19,8 @@ class AutoHitBattle extends "res://scripts/battle/playable_controller.gd":
 		return BattleMath.RhythmResult.MISS
 	func _defender_reaction(_defender: BattleUnit, _attacker: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
+	func _enemy_counter_roll(_e: BattleUnit) -> bool:
+		return false  # D-049 counters are covered by verify_playable_counter.gd
 
 var checks := 0
 
@@ -77,8 +81,9 @@ func _run() -> void:
 		battle.answer_reaction(true)
 		check(battle.hud.command_options.has("ATTACK") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps every command plus DEFEND as a reaction")
 		battle.submit_command(0)  # counter-attack: D-038 REST no longer spends acts
-		battle.submit_target(0)
-		battle.rhythm._finish(BattleMath.RhythmResult.MISS)
+		# D-049: the counter uses the two-rail exchange; both MISS = tie, no damage.
+		check(battle.hud.mode == "counter", "D-049: a counter-attack opens the two-rail exchange")
+		battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.MISS)
 		check(battle._fallen.acts_available == 1 - reaction, "Each reaction must spend exactly one shared act")
 		check(battle.state.round_number == 1, "Both reactions must occur in round one")
 		if reaction == 0:
@@ -102,8 +107,9 @@ func _run() -> void:
 	battle.answer_reaction(true)
 	check(not battle.hud.command_options.has("ABSORB"), "Ally must not receive Fallen-only absorption")
 	check(battle.reaction_defender == battle._fallen and battle.hud.command_options == ["ATTACK", "ITEM"], "D-045: a reactor who is not the target may only counter-attack or use an item (got %s)" % [battle.hud.command_options])
-	battle.submit_command(0); battle.submit_target(0)
-	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
+	battle.submit_command(0)
+	# Both MISS: a tie, so the ally's strike resolves (no contact) and no affinity penalty applies.
+	battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.MISS)
 	check(battle._ally.acts_available == 1 and battle._fallen.acts_available == 2, "Ally may react when Fallen is attacked, spending only Ally's act")
 	check(battle.log_history.any(func(line: String) -> bool: return line.begins_with("ALLY ->")), "Off-turn attack must use the real attack resolver")
 	battle.queue_free(); await process_frame
@@ -172,8 +178,64 @@ func _run() -> void:
 	await process_frame
 	var hits2: int = battle.fx.history.count("HIT") + battle.fx.history.count("CRITICAL")
 	check(hits2 == 2, "D-047: second combo attack draws another damage number (got %d)" % hits2)
+	# Creator 2026-11-22: hero damage numbers sit just above the hit hero's card and
+	# only appear after the hit animation has ended.
+	var hero_hit: Dictionary = {}
+	for effect in battle.fx.effects:
+		if effect.unit != null and effect.unit.is_player and effect.kind in ["HIT", "CRITICAL"]:
+			hero_hit = effect
+	check(not hero_hit.is_empty(), "D-047: the second combo hit must still be animating on a hero")
+	check(battle.fx.numbers.is_empty(), "No damage number may show while its hit animation is playing")
+	var card: Rect2 = hero_hit.target_rect
+	var nr: Rect2 = battle.fx.number_rect(hero_hit)
+	check(is_equal_approx(nr.end.y, card.position.y), "Hero damage number band must end at the top of the hero's card")
+	check(is_equal_approx(nr.position.y, battle.hud.STAGE_RECT.end.y), "Hero damage number band must start below the stage")
+	check(nr.position.x == card.position.x and nr.size.x == card.size.x, "Hero damage number stays over the hit hero's card")
+	for panel in battle.hud.STATUS_RECTS:
+		check(not nr.intersects(panel), "Hero damage number must not cover a status panel")
+	var waited := 0.0
+	while battle.fx.effects.has(hero_hit) and waited < 5.0:
+		await process_frame
+		waited += root.get_process_delta_time()
+	check(not battle.fx.effects.has(hero_hit), "The hero hit animation must end")
+	check(battle.fx.numbers.any(func(n: Dictionary) -> bool: return n.unit == hero_hit.unit and n.amount == hero_hit.amount), "The hero's number appears once the hit animation has ended")
+	check(battle.fx.is_busy(), "A showing damage number keeps input gated like the hit did")
+	var shown: Dictionary = battle.fx.numbers.filter(func(n: Dictionary) -> bool: return n.unit == hero_hit.unit)[0]
+	var expected: Color = battle.fx.LETHAL_INK if not hero_hit.unit.is_alive() else battle.fx.NUMBER_INK
+	check(battle.fx.number_color(shown) == expected, "Hero number is #ff3b3b exactly when the hit was lethal")
 	battle.queue_free(); await process_frame
-	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, shared acts, ally response, full reaction commands, D-022 auto-hit, D-038 REST, D-047 enemy combo" % checks)
+	# D-046 no caminho jogável: linhas EXEC/UNDO, marcadores verdes e cadeia compartilhada.
+	battle = fresh()
+	check(battle.hud.mode == "plan", "Playable battle must open the D-046 plan")
+	check(battle.hud.plan_options.size() == 7, "Plan menu must expose five commands plus EXEC and UNDO")
+	battle.submit_plan(0)
+	check(battle._planned.size() == 1, "One ATTACK must be committed")
+	battle.undo_plan()
+	check(battle._planned.is_empty(), "UNDO must drop the last planned command")
+	battle.submit_plan(0)
+	battle.submit_plan(0)
+	check(battle._planned.size() == 2, "Two ATTACKs must be committed before resolving")
+	check(battle.planned_acts_for(battle._fallen) == 2, "Committed acts must light the green ACT markers")
+	battle.exec_plan()
+	check(battle.hud.mode == "target", "EXEC must start resolving the plan")
+	battle.submit_target(0)
+	check(battle.rhythm._chain_mode, "Two planned ATTACKs must share one persistent rhythm line")
+	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
+	battle.queue_free(); await process_frame
+	# Item 2 da auditoria: reação que mata o atacante ainda pausa o resultado do combo.
+	battle = AutoHitBattle.new()
+	root.add_child(battle)
+	reserve(battle); reserve(battle)
+	var doomed: BattleUnit = battle.action_attacker
+	doomed.current_hp = 1
+	battle.select_reactor(0)
+	battle.answer_reaction(true)
+	battle.submit_command(0)
+	battle.counter.finish(BattleMath.RhythmResult.POINT, BattleMath.RhythmResult.MISS)
+	check(not doomed.is_alive(), "The counter-attack must defeat the announced attacker")
+	check(battle.hud.mode == "continue", "An interrupted combo must still pause so the player reads the reaction")
+	battle.queue_free(); await process_frame
+	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, D-022 auto-hit, D-038 REST, D-046 playable plan, D-047 enemy combo and interrupted pause" % checks)
 	# Let queued battle nodes and their pending coroutines release before exit.
 	await process_frame
 	await process_frame

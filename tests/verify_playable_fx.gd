@@ -4,6 +4,8 @@ const SANDBOX := preload("res://tests/progress_sandbox.gd")
 class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
 	func _ai_roll(_a: BattleUnit, _b: BattleUnit) -> int: return BattleMath.RhythmResult.POINT
 	func _defender_reaction(_a: BattleUnit, _b: BattleUnit) -> int: return BattleMath.RhythmResult.MISS
+	func _enemy_counter_roll(_e: BattleUnit) -> bool:
+		return false  # D-049 counters are covered by verify_playable_counter.gd
 
 var checks := 0
 
@@ -37,15 +39,26 @@ func _run() -> void:
 	battle.rhythm._finish(BattleMath.RhythmResult.POINT)
 	check(fx.count_kind("HIT") + fx.count_kind("CRITICAL") == 1, "Landed attack must start a real hit animation")
 	check(fx.has_target_sprite(battle.state.units[2]), "Defeated enemy must remain visible during its hit/fade animation")
+	check(fx.numbers.is_empty(), "Enemy damage number must wait for the hit animation to end")
+	# Creator 2026-11-22: lethal numbers are #ff3b3b; every number fades over its second half.
+	check(fx.number_color({"kind": "HIT", "amount": 9, "dying": true}) == Color("ff3b3b"), "Lethal hit number must be #ff3b3b")
+	check(fx.number_color({"kind": "HIT", "amount": 9, "dying": false}) == fx.NUMBER_INK, "Non-lethal hit number keeps its normal ink")
+	check(fx.number_color({"kind": "MISS", "amount": 0, "dying": true}) == fx.NUMBER_INK, "MISS is never painted as lethal")
+	check(fx.number_alpha(0.0, 0.8) == 1.0 and fx.number_alpha(0.4, 0.8) == 1.0, "Number stays opaque for the first half of its life")
+	check(is_equal_approx(fx.number_alpha(0.6, 0.8), 0.5) and fx.number_alpha(0.8, 0.8) == 0.0, "Number loses opacity linearly over its second half")
+	var killed: Array = fx.effects.filter(func(e: Dictionary) -> bool: return e.kind in ["HIT", "CRITICAL"])
+	check(killed.size() == 1 and fx.number_color(killed[0]) == fx.LETHAL_INK, "The live killing blow on the defeated enemy is painted red")
 	for effect in fx.effects:
 		check(not effect.clip_rect.intersects(battle.hud.LOG_RECT), "Effects must not cover the battle log")
 		check(not effect.clip_rect.intersects(battle.hud.COMMAND_RECT), "Effects must not cover the command menu")
 	var before: BattleUnit = battle.active_actor
 	battle.handle_confirm()
 	check(battle.active_actor == before, "Confirm must not skip an unfinished impact effect")
-	for i in 120:
+	# Real time, not a frame count: the number now shows after the hit animation.
+	var waited := 0.0
+	while fx.is_busy() and waited < 5.0:
 		await process_frame
-		if not fx.is_busy(): break
+		waited += root.get_process_delta_time()
 	check(fx.played_cells > 0, "Real spritesheet cells must have been rendered")
 	check(fx.applied_flashes > 0, "Original RGSS flash timings must have reached the renderer")
 	check(fx.find_children("*", "AudioStreamPlayer", true, false).is_empty(), "Combat effects must never create audio players")

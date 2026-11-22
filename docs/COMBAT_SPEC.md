@@ -185,6 +185,9 @@
   atos antes de passar a vez** — dois atos produzem `A, A, B, B`, e não mais
   `A, B, A, B`. Cada ato é consumido por uma ação ou reação.
   **IMPLEMENTADO** em `BattleState.next_actor()`.
+- **Correção do criador (D-051, 2026-11-22):** ele **nunca aprovou** que o inimigo gaste
+  **sempre** dois atos em ataques independente do contexto. A escolha deve depender do
+  contexto (IA **PENDENTE**); o código ainda ataca duas vezes.
 - **D-047 (2026-11-22): combo inimigo.** O inimigo anuncia e resolve **dois
   ataques no mesmo bloco de turno**, cada um com reação própria e **um número
   de dano próprio na camada principal** (`DamageLayer`). Sem reação declarada,
@@ -1190,7 +1193,7 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   **o código vigente**, não a execução dos perfis especiais
   D-013/D-020. Nenhuma implementação foi autorizada.
 
-## Contra-ataque e interrupção — D-049; DESIGN, NÃO IMPLEMENTADO
+## Contra-ataque e interrupção — D-049; IMPLEMENTADO no motor Godot
 - **Interrupção:** um personagem é interrompido na sua ação por um ataque que sofre, seja ataque normal ou magia. Quem é interrompido **perde o ato** da ação interrompida, e a ação não acontece.
 - **Contra-ataque com duas barras:** ao reagir a um ataque com contra-ataque, aparecem **duas barras de ritmo** em vez de uma. Em cima fica a do oponente, com ponteiro **vermelho** da **direita para a esquerda**. Embaixo fica a do jogador, com ponteiro **branco** da **esquerda para a direita**.
 - **Ritmo:** MISS, BLAST e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
@@ -1213,6 +1216,30 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 - **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (ambos interrompidos, perdem os atos, sem perder SP) e **cada golpe causa seu dano**; a D-015 continua valendo para defesa contra ataque.
 - **D-022 mantida:** sem reação declarada, o inimigo acerta automaticamente, sem barra dupla nem interrupção.
 - **Shake:** treme **só o sprite/cartão** de quem foi interrompido, por **0,4 s**, com amplitude de **4 px**.
+- **Resolução da troca:** os resultados são comparados (POINT > BLAST > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
+- **Golpe da perfeita:** conta como **POINT**, onde quer que o alinhamento aconteça.
+- **Alvo do contra-ataque:** sempre o inimigo que anunciou o ataque. Se quem contra-ataca não é o alvo anunciado (D-045) e tira resultado pior, **ele leva o dano** no lugar do alvo e perde o SP equivalente.
+- **Posição das barras:** sobre o inimigo quando é o inimigo quem contra-ataca; no painel de status do jogador quando é o jogador.
+- **IA:** inimigo atacado que tem ato de reação contra-ataca com **33%** de chance; senão usa a defesa atual.
+- **Perfeita só em movimento:** o alinhamento só conta enquanto os dois ponteiros andam; alinhar com um ponteiro já parado não é perfeita.
+- **Movimento do shake:** horizontal, alternando esquerda/direita a cada ~2 quadros (30 Hz).
+- **Implementação (2026-11-22):** IMPLEMENTADO no `BattlePlayable` (`counter_rhythm_bar.gd`, `playable_controller.gd`, `playable_hud.gd`, `BattleMath.resolve_counter`), coberto por `tests/verify_playable_counter.gd` e pelos testes GUT de `test_battle_math.gd`. A perfeita encerra a troca na hora do aperto (o ponteiro do outro congela), por isso o flash e o shake saem no instante do aperto. **PENDENTE de confirmação:** quando a vítima tem menos SP que o valor do roubo, o código rouba só o que ela tem (nunca negativo).
+
+## Prólogo — primeiro combate (D-050); ROTEIRO, NÃO IMPLEMENTADO
+- Fonte: `docs/PROLOGUE_SCRIPT.md` (texto do criador). Dois inimigos-sombra com nomes
+  hebraicos na HUD:
+  - **20 HP / 10 EN / 6 ATK / 3 MAK / 2 DEF / 8 MEF / 3 AGI** — Lunge (1 ACT, 4 EN: 5 de
+    dano físico duas vezes em rápida sucessão de ritmo); Bleedbuff (2 ACT, 4 HP: +1
+    estágio de ATK por 1 round).
+  - **8 HP / 16 EN / 1 ATK / 8 MAK / 2 DEF / 2 MEF / 3 AGI** — Heat wave (2 ACT, 6 EN: 5
+    de dano mágico IGNI em todos; 25% de burn, 3 de dano por round por 3 rounds);
+    Energy Eat (1 ACT, 6 EN: recupera 5 HP + 1 por EN extra alocado).
+- Resgate: diante de dano mortal ao protagonista, o humano entra (IA), cura tudo, corta
+  o SP atual do protagonista pela metade e o combate reinicia.
+- Absorção tutorial: fraqueza indicada por chacoalhar; todas as opções viram ABSORB;
+  +2 MEF do primeiro inimigo, depois +2 MAK com mash; permanentes.
+- **PENDENTES** (lista completa no roteiro): estágios de ATK, dano mágico, IGNI, burn,
+  EN extra, "dano o bastante", detalhes do resgate e conflito com a D-029.
 
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
@@ -1221,9 +1248,14 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 - **D-017 (2026-11-21): uma absorção bem-sucedida sempre elimina o alvo** (`current_hp =
   0`), que deixa de agir e pode encerrar o combate se for o último inimigo.
   **IMPLEMENTADO.**
-- Ganho: 1-3 pontos do maior atributo do inimigo (exceto EN/SP/HP), mais SP base, HP e EN extras.
-- **D-029:** limiar de mashing mantido em **4 apertos = +1, 8 = +2, 12 = +3**;
-  nenhuma dificuldade escalonada foi inventada.
+- **D-051 (2026-11-22) — absorção por disputa de SP; DESIGN, NÃO IMPLEMENTADO.** Substitui
+  a regra antiga (1–3 pontos do maior atributo mais SP base/HP/EN) e **revoga a D-029**
+  (4/8/12 apertos), que o criador nunca aprovou:
+- **Ganho:** baseado nos atributos do inimigo que são **múltiplos de 8** (o maior). Até **+2 em um atributo** ou **+1 e +1 em dois atributos diferentes** múltiplos de 8. Nem todo inimigo tem 8 em tudo: precisa ter **pelo menos 1 ou 2** atributos múltiplos de 8.
+- **Mash como disputa de SP:** o inimigo resiste com o **SP restante dele** contra o SP do jogador. O mash rende **até 20 SP no total, em 10 apertos**. A absorção se completa quando o jogador **esgota por completo o SP do inimigo**.
+- **SP baixo dos inimigos do prólogo é aceitável:** o combate começa com Fallen tendo **40 SP** (o criador confirmou que "40PP" era SP) mesmo com base 80; **só no prólogo**.
+- **PENDENTES:** fórmula exata da disputa (quanto cada aperto tira, como o SP restante do inimigo resiste); o que acontece se os 10 apertos terminam com SP inimigo sobrando; critério de escolha entre +2 em um atributo e +1/+1 em dois; ganhos de HP/EN/SP base que o GDD §10 antigo citava.
+  O código atual ainda usa a regra antiga (mash de 2 s, `apertos / 4`).
 - **D-028 (2026-11-21): os ganhos persistem entre batalhas.** Os deltas de
   atributos são salvos em `user://exodus_progress.json` com versão e validação
   contra corrupção, e reaplicados ao Fallen ao criar a próxima batalha.

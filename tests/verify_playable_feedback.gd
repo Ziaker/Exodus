@@ -6,6 +6,8 @@ class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
 		return BattleMath.RhythmResult.MISS
 	func _defender_reaction(_a: BattleUnit, _b: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
+	func _enemy_counter_roll(_e: BattleUnit) -> bool:
+		return false  # D-049 counters are covered by verify_playable_counter.gd
 
 var checks := 0
 
@@ -36,11 +38,12 @@ func reserve(battle: Control) -> void:
 
 func _run() -> void:
 	var battle := fresh()
-	await process_frame
-	await process_frame
+	# D-046: sete linhas (5 comandos + EXEC + UNDO) precisam da animação do menu.
+	for _i in 20:
+		await process_frame
 	var rows := 0
 	for hit in battle.hud.hitboxes:
-		if not String(hit.key).begins_with("live-command:"): continue
+		if not (String(hit.key).begins_with("live-command:") or String(hit.key).begins_with("live-plan:")): continue
 		rows += 1
 		check(not hit.rect.intersects(battle.hud.BATTLE_LOG_RECT), "Battle log must not cover any command row")
 		check(battle.hud.COMMAND_RECT.encloses(hit.rect), "Every command row must stay inside the HTML command window")
@@ -48,17 +51,18 @@ func _run() -> void:
 		check(hit.rect.end.y <= 416, "Every command must fit inside the screen")
 		for who in battle.hud.STATUS_RECTS:
 			check(not hit.rect.intersects(who), "Commands must not cover either character's status")
-	check(rows == 5, "All five Fallen commands must be visible and clickable")
+	check(rows == 7, "D-046: five Fallen commands plus EXEC and UNDO must be visible and clickable")
 	battle.submit_command(0)
 	check(battle.hud.mark_targets().keys() == ["enemy:0"], "The enemy being chosen must carry the green brackets")
 	key(battle, KEY_X)
-	check(battle.hud.mode == "command", "X must return from target selection")
+	check(battle.hud.mode == "plan", "X must return from target selection to D-046 planning")
 	check(battle._fallen.acts_available == 2, "X must not consume an uncommitted act")
 	key(battle, KEY_X)
-	check(battle.hud.mode == "turn", "X must close the own-turn command window")
+	check(battle.hud.mode == "plan", "X with an empty plan must not end the turn")
 	key(battle, KEY_Z)
-	check(battle.hud.mode == "command", "Z must reopen the same own-turn menu")
-	battle.submit_command(0); battle.submit_target(0)
+	check(battle._planned.size() == 1, "Z must commit one command to the D-046 plan")
+	battle.exec_plan()
+	battle.submit_target(0)
 	# HTML lab: the attack rail sits over the targeted enemy, above its name, clear of the log.
 	check(battle.rhythm.style == "attack", "Player attack must use the attack rail")
 	check(battle.hud.enemy_column(0).encloses(battle.rhythm.get_rect()), "Attack rail must sit inside the targeted enemy column")
@@ -72,7 +76,9 @@ func _run() -> void:
 		if not battle.fx.is_busy(): break
 		await process_frame
 	key(battle, KEY_X)
-	check(battle.hud.mode == "command" and battle.active_actor == battle._ally, "X must dismiss feedback and proceed")
+	await process_frame
+	# D-044: Fallen still has an act left, so the block continues with Fallen.
+	check(battle.hud.mode == "plan" and battle.active_actor == battle._fallen, "X must dismiss feedback and reopen planning (D-044 block)")
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle); reserve(battle)
@@ -80,6 +86,8 @@ func _run() -> void:
 	check(battle.hud.announcement_age < 0.75, "Enemy announcement must be animating")
 	check(battle.fx.count_kind("WHITEN") == 1, "Attacking enemy must flash (RMXP whiten) at its announcement")
 	check(battle.hud.alert_visible() and battle.hud.alert_unit == battle.action_attacker, "Announcing enemy must show the red alert")
+	battle.hud.announce("ROUND 02")
+	check(not battle.hud.alert_visible(), "Other announcements must not show the red alert")
 	var marked: Dictionary = battle.hud.mark_targets()
 	check(marked.has("player:%d" % battle.hud.players.find(battle.action_defender)), "The player chosen by the enemy must carry the green brackets")
 	check(not marked.keys().any(func(k: String) -> bool: return k.begins_with("enemy:")), "No enemy is marked while the enemy attack is announced")
@@ -113,6 +121,10 @@ func _run() -> void:
 	check(battle.hud.mode == "continue", "Announced attack must resolve only after confirmation")
 	battle.queue_free(); await process_frame
 	print("PLAYABLE_FEEDBACK_OK: %d checks; X back/deny, actor/target labels, attack/defense, enemy announcements, outcomes" % checks)
+	# Let queued battle nodes and their pending coroutines release before exit
+	# (quitting in the same frame crashed Godot at shutdown ~1 run in 7).
+	await process_frame
+	await process_frame
 	quit(0)
 
 func _finalize() -> void:

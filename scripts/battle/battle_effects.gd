@@ -18,6 +18,8 @@ var history: Array[String] = []
 var played_cells := 0
 var applied_flashes := 0
 var damage_layer: Control = null
+## Labels whose impact animation already ended; each lives as long as that animation did.
+var numbers: Array[Dictionary] = []
 
 ## Numbers live on their own node above containers and sprites, so they are
 ## never hidden by the RGXP cells or the silhouette ghost.
@@ -30,27 +32,33 @@ class DamageLayer extends Control:
 		var font: Font = fx.battle.hud.font
 		if font == null:
 			return
+		# MISS/DODGE have no impact animation and show at once; every other label
+		# waits in fx.numbers until its hit animation has ended.
+		var shown: Array[Dictionary] = []
 		for effect in fx.effects:
-			var r: Rect2 = effect.target_rect
-			var label := ""
-			match effect.kind:
-				"HIT", "CRITICAL": label = "-%d" % effect.amount
-				"BLOCK": label = "BLOCK -%d" % effect.amount
-				"MISS", "DODGE": label = effect.kind
-				"HEAL": label = "+%d HP" % effect.amount
-				"REST": label = "+%d EN" % effect.amount
-				"ABSORBED": label = "ABSORBED"
+			if effect.kind in fx.IMMEDIATE_LABELS: shown.append(effect)
+		shown.append_array(fx.numbers)
+		for effect in shown:
+			var r: Rect2 = fx.number_rect(effect)
+			var label: String = fx.label_for(effect.kind, effect.amount)
 			if label.is_empty():
 				continue
 			var size: int = 30 if label.begins_with("-") or label.begins_with("+") else 20
 			var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
 				-minf(34, effect.age * 34) - 10)
 			pos.y = clampf(pos.y, r.position.y + 16, r.end.y - size)
+			if effect.unit != null and effect.unit.is_player:
+				# Creator 2026-11-22: just above the hero's card; its bottom touches the card.
+				pos.y = r.end.y - fx.HERO_NUMBER_GAP
+			var alpha: float = fx.number_alpha(effect.age, effect.duration)
+			if alpha <= 0.0:
+				continue
 			for offset in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
 				draw_string(font, pos + offset, label, HORIZONTAL_ALIGNMENT_LEFT, -1,
-					size, Color(0, 0, 0, 0.95))
-			draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1,
-				size, Color("fff3d0"))
+					size, Color(0, 0, 0, 0.95 * alpha))
+			var ink: Color = fx.number_color(effect)
+			ink.a *= alpha
+			draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, size, ink)
 
 
 func _ready() -> void:
@@ -82,6 +90,7 @@ func has_target_sprite(unit: BattleUnit) -> bool:
 
 
 func is_busy() -> bool:
+	if not numbers.is_empty(): return true
 	for effect in effects:
 		if effect.kind not in ["ANNOUNCE", "ATTACK", "ABSORB", "WHITEN"]: return true
 	return false
@@ -99,6 +108,53 @@ func _unit_rect(unit: BattleUnit) -> Rect2:
 	if index >= 0: return battle.hud.STATUS_RECTS[index]
 	index = battle.hud.opponents.find(unit)
 	return battle.hud.enemy_sprite_rect(index)
+
+
+## Creator decision (2026-11-22): numbers on a hero sit just above that hero's
+## card (status panel), in the strip between the stage and the card, never over
+## FALLEN/ACT/HP. Baseline 2 px above the card top.
+const HERO_NUMBER_GAP := 2.0
+## Labels without an impact animation; all others appear only after it ends
+## (creator 2026-11-22: a number must never show before the hit effect is over).
+const IMMEDIATE_LABELS := ["MISS", "DODGE"]
+
+
+## Creator 2026-11-22: a number for a lethal hit is painted #ff3b3b.
+const NUMBER_INK := Color("fff3d0")
+const LETHAL_INK := Color("ff3b3b")
+const LETHAL_KINDS := ["HIT", "CRITICAL", "BLOCK"]
+
+
+## Creator 2026-11-22: every number stays opaque for the first half of its life
+## and loses opacity linearly over the second half.
+static func number_alpha(age: float, duration: float) -> float:
+	var half := maxf(0.001, duration * 0.5)
+	if age <= half: return 1.0
+	return clampf(1.0 - (age - half) / half, 0.0, 1.0)
+
+
+static func number_color(effect: Dictionary) -> Color:
+	var lethal: bool = effect.kind in LETHAL_KINDS and int(effect.amount) > 0 and bool(effect.get("dying", false))
+	return LETHAL_INK if lethal else NUMBER_INK
+
+
+static func label_for(kind: String, amount: int) -> String:
+	match kind:
+		"HIT", "CRITICAL": return "-%d" % amount
+		"BLOCK": return "BLOCK -%d" % amount
+		"MISS", "DODGE": return kind
+		"HEAL": return "+%d HP" % amount
+		"REST": return "+%d EN" % amount
+		"ABSORBED": return "ABSORBED"
+	return ""
+
+
+func number_rect(effect: Dictionary) -> Rect2:
+	var r: Rect2 = effect.target_rect
+	if effect.unit != null and effect.unit.is_player:
+		var top: float = battle.hud.STAGE_RECT.end.y
+		return Rect2(r.position.x, top, r.size.x, r.position.y - top)
+	return r
 
 
 func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = null) -> void:
@@ -160,7 +216,14 @@ func _process(delta: float) -> void:
 		if effect.age >= effect.duration:
 			effect.container.queue_free()
 			effects.remove_at(i)
+			if effect.kind not in IMMEDIATE_LABELS and not label_for(effect.kind, effect.amount).is_empty():
+				numbers.append({"kind": effect.kind, "amount": effect.amount, "unit": effect.unit,
+					"target_rect": effect.target_rect, "age": 0.0, "duration": effect.duration,
+					"dying": effect.dying})
 		else: _update_effect(effect, delta)
+	for i in range(numbers.size() - 1, -1, -1):
+		numbers[i].age += delta
+		if numbers[i].age >= numbers[i].duration: numbers.remove_at(i)
 	for i in range(screen_flashes.size() - 1, -1, -1):
 		screen_flashes[i].left -= delta
 		if screen_flashes[i].left <= 0: screen_flashes.remove_at(i)

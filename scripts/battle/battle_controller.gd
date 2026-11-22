@@ -405,7 +405,15 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 
 	var attack_timing := await _attack_timing(attacker, defender, duration, auto_hit, chain)
 	var defense_timing := await _defense_timing(defender, attacker, duration, defense_act_paid)
+	_apply_strike(attacker, defender, power, is_reaction, attack_timing, defense_timing)
 
+
+## Damage, Press Turn and SP rewards of one strike whose timings are already known.
+## Shared by the single rail and by the D-049 counter-attack exchange.
+func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
+		is_reaction: bool, attack_timing: int, defense_timing: int) -> void:
+	if not defender.is_alive():
+		return
 	# No contact: skip damage, crit, affinity and SP rolls entirely. This also
 	# avoids consuming random numbers for an outcome already determined.
 	var contact := BattleMath.has_contact(attack_timing, defense_timing)

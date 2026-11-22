@@ -551,7 +551,7 @@ cadeia, variação de alvo entre ataques e regras de fila quando REST
 aparece entre comandos. Nenhuma dessas hipóteses passa a valer no motor
 sem decisão específica.
 
-### 7.5 D-049 — contra-ataque com duas barras e interrupção — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+### 7.5 D-049 — contra-ataque com duas barras e interrupção — **IMPLEMENTADO no motor Godot**
 
 Decisão do criador (2026-11-22):
 
@@ -577,6 +577,14 @@ Decisão do criador (2026-11-22):
 - **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (ambos interrompidos, perdem os atos, sem perder SP) e **cada golpe causa seu dano**; a D-015 continua valendo para defesa contra ataque.
 - **D-022 mantida:** sem reação declarada, o inimigo acerta automaticamente, sem barra dupla nem interrupção.
 - **Shake:** treme **só o sprite/cartão** de quem foi interrompido, por **0,4 s**, com amplitude de **4 px**.
+- **Resolução da troca:** os resultados são comparados (POINT > BLAST > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
+- **Golpe da perfeita:** conta como **POINT**, onde quer que o alinhamento aconteça.
+- **Alvo do contra-ataque:** sempre o inimigo que anunciou o ataque. Se quem contra-ataca não é o alvo anunciado (D-045) e tira resultado pior, **ele leva o dano** no lugar do alvo e perde o SP equivalente.
+- **Posição das barras:** sobre o inimigo quando é o inimigo quem contra-ataca; no painel de status do jogador quando é o jogador.
+- **IA:** inimigo atacado que tem ato de reação contra-ataca com **33%** de chance; senão usa a defesa atual.
+- **Perfeita só em movimento:** o alinhamento só conta enquanto os dois ponteiros andam; alinhar com um ponteiro já parado não é perfeita.
+- **Movimento do shake:** horizontal, alternando esquerda/direita a cada ~2 quadros (30 Hz).
+- **Implementação (2026-11-22):** IMPLEMENTADO no `BattlePlayable` (`counter_rhythm_bar.gd`, `playable_controller.gd`, `playable_hud.gd`, `BattleMath.resolve_counter`), coberto por `tests/verify_playable_counter.gd` e pelos testes GUT de `test_battle_math.gd`. A perfeita encerra a troca na hora do aperto (o ponteiro do outro congela), por isso o flash e o shake saem no instante do aperto. **PENDENTE de confirmação:** quando a vítima tem menos SP que o valor do roubo, o código rouba só o que ela tem (nunca negativo).
 
 ## 8. Ritmo, bloqueio e desvio — **CONFIRMADO**
 
@@ -1424,9 +1432,11 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 
 ## 10. Absorção e progressão sem níveis — **CONFIRMADO (conceito)**
 
-Fallen absorve adversários; ganha 1–3 pontos do maior atributo do inimigo (exceto
-EN/SP/HP), mais pontos de SP base, HP e EN. Realizada por button mashing, mais fácil
-quanto maior a superioridade do jogador. **D-017:** a absorção bem-sucedida
+Fallen absorve adversários. **D-051 (correção do criador, 2026-11-22; NÃO IMPLEMENTADO):**
+os ganhos vêm dos atributos do inimigo que são múltiplos de 8, até +2 em um atributo ou
++1/+1 em dois; o mash é uma disputa de SP (10 apertos, até 20 SP) e a absorção se
+completa ao esgotar o SP do inimigo. A regra anterior (1–3 pontos do maior atributo
+mais SP base/HP/EN) e a D-029 estão revogadas. **D-017:** a absorção bem-sucedida
 elimina o alvo. Detalhes em `docs/COMBAT_SPEC.md`.
 Ambiguidade pendente em A-07. Implementação atual é protótipo, sem o sistema completo
 de mashing escalonado.
@@ -1480,6 +1490,22 @@ A premissa do §1.1 está **CONFIRMADO**. A promessa de Fallen a THÉOS, a queda
 de areia branca e o céu vermelho-escuro são fatos canônicos até nova decisão.
 Ato, cena, arco, final, consequências das escolhas e a relação entre Fallen e as
 figuras bíblicas reimaginadas permanecem sem decisão.
+
+### 14.1 D-050 — roteiro do prólogo — **CONFIRMADO como roteiro; NÃO IMPLEMENTADO**
+
+O criador entregou o roteiro de cenas da abertura (2026-11-22). O texto integral, sem
+edição, a leitura estruturada e a lista de pendências estão em
+`docs/PROLOGUE_SCRIPT.md`. Resumo: Play → cutscene → cutscene com diálogo → gameplay;
+queda do demônio no mar de areia branca vista por um homem loiro; silhueta amarela de
+letras hebraicas manda Fallen levantar-se como punição; pedido de ajuda no canto
+superior direito; primeiro combate contra 2 criaturas-sombra com nomes hebraicos
+(fichas e habilidades no roteiro); resgate pelo humano (nome censurado) controlado pela
+IA, que cura Fallen e corta pela metade seu SP atual; absorção tutorial forçada (+2 MEF
+sem mash, depois +2 MAK com mash, permanentes); o humano parte para sua mesquita a
+oeste; o jogador escolhe oeste ou leste, com montanhas avermelhadas à frente.
+**D-051:** o humano é Yoch (0 PP no início da batalha); reinício = Fallen com HP cheio;
+absorção por disputa de SP (D-029 revogada). Conflito restante: fichas dos inimigos
+versus o protótipo atual.
 
 ---
 
@@ -2061,7 +2087,7 @@ rodada.
 
 29. **D-049:** contra-ataque com duas barras de ritmo e interrupção por ataque
     sofrido (perfeita rouba 16 SP; BLAST/POINT antes rouba 4 SP; +1 ato por
-    comando da fila perdido, teto 4). **NÃO IMPLEMENTADO.** Design completo no §7.5, sem pendências.
+    comando da fila perdido, teto 4). **IMPLEMENTADO** no BattlePlayable; detalhes no §7.5.
 
 ## Apêndice A — Registro de decisões
 
@@ -2293,7 +2319,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   inventada. **CONFIRMADO e IMPLEMENTADO.** Impacto: `ProgressStore`,
   `BattleController._create_units()` e `_perform_absorption()`,
   `tests/test_progress_store.gd`, GDD §10, `COMBAT_SPEC.md` §Itens e absorção.
-- **D-029 · 2026-11-21** · Dificuldade do button mashing da absorção mantida
+- **D-029 · 2026-11-21** · **REVOGADA pela D-051: o criador declarou que nunca aprovou esta regra.** Dificuldade do button mashing da absorção mantida
   em **4 apertos = +1 ponto, 8 = +2, 12 = +3** (limiar fixo). **CONFIRMADO;
   nenhuma alteração de código necessária.** Impacto: `COMBAT_SPEC.md`
   §Itens e absorção.
@@ -2541,6 +2567,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   Impacto: GDD §7.4, `COMBAT_SPEC.md` §Atos e reações, `docs/DECISIONS.md`.
 
 - **D-047 · 2026-11-22 (decisão do criador) — combo inimigo com número por golpe.**
+  **Corrigida pela D-051:** o criador nunca aprovou que o inimigo gaste **sempre** dois
+  atos em ataques independente do contexto; a IA contextual está pendente.
   O inimigo resolve **dois ataques anunciados no mesmo bloco de turno**, em vez
   de um. Cada golpe tem **anúncio próprio**, **oportunidade de reação própria**
   e **seu próprio número de dano** na camada principal de efeitos (`DamageLayer`).
@@ -2616,7 +2644,40 @@ Formato: ID · data · decisão · estado · impacto documental.
   **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (ambos interrompidos, perdem os atos, sem perder SP) e **cada golpe causa seu dano**; a D-015 continua valendo para defesa contra ataque.
   **D-022 mantida:** sem reação declarada, o inimigo acerta automaticamente, sem barra dupla nem interrupção.
   **Shake:** treme **só o sprite/cartão** de quem foi interrompido, por **0,4 s**, com amplitude de **4 px**.
-  **CONFIRMADO como design; NÃO IMPLEMENTADO**; código não alterado. Impacto: GDD §§7.2, 7.5, 21; `COMBAT_SPEC.md` §§D-025, Contra-ataque e interrupção; `docs/DECISIONS.md`.
+  **Resolução da troca:** os resultados são comparados (POINT > BLAST > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
+  **Golpe da perfeita:** conta como **POINT**, onde quer que o alinhamento aconteça.
+  **Alvo do contra-ataque:** sempre o inimigo que anunciou o ataque. Se quem contra-ataca não é o alvo anunciado (D-045) e tira resultado pior, **ele leva o dano** no lugar do alvo e perde o SP equivalente.
+  **Posição das barras:** sobre o inimigo quando é o inimigo quem contra-ataca; no painel de status do jogador quando é o jogador.
+  **IA:** inimigo atacado que tem ato de reação contra-ataca com **33%** de chance; senão usa a defesa atual.
+  **Perfeita só em movimento:** o alinhamento só conta enquanto os dois ponteiros andam; alinhar com um ponteiro já parado não é perfeita.
+  **Movimento do shake:** horizontal, alternando esquerda/direita a cada ~2 quadros (30 Hz).
+  **Implementação (2026-11-22):** IMPLEMENTADO no `BattlePlayable` (`counter_rhythm_bar.gd`, `playable_controller.gd`, `playable_hud.gd`, `BattleMath.resolve_counter`), coberto por `tests/verify_playable_counter.gd` e pelos testes GUT de `test_battle_math.gd`. A perfeita encerra a troca na hora do aperto (o ponteiro do outro congela), por isso o flash e o shake saem no instante do aperto. **PENDENTE de confirmação:** quando a vítima tem menos SP que o valor do roubo, o código rouba só o que ela tem (nunca negativo).
+  **IMPLEMENTADO** no BattlePlayable. Impacto: GDD §§7.2, 7.5, 21; `COMBAT_SPEC.md` §§D-025, Contra-ataque e interrupção; `docs/DECISIONS.md`.
+
+- **D-050 · 2026-11-22 (roteiro do criador) — prólogo.** Roteiro integral em
+  `docs/PROLOGUE_SCRIPT.md` (texto do criador sem edição + leitura estruturada +
+  pendências). Define cutscenes de abertura, primeiro combate contra 2 inimigos com
+  fichas 20/10/6/3/2/8/3 (Lunge, Bleedbuff) e 8/16/1/8/2/2/3 (Heat wave, Energy Eat),
+  resgate pelo humano controlado pela IA (cura total, SP atual pela metade, combate
+  reiniciado), absorção tutorial (+2 MEF; depois +2 MAK com mash; permanentes), fala de
+  despedida e escolha oeste/leste. **CONFIRMADO como roteiro; NÃO IMPLEMENTADO.**
+  Conflitos abertos com D-029/§10 (absorção), com as fichas do protótipo e com a
+  identidade de Yoch (D-048). Impacto: GDD §14.1; `COMBAT_SPEC.md` §Prólogo;
+  `docs/DECISIONS.md`.
+
+- **D-051 · 2026-11-22 (correção do criador) — absorção por disputa de SP e respostas ao prólogo.**
+  **Absorção** (revoga a D-029, que o criador nunca aprovou, e a regra antiga do §10):
+  **Ganho:** baseado nos atributos do inimigo que são **múltiplos de 8** (o maior). Até **+2 em um atributo** ou **+1 e +1 em dois atributos diferentes** múltiplos de 8. Nem todo inimigo tem 8 em tudo: precisa ter **pelo menos 1 ou 2** atributos múltiplos de 8.
+  **Mash como disputa de SP:** o inimigo resiste com o **SP restante dele** contra o SP do jogador. O mash rende **até 20 SP no total, em 10 apertos**. A absorção se completa quando o jogador **esgota por completo o SP do inimigo**.
+  **SP baixo dos inimigos do prólogo é aceitável:** o combate começa com Fallen tendo **40 SP** (o criador confirmou que "40PP" era SP) mesmo com base 80; **só no prólogo**.
+  **PENDENTES:** fórmula exata da disputa (quanto cada aperto tira, como o SP restante do inimigo resiste); o que acontece se os 10 apertos terminam com SP inimigo sobrando; critério de escolha entre +2 em um atributo e +1/+1 em dois; ganhos de HP/EN/SP base que o GDD §10 antigo citava.
+  **Prólogo (D-050):** o humano do resgate é **Yoch**; o resgate é evento narrativo e
+  Yoch começa a batalha com **0 PP**; "reiniciar o combate" significa Fallen
+  **completamente recuperado, com HP cheio**; Lunge é **habilidade** (ataque normal todo
+  mundo tem e não entra na ficha). **D-047:** o criador nunca aprovou que inimigos gastem
+  **sempre** dois atos em ataques. **CONFIRMADO como design; NÃO IMPLEMENTADO.** Impacto:
+  GDD §10, §14.1; `COMBAT_SPEC.md` §Itens e absorção, §D-047; `PROLOGUE_SCRIPT.md`;
+  `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

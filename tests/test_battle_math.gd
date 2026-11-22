@@ -147,3 +147,39 @@ func test_press_turn_uses_contact_semantics() -> void:
 	# The formula itself is unchanged; the controller applies it only on contact.
 	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.WEAK), 1)
 	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), -1)
+
+
+## D-049: counter-attack exchange rules.
+func test_counter_better_result_interrupts_and_steals_four() -> void:
+	var R := BattleMath.RhythmResult
+	var o := BattleMath.resolve_counter(R.POINT, R.BEAM)
+	assert_eq(o.winner, BattleMath.CounterWinner.PLAYER)
+	assert_eq(o.steal, BattleMath.INTERRUPT_SP_NORMAL)
+	o = BattleMath.resolve_counter(R.MISS, R.BEAM)
+	assert_eq(o.winner, BattleMath.CounterWinner.ENEMY)
+	assert_false(o.perfect)
+
+
+func test_counter_equal_results_tie_without_theft() -> void:
+	var R := BattleMath.RhythmResult
+	for r in [R.POINT, R.BEAM, R.MISS]:
+		var o := BattleMath.resolve_counter(r, r)
+		assert_eq(o.winner, BattleMath.CounterWinner.TIE)
+		assert_eq(o.steal, 0)
+
+
+func test_counter_perfect_press_wins_as_point_and_steals_sixteen() -> void:
+	var R := BattleMath.RhythmResult
+	var o := BattleMath.resolve_counter(R.MISS, R.POINT, false, true)
+	assert_eq(o.winner, BattleMath.CounterWinner.ENEMY)
+	assert_true(o.perfect)
+	assert_eq(o.steal, 16)
+	assert_eq(o.enemy_timing, R.POINT)
+
+
+func test_counter_red_pointer_speed_follows_agi_ratio() -> void:
+	assert_almost_eq(BattleMath.counter_red_duration(1.0, 6, 6), 1.0, 0.0001)
+	assert_almost_eq(BattleMath.counter_red_duration(1.0, 4, 6), 1.5, 0.0001)
+	assert_almost_eq(BattleMath.counter_red_duration(1.0, 12, 6), 0.5, 0.0001)
+	assert_true(BattleMath.pointers_aligned(0.4, 0.42))
+	assert_false(BattleMath.pointers_aligned(0.4, 0.425))

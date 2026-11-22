@@ -29,6 +29,14 @@ const POINT_SP_STEP: int = 5
 const POINT_SP_MAX_STEPS: int = 2
 const POINT_MIN_HALF_WIDTH: float = 0.04
 const POINT_MAX_HALF_WIDTH: float = 0.08
+## D-049: counter-attack exchange on two rails (creator, 2026-11-22).
+## Perfect interruption: a press while both moving pointers are within 2% of the bar.
+const PERFECT_INTERRUPT_GAP: float = 0.02
+const INTERRUPT_SP_PERFECT: int = 16
+const INTERRUPT_SP_NORMAL: int = 4
+## An attacked enemy with a reaction act counter-attacks 33% of the time.
+const ENEMY_COUNTER_CHANCE: float = 0.33
+enum CounterWinner { ENEMY = -1, TIE = 0, PLAYER = 1 }
 
 static func affinity_multiplier(affinity: Affinity) -> float:
 	match affinity:
@@ -71,6 +79,46 @@ static func point_half_width(own_agi: int, rival_agi: int,
 		-POINT_SP_MAX_STEPS, POINT_SP_MAX_STEPS)
 	total += float(sp_steps) * POINT_PP_PER_AGI
 	return clampf(total * 0.5, POINT_MIN_HALF_WIDTH, POINT_MAX_HALF_WIDTH)
+
+
+## D-049: the opponent's red pointer moves at base speed x AGI_opponent / AGI_player,
+## so its crossing time is the base duration x AGI_player / AGI_opponent.
+static func counter_red_duration(base_seconds: float, opponent_agi: int, player_agi: int) -> float:
+	return base_seconds * float(maxi(1, player_agi)) / float(maxi(1, opponent_agi))
+
+
+## D-049: only two moving pointers can align (the crossing); a stopped one never counts.
+static func pointers_aligned(white_position: float, red_position: float) -> bool:
+	return absf(white_position - red_position) <= PERFECT_INTERRUPT_GAP + 0.000001
+
+
+static func rhythm_rank(result: int) -> int:
+	match result:
+		RhythmResult.POINT: return 2
+		RhythmResult.BEAM: return 1
+	return 0
+
+
+## D-049 exchange. A perfect press wins as POINT and steals 16 SP. Otherwise the
+## better result (POINT > BLAST > MISS) interrupts the other and steals 4 SP. Equal
+## results (both hit or both miss) resolve both strikes and steal nothing.
+static func resolve_counter(player_result: int, enemy_result: int,
+		player_perfect: bool = false, enemy_perfect: bool = false) -> Dictionary:
+	var outcome := {"winner": CounterWinner.TIE, "perfect": false, "steal": 0,
+		"player_timing": player_result, "enemy_timing": enemy_result}
+	if player_perfect: outcome.player_timing = RhythmResult.POINT
+	if enemy_perfect: outcome.enemy_timing = RhythmResult.POINT
+	if player_perfect != enemy_perfect:
+		outcome.winner = CounterWinner.PLAYER if player_perfect else CounterWinner.ENEMY
+		outcome.perfect = true
+		outcome.steal = INTERRUPT_SP_PERFECT
+		return outcome
+	var mine := rhythm_rank(outcome.player_timing)
+	var theirs := rhythm_rank(outcome.enemy_timing)
+	if mine != theirs:
+		outcome.winner = CounterWinner.PLAYER if mine > theirs else CounterWinner.ENEMY
+		outcome.steal = INTERRUPT_SP_NORMAL
+	return outcome
 
 
 static func rhythm_zone(marker_position: float,
