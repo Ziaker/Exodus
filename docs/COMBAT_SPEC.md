@@ -2,9 +2,11 @@
 
 ## Identidade
 - Jogo: conceito original com conceitos visuais/gameplay de SMT 1 e 2.
-- Protagonista: **Fallen** (nome real desconhecido), demônio caído.
+- Protagonista: **Fallen** (nome real desconhecido), demônio caído; raça **demônio** (D-048).
 - Inimigos do teste: 2 placeholders genéricos, sem dependência de nomes dos .rvdata.
-- Aliado do teste: **Yoch**, humano (D-048; o código atual ainda identifica o personagem como `ALLY`).
+- Aliado: **Yoch** (D-048, 2026-11-22), raça **humano**; arte do teste ainda é placeholder
+  genérico. O código ainda usa o rótulo `ALLY` (`battle_controller.gd`); renomear no
+  código não foi pedido.
 - Idioma da UI: **inglês**.
 - Visão frontal. Após revisão visual, o fundo plano `#333333` foi substituído por
   battleback e janelas no estilo RPG Maker VX Ace, usando assets temporários da fangame
@@ -12,16 +14,16 @@
   em `assets/graphics/battle_sprites/`). A referência visual buscada foi a screenshot
   oficial de batalha do VX Ace (Yanfly Channel, nov/2011).
 
-### D-048 — raças e identificação mecânica — **DESIGN, NÃO IMPLEMENTADO**
-
-O universo **Maesto** possui quatro raças: **humanos, animais, monstros e demônios**. Fallen pertence aos **demônios**; **Yoch** é **humano**. **Maziks** é uma **"raça" mecânica dos inimigos genéricos**, não automaticamente uma quinta raça do mundo. Relação com as quatro raças, anjos, afinidades e efeitos de raça **PENDENTE**.
-
 ## Atributos
 `HP`, `EN` (Energy Points), `ATK`, `MAK`, `DEF`, `MEF`, `AGI`, `SP` (Superiority Points).
 
 - `SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI` (soma dos 7 atributos).
 - SP ganho em batalha é **temporário**; volta ao base ao fim da luta.
 - `EN`: habilidades custam EP definido nos dados; recupera **20% do máximo por rodada**.
+- **D-048:** Yoch **não tem EN**; no lugar dele usa **PP** (Pray Points), ver §Reza.
+  No SP de Yoch, cada **PP atual vale +2 SP** (0 PP = +0; 8 PP = +16), subindo ao
+  rezar e caindo ao gastar. A regeneração de 20% de EN não se aplica a Yoch; o REST
+  de Yoch **só guarda atos** (sem ganho de recurso).
 - **REST / Descanso — D-038 (CONFIRMADO e IMPLEMENTADO):** não gasta
   nenhum ACT, recupera **2 EN fixos** (até o EN máximo; **sem porcentagem pelo
   REST**) e encerra a participação do combatente na rodada, guardando os atos
@@ -32,12 +34,6 @@ O universo **Maesto** possui quatro raças: **humanos, animais, monstros e demô
   `BattleUnit.recover_en_flat()`, com testes em `test_battle_combat.gd`.
 - Mapeamento dos `.rvdata`: `MaxHP→HP`, `MaxMP→EN`, `ATK→ATK`, `DEF→DEF`,
   `MAT→MAK`, `MDF→MEF`, `LUK→AGI`.
-
-### D-048 — Pray Points (PP) do humano Yoch — **DESIGN, NÃO IMPLEMENTADO**
-
-Humanos usam **PP em lugar de EN para conjurar Luz**: cada **PRAY custa 1 ACT e concede 1 PP**, armazenado até gastar. PP substitui EN no **HUD de Yoch** e é mostrado em **`#f5f58c`**. Custos de magias: **1–4 PP** (repertório inicial 2/2/3 PP). Saldo inicial, teto e persistência entre encontros/saves **PENDENTES**.
-
-**Não redefinido:** `SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI`; o papel de EN no SP do humano, a regeneração de 20% EN por rodada e REST D-038 (+2 EN) diante de PP **PENDENTES**. Não converter ou apagar EN automaticamente. O código ainda possui EN e não possui campo PP.
 
 ### D-025 (Rodada 8, 5E) — atributos iniciais (design aprovado; não implementado)
 
@@ -230,7 +226,11 @@ Humanos usam **PP em lugar de EN para conjurar Luz**: cada **PRAY custa 1 ACT e 
   **EXEC** (X) inicia a resolução; ↑/↓ navega e Z/Enter confirma. Ataques
   consecutivos reutilizam a **mesma linha de ritmo**, reiniciando o marcador
   para cada julgamento. Implementado em `BattleController` e `RhythmBar`,
-  com testes em `test_battle_combat.gd`.
+  com testes em `test_battle_combat.gd`. **Também implementado no caminho
+  jogável** (`BattlePlayable.tscn`): os sete itens (cinco comandos + EXEC +
+  UNDO) cabem na janela de comando, os ACT comprometidos acendem em verde no
+  painel do personagem e REACT/REST encerram o plano sem gastar ato extra.
+  Regressão em `tests/verify_playable_reactions.gd`.
 - **PENDENTES:** reação entre os passos da cadeia, alvo invalidado no meio
   da sequência e mudança de ACT durante a cadeia. REST D-038 já encerra o
   planejamento ao ser escolhido. O HTML independente permanece como
@@ -262,6 +262,8 @@ Humanos usam **PP em lugar de EN para conjurar Luz**: cada **PRAY custa 1 ACT e 
   ou provocar **interrupção por efeito
   explicitamente definido**.
   Dano sem morte/interrupção não cancela.
+  **Substituído pela D-049 (2026-11-22):** o cancelamento agora segue o
+  contra-ataque com duas barras (ver §Contra-ataque e interrupção).
   Não criar novos efeitos, custos ou
   recompensas por inferência. Ordem
   detalhada de gastos/eventos e
@@ -295,21 +297,6 @@ Humanos usam **PP em lugar de EN para conjurar Luz**: cada **PRAY custa 1 ACT e 
   não recebem desempate
   silencioso. A regra não
   foi implementada.
-
-### D-048 — ação PRAY, magias como ação/reação, fila e itens — **DESIGN, NÃO IMPLEMENTADO**
-
-- **PRAY** é comando de **ação**: renunciar a **1 ACT para ganhar +1 PP**. Não substitui REST nem gera automaticamente PP em uma reação. A **conjuração das magias** pode ocorrer como **ação ou reação**, com custos PP e economia de ACT vigente; a elegibilidade de um **não alvo** precisa respeitar/ser reconciliada com D-045, sem exceção presumida.
-- **Aba PRAY:** contém obtenção de PP e magias desbloqueadas de custo compatível com o saldo. Para **Cura**, o jogador seleciona **entrada já planejada** para alocar PP adicionais: magia agregada **resolve de uma vez** contra o mesmo alvo, sem multiplicar conjurações. Custos/reservas, cancelamento, alterações de saldo e outras magias em fila ainda **PENDENTES**.
-
-| Magia hebraica | Inglês de referência | PP base | Efeito |
-|---|---|---:|---|
-| **רְפוּאָה — Refuah** | Healing | **2** | Um alvo: **20 HP base, +10 HP por PP adicional alocado à mesma magia**, agregado em uma resolução. |
-| **הֲגָנָה / שְׁמִירָה — Haganah / Shemirah** | Protection | **2** | Escudo antistatus por **1 rodada inteira**, dissipado ao impedir uma condição de status. |
-| **רַעַם — Ra'am** | Thunder | **3** | Um alvo: **10 dano +10 por PP extra**; **não afeta anjos**. |
-
-**No começo do jogo, só essas três magias são habilitadas.** Nomes são hebraicos, descrições do Battle Log são **simples em inglês**, com texto em **`#f5f58c`**. **Haganah/Shemirah é escolha de nome ainda pendente.** A contagem exata de "PP extra" em Cura versus custo-base 2 PP, máximo total por magia, duração do escudo e definição de condição anulada, classificação de anjos, mitigação/afinidades, nome mostrado em letras hebraicas ou transliteração **PENDENTES**.
-
-**Consumíveis abençoados usados em Yoch** concedem **efeitos e PP**; quantidades/efeitos ainda não aprovados. Magias futuras de Fallen **envolvem absorção e elementos**, mas regras de aquisição e custos **a discutir posteriormente**. Nenhum dado, código, cena ou teste foi modificado pela D-048.
 
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
@@ -1203,6 +1190,30 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   **o código vigente**, não a execução dos perfis especiais
   D-013/D-020. Nenhuma implementação foi autorizada.
 
+## Contra-ataque e interrupção — D-049; DESIGN, NÃO IMPLEMENTADO
+- **Interrupção:** um personagem é interrompido na sua ação por um ataque que sofre, seja ataque normal ou magia. Quem é interrompido **perde o ato** da ação interrompida, e a ação não acontece.
+- **Contra-ataque com duas barras:** ao reagir a um ataque com contra-ataque, aparecem **duas barras de ritmo** em vez de uma. Em cima fica a do oponente, com ponteiro **vermelho** da **direita para a esquerda**. Embaixo fica a do jogador, com ponteiro **branco** da **esquerda para a direita**.
+- **Ritmo:** MISS, BLAST e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
+- **Velocidade do ponteiro do oponente:** diferente da do jogador e definida pela **AGI**. Oponente com AGI maior que a do jogador tem ponteiro vermelho **mais rápido**; com AGI menor, mais lento.
+- **Interrupção perfeita:** se o jogador ou o oponente aperta na hora certa quando os dois ponteiros estão na mesma posição, a tela pisca num **impact frame**, quem foi interrompido recebe **shake** e quem interrompeu **rouba 16 SP** do outro.
+- **Interrupção comum:** acertar BLAST ou POINT antes do outro rouba **4 SP**.
+- **Magias:** mantêm seus efeitos normais e também usam esse sistema para causar interrupção.
+- **Fila:** quem interrompe ações em fila ganha **+1 ato por comando da fila perdido**, respeitando o teto de 4 atos disponíveis da D-005 (excedente vai ao estoque).
+- **Decisões anteriores:** substitui **só o cancelamento** da D-025 (7A), que cancelava apenas por eliminação ou efeito explícito. A ordem por AGI (D-014, 5C) e o desempate lexicográfico por ID (D-031) continuam valendo. A interrupção da reza da D-048 segue a mesma ideia: o ataque de reação que acerta interrompe.
+- **Empate:** se os dois acertam, ou os dois erram, **ambos se interrompem**, perdendo os atos, e **ninguém perde SP**.
+- **SP roubado:** é SP de combate, portanto **temporário**: vale até o fim da batalha, como o +1 SP por evento (GDD §5). Só o SP de absorção e de atributos é permanente (D-028).
+- **Dano:** o contra-ataque **causa dano** normalmente, além de interromper.
+- **Magias:** a barra dupla funciona **exatamente como nos ataques**.
+- **IA:** o momento em que o inimigo aperta na barra de cima é **aleatório**.
+- **Impact frame:** o **cenário pisca em branco** por **3 quadros** (~0,05 s).
+- **Janela da interrupção perfeita:** os dois ponteiros a até **~2% da barra** um do outro (praticamente o cruzamento).
+- **Velocidade pela AGI:** velocidade do ponteiro vermelho = velocidade base × **AGI do oponente / AGI do jogador**.
+- **SP zero:** o roubo pode deixar a vítima com **0 SP**, nunca negativo.
+- **Só contra-ataque:** a barra dupla aparece só no contra-ataque (e em magias, como nos ataques). DEFEND/desvio e item usam a barra única de sempre.
+- **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (ambos interrompidos, perdem os atos, sem perder SP) e **cada golpe causa seu dano**; a D-015 continua valendo para defesa contra ataque.
+- **D-022 mantida:** sem reação declarada, o inimigo acerta automaticamente, sem barra dupla nem interrupção.
+- **Shake:** treme **só o sprite/cartão** de quem foi interrompido, por **0,4 s**, com amplitude de **4 px**.
+
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
 - Absorção: restrita a **Fallen**; requer button mashing; **0 pressionamentos = falha,
@@ -1218,7 +1229,54 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   contra corrupção, e reaplicados ao Fallen ao criar a próxima batalha.
   **IMPLEMENTADO.**
 - **PENDENTE:** novas tentativas após falha e limite de HP. Não foram inventadas.
-- Sem equipamentos e sem magia neste protótipo.
+- Sem equipamentos e sem magia implementados neste protótipo (Reza D-048 é design).
+
+## Reza (Pray Points) — D-048; DESIGN, NÃO IMPLEMENTADO
+- **Quem:** personagens **humanos** conjuram **magias de luz** rezando, em vez de usar EN.
+  Yoch é humano. Fallen (demônio) não usa Reza; como Fallen obtém magias é **PENDENTE**
+  (envolve absorção e elementos).
+- **PRAY:** comando que gasta **1 ato** e dá **+1 PP**. Pode ser **Ação ou Reação**.
+- **PP:** ocupa o lugar da EN no painel de Yoch, cor `#f5f58c`. Teto **8 PP**. PP não
+  gastos **persistem entre batalhas** até serem gastos. Cada PP atual dá **+2 SP** a
+  Yoch. REST de Yoch só guarda atos.
+- **Aba PRAY:** lista as magias com **custo base ≤ PP atuais**. A magia escolhida é
+  usada como **Ação ou Reação** e gasta 1 ato.
+- **Custo:** custo base de **1 a 4 PP** por magia. **PP extra:** selecionar uma magia
+  **já em fila** aloca +1 PP nela, **sem gastar ato**; não há teto de 4 por magia (o
+  limite são os PP disponíveis). Alocações no **mesmo alvo** saem **de uma vez só**.
+- **Log:** nomes hebraicos; descrição simples em inglês; texto do log em `#f5f58c`.
+
+| Magia | Hebraico | PT / EN | Custo base | Efeito |
+|---|---|---|---|---|
+| **Refuah** | רְפוּאָה | Cura / Healing | 2 PP | Cura um alvo: **20 HP + 10 por PP extra**, valor **fixo**. |
+| **Haganah** | הֲגָנָה | Proteção / Protection | 2 PP | Escudo anti-condição de status em **um aliado** (inclusive Yoch) por **1 round inteiro** (do momento da conjuração até o mesmo ponto do round seguinte); desfaz-se quando o personagem receberia uma condição. |
+| **Ra'am** | רַעַם | Trovão / Thunder | 3 PP | **10 + 10 por PP extra** de dano em um alvo, como **base da fórmula mágica**. **Sem efeito contra anjos.** |
+
+- Exemplos com os números do criador: Refuah 3 PP = 30 HP; Ra'am 4 PP = base 20.
+- **Efeito visual do Ra'am (placeholder):** animação **Zio** (ジオ) do SMT VX The Genesis,
+  animação 27 de `Data/Animations.rvdata`, 7 quadros a 15 fps, imagem `Thunder1.png`
+  (RTP oficial do RPG Maker VX 1.02e; não vem na pasta do SMT). Placeholder como os
+  demais assets do SMT; o asset do RTP segue a mesma regra de não publicação da D-018.
+  Destino do arquivo em `assets/` e implementação: **PENDENTES**.
+- **Reação inimiga:** inimigos podem reagir ao **PRAY** e ao **Ra'am**, mas **não** à
+  **Refuah** nem à **Haganah**. **Todos** os inimigos com atos de reação disponíveis
+  podem reagir (exceção à D-045 para o PRAY, que não mira ninguém). Se o ataque de
+  reação **acertar**, a reza é **interrompida**:
+  - **PRAY interrompido:** o ato se perde e Yoch **não recebe o PP**.
+  - **Ra'am interrompido:** o ato se perde, a magia não tem efeito e os PP alocados
+    nela (custo base **e** todos os PP extras alocados na fila) **voltam ao Yoch**.
+  - **Mecânica de interrupção:** todos os comandos seguintes da fila de Yoch também
+    se perdem, com seus atos; PP alocados em magias desses comandos **voltam ao Yoch**.
+  - MISS ou bloqueio **não** interrompem: o PRAY ou o Ra'am resolve normalmente.
+- **Itens abençoados:** consumíveis que dão efeitos e PP quando usados no aliado (Yoch).
+- **PENDENTES:** fórmula mágica que modifica o Ra'am; lista, efeitos e PP dos itens
+  abençoados; sistema de condições de status bloqueadas pelo Haganah; efeitos de raça
+  e classificação dos anjos.
+
+## Raças — D-048; DESIGN, NÃO IMPLEMENTADO
+- Em **Maesto** (mundo): humanos, animais, monstros e demônios. No jogo, também a
+  "raça" mecânica **Mazik** (inimigos mais genéricos).
+- Fallen: demônio. Yoch: humano. Efeitos de raça além da Reza: **PENDENTE**.
 
 ## IA
 - Inimigos: aleatório ponderado entre ataque e habilidades.
@@ -1254,7 +1312,5 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 - Verificar a infraestrutura Godot/testes do repositório antes de escolher harness ou arquivos. Fase 1 segue portões D-039/D-040: parse real, testes unitários/integração pertinentes, diff e evidência verificável; Fase 2 de múltiplas zonas e IA especial depende de liberação adequada da Fase 1. **Nenhum teste, código ou recurso foi executado/alterado nesta rodada documental.**
 
 ## Escopo fora deste protótipo
-Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), oração de humanos,
-progressão narrativa e absorção de longo prazo.
-
-A D-048 **aprova como design futuro** PP, PRAY e as três magias iniciais de Yoch; o trecho anterior descreve o **escopo do protótipo existente**, não uma ausência de decisões aprovadas.
+Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), implementação da oração
+de humanos (design em D-048), progressão narrativa e absorção de longo prazo.
