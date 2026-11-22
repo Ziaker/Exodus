@@ -48,7 +48,7 @@ qualquer alteração em documentos ou código.
 | D-039 | 2026-11-21 (Rodada 14: 1A; 2A; 3A; 4A; 5B; 6A; 7A; 8A) | CONFIRMADO como design/plano; NÃO IMPLEMENTADO nesta rodada: (1A) quatro fases sequen... | `docs/GDD.md` Apêndice A |
 | D-040 | 2026-11-21 (Rodada 15: 1A; 2A; 3A; 4A; 5A; 6A; 7A; 8A) | DESIGN APROVADO; NÃO IMPLEMENTADO nesta rodada: (1A) capturar timestamp monotônico do... | `docs/GDD.md` Apêndice A |
 | D-041 | 2026-11-21 (Rodada 16: 1A; 2A; 3A; 4A; 5A; 6C; 7B; 8A) | CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada: (1A) `Time.get_ticks_usec()` n... | `docs/GDD.md` Apêndice A |
-| D-042 | 2026-11-21 (Rodada 17) | RESERVADO — orçamento POINT/BEAM, intervalos especiais, prioridades e IA triangular | `docs/GDD.md` Apêndice A |
+| D-042 | 2026-11-21 (Rodada 17: 1A; 2A; 3A; 4A; 5A; 6A; 7D; 8A) | Orçamento combinado 30%, geometria POINT/BEAM especial, perfis independentes e erro triangular da IA | `docs/GDD.md` Apêndice A |
 | D-043 | 2026-11-21 | Reação de quem não é o alvo: só contra-ataque ou item/magia, sem bloqueio — IMPLEMENTADO | `docs/GDD.md` Apêndice A |
 
 Total: 41 decisões indexadas.
