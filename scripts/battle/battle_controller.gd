@@ -70,6 +70,13 @@ var ally_rows: Array[StatusRow] = []
 var enemy_sprites: Array[TextureRect] = []
 
 var _chosen: int = -1
+var _planned: Array[int] = []
+var _plan_cursor: int = 0
+var _plan_active: bool = false
+var _plan_options: Array[String] = []
+var plan_label: Label
+var plan_markers: Array[ColorRect] = []
+var plan_buttons: Array[Button] = []
 var _rhythm_result: int = BattleMath.RhythmResult.MISS
 var _reaction_yes: bool = false
 var _reaction_active: bool = false
@@ -155,6 +162,19 @@ func _build_ui() -> void:
 	command_box.position = Vector2(360, 274)
 	command_box.add_theme_constant_override("separation", 2)
 	add_child(command_box)
+
+	# D-046: planned ACT markers stay green until their command resolves.
+	plan_label = BattleWidgets.styled_label("PLAN: -", 9)
+	plan_label.position = Vector2(360, 244)
+	plan_label.size = Vector2(184, 16)
+	add_child(plan_label)
+	for i in BattleMath.MAX_AVAILABLE_ACTS:
+		var marker := ColorRect.new()
+		marker.color = Color(0.18, 0.20, 0.18, 1.0)
+		marker.position = Vector2(360 + i * 42, 260)
+		marker.size = Vector2(36, 6)
+		add_child(marker)
+		plan_markers.append(marker)
 
 	_build_sp_bar()
 
@@ -282,18 +302,60 @@ func _player_turn(actor: BattleUnit) -> void:
 	var target := _first_alive_enemy()
 	if target == null:
 		return
-	var options: Array[String] = ["ATTACK", "ITEM", "REST"]
-	if actor.is_fallen:
-		options.append("ABSORB")
-	var choice := await _wait_command(options)
-	if choice < 0:
+	if not actor.is_fallen:
+		var choice := await _wait_command(["ATTACK", "ITEM", "REST"])
+		if choice < 0:
+			return
+		await _execute_player_command(actor, choice, false)
+		return
+
+	# D-046: Fallen plans a sequence of up to four committed acts before any
+	# command resolves. Green markers show what is already planned.
+	var options: Array[String] = ["ATTACK", "ITEM", "REST", "ABSORB"]
+	var max_acts := mini(BattleMath.MAX_AVAILABLE_ACTS, actor.acts_available)
+	_planned.clear()
+	while _planned.size() < max_acts:
+		_refresh_plan_display()
+		var choice := await _wait_plan_command(options)
+		if choice == -2:  # EXEC
+			break
+		if choice == -3:  # UNDO
+			if not _planned.is_empty():
+				_planned.remove_at(_planned.size() - 1)
+			continue
+		if choice < 0:
+			break
+		_planned.append(choice)
+		if choice == 2:  # REST ends participation immediately
+			break
+
+	var chain_used := false
+	for i in _planned.size():
+		if not actor.is_alive():
+			break
+		var chain := false
+		if _planned[i] == 0:
+			for j in range(i + 1, _planned.size()):
+				if _planned[j] == 0:
+					chain = true
+					break
+		chain_used = chain_used or chain
+		await _execute_player_command(actor, _planned[i], chain)
+	_clear_plan_display()
+	if chain_used:
+		rhythm.stop_chain()
+
+
+func _execute_player_command(actor: BattleUnit, choice: int, chain: bool) -> void:
+	var target := _first_alive_enemy()
+	if target == null:
 		return
 	_append_log("%s acts." % actor.display_name)
 	match choice:
 		0:
 			if not actor.spend_act():
 				return
-			await _perform_attack(actor, target, 100, false)
+			await _perform_attack(actor, target, 100, false, false, false, chain)
 		1:
 			if not actor.spend_act():
 				return
@@ -303,8 +365,6 @@ func _player_turn(actor: BattleUnit) -> void:
 			_append_log("%s uses item: +%d HP%s." % [
 				actor.display_name, healed, " (-2 SP)" if actor.is_fallen else ""])
 		2:
-			# D-038: REST costs no act. All remaining acts go to the stock and
-			# the unit stops participating this round.
 			var remaining := actor.acts_available
 			actor.store_acts(remaining)
 			actor.acts_available = 0
@@ -337,13 +397,13 @@ func _enemy_turn(actor: BattleUnit) -> void:
 ## only a player-controlled attacker/defender uses the visible rhythm bar.
 func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 		is_reaction: bool, defense_act_paid: bool = false,
-		auto_hit: bool = false) -> void:
+		auto_hit: bool = false, chain: bool = false) -> void:
 	if not defender.is_alive():
 		return
 	var duration := BattleMath.rhythm_duration(attacker.stats.agi, defender.stats.agi,
 		attacker.current_sp, defender.current_sp)
 
-	var attack_timing := await _attack_timing(attacker, defender, duration, auto_hit)
+	var attack_timing := await _attack_timing(attacker, defender, duration, auto_hit, chain)
 	var defense_timing := await _defense_timing(defender, attacker, duration, defense_act_paid)
 
 	# No contact: skip damage, crit, affinity and SP rolls entirely. This also
@@ -391,11 +451,11 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 
 
 func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
-		auto_hit: bool = false) -> int:
+		auto_hit: bool = false, chain: bool = false) -> int:
 	if attacker.is_player:
 		var point_half := BattleMath.point_half_width(attacker.stats.agi,
 			defender.stats.agi, attacker.current_sp, defender.current_sp)
-		return await _manual_rhythm(duration, point_half)
+		return await _manual_rhythm(duration, point_half, chain)
 	# D-014/D-022: without a declared reaction the hit is guaranteed. POINT is a
 	# normal landed hit — it grants no automatic critical and no extra bonus.
 	if auto_hit:
@@ -416,9 +476,13 @@ func _defense_timing(defender: BattleUnit, attacker: BattleUnit, duration: float
 	return _defender_reaction(defender, attacker)
 
 
-func _manual_rhythm(duration: float, point_half: float) -> int:
+func _manual_rhythm(duration: float, point_half: float,
+		chain: bool = false) -> int:
 	rhythm.configure(point_half)
-	rhythm.start(duration)
+	if chain:
+		rhythm.start_chain(duration)
+	else:
+		rhythm.start(duration)
 	return await _wait_rhythm()
 
 
@@ -562,6 +626,73 @@ func _on_command_pressed(index: int) -> void:
 	command_chosen.emit()
 
 
+func _command_short(index: int) -> String:
+	match index:
+		0: return "ATK"
+		1: return "ITM"
+		2: return "RST"
+		3: return "ABS"
+	return "-"
+
+
+func _refresh_plan_display() -> void:
+	for i in plan_markers.size():
+		plan_markers[i].color = Color(0.20, 0.85, 0.35, 1.0) \
+			if i < _planned.size() else Color(0.18, 0.20, 0.18, 1.0)
+	var names: Array[String] = []
+	for command in _planned:
+		names.append(_command_short(command))
+	plan_label.text = "PLAN: " + (" > ".join(names) if not names.is_empty() else "-")
+
+
+func _clear_plan_display() -> void:
+	_planned.clear()
+	_plan_active = false
+	_refresh_plan_display()
+
+
+func _refresh_plan_cursor() -> void:
+	for i in plan_buttons.size():
+		var prefix := "> " if i == _plan_cursor else ""
+		plan_buttons[i].text = prefix + _command_short(i) if i < 4 \
+			else prefix + ("EX" if i == _plan_options.size() - 2 else "UN")
+
+
+func _wait_plan_command(options: Array[String]) -> int:
+	_plan_options = options.duplicate()
+	_plan_options.append("EXEC")
+	_plan_options.append("UNDO")
+	for child in command_box.get_children():
+		child.queue_free()
+	plan_buttons.clear()
+	for i in _plan_options.size():
+		var frame := BattleWidgets.window_frame(Vector2(i * 29, 0), Vector2(28, 40))
+		command_box.add_child(frame)
+		var button := Button.new()
+		button.position = Vector2(i * 29 + 1, 2)
+		button.size = Vector2(26, 36)
+		button.flat = true
+		button.add_theme_font_size_override("font_size", 8)
+		button.add_theme_color_override("font_color", Color(0.93, 0.94, 0.90))
+		button.pressed.connect(_on_command_pressed.bind(i))
+		command_box.add_child(button)
+		plan_buttons.append(button)
+	_plan_cursor = 0
+	_chosen = -99
+	_plan_active = true
+	_refresh_plan_cursor()
+	await command_chosen
+	_plan_active = false
+	for child in command_box.get_children():
+		child.queue_free()
+	plan_buttons.clear()
+	if _chosen == options.size():
+		return -2
+	if _chosen == options.size() + 1:
+		return -3
+	return _chosen
+
+
 func _wait_rhythm() -> int:
 	_rhythm_result = BattleMath.RhythmResult.MISS
 	await rhythm_done
@@ -577,6 +708,24 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key := event as InputEventKey
 		var confirm := key.keycode == KEY_Z or key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER
+		if _plan_active:
+			if key.keycode == KEY_X:
+				_chosen = _plan_options.size() - 2
+				command_chosen.emit()
+			elif key.keycode == KEY_BACKSPACE:
+				_chosen = _plan_options.size() - 1
+				command_chosen.emit()
+			elif key.keycode == KEY_UP or key.keycode == KEY_LEFT:
+				_plan_cursor = (_plan_cursor - 1 + plan_buttons.size()) % maxi(1, plan_buttons.size())
+				_refresh_plan_cursor()
+			elif key.keycode == KEY_DOWN or key.keycode == KEY_RIGHT:
+				_plan_cursor = (_plan_cursor + 1) % maxi(1, plan_buttons.size())
+				_refresh_plan_cursor()
+			elif confirm:
+				_chosen = _plan_cursor
+				command_chosen.emit()
+			accept_event()
+			return
 		if _mash_active and confirm:
 			_mash_count += 1
 			accept_event()

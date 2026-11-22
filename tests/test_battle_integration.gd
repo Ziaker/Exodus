@@ -17,7 +17,11 @@ func test_attack_resolves_through_rhythm() -> void:
 		await get_tree().process_frame
 	assert_gt(command_box.get_child_count(), 0, "command menu should appear")
 
+	# D-046: plan ATTACK, then confirm EXEC.
 	battle._chosen = 0
+	battle.command_chosen.emit()
+	await get_tree().process_frame
+	battle._chosen = battle._plan_options.size() - 2
 	battle.command_chosen.emit()
 
 	for _i in range(30):

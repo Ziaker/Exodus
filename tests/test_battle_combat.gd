@@ -18,12 +18,26 @@ func _choose(battle: Control, index: int) -> void:
 	battle.command_chosen.emit()
 
 
+## Feeds a planned sequence to the D-046 queue, one command per frame.
+func _plan(battle: Control, commands: Array[int]) -> void:
+	for command in commands:
+		battle._chosen = command
+		battle.command_chosen.emit()
+		await get_tree().process_frame
+	if battle._planned.is_empty():
+		return
+	if commands.has(2):  # REST already finalizes the plan.
+		return
+	battle._chosen = battle._plan_options.size() - 2  # EXEC
+	battle.command_chosen.emit()
+
+
 func test_player_attack_uses_manual_rhythm_and_spends_one_act() -> void:
 	var battle := await _fresh_battle()
 	battle.state.units[2].affinity = BattleMath.Affinity.NORMAL
 	battle._fallen.acts_available = 2
 	var before: int = battle._fallen.acts_available
-	_choose(battle, 0)
+	await _plan(battle, [0])
 	for _i in range(30):
 		if battle.rhythm.visible:
 			break
@@ -200,7 +214,7 @@ func test_rest_en_is_capped_at_maximum() -> void:
 func test_absorption_without_input_grants_nothing() -> void:
 	var battle := await _fresh_battle()
 	var before_hp: int = battle._fallen.stats.max_hp
-	_choose(battle, 3)
+	await _plan(battle, [3])
 	await get_tree().create_timer(2.4).timeout
 	var failed := false
 	for line in battle.log_history:
@@ -214,7 +228,7 @@ func test_absorption_success_eliminates_target_once() -> void:
 	var battle := await _fresh_battle()
 	var target: BattleUnit = battle.state.units[2]
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 12)
-	_choose(battle, 3)
+	await _plan(battle, [3])
 	await get_tree().create_timer(2.4).timeout
 	assert_true(target.absorbed)
 	assert_false(target.is_alive(), "a successful absorption consumes the target")
@@ -239,7 +253,7 @@ func test_absorption_of_last_enemy_ends_battle() -> void:
 	last.take_damage(last.current_hp)
 	assert_false(last.is_alive())
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 12)
-	_choose(battle, 3)
+	await _plan(battle, [3])
 	await get_tree().create_timer(2.4).timeout
 	assert_false(first.is_alive())
 	assert_true(battle.state.is_over())
@@ -252,6 +266,64 @@ func test_ally_cannot_absorb() -> void:
 	battle._perform_absorption(battle._ally, battle.state.units[2])
 	await get_tree().process_frame
 	assert_eq(battle._ally.stats.max_hp, before)
+
+
+func test_plan_markers_show_committed_acts_and_undo_clears_them() -> void:
+	var battle := await _fresh_battle()
+	battle._fallen.acts_available = 3
+	for _i in range(20):
+		if battle._plan_active:
+			break
+		await get_tree().process_frame
+	assert_true(battle._plan_active, "fallen enters planning mode")
+	battle._chosen = 0
+	battle.command_chosen.emit()
+	await get_tree().process_frame
+	assert_eq(battle._planned.size(), 1)
+	assert_gt(battle.plan_markers[0].color.g, 0.7, "planned ACT turns green")
+	battle._chosen = battle._plan_options.size() - 1  # UNDO
+	battle.command_chosen.emit()
+	await get_tree().process_frame
+	assert_eq(battle._planned.size(), 0)
+	assert_lt(battle.plan_markers[0].color.g, 0.5, "undo clears the green marker")
+
+
+func test_chain_bar_stays_visible_between_attacks() -> void:
+	var bar := RhythmBar.new()
+	add_child_autofree(bar)
+	bar.start_chain(1.0)
+	assert_true(bar.visible)
+	bar._finish(BattleMath.RhythmResult.POINT)
+	assert_true(bar.visible, "chain keeps the same line on screen")
+	assert_eq(bar._elapsed, 0.0, "marker restarts from the left")
+	bar.stop_chain()
+	assert_false(bar.visible)
+
+
+func test_chained_command_keeps_bar_and_restarts_marker() -> void:
+	var battle := await _fresh_battle()
+	var target: BattleUnit = battle.state.units[2]
+	target.affinity = BattleMath.Affinity.NORMAL
+	target.current_hp = 999
+	target.stats.max_hp = 999
+	battle._fallen.acts_available = 2
+	battle._execute_player_command(battle._fallen, 0, true)
+	for _i in range(40):
+		if battle.rhythm._chain_mode:
+			break
+		await get_tree().process_frame
+	assert_true(battle.rhythm.visible)
+	assert_true(battle.rhythm._chain_mode, "chained attack keeps the bar visible")
+	battle._on_rhythm_finished(BattleMath.RhythmResult.POINT)
+	await get_tree().process_frame
+	assert_true(battle.rhythm.visible, "bar persists after the first judgment")
+	assert_lt(battle.rhythm._elapsed, 0.05, "next marker restarts near the left")
+	rhythm_stop(battle)
+
+
+func rhythm_stop(battle: Control) -> void:
+	battle.rhythm.stop_chain()
+	assert_false(battle.rhythm.visible, "stopping the chain hides the bar")
 
 
 func test_menu_input_does_not_trigger_reaction_or_mash() -> void:

@@ -190,7 +190,7 @@
 - **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
   não autoriza um quinto ato. O excedente é adiado ao estoque pela mesma regra.
 
-### D-043 — seleção antecipada de vários atos e ataques encadeados; DESIGN, NÃO IMPLEMENTADO
+### D-043 / D-046 — fila de comandos e ataques encadeados; IMPLEMENTADO no motor Godot
 
 - O jogador pode **planejar em conjunto comandos para 1–4 atos disponíveis**
   (limite D-005) antes de iniciar a resolução. A interface marca **em verde**
@@ -205,13 +205,18 @@
   é executada como **bloco contínuo** — o combatente resolve todos os atos
   comprometidos antes que qualquer outro combatente aja. A ordem entre
   combatentes continua por AGI, mas dentro do bloco não há intercalação.
-  **IMPLEMENTADO** em `BattleState.next_actor()`; a fila/interface green-ACT
-  descrita acima permanece **design, não implementada no motor Godot**.
-- **PENDENTES:** entrada e validação de pacotes de comandos, possibilidade
-  de reação entre seus passos, alvo invalidado, cancelamento/interrupção,
-  efeitos de mudança de ACT durante a cadeia e interação detalhada com
-  REST D-038. O HTML independente testa um bloco contínuo apenas para
-  inspeção do fluxo e dos feedbacks, não como regra de Godot homologada.
+  **IMPLEMENTADO** em `BattleState.next_actor()`.
+- **D-046 (2026-11-21): fila e linha persistente implementadas no Godot.**
+  O Fallen planeja 1–4 comandos antes da resolução; cada ato comprometido
+  acende um marcador **verde**, e **UNDO** (Backspace) remove o último.
+  **EXEC** (X) inicia a resolução; ↑/↓ navega e Z/Enter confirma. Ataques
+  consecutivos reutilizam a **mesma linha de ritmo**, reiniciando o marcador
+  para cada julgamento. Implementado em `BattleController` e `RhythmBar`,
+  com testes em `test_battle_combat.gd`.
+- **PENDENTES:** reação entre os passos da cadeia, alvo invalidado no meio
+  da sequência e mudança de ACT durante a cadeia. REST D-038 já encerra o
+  planejamento ao ser escolhido. O HTML independente permanece como
+  protótipo visual, fora do repositório.
 
 ### Reações da Rodada 2 — D-014 (CONFIRMADO como design; não implementado)
 

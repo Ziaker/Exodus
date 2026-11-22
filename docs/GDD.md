@@ -508,7 +508,7 @@ declarada). Nenhum código foi alterado.
 
 ---
 
-### 7.4 D-043 — planejamento conjunto de ações e ritmo encadeado — **DESIGN CONFIRMADO, MOTOR NÃO ALTERADO**
+### 7.4 D-043 / D-046 - planejamento conjunto de ações e ritmo encadeado - **IMPLEMENTADO no motor Godot**
 
 Decisão explícita do diretor para o HUD e o fluxo de combate (2026-11-21):
 
@@ -536,7 +536,8 @@ em **bloco contínuo** — os 2–4 ataques planejados resolvem antes de qualque
 outro combatente agir. `BattleState.next_actor()` agora devolve o mesmo
 combatente enquanto ele tiver atos (`A, A, B, B`); a ordem entre combatentes
 continua por AGI. **IMPLEMENTADO** com testes de estado. A fila visual com
-ACT verdes permanece no protótipo HTML, sem implementação no motor Godot.
+ACT verdes e a linha de ritmo persistente foram implementadas no motor Godot
+pela **D-046** (abaixo), preservando o HTML como protótipo externo.
 
 **Protótipo HTML de teste:** `exodus_batalha_jogavel.html` (artefato
 independente, fora do repositório) apresenta fila, ACT verde, desfazer,
@@ -1963,6 +1964,9 @@ rodada.
     ordem entre combatentes por AGI. **IMPLEMENTADO.** Substitui a
     intercalação `A, B, A, B` sem alterar custo por comando ou reações.
 
+27. **D-046:** fila de comandos com ACT verdes, UNDO/EXEC e linha de
+    ritmo persistente entre ataques consecutivos. **IMPLEMENTADO.**
+
 ## Apêndice A — Registro de decisões
 
 Formato: ID · data · decisão · estado · impacto documental.
@@ -2427,6 +2431,18 @@ Formato: ID · data · decisão · estado · impacto documental.
   custo por comando, reações, D-005, D-038 nem fórmulas de dano/SP.
   Impacto: GDD §§1, 4.1, 7.4, 21, `COMBAT_SPEC.md` §Atos e reações.
   A fila visual com ACT verdes continua fora do motor Godot.
+
+- **D-046 · 2026-11-21 (implementação da fila D-043 no Godot)** ·
+  O Fallen pode **planejar de 1 a 4 comandos** antes da resolução. Cada ato
+  comprometido acende um marcador **verde**; **UNDO** (Backspace) retira o
+  último comando e **EXEC** (X) inicia a sequência. ↑/↓ navega e Z/Enter
+  confirma no menu. Ataques consecutivos reutilizam a **mesma linha de ritmo**,
+  com marcador reiniciado e novo julgamento de timing para cada golpe.
+  **CONFIRMADO e IMPLEMENTADO** em `BattleController`, `RhythmBar` e
+  `tests/test_battle_combat.gd`. Preserva D-038 (REST encerra o plano),
+  D-044 (bloco contínuo) e as fórmulas vigentes. Permanecem pendentes reação
+  entre passos, alvo invalidado na cadeia e mudança de ACT durante a execução.
+  Impacto: GDD §7.4, `COMBAT_SPEC.md` §Atos e reações, `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

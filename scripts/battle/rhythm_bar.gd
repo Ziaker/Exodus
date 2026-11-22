@@ -22,6 +22,7 @@ var _beam_left: ColorRect
 var _point_zone: ColorRect
 var _beam_right: ColorRect
 var _point_half_width: float = BattleMath.POINT_HALF_WIDTH
+var _chain_mode: bool = false
 
 func _ready() -> void:
 	anchor_left = 0.0
@@ -87,6 +88,23 @@ func configure(point_half: float) -> void:
 
 
 func start(seconds: float) -> void:
+	_chain_mode = false
+	_begin(seconds)
+
+
+## D-046: keeps the bar on screen between consecutive planned attacks.
+func start_chain(seconds: float) -> void:
+	_chain_mode = true
+	_begin(seconds)
+
+
+func stop_chain() -> void:
+	_chain_mode = false
+	_running = false
+	hide()
+
+
+func _begin(seconds: float) -> void:
 	duration = maxf(seconds, 0.05)
 	_elapsed = 0.0
 	_running = true
@@ -119,5 +137,10 @@ func _finish(result: int) -> void:
 	if not _running:
 		return
 	_running = false
-	hide()
+	if _chain_mode:
+		# Same line stays visible; the next marker starts from the left again.
+		_elapsed = 0.0
+		_marker.position.x = 10.0
+	else:
+		hide()
 	finished.emit(result)
