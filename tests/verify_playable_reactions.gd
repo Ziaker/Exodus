@@ -8,8 +8,8 @@ class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
 		return BattleMath.RhythmResult.MISS
 	# These checks isolate act economy, so enemy attacks must never land. D-022
 	# auto-hit is disabled here and covered by AutoHitBattle below.
-	func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, _auto_hit: bool = false) -> void:
-		await super._perform_attack(attacker, defender, power, is_reaction, defense_act_paid, false)
+	func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, _auto_hit: bool = false, _chain: bool = false) -> void:
+		await super._perform_attack(attacker, defender, power, is_reaction, defense_act_paid, false, _chain)
 
 ## D-022: enemy timing always rolls MISS, so a landed POINT can only come from auto-hit.
 class AutoHitBattle extends "res://scripts/battle/playable_controller.gd":
@@ -58,11 +58,7 @@ func _run() -> void:
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	check(battle._fallen.acts_available == 1, "One attack spends exactly one act")
 	await advance(battle)
-	check(battle.active_actor == battle._ally, "Acts remain interleaved, not two consecutive attacks")
-	battle.submit_command(0); battle.submit_target(0)
-	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
-	await advance(battle)
-	check(battle.active_actor == battle._fallen and battle.state.round_number == 1, "Fallen must get a second action in round one")
+	check(battle.active_actor == battle._fallen, "D-044: o mesmo combatente esgota seus atos em bloco (A,A,B,B)")
 	battle.submit_command(0); battle.submit_target(0)
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	check(battle._fallen.acts_available == 0, "Two attacks consume the two available acts")
@@ -147,7 +143,26 @@ func _run() -> void:
 	check(battle.log_history.back().contains("rhythm MISS"), "D-022: a declared reaction uses the normal enemy timing (got %s)" % battle.log_history.back())
 	check(defender.current_hp == hp_before, "D-022: the missed enemy attack deals no damage")
 	battle.queue_free(); await process_frame
-	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, shared acts, ally response, full reaction commands, D-022 auto-hit" % checks)
+	# D-047: o mesmo inimigo resolve dois ataques em bloco, cada um com seu número.
+	battle = AutoHitBattle.new()
+	root.add_child(battle)
+	reserve(battle); reserve(battle)
+	check(battle.hud.mode == "react", "D-047: first enemy announcement opens a reaction prompt")
+	var combo_attacker: BattleUnit = battle.action_attacker
+	battle.answer_reaction(false)
+	await process_frame
+	var hits1: int = battle.fx.history.count("HIT") + battle.fx.history.count("CRITICAL")
+	check(hits1 == 1, "D-047: first combo attack draws one damage number (got %d)" % hits1)
+	check(battle.hud.mode == "continue", "D-047: result pause happens after each combo attack")
+	battle.proceed()
+	check(battle.hud.mode == "react", "D-047: second announcement belongs to the same enemy turn")
+	check(battle.action_attacker == combo_attacker, "D-047: the same enemy performs both attacks in one block")
+	battle.answer_reaction(false)
+	await process_frame
+	var hits2: int = battle.fx.history.count("HIT") + battle.fx.history.count("CRITICAL")
+	check(hits2 == 2, "D-047: second combo attack draws another damage number (got %d)" % hits2)
+	battle.queue_free(); await process_frame
+	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, shared acts, ally response, full reaction commands, D-022 auto-hit, D-047 enemy combo" % checks)
 	quit(0)
 
 func _finalize() -> void:

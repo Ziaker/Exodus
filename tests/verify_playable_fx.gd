@@ -51,7 +51,7 @@ func _run() -> void:
 	check(fx.find_children("*", "AudioStreamPlayer", true, false).is_empty(), "Combat effects must never create audio players")
 	check(not fx.is_busy(), "Transient effects must finish and release input")
 	battle.handle_confirm()
-	check(battle.active_actor == battle._ally, "Gameplay must continue after the effect")
+	check(battle.active_actor == battle._fallen, "D-044: gameplay must continue in the same actor's act block after the effect")
 	battle.queue_free(); await process_frame
 	battle = fresh(); fx = battle.get_node("BattleEffects")
 	battle._fallen.current_hp = 1; battle.submit_command(1)

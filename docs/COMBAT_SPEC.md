@@ -179,6 +179,14 @@
   atos antes de passar a vez** — dois atos produzem `A, A, B, B`, e não mais
   `A, B, A, B`. Cada ato é consumido por uma ação ou reação.
   **IMPLEMENTADO** em `BattleState.next_actor()`.
+- **D-047 (2026-11-22): combo inimigo.** O inimigo anuncia e resolve **dois
+  ataques no mesmo bloco de turno**, cada um com reação própria e **um número
+  de dano próprio na camada principal** (`DamageLayer`). Sem reação declarada,
+  cada golpe usa o autoacerto D-022. A cadeia para se o atacante ou o alvo cair,
+  ou se o combate terminar. Um jogador que reservou atos com REACT não trava
+  o agendamento (`BattleState.skip_active_actor()`). **IMPLEMENTADO** em
+  `playable_controller.gd` (`_enemy_turn()`), com regressão em
+  `tests/verify_playable_reactions.gd`.
 - **D-007 (2026-11-21): limiar de superioridade por dominância em razão.** Ganha
   **+1 ato** quem possui `SP_próprio / (SP_próprio + SP_rival) > 0,7`. Substitui a
   interpretação literal `SP_próprio > 0,7 × SP_rival`, que premiava ambos os lados

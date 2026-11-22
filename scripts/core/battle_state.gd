@@ -75,6 +75,12 @@ func next_actor() -> BattleUnit:
 	return null
 
 
+## D-047: um combatente que reservou atos para reagir não pode travar o
+## agendamento — liberar o ativo faz o próximo next_actor() seguir na ordem de AGI.
+func skip_active_actor() -> void:
+	_active_unit = null
+
+
 func end_round() -> void:
 	_active_unit = null
 	for unit in units:

@@ -53,5 +53,6 @@ qualquer alteração em documentos ou código.
 | D-044 | 2026-11-21 (decisão do diretor sobre a ordem da fila D-043) | Os atos de um combatente são executados em bloco contínuo: o mesmo | `docs/GDD.md` Apêndice A |
 | D-045 | 2026-11-21 | Reação de quem não é o alvo | `docs/GDD.md` Apêndice A |
 | D-046 | 2026-11-21 (implementação da fila D-043 no Godot) | O Fallen pode planejar de 1 a 4 comandos antes da resolução. | `docs/GDD.md` Apêndice A |
+| D-047 | 2026-11-22 (decisão do criador) | Combo inimigo: dois ataques anunciados por turno, com reação e número de dano próprios. | `docs/GDD.md` Apêndice A |
 
 Total: 44 decisões indexadas.

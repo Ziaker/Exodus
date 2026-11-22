@@ -2444,6 +2444,19 @@ Formato: ID · data · decisão · estado · impacto documental.
   entre passos, alvo invalidado na cadeia e mudança de ACT durante a execução.
   Impacto: GDD §7.4, `COMBAT_SPEC.md` §Atos e reações, `docs/DECISIONS.md`.
 
+- **D-047 · 2026-11-22 (decisão do criador) — combo inimigo com número por golpe.**
+  O inimigo resolve **dois ataques anunciados no mesmo bloco de turno**, em vez
+  de um. Cada golpe tem **anúncio próprio**, **oportunidade de reação própria**
+  e **seu próprio número de dano** na camada principal de efeitos (`DamageLayer`).
+  A cadeia para se o atacante cair, se o alvo cair ou se o combate terminar;
+  sem reação declarada, vale a exceção de autoacerto D-022 para cada golpe.
+  **CONFIRMADO e IMPLEMENTADO** em `playable_controller.gd` (`_enemy_turn()`),
+  com `BattleState.skip_active_actor()` para que um jogador que reservou atos
+  com REACT não trave o agendamento e faça a rodada avançar sem vez inimiga.
+  Regressão em `tests/verify_playable_reactions.gd` (dois golpes, dois números).
+  Preserva D-005, D-022, D-044, D-045 e todas as fórmulas de dano/SP/ritmo.
+  Impacto: GDD §7.4, `COMBAT_SPEC.md` §Atos e reações, `docs/DECISIONS.md`.
+
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
 `docs/COMBAT_SPEC.md`. Este apêndice não as duplica.

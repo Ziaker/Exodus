@@ -171,6 +171,9 @@ func _next_live_actor() -> BattleUnit:
 		var unit := state.next_actor()
 		if unit == null: return null
 		if not waiting_players.has(unit.id): return unit
+		# D-047: REACT reserves acts without spending them; release the scheduler
+		# so the enemy still gets its turn instead of skipping to the next round.
+		state.skip_active_actor()
 	return null
 
 
@@ -259,30 +262,38 @@ func _player_turn(unit: BattleUnit) -> void:
 
 func _enemy_turn(unit: BattleUnit) -> void:
 	active_actor = null
-	if not unit.spend_act(): return
-	var defender := _player_with_most_sp()
-	if defender == null: return
-	action_attacker = unit
-	action_defender = defender
-	phase_text = "ENEMY ATTACK"
-	# Creator decision 2026-11-21: no TARGET01 "SEARCH" cue; the attacker whitens and
-	# shows a red "!" while the announcement is on screen.
-	# Creator decision 2026-11-21: RPG Maker XP whiten on the attacker at the announcement.
-	fx.play("WHITEN", unit)
-	hud.feedback = ""
-	_append_log("%s announces an attack on %s." % [unit.display_name, defender.display_name])
-	hud.announce_attack("NO REACTION AVAILABLE" if eligible_reactors().is_empty() else "%s → %s" % [short_name(unit), short_name(defender)], unit)
-	if eligible_reactors().is_empty():
-		hud.mode = "announce"
-		hud.feedback = "No reaction acts left. Z / Enter: resolve attack"
-		await continue_requested
-		hud.mode = "busy"
-	reaction_declared = false
-	var defense_paid := await _maybe_player_reaction(defender, unit)
-	# A reaction can defeat the announced attacker before its action resolves.
-	if unit.is_alive() and defender.is_alive():
-		await _perform_attack(unit, defender, 100, false, defense_paid, not reaction_declared)
-	await _pause_result()
+	# D-047 (decisão do criador): o inimigo resolve seus atos em bloco contínuo —
+	# dois ataques anunciados, cada um com sua própria reação e seu próprio número
+	# de dano na camada principal. A cadeia para se o combatente cair ou o duelo acabar.
+	for _hit in 2:
+		if not unit.is_alive() or state.is_over():
+			break
+		if not unit.spend_act():
+			break
+		var defender := _player_with_most_sp()
+		if defender == null:
+			break
+		action_attacker = unit
+		action_defender = defender
+		phase_text = "ENEMY ATTACK"
+		# Creator decision 2026-11-21: no TARGET01 "SEARCH" cue; the attacker whitens and
+		# shows a red "!" while the announcement is on screen.
+		# Creator decision 2026-11-21: RPG Maker XP whiten on the attacker at the announcement.
+		fx.play("WHITEN", unit)
+		hud.feedback = ""
+		_append_log("%s announces an attack on %s." % [unit.display_name, defender.display_name])
+		hud.announce_attack("NO REACTION AVAILABLE" if eligible_reactors().is_empty() else "%s → %s" % [short_name(unit), short_name(defender)], unit)
+		if eligible_reactors().is_empty():
+			hud.mode = "announce"
+			hud.feedback = "No reaction acts left. Z / Enter: resolve attack"
+			await continue_requested
+			hud.mode = "busy"
+		reaction_declared = false
+		var defense_paid := await _maybe_player_reaction(defender, unit)
+		# A reaction can defeat the announced attacker before its action resolves.
+		if unit.is_alive() and defender.is_alive():
+			await _perform_attack(unit, defender, 100, false, defense_paid, not reaction_declared)
+		await _pause_result()
 
 
 func _create_units() -> void:
