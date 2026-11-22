@@ -415,6 +415,14 @@ fichas de inimigos já publicadas no jogo.
 
 Com poder básico 8 e ATK/DEF 8, o dano-base nominal é 8 e **cinco acertos nominais** vencem 40 HP: agora atende nominalmente à meta resistente 5–7. Porém, atacante SP 80 contra resistente SP 88 sofre **−1d8** de dano antes dos demais modificadores. O piso de 1 (D-033 3B) **não garante** que a derrota ocorra em 5–7 acertos efetivos. **Balanceamento ainda não homologado**.
 
+### 6.5 D-048 — Pray Points (PP) de Yoch — **DESIGN CONFIRMADO; NÃO IMPLEMENTADO**
+
+Yoch é o aliado **humano**, que conjura magias de **Luz** com **Pray Points (PP)**, **não EN**. Cada ação/ACT investida no comando **PRAY** concede **+1 PP**; o recurso fica **armazenado permanentemente até ser gasto**, sem expiração automática aprovada. As magias têm custo em PP de **1 a 4**, e as três iniciais custam 2/2/3 PP (§9).
+
+O HUD de Yoch exibirá **PP no lugar de EN**, na cor **`#f5f58c`** (amarelo-claro quase branco); o texto de **Battle Log** de oração/magia terá a mesma cor, com descrições **simples em inglês**. A duração desse estoque entre batalhas/derrota/save, PP inicial/máximo e demais condições de aquisição ainda são **PENDENTES**.
+
+**Conflito não resolvido:** o cálculo histórico `SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI` usa EN; REST D-038 restaura **2 EN** e o fim de rodada recupera **20% EN**. A D-048 **não especifica o papel de EN/PP no SP de Yoch**, nem converte EN de REST ou regeneração em PP. Nenhuma fórmula, teto ou ficha de atributos foi alterada.
+
 ## 7. Ações, reações e armazenamento — **CONFIRMADO**
 
 Dois atos por personagem por rodada: 2 ações, 2 reações ou 1 de cada. Reação é
@@ -549,6 +557,15 @@ cadeia, variação de alvo entre ataques e regras de fila quando REST
 aparece entre comandos. Nenhuma dessas hipóteses passa a valer no motor
 sem decisão específica.
 
+
+### 7.5 D-048 — PRAY em ações, magia em ações/reações e fila — **DESIGN CONFIRMADO; NÃO IMPLEMENTADO**
+
+- **PRAY** abre mão de **uma ação/ACT** para ganhar **+1 PP**; **não é REST** e não guarda ACT/encerra a rodada por si. A D-048 **não autorizou PRAY para gerar PP como reação**.
+- Pela aba/botão **PRAY**, selecionar uma magia de Luz habilitada e de custo compatível com PP disponível; a **conjuração** pode ocorrer como **ação ou reação**. Não presumir conjuração sem custo de ACT apenas por custar PP; as regras D-005/D-043–D-046 de ações e reação permanecem.
+- Para **Cura**, selecionar **a entrada de magia já presente na fila** para atribuir PP adicionais, em vez de inserir várias magias contra **o mesmo alvo**. O efeito agregado deve ser aplicado **de uma só vez**, não em várias saídas separadas. Momento de gasto/reserva/reembolso, ordenação, interrupções, agrupamento de outras magias e alteração de alvo são **PENDENTES**.
+- **D-045:** combatentes **não alvos** têm reações restritas. Permitir magias como reação **não autoriza silenciosamente** ampliar a lista de reações do não alvo; encaixe de PRAY/magia na interface e exceções específicas continuam **PENDENTES**.
+
+O controlador base implementa fila D-046 para Fallen, mas isso **não prova que a fila de Yoch já exista**. Nenhum código/menu/teste foi alterado.
 
 ## 8. Ritmo, bloqueio e desvio — **CONFIRMADO**
 
@@ -1342,12 +1359,24 @@ nem o posicionamento da linha aprovado no §17.2.
 
 ---
 
-## 9. Magia, elementos, oração e afinidades — **PENDENTE**
+## 9. Magia, elementos, oração e afinidades — **PARCIALMENTE CONFIRMADO (D-048)**
 
-O diretor confirmou que magia, oração humana, elementos e afinidades são partes
-importantes do sistema, mas o protótipo atual os exclui explicitamente. Nomes de
-elementos e regras de oração foram mencionados em conversa anterior e **não** devem
-ser tratados como regras oficiais sem confirmação documental neste GDD.
+O diretor aprovou o sistema de **Reza humano** e o repertório inicial de Yoch. Magias humanas de **Luz** usam **PP, não EN**, custando de **1 a 4 PP**; PRAY gera +1 PP por ACT. A aquisição de magia por Fallen, as regras gerais dos elementos e a implementação em Godot continuam **PENDENTES**.
+
+### 9.1 D-048 — três magias inicialmente habilitadas para Yoch — **DESIGN, NÃO IMPLEMENTADO**
+
+| Nome hebraico e transliteração | Inglês (referência) | Custo-base | Efeito aprovado |
+|---|---|---:|---|
+| **רְפוּאָה — Refuah** | Healing | **2 PP** | **Cura um alvo**: base de **20 HP** com **+10 HP por PP adicional alocado à mesma entrada da fila**; alocações contra o mesmo alvo saem numa **única resolução**. |
+| **הֲגָנָה / שְׁמִירָה — Haganah / Shemirah** | Protection | **2 PP** | Concede **escudo anticondição de status durante uma rodada inteira**, dissipado no momento em que **impedir uma condição de status**. |
+| **רַעַם — Ra'am** | Thunder | **3 PP** | Atinge **um alvo** com **10 dano +10 por PP adicional**, **sem efeito contra anjos**. |
+
+**Identidade textual:** magias terão **nomes hebraicos** e descrições **simples em inglês no Battle Log**, na cor **`#f5f58c`**. O diretor forneceu **Haganah e Shemirah** para Protection, **sem escolher um nome definitivo**. A exibição por escrita hebraica, transliteração ou ambas ainda não foi fixada.
+
+**Pendências sem interpretação implícita:** (1) o diretor mencionou **"20 HP +10 por PP alocado"** e **"alocações extras"**: a contagem operacional do que é PP **adicional além dos 2 PP de ativação** ainda precisa de confirmação antes de implementar; (2) limite de PP por magia e de estoque perante custos 1–4; (3) quando começa/termina "uma rodada inteira" do escudo, tentativas imunes, sobreposição de proteções e eventos simultâneos; (4) identificação mecânica dos **anjos** sem inventar uma quinta raça, afinidades e mitigação do dano; (5) distribuição/alocação de PP para outras magias. Não criar valores de efeito/escala não aprovados para Proteção.
+
+**Fallen:** aquisição futura de magias envolve **absorção e os elementos do jogo**, mas nenhuma regra de obtenção, lista ou custo foi aprovada nesta D-048.
+
 
 ---
 
@@ -1380,13 +1409,15 @@ reduzem SP em troca de efeitos foram descritos pelo diretor, mas ficaram fora do
 protótipo por decisão explícita. **CONFIRMADO como fora de escopo do protótipo**;
 regras definitivas pendentes. Inventário, moeda e drop rules: **PENDENTE**.
 
+**D-048 — consumíveis abençoados:** itens consumíveis usados **no aliado Yoch** concedem **efeitos e pontos PP**. Seus efeitos concretos, quantidade de PP, custo de ACT, estoque, seleção de alvo e raridade **não foram especificados**; não inventar itens ou substituir EN por PP em outros personagens. **DESIGN APROVADO; NÃO IMPLEMENTADO.**
+
 ---
 
-## 13. Personagens, criaturas e facções — **PENDENTE**
+## 13. Personagens, criaturas e facções — **PARCIALMENTE CONFIRMADO (D-048)**
 
-Nomeados sem definição oficial: Fallen, THÉOS. Não há nomes, papéis ou hierarquias
-aprovados para os três reis magos, Herodes, a figura equivalente a Jesus, anjos,
-aliados ou demônios específicos. Nenhuma facção foi formalizada.
+**Fallen é demônio** e o aliado humano passa a se chamar **Yoch**. "ALLY" é somente placeholder ainda presente no código; **não é nome canônico**. THÉOS permanece mencionado na premissa, e os papéis/hierarquias de outros personagens/facções ainda não estão definidos.
+
+**Maesto possui quatro raças:** **humanos, animais, monstros e demônios**. **Maziks** constituem uma **"raça" como classificação mecânica de gameplay dos inimigos genéricos**. Isto **não confirma uma quinta raça ontológica em Maesto**, nem determina a relação de Maziks com as quatro raças, com anjos, espécie, facção ou afinidades. Essas relações e bônus de raça continuam **PENDENTES**. Nenhuma ficha ou script foi alterado.
 
 ---
 
@@ -1510,6 +1541,12 @@ As decisões da Rodada Visual 6 sobre ornamentos **não foram aprovadas**;
 a ideia das setas diagonais foi posteriormente rejeitada.
 
 ---
+
+### 17.3 D-048 — HUD e Log de Yoch — **DESIGN CONFIRMADO; NÃO IMPLEMENTADO**
+
+- Substituir o indicador **EN** de Yoch por **PP**, com cor exata **`#f5f58c`**. A mesma cor aplica-se aos textos relacionados às **magias/oração no Battle Log**, com **descrições simples em inglês**.
+- Botão/aba **PRAY** para obter +1 PP por ação e acessar magias habilitadas com custo correspondente; a interface de fila permite selecionar **Cura já planejada** para acrescentar PP à mesma conjuração.
+- Os **nomes são hebraicos**; forma de exibição (letras hebraicas, transliteração ou ambas) e escolha Haganah/Shemirah ainda dependem de decisão do diretor. Preservar os marcadores ACT, D-045 e as regras da HUD vigente.
 
 ## 18. Direção sonora — **PENDENTE**
 
@@ -1812,6 +1849,10 @@ rodada.
 **D-042 — crítica geométrica e de integração:** em perfis especiais, a soma **POINT+BEAM = 30%** (D-042 1A) precisa coexistir com cobertura POINT dinâmica de 8%–16%, intervalos declarados, ausência de sobreposições interiores, centros POINT fixos e largura mínima de 4% por região. **Não está demonstrado** que todos os estados de atributos permitidos possam ser cobertos pelos perfis/variantes atuais; especialmente, três regiões POINT são impossíveis com cobertura total de 8%. Além disso, a D-042 não determina **como distribuir dinamicamente o orçamento BEAM restante** em intervalos autorais sem alterar silenciosamente seus limites; essa decisão permanece em aberto.
 
 **D-042 — IA e RNG:** a IA especial triangular precisa de exatamente **duas amostras uniformes** de seu fluxo temporal por ação que realmente faça julgamento de timing, e de **nenhuma** no autoacerto D-022 sem reação. Resolver fora da barra (tempo <0 ou >1 s) e fixar o contrato de stream/serialização são pendências; não usar sorteios de rejeição por inferência. O código atual implementa apenas IA comum D-035 por posição uniforme; o motor ainda não oferece os múltiplos intervalos declarados D-042. **REST D-038 está IMPLEMENTADO** na `main` atual em commits posteriores à sua documentação inicial; relatos históricos que indicam `não implementado` não devem prevalecer sobre a verificação do código atual. Esta rodada não modifica esse sistema.
+
+**D-048 — conflitos e pontos abertos:** EN ainda integra `SP_base`, REST D-038 recupera EN e a regeneração de EN ao fim da rodada não recebeu exceção humana: **não substituir esses cálculos por PP sem decisão**. O saldo PP permanece até gasto, mas persistência entre combates e teto não estão definidos. **Cura:** contabilização de bônus +10 em relação ao custo-base 2 PP ainda ambígua. **Proteção:** início da rodada e gatilho de dissipação precisam de contrato. **Reações:** conjurar foi aprovado, mas a restrição de D-045 para não alvos não foi revogada. **Raças:** quatro raças de Maesto, Maziks como classificação mecânica, anjos sem taxonomia definida. **Fila:** custo/reserva de PP e agregação na entrada planejada ainda não estão implementados. A aquisição de magia por Fallen via absorção e elementos **continua pendente**.
+
+**Estado do código na consulta da main:** `BattleController._create_units()` cria o aliado como `ALLY` e lhe atribui EN; `BattleUnit` não possui campo PP. Nenhum arquivo de código, Resource, teste, cena ou save foi alterado nesta rodada.
 
 ## 21. Riscos e pendências consolidadas
 
@@ -2456,6 +2497,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   Regressão em `tests/verify_playable_reactions.gd` (dois golpes, dois números).
   Preserva D-005, D-022, D-044, D-045 e todas as fórmulas de dano/SP/ritmo.
   Impacto: GDD §7.4, `COMBAT_SPEC.md` §Atos e reações, `docs/DECISIONS.md`.
+
+- **D-048 · 2026-11-22 (Reza, Yoch e raças de Maesto)** · **DESIGN CONFIRMADO, NÃO IMPLEMENTADO:** Yoch é **humano**; Fallen é **demônio**. Maesto tem **quatro raças** (humanos, animais, monstros, demônios), e **Maziks** são uma classificação de "raça" **mecânica** para inimigos genéricos, sem aprovação como quinta raça cosmológica. Humanos usam **PRAY** para converter **1 ACT em 1 PP**; PP permanece até gastar e paga magias humanas de **Luz** em vez de EN (habilidades custam **1–4 PP**). PP substitui EN no indicador de Yoch, e o Log de magia usa **`#f5f58c`**, com nomes hebraicos e descrições simples em inglês. Só três magias iniciais: **Refuah (רְפוּאָה), Cura 2 PP, 20 HP +10 por PP extra alocado à mesma magia em resolução única para o mesmo alvo; Haganah/Shemirah (הֲגָנָה/שְׁמִירָה), Proteção 2 PP, escudo contra uma condição de status durante uma rodada; Ra'am (רַעַם), Thunder 3 PP, 10 dano +10 por PP extra e sem efeito em anjos**. Magias podem ser ações ou reações (elegibilidade de não alvo D-045 pendente); itens abençoados consumíveis usados em Yoch dão efeitos e PP. Magia de Fallen via absorção/elementos **PENDENTE**. Detalhes de escala de Cura, duração do escudo, PP/EN/SP, teto/persistência, nomes, anjos e ficha Mazik **PENDENTES**. **Exclusivamente documental**, sem código/testes/asset/save alterados. Impacto: GDD §§6.5, 7.5, 9, 12, 13, 17.3, 20; `docs/COMBAT_SPEC.md`; `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

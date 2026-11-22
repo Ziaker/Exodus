@@ -4,13 +4,17 @@
 - Jogo: conceito original com conceitos visuais/gameplay de SMT 1 e 2.
 - Protagonista: **Fallen** (nome real desconhecido), demônio caído.
 - Inimigos do teste: 2 placeholders genéricos, sem dependência de nomes dos .rvdata.
-- Aliado do teste: placeholder genérico.
+- Aliado do teste: **Yoch**, humano (D-048; o código atual ainda identifica o personagem como `ALLY`).
 - Idioma da UI: **inglês**.
 - Visão frontal. Após revisão visual, o fundo plano `#333333` foi substituído por
   battleback e janelas no estilo RPG Maker VX Ace, usando assets temporários da fangame
   (`assets/graphics/parallaxes/BB01-001.png`, `Window.png`, battlers com fundo removido
   em `assets/graphics/battle_sprites/`). A referência visual buscada foi a screenshot
   oficial de batalha do VX Ace (Yanfly Channel, nov/2011).
+
+### D-048 — raças e identificação mecânica — **DESIGN, NÃO IMPLEMENTADO**
+
+O universo **Maesto** possui quatro raças: **humanos, animais, monstros e demônios**. Fallen pertence aos **demônios**; **Yoch** é **humano**. **Maziks** é uma **"raça" mecânica dos inimigos genéricos**, não automaticamente uma quinta raça do mundo. Relação com as quatro raças, anjos, afinidades e efeitos de raça **PENDENTE**.
 
 ## Atributos
 `HP`, `EN` (Energy Points), `ATK`, `MAK`, `DEF`, `MEF`, `AGI`, `SP` (Superiority Points).
@@ -28,6 +32,12 @@
   `BattleUnit.recover_en_flat()`, com testes em `test_battle_combat.gd`.
 - Mapeamento dos `.rvdata`: `MaxHP→HP`, `MaxMP→EN`, `ATK→ATK`, `DEF→DEF`,
   `MAT→MAK`, `MDF→MEF`, `LUK→AGI`.
+
+### D-048 — Pray Points (PP) do humano Yoch — **DESIGN, NÃO IMPLEMENTADO**
+
+Humanos usam **PP em lugar de EN para conjurar Luz**: cada **PRAY custa 1 ACT e concede 1 PP**, armazenado até gastar. PP substitui EN no **HUD de Yoch** e é mostrado em **`#f5f58c`**. Custos de magias: **1–4 PP** (repertório inicial 2/2/3 PP). Saldo inicial, teto e persistência entre encontros/saves **PENDENTES**.
+
+**Não redefinido:** `SP_base = HP + EN + ATK + MAK + DEF + MEF + AGI`; o papel de EN no SP do humano, a regeneração de 20% EN por rodada e REST D-038 (+2 EN) diante de PP **PENDENTES**. Não converter ou apagar EN automaticamente. O código ainda possui EN e não possui campo PP.
 
 ### D-025 (Rodada 8, 5E) — atributos iniciais (design aprovado; não implementado)
 
@@ -285,6 +295,21 @@
   não recebem desempate
   silencioso. A regra não
   foi implementada.
+
+### D-048 — ação PRAY, magias como ação/reação, fila e itens — **DESIGN, NÃO IMPLEMENTADO**
+
+- **PRAY** é comando de **ação**: renunciar a **1 ACT para ganhar +1 PP**. Não substitui REST nem gera automaticamente PP em uma reação. A **conjuração das magias** pode ocorrer como **ação ou reação**, com custos PP e economia de ACT vigente; a elegibilidade de um **não alvo** precisa respeitar/ser reconciliada com D-045, sem exceção presumida.
+- **Aba PRAY:** contém obtenção de PP e magias desbloqueadas de custo compatível com o saldo. Para **Cura**, o jogador seleciona **entrada já planejada** para alocar PP adicionais: magia agregada **resolve de uma vez** contra o mesmo alvo, sem multiplicar conjurações. Custos/reservas, cancelamento, alterações de saldo e outras magias em fila ainda **PENDENTES**.
+
+| Magia hebraica | Inglês de referência | PP base | Efeito |
+|---|---|---:|---|
+| **רְפוּאָה — Refuah** | Healing | **2** | Um alvo: **20 HP base, +10 HP por PP adicional alocado à mesma magia**, agregado em uma resolução. |
+| **הֲגָנָה / שְׁמִירָה — Haganah / Shemirah** | Protection | **2** | Escudo antistatus por **1 rodada inteira**, dissipado ao impedir uma condição de status. |
+| **רַעַם — Ra'am** | Thunder | **3** | Um alvo: **10 dano +10 por PP extra**; **não afeta anjos**. |
+
+**No começo do jogo, só essas três magias são habilitadas.** Nomes são hebraicos, descrições do Battle Log são **simples em inglês**, com texto em **`#f5f58c`**. **Haganah/Shemirah é escolha de nome ainda pendente.** A contagem exata de "PP extra" em Cura versus custo-base 2 PP, máximo total por magia, duração do escudo e definição de condição anulada, classificação de anjos, mitigação/afinidades, nome mostrado em letras hebraicas ou transliteração **PENDENTES**.
+
+**Consumíveis abençoados usados em Yoch** concedem **efeitos e PP**; quantidades/efeitos ainda não aprovados. Magias futuras de Fallen **envolvem absorção e elementos**, mas regras de aquisição e custos **a discutir posteriormente**. Nenhum dado, código, cena ou teste foi modificado pela D-048.
 
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
@@ -1231,3 +1256,5 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), oração de humanos,
 progressão narrativa e absorção de longo prazo.
+
+A D-048 **aprova como design futuro** PP, PRAY e as três magias iniciais de Yoch; o trecho anterior descreve o **escopo do protótipo existente**, não uma ausência de decisões aprovadas.
