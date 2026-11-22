@@ -17,12 +17,52 @@ var textures: Dictionary = {}
 var history: Array[String] = []
 var played_cells := 0
 var applied_flashes := 0
+var damage_layer: Control = null
+
+## Numbers live on their own node above containers and sprites, so they are
+## never hidden by the RGXP cells or the silhouette ghost.
+class DamageLayer extends Control:
+	var fx: Control
+
+	func _draw() -> void:
+		if fx == null or fx.battle == null or fx.battle.hud == null:
+			return
+		var font: Font = fx.battle.hud.font
+		if font == null:
+			return
+		for effect in fx.effects:
+			var r: Rect2 = effect.target_rect
+			var label := ""
+			match effect.kind:
+				"HIT", "CRITICAL": label = "-%d" % effect.amount
+				"BLOCK": label = "BLOCK -%d" % effect.amount
+				"MISS", "DODGE": label = effect.kind
+				"HEAL": label = "+%d HP" % effect.amount
+				"REST": label = "+%d EN" % effect.amount
+				"ABSORBED": label = "ABSORBED"
+			if label.is_empty():
+				continue
+			var size: int = 30 if label.begins_with("-") or label.begins_with("+") else 20
+			var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
+				-minf(18, effect.age * 18))
+			pos.y = clampf(pos.y, r.position.y + 16, r.end.y - size)
+			for offset in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
+				draw_string(font, pos + offset, label, HORIZONTAL_ALIGNMENT_LEFT, -1,
+					size, Color(0, 0, 0, 0.95))
+			draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				size, Color("fff3d0"))
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size = Vector2(544, 416)
 	z_index = 3
+	damage_layer = DamageLayer.new()
+	damage_layer.fx = self
+	damage_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	damage_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	damage_layer.z_index = 10
+	add_child(damage_layer)
 	library = JSON.parse_string(FileAccess.get_file_as_string("res://assets/data/smt_combat_fx.json"))
 	assert(not library.is_empty(), "Extract local SMT FX data before running")
 	for profile in library.profiles.values():
@@ -125,6 +165,8 @@ func _process(delta: float) -> void:
 		screen_flashes[i].left -= delta
 		if screen_flashes[i].left <= 0: screen_flashes.remove_at(i)
 	queue_redraw()
+	if damage_layer != null:
+		damage_layer.queue_redraw()
 
 
 func _update_effect(effect: Dictionary, delta: float) -> void:
@@ -202,23 +244,4 @@ func _draw() -> void:
 			var color: Color = effect.flash_color
 			color.a *= effect.flash_left / maxf(0.001, effect.flash_duration)
 			draw_rect(r, color)
-		var label := ""
-		match effect.kind:
-			"HIT", "CRITICAL": label = "-%d" % effect.amount
-			"BLOCK": label = "BLOCK -%d" % effect.amount
-			"MISS", "DODGE": label = effect.kind
-			"HEAL": label = "+%d HP" % effect.amount
-			"REST": label = "+%d EN" % effect.amount
-			"ABSORBED": label = "ABSORBED"
-		if label.is_empty(): continue
-		var font: Font = battle.hud.font
-		# Damage values are slightly larger and outlined so they read over any battler.
-		var size: int = 30 if label.begins_with("-") or label.begins_with("+") else 20
-		var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
-			-minf(18, effect.age * 18))
-		pos.y = clampf(pos.y, r.position.y + 16, r.end.y - size)
-		for offset in [Vector2(-1.5, 0), Vector2(1.5, 0), Vector2(0, -1.5), Vector2(0, 1.5)]:
-			draw_string(font, pos + offset, label, HORIZONTAL_ALIGNMENT_LEFT, -1,
-				size, Color(0, 0, 0, 0.92))
-		draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, size,
-			Color("fff3d0"))
+		# Labels are drawn by damage_layer, above all sprites and containers.
