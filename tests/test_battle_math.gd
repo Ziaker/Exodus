@@ -183,3 +183,50 @@ func test_counter_red_pointer_speed_follows_agi_ratio() -> void:
 	assert_almost_eq(BattleMath.counter_red_duration(1.0, 12, 6), 0.5, 0.0001)
 	assert_true(BattleMath.pointers_aligned(0.4, 0.42))
 	assert_false(BattleMath.pointers_aligned(0.4, 0.425))
+
+
+## D-051: absorption as an SP dispute.
+func test_absorb_press_moves_two_sp_and_adds_one_percent_per_sp() -> void:
+	var step := BattleMath.absorb_press(30, 11, 0, 99.0)
+	assert_eq(step.steal, 2)
+	assert_eq(step.taken, 2)
+	assert_eq(step.chance, 13)
+	assert_false(step.absorbed)
+	step = BattleMath.absorb_press(28, 11, 2, 14.9)
+	assert_eq(step.chance, 15)
+	assert_true(step.absorbed, "a roll under the chance absorbs")
+
+
+func test_absorb_press_negative_gap_is_zero_and_drain_is_guaranteed() -> void:
+	var step := BattleMath.absorb_press(50, -40, 0, 1.0)
+	assert_eq(step.chance, 2, "a negative SP gap counts as 0%")
+	assert_true(step.absorbed)
+	step = BattleMath.absorb_press(2, 0, 18, 99.9)
+	assert_true(step.absorbed, "draining the target to 0 SP absorbs for sure")
+	step = BattleMath.absorb_press(1, 0, 18, 99.9)
+	assert_eq(step.steal, 1, "only the SP the target still has can be taken")
+	assert_true(step.absorbed)
+
+
+func test_absorb_gain_options_follow_multiples_of_eight() -> void:
+	var stats := UnitStats.new()
+	stats.max_hp = 16
+	stats.max_en = 8
+	stats.atk = 6
+	stats.mak = 3
+	stats.defense = 2
+	stats.mef = 8
+	stats.agi = 3
+	var options := BattleMath.absorb_gain_options(stats)
+	assert_eq(options.size(), 1, "HP and EN never count; MEF 8 is the only eligible stat")
+	assert_eq(options[0].gains, {&"mef": 2})
+	stats.mak = 16
+	options = BattleMath.absorb_gain_options(stats)
+	assert_eq(options.size(), 3, "two eligible stats: +2 in either or +1/+1")
+	assert_eq(options[0].gains, {&"mak": 2}, "highest multiple of 8 first")
+	assert_eq(options[2].gains, {&"mak": 1, &"mef": 1})
+	stats.mak = 3
+	stats.mef = 5
+	options = BattleMath.absorb_gain_options(stats)
+	assert_eq(options.size(), 1)
+	assert_eq(options[0].gains, {&"atk": 2}, "no multiple of 8: +2 in the highest attribute")

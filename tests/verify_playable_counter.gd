@@ -253,6 +253,32 @@ func _run() -> void:
 	check(not battle.last_counter.is_empty(), "The exchange outcome is recorded")
 	battle.queue_free(); await process_frame
 
+	# ---- D-051 absorption: SP dispute and the player's choice of gain.
+	battle = fresh()
+	var foe: BattleUnit = battle.hud.opponents[0]
+	foe.stats.mak = 16
+	foe.stats.mef = 8
+	foe.current_sp = 6
+	var fallen: BattleUnit = battle._fallen
+	var mak0: int = fallen.stats.mak
+	var mef0: int = fallen.stats.mef
+	var hp0: int = fallen.stats.max_hp
+	var sp0: int = fallen.current_sp
+	battle.submit_command(battle.hud.command_options.find("ABSORB"))
+	battle.submit_target(0)
+	check(battle.hud.mode == "absorb", "ABSORB opens the mash")
+	for i in 3: battle.handle_confirm()
+	deadline = Time.get_ticks_msec() + 4000
+	while battle.hud.mode != "command" and Time.get_ticks_msec() < deadline:
+		await process_frame
+	check(fallen.current_sp - sp0 == 6 - foe.current_sp and foe.current_sp <= 4, "Each press moves 2 SP from the target into Fallen")
+	check(battle.hud.mode == "command" and battle.hud.command_options == ["+2 MAK", "+2 MEF", "+1 MAK / +1 MEF"], "Two multiples of 8: the player chooses the gain (got %s)" % [battle.hud.command_options])
+	battle.submit_command(2)
+	check(fallen.stats.mak == mak0 + 1 and fallen.stats.mef == mef0 + 1, "+1/+1 applies to both chosen attributes")
+	check(fallen.stats.max_hp == hp0 + 2, "Absorption still grants +HP of the same amount")
+	check(foe.absorbed and not foe.is_alive(), "The absorbed target is eliminated")
+	battle.queue_free(); await process_frame
+
 	print("PLAYABLE_COUNTER_OK: %d checks; D-049 rails, AGI speed, perfect window, 4/16 SP theft, ties, redirect, lost queues, impact flash, shake, enemy counter" % checks)
 	await process_frame
 	await process_frame

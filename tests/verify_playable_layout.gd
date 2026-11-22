@@ -109,6 +109,7 @@ func _run() -> void:
 	battle.queue_free()
 	await process_frame
 	battle = _new_battle()
+	battle.state.units[2].current_sp = 10  # D-051: drained by the presses, absorption guaranteed
 	battle.submit_command(3)
 	battle.submit_target(0)
 	_check(battle._mash_active, "Absorption must accept real presses")

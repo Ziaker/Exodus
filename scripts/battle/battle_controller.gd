@@ -82,6 +82,8 @@ var _reaction_yes: bool = false
 var _reaction_active: bool = false
 var _mash_active: bool = false
 var _mash_count: int = 0
+## D-051: chance of the latest absorption roll, in percent (HUD feedback).
+var absorb_chance: int = 0
 var _feedback_token: int = 0
 var _progress_gains: Dictionary = {}
 ## Creator decision (2026-11-21): a Restart after DEFEAT starts Fallen at base
@@ -564,47 +566,80 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	if not target.is_alive():
 		_append_log("ABSORB failed: %s is already defeated." % target.display_name)
 		return
+	# D-051 (creator, 2026-11-22): the mash is an SP dispute. Each press (up to 10,
+	# within 2 s) takes 2 SP from the target and gives it to Fallen, then rolls:
+	# chance = max(0, SP gap measured once at the start) + 1% per SP taken so far.
+	# A target drained to 0 SP is absorbed for sure. On failure the SP stays taken.
 	_append_log("ABSORPTION: mash Z / ENTER!")
+	var base_chance: int = maxi(0, actor.current_sp - target.current_sp)
+	var taken := 0
+	var presses := 0
+	var absorbed := false
 	_mash_active = true
 	_mash_count = 0
-	for _i in 20:
-		await get_tree().create_timer(0.1).timeout
+	for _i in BattleMath.ABSORB_TICKS:
+		await get_tree().create_timer(BattleMath.ABSORB_SECONDS / BattleMath.ABSORB_TICKS).timeout
+		while presses < mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES) and not absorbed:
+			presses += 1
+			var step := BattleMath.absorb_press(target.current_sp, base_chance, taken, _absorb_roll())
+			target.add_sp(-int(step.steal))
+			actor.add_sp(int(step.steal))
+			taken = int(step.taken)
+			absorb_chance = int(step.chance)
+			absorbed = bool(step.absorbed)
+		if absorbed or presses >= BattleMath.ABSORB_MAX_PRESSES:
+			break
 	_mash_active = false
-
-	# Zero presses means no success. The previous clamp awarded +1 for free.
-	var success := clampi(_mash_count / 4, 0, 3)
-	if success <= 0:
+	if presses <= 0:
 		_append_log("ABSORB failed: no input.")
 		_flash_feedback("ABSORB FAILED")
 		return
-
-	var stat_name := target.stats.highest_combat_stat()
-	var gained: int = rng.randi_range(1, success)
-	match stat_name:
-		&"atk":
-			actor.stats.atk += gained
-		&"mak":
-			actor.stats.mak += gained
-		&"defense":
-			actor.stats.defense += gained
-		&"mef":
-			actor.stats.mef += gained
-		&"agi":
-			actor.stats.agi += gained
-	actor.stats.max_hp += gained
-	actor.stats.max_en += gained
-	actor.current_hp = mini(actor.stats.max_hp, actor.current_hp + gained)
-	actor.current_en = mini(actor.stats.max_en, actor.current_en + gained)
-	actor.restore_sp()
+	if not absorbed:
+		_append_log("ABSORB failed: %s resisted (%d SP taken, last chance %d%%)." % [target.display_name, taken, absorb_chance])
+		_flash_feedback("ABSORB FAILED")
+		return
+	var options := BattleMath.absorb_gain_options(target.stats)
+	var pick: int = await _choose_absorb_gain(options)
+	var gains: Dictionary = options[clampi(pick, 0, options.size() - 1)].gains
+	var base_before := actor.sp_base()
+	var total := 0
+	for stat in gains:
+		_add_stat(actor.stats, stat, int(gains[stat]))
+		_progress_gains[String(stat)] = int(_progress_gains.get(String(stat), 0)) + int(gains[stat])
+		total += int(gains[stat])
+	# D-051: +HP and +EN of the same amount as the attribute gain.
+	actor.stats.max_hp += total
+	actor.stats.max_en += total
+	actor.current_hp = mini(actor.stats.max_hp, actor.current_hp + total)
+	actor.current_en = mini(actor.stats.max_en, actor.current_en + total)
+	actor.add_sp(actor.sp_base() - base_before)
 	# D-028: persist the acquired stat deltas for the next battle.
-	_progress_gains[String(stat_name)] = int(_progress_gains.get(String(stat_name), 0)) + gained
-	_progress_gains["max_hp"] = int(_progress_gains.get("max_hp", 0)) + gained
-	_progress_gains["max_en"] = int(_progress_gains.get("max_en", 0)) + gained
+	_progress_gains["max_hp"] = int(_progress_gains.get("max_hp", 0)) + total
+	_progress_gains["max_en"] = int(_progress_gains.get("max_en", 0)) + total
 	ProgressStore.save_gains(_progress_gains)
 	target.consume_by_absorption()
 	_flash_feedback("ABSORBED")
-	_append_log("Absorbed %d %s (+HP/+EN); %s eliminated; SP base %d." % [
-		gained, stat_name, target.display_name, actor.sp_base()])
+	_append_log("Absorbed %s (+%d HP/EN) after %d press(es), %d SP taken; %s eliminated; SP base %d." % [
+		options[clampi(pick, 0, options.size() - 1)].label, total, presses, taken, target.display_name, actor.sp_base()])
+
+
+func _add_stat(stats: UnitStats, stat: StringName, amount: int) -> void:
+	match stat:
+		&"atk": stats.atk += amount
+		&"mak": stats.mak += amount
+		&"defense": stats.defense += amount
+		&"mef": stats.mef += amount
+		&"agi": stats.agi += amount
+
+
+## Overridable: one absorption roll in [0, 100), compared with the chance.
+func _absorb_roll() -> float:
+	return rng.randf_range(0.0, 100.0)
+
+
+## Overridable: which gain option the player takes (the playable HUD asks).
+func _choose_absorb_gain(_options: Array[Dictionary]) -> int:
+	return 0
 
 
 func _wait_command(options: Array[String]) -> int:

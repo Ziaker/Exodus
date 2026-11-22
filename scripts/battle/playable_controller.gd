@@ -762,6 +762,20 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	hud.mode = "busy"
 
 
+## D-051: with two or more eligible attributes the player picks the gain.
+func _choose_absorb_gain(options: Array[Dictionary]) -> int:
+	if options.size() <= 1:
+		return 0
+	var labels: Array[String] = []
+	for option in options:
+		labels.append(String(option.label))
+	var pick := -1
+	while pick < 0:
+		hud.message = "ABSORBED: choose the gain. Z: confirm."
+		pick = await _wait_command(labels)
+	return pick
+
+
 func _pause_result() -> void:
 	hud.mode = "continue"
 	_refresh_all()

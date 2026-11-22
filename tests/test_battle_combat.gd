@@ -227,6 +227,7 @@ func test_absorption_without_input_grants_nothing() -> void:
 func test_absorption_success_eliminates_target_once() -> void:
 	var battle := await _fresh_battle()
 	var target: BattleUnit = battle.state.units[2]
+	target.current_sp = 10  # D-051: 5 presses drain it, so absorption is guaranteed
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 12)
 	await _plan(battle, [3])
 	await get_tree().create_timer(2.4).timeout
@@ -252,6 +253,7 @@ func test_absorption_of_last_enemy_ends_battle() -> void:
 	var last: BattleUnit = battle.state.units[3]
 	last.take_damage(last.current_hp)
 	assert_false(last.is_alive())
+	first.current_sp = 10  # D-051: drained by 5 presses
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 12)
 	await _plan(battle, [3])
 	await get_tree().create_timer(2.4).timeout
@@ -335,3 +337,21 @@ func test_menu_input_does_not_trigger_reaction_or_mash() -> void:
 	assert_false(battle._reaction_active)
 	assert_false(battle._mash_active)
 	assert_eq(battle._mash_count, 0)
+
+
+func test_absorption_takes_sp_and_keeps_it_on_failure() -> void:
+	var battle := await _fresh_battle()
+	var target: BattleUnit = battle.state.units[2]
+	target.current_sp = 500
+	battle._fallen.current_sp = 0
+	var fallen_sp: int = battle._fallen.current_sp
+	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 3)
+	await _plan(battle, [3])
+	await get_tree().create_timer(2.4).timeout
+	# Chances are 2/4/6%: whether or not a roll landed, each press moved 2 SP.
+	if target.absorbed:
+		assert_true(battle._fallen.current_sp >= fallen_sp + 2, "SP moved before the successful roll")
+	else:
+		assert_eq(target.current_sp, 494, "three presses took 6 SP and failure keeps them taken")
+		assert_eq(battle._fallen.current_sp, fallen_sp + 6, "the taken SP went to Fallen")
+		assert_true(battle.log_history.any(func(l: String) -> bool: return l.contains("resisted")))

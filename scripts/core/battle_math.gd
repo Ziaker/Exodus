@@ -37,6 +37,47 @@ const INTERRUPT_SP_NORMAL: int = 4
 ## An attacked enemy with a reaction act counter-attacks 33% of the time.
 const ENEMY_COUNTER_CHANCE: float = 0.33
 enum CounterWinner { ENEMY = -1, TIE = 0, PLAYER = 1 }
+## D-051 absorption (creator, 2026-11-22): SP dispute by mashing.
+const ABSORB_MAX_PRESSES: int = 10
+const ABSORB_SP_PER_PRESS: int = 2
+const ABSORB_SECONDS: float = 2.0
+const ABSORB_TICKS: int = 20
+const ABSORB_GAIN_POINTS: int = 2
+const ABSORB_STATS: Array[StringName] = [&"atk", &"mak", &"defense", &"mef", &"agi"]
+const STAT_LABELS := {&"atk": "ATK", &"mak": "MAK", &"defense": "DEF", &"mef": "MEF", &"agi": "AGI"}
+
+
+## D-051: one mash press. Takes up to 2 SP from the target (given to Fallen) and
+## decides success with `roll` in [0, 100): chance = max(0, start gap) + SP taken.
+## A target drained to 0 SP is absorbed for sure.
+static func absorb_press(target_sp: int, base_chance: int, taken: int, roll: float) -> Dictionary:
+	var steal := mini(ABSORB_SP_PER_PRESS, maxi(0, target_sp))
+	var total := taken + steal
+	var chance := maxi(0, base_chance) + total
+	return {"steal": steal, "taken": total, "chance": chance,
+		"absorbed": target_sp - steal <= 0 or roll < float(chance)}
+
+
+## D-051: ATK/MAK/DEF/MEF/AGI whose value is a positive multiple of 8, highest first.
+## Two or more: the player picks +2 in one or +1/+1 in two. One: +2 in it.
+## None: +2 in the highest of those attributes.
+static func absorb_gain_options(stats: UnitStats) -> Array[Dictionary]:
+	var eligible: Array[StringName] = []
+	for stat in ABSORB_STATS:
+		var value := int(stats.get(stat))
+		if value > 0 and value % 8 == 0:
+			eligible.append(stat)
+	eligible.sort_custom(func(a: StringName, b: StringName) -> bool: return int(stats.get(a)) > int(stats.get(b)))
+	if eligible.is_empty():
+		eligible.append(stats.highest_combat_stat())
+	var options: Array[Dictionary] = []
+	for stat in eligible:
+		options.append({"label": "+2 %s" % STAT_LABELS[stat], "gains": {stat: ABSORB_GAIN_POINTS}})
+	for i in eligible.size():
+		for j in range(i + 1, eligible.size()):
+			options.append({"label": "+1 %s / +1 %s" % [STAT_LABELS[eligible[i]], STAT_LABELS[eligible[j]]],
+				"gains": {eligible[i]: 1, eligible[j]: 1}})
+	return options
 
 static func affinity_multiplier(affinity: Affinity) -> float:
 	match affinity:

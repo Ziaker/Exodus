@@ -2670,7 +2670,11 @@ Formato: ID · data · decisão · estado · impacto documental.
   **Ganho:** baseado nos atributos do inimigo que são **múltiplos de 8** (o maior). Até **+2 em um atributo** ou **+1 e +1 em dois atributos diferentes** múltiplos de 8. Nem todo inimigo tem 8 em tudo: precisa ter **pelo menos 1 ou 2** atributos múltiplos de 8.
   **Mash como disputa de SP:** o inimigo resiste com o **SP restante dele** contra o SP do jogador. O mash rende **até 20 SP no total, em 10 apertos**. A absorção se completa quando o jogador **esgota por completo o SP do inimigo**.
   **SP baixo dos inimigos do prólogo é aceitável:** o combate começa com Fallen tendo **40 SP** (o criador confirmou que "40PP" era SP) mesmo com base 80; **só no prólogo**.
-  **PENDENTES:** fórmula exata da disputa (quanto cada aperto tira, como o SP restante do inimigo resiste); o que acontece se os 10 apertos terminam com SP inimigo sobrando; critério de escolha entre +2 em um atributo e +1/+1 em dois; ganhos de HP/EN/SP base que o GDD §10 antigo citava.
+  **Fórmula da disputa (criador, 2026-11-22):** cada aperto tira **2 SP fixos** do inimigo, que **vão para o Fallen** (até 20 SP em 10 apertos, dentro de **2 s**). A cada aperto há um **sorteio**; o primeiro sucesso completa a absorção.
+  **Chance:** base = **SP do Fallen − SP do inimigo**, em pontos percentuais, medida **uma vez no início** (diferença negativa = **0%**), mais **+1% por SP** já tirado pelo mash. Se o SP do inimigo chega a **0**, a absorção é **garantida**.
+  **Falha:** se o mash acaba sem sucesso, a absorção falha, o ato é gasto e o **SP perdido pelo inimigo não volta**.
+  **Atributos elegíveis:** ATK, MAK, DEF, MEF e AGI (sem HP e EN) cujo valor é múltiplo de 8. Com **dois ou mais**, **o jogador escolhe** entre +2 em um ou +1/+1 em dois; com **um**, +2 nele; com **nenhum**, o ganho vem do **maior** desses atributos.
+  **HP/EN:** a absorção continua dando **+HP e +EN** do mesmo valor do ganho de atributo (como no código anterior).
   **Prólogo (D-050):** o humano do resgate é **Yoch**; o resgate é evento narrativo e
   Yoch começa a batalha com **0 PP**; "reiniciar o combate" significa Fallen
   **completamente recuperado, com HP cheio**; Lunge é **habilidade** (ataque normal todo

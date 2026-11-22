@@ -569,7 +569,7 @@ func _log_text() -> String:
 	match mode:
 		"turn", "react", "announce": return feedback if not feedback.is_empty() else message
 		"result": return message + " " + feedback
-		"absorb": return "ABSORB [Z]  Mash!  Presses: %d" % battle._mash_count
+		"absorb": return "ABSORB [Z]  Mash!  Presses: %d/%d" % [mini(battle._mash_count, BattleMath.ABSORB_MAX_PRESSES), BattleMath.ABSORB_MAX_PRESSES]
 	return message
 
 

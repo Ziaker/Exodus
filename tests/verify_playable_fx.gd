@@ -94,6 +94,7 @@ func _run() -> void:
 	check(fx.count_kind("BLOCK") == 1 and fx.count_kind("HIT") == 0, "Blocked contact must have its own outcome effect")
 	battle.queue_free(); await process_frame
 	battle = fresh(); fx = battle.get_node("BattleEffects")
+	battle.hud.opponents[0].current_sp = 10  # D-051: drained by the presses, absorption guaranteed
 	battle.submit_command(3); battle.submit_target(0)
 	check(fx.count_kind("ABSORB") == 1, "Mashing must animate the selected absorption target")
 	for i in 12: battle.handle_confirm()
