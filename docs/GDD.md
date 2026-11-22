@@ -435,9 +435,10 @@ O encerramento da participação evita múltiplas recuperações de REST na mesm
 rodada pelo mesmo personagem. O REST **substitui apenas** a regra anterior de
 custo de 1 ato e recuperação de 20% pela escolha de descanso (histórico D-006);
 **não altera** a regeneração automática no fim da rodada, as regras gerais
-de armazenamento ou outros comandos. **Implementação no motor Godot:** o ato
-gasto na entrada do menu é devolvido, os atos restantes vão ao estoque e
-`recover_en_flat()` concede 2 EN; coberto por `test_battle_combat.gd`.
+de armazenamento ou outros comandos. **Implementação no motor Godot:** o menu
+não gasta ato; ATTACK, ITEM e ABSORB consomem um ato cada ao serem escolhidos,
+enquanto REST consome zero, envia os atos restantes ao estoque e usa
+`recover_en_flat()` para conceder 2 EN; coberto por `test_battle_combat.gd`.
 O HTML jogável anterior pode permanecer com o comportamento antigo — fora
 do escopo desta implementação.
 

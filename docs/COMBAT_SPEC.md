@@ -163,8 +163,9 @@
   sujeitando-se às regras vigentes de início de rodada D-005. REST também
   recupera exatamente **2 EN** (até o máximo), **não** recupera EN por percentual
   e não pode ser repetido na mesma rodada pelo mesmo combatente após encerrar
-  sua participação. **IMPLEMENTADO:** o ato gasto na entrada do menu é devolvido,
-  os atos restantes vão ao estoque e `acts_available` zera. Não equiparar PASS
+  sua participação. **IMPLEMENTADO:** nenhum ato é gasto ao abrir o menu;
+  ATTACK, ITEM e ABSORB consomem um ato quando escolhidos, e REST consome zero.
+  Os atos restantes vão ao estoque e `acts_available` zera. Não equiparar PASS
   a REST. A regeneração automática no fim de rodada permanece distinta.
 - **D-005 (2026-11-21): teto de 4 atos disponíveis no total por personagem**, somando
   atos novos da rodada, atos armazenados e bônus de SP/Press Turn. Vale igualmente

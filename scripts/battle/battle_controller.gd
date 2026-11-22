@@ -277,9 +277,8 @@ func run_battle() -> void:
 
 
 func _player_turn(actor: BattleUnit) -> void:
-	if not actor.spend_act():
+	if actor.acts_available <= 0:
 		return
-	_append_log("%s acts." % actor.display_name)
 	var target := _first_alive_enemy()
 	if target == null:
 		return
@@ -287,19 +286,25 @@ func _player_turn(actor: BattleUnit) -> void:
 	if actor.is_fallen:
 		options.append("ABSORB")
 	var choice := await _wait_command(options)
+	if choice < 0:
+		return
+	_append_log("%s acts." % actor.display_name)
 	match choice:
 		0:
+			if not actor.spend_act():
+				return
 			await _perform_attack(actor, target, 100, false)
 		1:
+			if not actor.spend_act():
+				return
 			var healed := actor.heal(6)
 			if actor.is_fallen:
 				actor.add_sp(-2)
 			_append_log("%s uses item: +%d HP%s." % [
 				actor.display_name, healed, " (-2 SP)" if actor.is_fallen else ""])
 		2:
-			# D-038: REST costs no act. The act spent on entering the menu is
-			# returned, remaining acts go to the stock and the unit stops acting.
-			actor.acts_available += 1
+			# D-038: REST costs no act. All remaining acts go to the stock and
+			# the unit stops participating this round.
 			var remaining := actor.acts_available
 			actor.store_acts(remaining)
 			actor.acts_available = 0
@@ -307,6 +312,8 @@ func _player_turn(actor: BattleUnit) -> void:
 			_append_log("%s rests: +%d EN, %d act(s) stored; round participation ended." % [
 				actor.display_name, BattleMath.REST_EN_RECOVERY, remaining])
 		3:
+			if not actor.spend_act():
+				return
 			await _perform_absorption(actor, target)
 
 

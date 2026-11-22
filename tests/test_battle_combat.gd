@@ -32,8 +32,8 @@ func test_player_attack_uses_manual_rhythm_and_spends_one_act() -> void:
 	battle._on_rhythm_finished(BattleMath.RhythmResult.POINT)
 	for _i in range(20):
 		await get_tree().process_frame
-	# The act was spent before the menu opened; no second spend occurs.
-	assert_eq(battle._fallen.acts_available, before)
+	# Acts are now spent by the chosen command, not on entering the menu.
+	assert_eq(battle._fallen.acts_available, before - 1)
 	var attacks := 0
 	for line in battle.log_history:
 		if line.contains("->"):
@@ -165,8 +165,8 @@ func test_rest_costs_no_act_stores_acts_and_restores_flat_en() -> void:
 	var battle := await _fresh_battle()
 	battle._fallen.current_en = 0
 	battle._fallen.stored_acts = 0
-	# One act was already spent when the menu opened; REST returns it.
-	battle._fallen.acts_available = 1
+	# REST spends nothing: both acts remain available and go to the stock.
+	battle._fallen.acts_available = 2
 	_choose(battle, 2)
 	for _i in range(20):
 		await get_tree().process_frame
@@ -179,7 +179,7 @@ func test_rest_costs_no_act_stores_acts_and_restores_flat_en() -> void:
 func test_rest_stores_at_most_four_acts() -> void:
 	var battle := await _fresh_battle()
 	battle._fallen.stored_acts = 0
-	battle._fallen.acts_available = 3
+	battle._fallen.acts_available = 4
 	_choose(battle, 2)
 	for _i in range(20):
 		await get_tree().process_frame
