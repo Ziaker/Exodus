@@ -7,6 +7,7 @@ var units: Array[BattleUnit] = []
 var round_number: int = 0
 var turn_order: Array[BattleUnit] = []
 var turn_index: int = 0
+var _active_unit: BattleUnit = null
 
 func add_unit(unit: BattleUnit) -> void:
 	units.append(unit)
@@ -46,16 +47,20 @@ func start_round() -> void:
 		turn_order.append(unit)
 	turn_order.sort_custom(_faster_first)
 	turn_index = 0
+	_active_unit = null
 
 
 func _faster_first(a: BattleUnit, b: BattleUnit) -> bool:
 	return a.stats.agi > b.stats.agi
 
 
-## Returns the next unit that still has an act. Each unit is offered once per
-## pass in AGI order, so 2 acts produce A,B,A,B rather than A,A,B,B.
-## Reactions spend acts through BattleUnit.spend_act() and are skipped here.
+## D-044: a combatant keeps acting until its available acts run out, then the
+## next combatant in AGI order takes over. Two acts produce A,A,B,B instead of
+## the old interleaved A,B,A,B. Reactions still spend from the same act pool.
 func next_actor() -> BattleUnit:
+	if _active_unit != null and _active_unit.is_alive() \
+			and _active_unit.acts_available > 0:
+		return _active_unit
 	var scanned: int = 0
 	while scanned < turn_order.size():
 		if turn_index >= turn_order.size():
@@ -64,11 +69,14 @@ func next_actor() -> BattleUnit:
 		turn_index += 1
 		scanned += 1
 		if unit.is_alive() and unit.acts_available > 0:
+			_active_unit = unit
 			return unit
+	_active_unit = null
 	return null
 
 
 func end_round() -> void:
+	_active_unit = null
 	for unit in units:
 		if unit.is_alive():
 			unit.recover_en(0.2)

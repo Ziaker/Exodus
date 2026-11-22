@@ -33,13 +33,13 @@ func _equal_state() -> BattleState:
 	return state
 
 
-func test_two_acts_are_both_usable_in_agi_order() -> void:
+func test_two_acts_are_consecutive_before_the_next_combatant() -> void:
 	var state := _equal_state()
 	assert_eq(state.units[0].acts_available, 2)
 	assert_eq(state.units[1].acts_available, 2)
 	assert_eq(_take(state), state.units[0])
+	assert_eq(_take(state), state.units[0], "D-044: second act stays with the same unit")
 	assert_eq(_take(state), state.units[1])
-	assert_eq(_take(state), state.units[0])
 	assert_eq(_take(state), state.units[1])
 	assert_null(state.next_actor())
 
@@ -147,10 +147,22 @@ func test_rules_are_symmetric_for_player_and_enemy() -> void:
 	hero.acts_available = 2
 	foe.acts_available = 2
 	assert_eq(_take(state), hero)
-	assert_eq(_take(state), foe)
 	assert_eq(_take(state), hero)
 	assert_eq(_take(state), foe)
+	assert_eq(_take(state), foe)
 	assert_null(state.next_actor())
+
+
+func test_next_round_resets_the_active_combatant() -> void:
+	var state := _equal_state()
+	_take(state)
+	_take(state)
+	assert_eq(_take(state), state.units[1])
+	state.end_round()
+	state.start_round()
+	for unit in state.units:
+		unit.acts_available = 2
+	assert_eq(_take(state), state.units[0], "AGI order still decides who starts the block")
 
 
 func test_superiority_bonus_still_grants_one_act() -> void:

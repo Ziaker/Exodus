@@ -175,8 +175,10 @@
   **mais** 2 novos simultaneamente disponíveis. **IMPLEMENTADO:** o excedente é
   **adiado** ao estoque (`stored_acts`), limitado a 4, e pode reaparecer em rodada
   posterior. Atos novos e bônus entram primeiro; o que sobrar volta ao estoque.
-- Ordem de turnos por `AGI`. Os atos são oferecidos em passagens intercaladas
-  (`A, B, A, B`), e cada ato é consumido por uma ação ou reação.
+- Ordem de turnos por `AGI`. **D-044 (2026-11-21): o combatente esgota seus
+  atos antes de passar a vez** — dois atos produzem `A, A, B, B`, e não mais
+  `A, B, A, B`. Cada ato é consumido por uma ação ou reação.
+  **IMPLEMENTADO** em `BattleState.next_actor()`.
 - **D-007 (2026-11-21): limiar de superioridade por dominância em razão.** Ganha
   **+1 ato** quem possui `SP_próprio / (SP_próprio + SP_rival) > 0,7`. Substitui a
   interpretação literal `SP_próprio > 0,7 × SP_rival`, que premiava ambos os lados
@@ -187,6 +189,29 @@
   Não confundir com a referência visual contextual de SP definida no GDD.
 - **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
   não autoriza um quinto ato. O excedente é adiado ao estoque pela mesma regra.
+
+### D-043 — seleção antecipada de vários atos e ataques encadeados; DESIGN, NÃO IMPLEMENTADO
+
+- O jogador pode **planejar em conjunto comandos para 1–4 atos disponíveis**
+  (limite D-005) antes de iniciar a resolução. A interface marca **em verde**
+  cada um dos ACT comprometidos no planejamento, distinguindo previsão,
+  disponibilidade e ato efetivamente gasto.
+- Quando mais de um dos comandos selecionados for ATTACK, o HUD deverá
+  **reutilizar a mesma linha de ritmo no inimigo alvo**, resolvendo o timing
+  de cada ataque e só então iniciando o próximo marcador. Cada ataque
+  conserva seu julgamento mecânico independente (POINT/BEAM/MISS), dano,
+  contato e efeitos; não há acertos automáticos nem soma implícita de danos.
+- **D-044 (2026-11-21) resolve o conflito de ordem:** a sequência planejada
+  é executada como **bloco contínuo** — o combatente resolve todos os atos
+  comprometidos antes que qualquer outro combatente aja. A ordem entre
+  combatentes continua por AGI, mas dentro do bloco não há intercalação.
+  **IMPLEMENTADO** em `BattleState.next_actor()`; a fila/interface green-ACT
+  descrita acima permanece **design, não implementada no motor Godot**.
+- **PENDENTES:** entrada e validação de pacotes de comandos, possibilidade
+  de reação entre seus passos, alvo invalidado, cancelamento/interrupção,
+  efeitos de mudança de ACT durante a cadeia e interação detalhada com
+  REST D-038. O HTML independente testa um bloco contínuo apenas para
+  inspeção do fluxo e dos feedbacks, não como regra de Godot homologada.
 
 ### Reações da Rodada 2 — D-014 (CONFIRMADO como design; não implementado)
 

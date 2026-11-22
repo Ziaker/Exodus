@@ -92,7 +92,8 @@ de Herodes e de uma figura equivalente a Jesus. Definições definitivas dessas 
 
 ### 1.2 Identidade mecânica — **CONFIRMADO**
 
-Turnos intercalados, ações e reações, reflexos, atos armazenáveis e Superiority Points.
+Turnos em bloco contínuo por combatente (D-044), ações e reações, reflexos,
+atos armazenáveis e Superiority Points.
 Atributos: HP, EN, ATK, MAK, DEF, MEF, AGI e SP. SP representa a superioridade dos
 combatentes e influencia diferentes aspectos do desempenho. Fallen absorve adversários
 e desenvolve atributos sem níveis tradicionais. Magia, oração humana, economia de EN,
@@ -131,8 +132,9 @@ narrativa — ainda não foi definido.
 ## 4. Sistema de combate
 
 - Regras oficiais: `docs/COMBAT_SPEC.md`.
-- Formato: turnos intercalados com Ação e Reação; ordem por AGI; até 4 inimigos;
-  protagonista + 1 aliado no protótipo. **CONFIRMADO**.
+- Formato: turnos em **bloco contínuo por combatente** (D-044) com Ação e
+  Reação; ordem **entre** combatentes por AGI; até 4 inimigos; protagonista
+  + 1 aliado no protótipo. **CONFIRMADO**.
 - Protótipo atual: cena `res://scenes/battle/Battle.tscn`, dois inimigos genéricos e
   um aliado placeholder. **IMPLEMENTADO**; interface em inglês. **CONFIRMADO**.
 - Fundo plano `#333333` — **SUBSTITUÍDO** localmente por battleback e janelas inspiradas
@@ -143,7 +145,7 @@ narrativa — ainda não foi definido.
 
 | ID | Gravidade | Achado | Estado |
 |---|---|---|---|
-| A-01 | CRÍTICO | `next_actor()` oferecia cada unidade uma única vez por rodada. | **CORRIGIDO:** passagens intercaladas por AGI; atos consumidos por ações e reações; 12 testes de estado. |
+| A-01 | CRÍTICO | `next_actor()` oferecia cada unidade uma única vez por rodada. | **CORRIGIDO:** atos consumidos por ações e reações; ordem final em bloco contínuo por combatente conforme D-044; testes de estado. |
 | A-02 | ALTO | Limiar literal `SP_atual > 0,7 × SP_rival` premiava ambos os lados. | **CORRIGIDO:** D-007 substitui por dominância em razão. |
 | A-03 | MÉDIO | Reação do jogador não era utilizável para defesa; ataques inimigos exigiam entrada manual. | **CORRIGIDO:** entrada manual apenas para personagens do jogador; IA resolve seus próprios tempos; defesa manual exige reação declarada e 1 ato. |
 | A-04 | MÉDIO | IA não tinha resolução própria de ritmo. | **IMPLEMENTADO como execução provisória:** mesmas zonas POINT/BEAM/MISS com tentativas extras por vantagem; sem nova regra de design. |
@@ -505,6 +507,47 @@ e a D-022 (autoacerto sem reação
 declarada). Nenhum código foi alterado.
 
 ---
+
+### 7.4 D-043 — planejamento conjunto de ações e ritmo encadeado — **DESIGN CONFIRMADO, MOTOR NÃO ALTERADO**
+
+Decisão explícita do diretor para o HUD e o fluxo de combate (2026-11-21):
+
+- O jogador **não precisa escolher e executar um único comando por vez**.
+  Pode **montar antecipadamente uma sequência de comandos** que comprometa
+  1, 2, 3 ou 4 atos disponíveis, observando o teto D-005. Escolher
+  vários comandos antes da resolução não concede atos adicionais.
+- Cada ACT correspondente a uma ação **planejada** fica **aceso/brilhando em
+  verde**, em posição própria entre os quatro marcadores ACT do personagem,
+  indicando claramente quantos atos da sequência foram comprometidos.
+  Distinguir atos disponíveis, planejados e efetivamente gastos; não
+  subtrair mecanicamente o ato apenas por editar uma prévia.
+- Se a sequência incluir **múltiplos ATTACKs**, os timings ofensivos devem
+  formar uma **cadeia de jogo de ritmo na mesma linha sobre o inimigo alvo**:
+  um reflexo é resolvido e **só então** inicia o próximo marcador/timing.
+  Cada ataque mantém avaliação mecânica própria e sua aplicação de efeitos;
+  «simultaneamente» descreve o **planejamento combinado**, não acertos no
+  mesmo instante. A barra nunca exige janela central sobre os personagens.
+- Preservar as regras vigentes de custo por ato, uso de REACT como parte do
+  mesmo estoque, REST D-038 (sem custo, +2 EN e armazenamento) e o limite de
+  quatro; não inventar alterações em fórmulas de dano, SP ou Press Turn.
+
+**D-044 (2026-11-21) resolve o conflito:** o diretor escolheu a execução
+em **bloco contínuo** — os 2–4 ataques planejados resolvem antes de qualquer
+outro combatente agir. `BattleState.next_actor()` agora devolve o mesmo
+combatente enquanto ele tiver atos (`A, A, B, B`); a ordem entre combatentes
+continua por AGI. **IMPLEMENTADO** com testes de estado. A fila visual com
+ACT verdes permanece no protótipo HTML, sem implementação no motor Godot.
+
+**Protótipo HTML de teste:** `exodus_batalha_jogavel.html` (artefato
+independente, fora do repositório) apresenta fila, ACT verde, desfazer,
+botão de execução e sequência contínua de ataques; a execução em bloco
+é uma **hipótese de demonstração**, não prova de comportamento homologado
+no Godot. Outros pontos pendentes: consumo e destino de ações cuja seleção
+se torna inválida antes da resolução, reações/cancelamentos dentro da
+cadeia, variação de alvo entre ataques e regras de fila quando REST
+aparece entre comandos. Nenhuma dessas hipóteses passa a valer no motor
+sem decisão específica.
+
 
 ## 8. Ritmo, bloqueio e desvio — **CONFIRMADO**
 
@@ -1916,6 +1959,10 @@ rodada.
     **IMPLEMENTADO** com três testes de regressão; substitui a regra antiga
     de D-006 sem alterar a regeneração automática de 20% no fim da rodada.
 
+26. **D-044:** atos executados em bloco contínuo por combatente, com
+    ordem entre combatentes por AGI. **IMPLEMENTADO.** Substitui a
+    intercalação `A, B, A, B` sem alterar custo por comando ou reações.
+
 ## Apêndice A — Registro de decisões
 
 Formato: ID · data · decisão · estado · impacto documental.
@@ -2348,6 +2395,8 @@ Formato: ID · data · decisão · estado · impacto documental.
 
 - **D-042 · 2026-11-21 (Rodada 17: 1A; 2A; 3A; 4A; 5A; 6A; 7D; 8A)** · **DESIGN APROVADO; NÃO IMPLEMENTADO nesta rodada**: (1A) cobertura combinada **POINT+BEAM de 30%** para especiais, com POINT dinâmico 8%–16% (D-034) e BEAM restante 22%–14%; (2A) proibir sobreposição dos interiores dos intervalos, bordas coincidentes usam POINT>BEAM>MISS; (3A) regiões POINT separadas por intervalo não-POINT estritamente positivo, sem novo piso percentual; (4A) pesos POINT finitos, estritamente positivos e normalizados proporcionalmente, com mínimo 4% por região; (5A) centros POINT normalizados fixos, expansão simétrica e invalidação por colisão/limites; (6A) perfis especiais de ataque e defesa independentes; (7D) desempate de maior janela POINT pela **prioridade de regiões declarada**, diferente da prioridade de variantes; (8A) erro triangular da IA especial como **média de duas amostras uniformes independentes em [−L,+L]**, L de 70/40/20 ms conforme habilidade, sem amostras no autoacerto sem reação D-022. **PENDENTES:** orçamento BEAM dinâmico entre intervalos, condições de separação/overlap, viabilidade de variantes em todos os estados, tempos simulados fora da barra, esquema de RNG e testes. **D-034/D-035 preservadas e vigentes; D-038 REST verificada como IMPLEMENTADA na main atual**. Sem alteração de código/testes/assets/saves. **Impacto documental:** GDD §§8.1.14 e 20, `docs/COMBAT_SPEC.md`, índice `docs/DECISIONS.md`.
 
+**COLISÃO DE ID:** D-043 foi usado por duas decisões diferentes. Ambas preservadas até decisão do autor.
+
 - **D-043 · 2026-11-21** · **Reação de quem não é o alvo — CONFIRMADO e IMPLEMENTADO:**
   quando um inimigo anuncia um ataque, só o personagem **atacado** pode bloquear
   (DEFEND) e mantém todos os comandos como reação. Um aliado que **não é o alvo** não
@@ -2356,6 +2405,28 @@ Formato: ID · data · decisão · estado · impacto documental.
   Implementado em `playable_controller.gd` (`_commands()`), com teste de regressão em
   `tests/verify_playable_reactions.gd`. Impacto: `COMBAT_SPEC.md` (Atos e reações) e
   `docs/DECISIONS.md`.
+
+- **D-043 · 2026-11-21** · **Fila de comandos e ritmo de ataques encadeados**:
+  o jogador pode compor previamente uma sequência que comprometa até quatro
+  ACT disponíveis, com marcadores de ACT comprometidos em verde. Quando a
+  sequência contém vários ataques, os reflexos usam a mesma linha sobre
+  o alvo, iniciando o próximo timing após a resolução do anterior.
+  **DESIGN CONFIRMADO no que é fila/visual; MOTOR NÃO ALTERADO por esta
+  decisão.** O conflito de ordem foi resolvido por **D-044** (bloco
+  contínuo), implementado em `BattleState.next_actor()`. Ações inválidas,
+  reações durante a cadeia e detalhes de custo/compromisso seguem pendentes.
+  Impacto documental: GDD §7.4 e `docs/COMBAT_SPEC.md`, índice D-043.
+
+- **D-044 · 2026-11-21 (decisão do diretor sobre a ordem da fila D-043)** ·
+  Os atos de um combatente são **executados em bloco contínuo**: o mesmo
+  personagem resolve todos os atos disponíveis antes que outro combatente
+  ajia. Dois atos produzem `A, A, B, B`, em vez da intercalação `A, B, A, B`.
+  A ordem **entre** combatentes continua determinada por AGI.
+  **CONFIRMADO e IMPLEMENTADO** em `BattleState.next_actor()`, com testes em
+  `test_battle_state.gd`. Substitui apenas a intercalação de atos; não altera
+  custo por comando, reações, D-005, D-038 nem fórmulas de dano/SP.
+  Impacto: GDD §§1, 4.1, 7.4, 21, `COMBAT_SPEC.md` §Atos e reações.
+  A fila visual com ACT verdes continua fora do motor Godot.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
