@@ -506,6 +506,49 @@ declarada). Nenhum código foi alterado.
 
 ---
 
+### 7.4 D-043 — planejamento conjunto de ações e ritmo encadeado — **DESIGN CONFIRMADO, MOTOR NÃO ALTERADO**
+
+Decisão explícita do diretor para o HUD e o fluxo de combate (2026-11-21):
+
+- O jogador **não precisa escolher e executar um único comando por vez**.
+  Pode **montar antecipadamente uma sequência de comandos** que comprometa
+  1, 2, 3 ou 4 atos disponíveis, observando o teto D-005. Escolher
+  vários comandos antes da resolução não concede atos adicionais.
+- Cada ACT correspondente a uma ação **planejada** fica **aceso/brilhando em
+  verde**, em posição própria entre os quatro marcadores ACT do personagem,
+  indicando claramente quantos atos da sequência foram comprometidos.
+  Distinguir atos disponíveis, planejados e efetivamente gastos; não
+  subtrair mecanicamente o ato apenas por editar uma prévia.
+- Se a sequência incluir **múltiplos ATTACKs**, os timings ofensivos devem
+  formar uma **cadeia de jogo de ritmo na mesma linha sobre o inimigo alvo**:
+  um reflexo é resolvido e **só então** inicia o próximo marcador/timing.
+  Cada ataque mantém avaliação mecânica própria e sua aplicação de efeitos;
+  «simultaneamente» descreve o **planejamento combinado**, não acertos no
+  mesmo instante. A barra nunca exige janela central sobre os personagens.
+- Preservar as regras vigentes de custo por ato, uso de REACT como parte do
+  mesmo estoque, REST D-038 (sem custo, +2 EN e armazenamento) e o limite de
+  quatro; não inventar alterações em fórmulas de dano, SP ou Press Turn.
+
+**CONFLITO MECÂNICO NÃO RESOLVIDO:** o contrato de turnos vigente em
+`docs/COMBAT_SPEC.md` e `BattleState.next_actor()` oferece atos em
+passagens **intercaladas por AGI (A, B, A, B)**. Resolver um pacote de
+2–4 ações inteiro, sem dar oportunidades aos demais combatentes entre os
+ataques, **mudaria essa ordem**. O diretor ainda não definiu
+explicitamente se o novo combo prevalece sobre a intercalagem ou se
+a fila de comandos é preparada em conjunto mas executada por oportunidades
+intercaladas. **Não substituir a regra do motor por inferência.**
+
+**Protótipo HTML de teste:** `exodus_batalha_jogavel.html` (artefato
+independente, fora do repositório) apresenta fila, ACT verde, desfazer,
+botão de execução e sequência contínua de ataques; a execução em bloco
+é uma **hipótese de demonstração**, não prova de comportamento homologado
+no Godot. Outros pontos pendentes: consumo e destino de ações cuja seleção
+se torna inválida antes da resolução, reações/cancelamentos dentro da
+cadeia, variação de alvo entre ataques e regras de fila quando REST
+aparece entre comandos. Nenhuma dessas hipóteses passa a valer no motor
+sem decisão específica.
+
+
 ## 8. Ritmo, bloqueio e desvio — **CONFIRMADO**
 
 Aplica-se a todos os ataques físicos, de ambas as partes. Barra com marcador e janela
@@ -2347,6 +2390,18 @@ Formato: ID · data · decisão · estado · impacto documental.
 - **D-041 · 2026-11-21 (Rodada 16: 1A; 2A; 3A; 4A; 5A; 6C; 7B; 8A)** · **CONFIRMADO como design; NÃO IMPLEMENTADO nesta rodada**: (1A) `Time.get_ticks_usec()` na origem e no handler de input com verificação da API real; (2A) arbitragem por tempo mecânico e input elegível prioritário ao timeout em t=1 s, sem dependência dos callbacks; (3A) somente novas transições de tecla após ativação, sem reaproveitar confirmação nem `echo`; (4A) para replay de fronteiras, registrar instante capturado na precisão de origem disponível, limites resolvidos, resultado e versão além do µs arredondado; (5A) testes de avaliador puro com tempos injetados **e** integração de cena a 30/60/120 FPS; (6C) perfis **especiais declaram BEAM explícito** validado junto às regiões POINT, sem mudar BEAM comum; (7B) POINT total de D-034 dividido proporcionalmente por **pesos autorais** do perfil, invalidando variantes com região <4% sem fallback; (8A) streams de RNG independentes derivados de seed, IDs estáveis, perfil, índice de execução e propósito. **PENDENTES:** protocolo de eventos input/timeout, intervalos/overlaps BEAM, domínio de pesos, cobertura de estados por variantes, algoritmo/estado/versão de RNG, esquema JSON de replay e testes reais. **Preservadas** D-022–D-025 e D-028–D-040, especialmente D-034/D-035 vigentes, D-038 REST fora do escopo. **Impacto exclusivamente documental:** GDD §§8.1.13, 19.3, 20; `docs/COMBAT_SPEC.md`; `docs/DECISIONS.md`. Código, testes, recursos e saves não alterados.
 
 - **D-042 · 2026-11-21 (Rodada 17: 1A; 2A; 3A; 4A; 5A; 6A; 7D; 8A)** · **DESIGN APROVADO; NÃO IMPLEMENTADO nesta rodada**: (1A) cobertura combinada **POINT+BEAM de 30%** para especiais, com POINT dinâmico 8%–16% (D-034) e BEAM restante 22%–14%; (2A) proibir sobreposição dos interiores dos intervalos, bordas coincidentes usam POINT>BEAM>MISS; (3A) regiões POINT separadas por intervalo não-POINT estritamente positivo, sem novo piso percentual; (4A) pesos POINT finitos, estritamente positivos e normalizados proporcionalmente, com mínimo 4% por região; (5A) centros POINT normalizados fixos, expansão simétrica e invalidação por colisão/limites; (6A) perfis especiais de ataque e defesa independentes; (7D) desempate de maior janela POINT pela **prioridade de regiões declarada**, diferente da prioridade de variantes; (8A) erro triangular da IA especial como **média de duas amostras uniformes independentes em [−L,+L]**, L de 70/40/20 ms conforme habilidade, sem amostras no autoacerto sem reação D-022. **PENDENTES:** orçamento BEAM dinâmico entre intervalos, condições de separação/overlap, viabilidade de variantes em todos os estados, tempos simulados fora da barra, esquema de RNG e testes. **D-034/D-035 preservadas e vigentes; D-038 REST verificada como IMPLEMENTADA na main atual**. Sem alteração de código/testes/assets/saves. **Impacto documental:** GDD §§8.1.14 e 20, `docs/COMBAT_SPEC.md`, índice `docs/DECISIONS.md`.
+
+- **D-043 · 2026-11-21** · **Fila de comandos e ritmo de ataques encadeados**:
+  o jogador pode compor previamente uma sequência que comprometa até quatro
+  ACT disponíveis, com marcadores de ACT comprometidos em verde. Quando a
+  sequência contém vários ataques, os reflexos usam a mesma linha sobre
+  o alvo, iniciando o próximo timing após a resolução do anterior.
+  **DESIGN CONFIRMADO; MOTOR NÃO ALTERADO. CONFLITO PENDENTE:** a ordem
+  intercalada por AGI `A, B, A, B` continua vigente em
+  `BattleState.next_actor()`; o protótipo HTML testa combo em bloco
+  sem homologar a prioridade entre turnos. Ações inválidas, reações
+  durante cadeia e detalhes de custo/compromisso permanecem pendentes.
+  Impacto documental: GDD §7.4 e `docs/COMBAT_SPEC.md`, índice D-043.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
