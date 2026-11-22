@@ -186,6 +186,29 @@
 - **Consequência de D-005:** o bônus de SP respeita o teto de 4 atos disponíveis;
   não autoriza um quinto ato. O excedente é adiado ao estoque pela mesma regra.
 
+### D-043 — seleção antecipada de vários atos e ataques encadeados; DESIGN, NÃO IMPLEMENTADO
+
+- O jogador pode **planejar em conjunto comandos para 1–4 atos disponíveis**
+  (limite D-005) antes de iniciar a resolução. A interface marca **em verde**
+  cada um dos ACT comprometidos no planejamento, distinguindo previsão,
+  disponibilidade e ato efetivamente gasto.
+- Quando mais de um dos comandos selecionados for ATTACK, o HUD deverá
+  **reutilizar a mesma linha de ritmo no inimigo alvo**, resolvendo o timing
+  de cada ataque e só então iniciando o próximo marcador. Cada ataque
+  conserva seu julgamento mecânico independente (POINT/BEAM/MISS), dano,
+  contato e efeitos; não há acertos automáticos nem soma implícita de danos.
+- **CONFLITO A RESOLVER COM O DIRETOR:** a ordem vigente oferece ações
+  intercaladas por AGI (`A, B, A, B`), implementada em
+  `BattleState.next_actor()`. Ainda não está determinado se a seleção
+  antecipada executa um **bloco contínuo** antes do turno do oponente ou
+  se a **fila é consumida ao longo de turnos intercalados**. Até uma
+  decisão explícita, **não alterar a ordem do motor**.
+- **PENDENTES:** entrada e validação de pacotes de comandos, possibilidade
+  de reação entre seus passos, alvo invalidado, cancelamento/interrupção,
+  efeitos de mudança de ACT durante a cadeia e interação detalhada com
+  REST D-038. O HTML independente testa um bloco contínuo apenas para
+  inspeção do fluxo e dos feedbacks, não como regra de Godot homologada.
+
 ### Reações da Rodada 2 — D-014 (CONFIRMADO como design; não implementado)
 
 - **3A:** sem atos disponíveis, o personagem **não pode bloquear nem desviar**.
