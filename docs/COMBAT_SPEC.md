@@ -1307,10 +1307,20 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
   direto ao alvo. Uma habilidade de 2 ACT ocupa dois atos do plano. O submenu também
   aparece na **reação** (habilidades podem ser usadas como reação).
 - **Lunge** (1 ACT, 4 EN): **poder 5** na fórmula poder×ATK÷DEF, **dois golpes** numa
-  **só barra com duas marcas, a 35% e 65%**. Um aperto vale para a primeira marca até o
-  ponteiro passar do meio entre as duas; depois disso, a primeira conta como MISS. A
-  defesa do jogador contra o Lunge inimigo usa a mesma barra de duas marcas, e cada aperto
-  defende um golpe.
+  **duas barras normais, uma por golpe, uma após a outra** (correção do criador em
+  2026-11-23: "nunca foi uma só, sempre foram 2"; a redação anterior, uma barra com marcas
+  a 35% e 65%, estava errada). Um aperto por barra. A defesa do jogador contra o Lunge
+  inimigo também usa duas barras seguidas, uma por golpe. Visual (criador 2026-11-23): um
+  único efeito do ataque normal tocado normal e espelhado ao mesmo tempo (um X); os dois
+  números de dano saem um após o outro, sem repetir o efeito.
+- **Efeitos de letras hebraicas das habilidades (aprovados pelo criador em 2026-11-23,
+  `scripts/battle/skill_letters.gd`), no jogador e no inimigo:** Heat wave = onda de letras
+  laranja atravessando a fileira e chamas de letras em cada alvo atingido; cada queimadura
+  solta brasas; Bleedbuff = letras vermelhas escorrendo e puxadas de volta, anel vermelho;
+  Energy Eat = letras ciano em espiral para dentro, anel. No herói o efeito fica dentro do
+  cartão. Magia mostra só o número (cues `MAGIC`/`MAGIC_BLOCK`, sem a garra). Ataques físicos
+  (ATTACK, Lunge) **não** têm letras. O golpe normal não pisca mais o fundo; o clarão de
+  fundo ficou só no Ra'am e em cura/REST/buff (criador 2026-11-23).
 - **Bleedbuff** (2 ACT, 4 HP): **+1 estágio de ATK = +25% de ATK**, por **1 round inteiro**
   (até o mesmo ponto do round seguinte). Usado de novo, **acumula**. Com **4 HP ou menos**,
   não pode ser usado.

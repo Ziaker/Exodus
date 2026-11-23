@@ -53,6 +53,7 @@ class DamageLayer extends Control:
 			if effect.unit != null and effect.unit.is_player:
 				# Creator 2026-11-22: just above the hero's card; its bottom touches the card.
 				pos.y = r.end.y - fx.HERO_NUMBER_GAP
+			pos += effect.get("offset", Vector2.ZERO)
 			var alpha: float = fx.number_alpha(effect.age, effect.duration)
 			if alpha <= 0.0:
 				continue
@@ -157,7 +158,11 @@ const IMMEDIATE_LABELS := ["MISS", "DODGE"]
 const NUMBER_INK := Color("fff3d0")
 const LETHAL_INK := Color("ff3b3b")
 ## D-048 RAAM / RAAM_BLOCK: the approved thunder (pray_fx.gd) is the impact; only the number here.
-const LETHAL_KINDS := ["HIT", "CRITICAL", "BLOCK", "RAAM", "RAAM_BLOCK"]
+## HIT_NEXT / BLOCK_NEXT (creator 2026-11-23, Lunge): a further hit of the same effect instance -
+## no animation, only its number, shown right after the first one and a little lower.
+const LETHAL_KINDS := ["HIT", "CRITICAL", "BLOCK", "RAAM", "RAAM_BLOCK", "MAGIC", "MAGIC_BLOCK", "HIT_NEXT", "BLOCK_NEXT"]
+const NEXT_NUMBER_GAP := 0.25
+const NEXT_NUMBER_OFFSET := Vector2(14, 22)
 
 
 ## Creator 2026-11-22: every number stays opaque for the first half of its life
@@ -181,8 +186,8 @@ static func label_for(kind: String, amount: int) -> String:
 		"HEAL": return "+%d HP" % amount
 		"REST": return "+%d EN" % amount
 		"ABSORBED": return "ABSORBED"
-		"BURN", "RAAM": return "-%d" % amount
-		"RAAM_BLOCK": return "BLOCK -%d" % amount
+		"BURN", "RAAM", "MAGIC", "HIT_NEXT": return "-%d" % amount
+		"RAAM_BLOCK", "MAGIC_BLOCK", "BLOCK_NEXT": return "BLOCK -%d" % amount
 		"BUFF": return "ATK UP"
 	return ""
 
@@ -195,7 +200,8 @@ func number_rect(effect: Dictionary) -> Rect2:
 	return r
 
 
-func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = null) -> void:
+## cross (creator 2026-11-23, Lunge): the hit cells play normal and mirrored at once, an X.
+func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = null, cross: bool = false) -> void:
 	if unit == null: return
 	history.append(kind)
 	var profile_name := "target"
@@ -204,7 +210,7 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		"ABSORB": profile_name = "absorb"
 		"HEAL", "REST", "ABSORBED", "BUFF": profile_name = "heal_flash"
 	var profile: Dictionary = library.profiles[profile_name]
-	if kind in ["MISS", "DODGE", "WHITEN", "BURN", "RAAM", "RAAM_BLOCK"]:
+	if kind in ["MISS", "DODGE", "WHITEN", "BURN", "RAAM", "RAAM_BLOCK", "MAGIC", "MAGIC_BLOCK", "HIT_NEXT", "BLOCK_NEXT"]:
 		# No impact cells, hurt flashes or hit sounds for a non-contact result.
 		profile = {"frames": [[], [], [], [], [], [], [], [], []], "sheets": ["", ""], "timings": []}
 	var target_rect := _unit_rect(unit)
@@ -216,7 +222,7 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(container)
 	var cell_sprites: Array[Sprite2D] = []
-	for i in 16:
+	for i in (32 if cross else 16):
 		var sprite := Sprite2D.new()
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		sprite.hide()
@@ -239,7 +245,15 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		ghost.material = material
 		container.add_child(ghost)
 		container.move_child(ghost, 0)
-	var effect := {"kind": kind, "unit": unit, "amount": amount, "age": 0.0, "duration": profile.frames.size() / float(library.fps), "profile": profile, "container": container, "sprites": cell_sprites, "target_rect": target_rect, "clip_rect": clip_rect, "last_frame": -1, "flash_left": 0.0, "flash_duration": 1.0, "flash_color": Color.WHITE, "ghost": ghost, "dying": not unit.is_alive(), "fit": minf(1.0, target_rect.size.y / 190.0)}
+	var effect := {"kind": kind, "unit": unit, "amount": amount, "age": 0.0, "duration": profile.frames.size() / float(library.fps), "profile": profile, "container": container, "sprites": cell_sprites, "target_rect": target_rect, "clip_rect": clip_rect, "last_frame": -1, "flash_left": 0.0, "flash_duration": 1.0, "flash_color": Color.WHITE, "ghost": ghost, "cross": cross, "dying": not unit.is_alive(), "fit": minf(1.0, target_rect.size.y / 190.0)}
+	if kind in ["HIT_NEXT", "BLOCK_NEXT"]:
+		# Its number follows the number of the hit animation still playing on this unit.
+		var first := 0.0
+		for other in effects:
+			if other.unit == unit and other != effect: first = maxf(first, float(other.duration) - float(other.age))
+		effect.duration = first + NEXT_NUMBER_GAP
+		# Over a hero the number line sits right above the card: the next one goes to the side.
+		effect["offset"] = Vector2(NEXT_NUMBER_OFFSET.x * 3.0, 0) if unit.is_player else NEXT_NUMBER_OFFSET
 	if kind == "WHITEN":
 		effect.duration = WHITEN_FRAMES / WHITEN_FPS
 	effects.append(effect)
@@ -258,7 +272,7 @@ func _process(delta: float) -> void:
 				var number := {"kind": effect.kind, "amount": effect.amount, "unit": effect.unit,
 					"target_rect": effect.target_rect, "age": 0.0, "duration": effect.duration,
 					"dying": effect.dying}
-				for key in ["lines", "label_rect", "ink"]:
+				for key in ["lines", "label_rect", "ink", "offset"]:
 					if effect.has(key): number[key] = effect[key]
 				numbers.append(number)
 		else: _update_effect(effect, delta)
@@ -271,6 +285,30 @@ func _process(delta: float) -> void:
 	queue_redraw()
 	if damage_layer != null:
 		damage_layer.queue_redraw()
+
+
+func _place_cell(effect: Dictionary, sprite: Sprite2D, cell: Array, mirrored: bool) -> bool:
+	var pattern := int(cell[0])
+	var sheet: String = effect.profile.sheets[0 if pattern < 100 else 1]
+	if sheet.is_empty() or not textures.has(sheet):
+		sprite.hide()
+		return false
+	var tile := pattern % 100
+	var atlas := AtlasTexture.new()
+	atlas.atlas = textures[sheet]
+	atlas.region = Rect2((tile % 5) * 192, (tile / 5) * 192, 192, 192)
+	sprite.texture = atlas
+	var offset := Vector2(-float(cell[1]) if mirrored else float(cell[1]), float(cell[2]))
+	sprite.position = effect.target_rect.get_center() - effect.clip_rect.position + offset * effect.fit
+	sprite.scale = Vector2.ONE * (float(cell[3]) / 100.0) * effect.fit
+	sprite.rotation_degrees = float(cell[4]) if mirrored else -float(cell[4])
+	sprite.flip_h = not bool(cell[5]) if mirrored else bool(cell[5])
+	sprite.modulate.a = float(cell[6]) / 255.0
+	var material := CanvasItemMaterial.new()
+	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD if int(cell[7]) == 1 else (CanvasItemMaterial.BLEND_MODE_SUB if int(cell[7]) == 2 else CanvasItemMaterial.BLEND_MODE_MIX)
+	sprite.material = material
+	sprite.show()
+	return true
 
 
 func _update_effect(effect: Dictionary, delta: float) -> void:
@@ -286,37 +324,22 @@ func _update_effect(effect: Dictionary, delta: float) -> void:
 				effect.flash_left = duration
 				effect.flash_duration = duration
 				applied_flashes += 1
-			elif int(timing.scope) == 2:
+			elif int(timing.scope) == 2 and effect.kind not in ["HIT", "CRITICAL", "BLOCK"]:
 				# Original viewport flash restricted to artwork; the HUD/log stay legible.
+				# Creator 2026-11-23: normal hits (claw/bite) no longer flash the background.
 				screen_flashes.append({"color": color, "left": duration, "duration": duration})
 				applied_flashes += 1
 		var cells: Array = effect.profile.frames[frame_index]
 		for i in effect.sprites.size():
 			var sprite: Sprite2D = effect.sprites[i]
-			if i >= cells.size():
+			# Sprites 16..31 exist only for a cross hit: the same cell, mirrored.
+			var mirrored: bool = i >= 16
+			var c: int = i - 16 if mirrored else i
+			if c >= cells.size():
 				sprite.hide()
 				continue
-			var cell: Array = cells[i]
-			var pattern := int(cell[0])
-			var sheet: String = effect.profile.sheets[0 if pattern < 100 else 1]
-			if sheet.is_empty() or not textures.has(sheet):
-				sprite.hide()
-				continue
-			var tile := pattern % 100
-			var atlas := AtlasTexture.new()
-			atlas.atlas = textures[sheet]
-			atlas.region = Rect2((tile % 5) * 192, (tile / 5) * 192, 192, 192)
-			sprite.texture = atlas
-			sprite.position = effect.target_rect.get_center() - effect.clip_rect.position + Vector2(cell[1], cell[2]) * effect.fit
-			sprite.scale = Vector2.ONE * (float(cell[3]) / 100.0) * effect.fit
-			sprite.rotation_degrees = -float(cell[4])
-			sprite.flip_h = bool(cell[5])
-			sprite.modulate.a = float(cell[6]) / 255.0
-			var material := CanvasItemMaterial.new()
-			material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD if int(cell[7]) == 1 else (CanvasItemMaterial.BLEND_MODE_SUB if int(cell[7]) == 2 else CanvasItemMaterial.BLEND_MODE_MIX)
-			sprite.material = material
-			sprite.show()
-			played_cells += 1
+			if _place_cell(effect, sprite, cells[c], mirrored):
+				played_cells += 1
 		effect.last_frame = frame_index
 	var intensity: float = effect.flash_color.a * effect.flash_left / maxf(0.001, effect.flash_duration)
 	if effect.kind == "WHITEN":

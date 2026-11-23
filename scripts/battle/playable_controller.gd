@@ -12,6 +12,7 @@ const COMPACT_RHYTHM = preload("res://scripts/battle/compact_rhythm_bar.gd")
 const EFFECTS_SCRIPT = preload("res://scripts/battle/battle_effects.gd")
 const COUNTER_RHYTHM = preload("res://scripts/battle/counter_rhythm_bar.gd")
 const PRAYER_FLOW = preload("res://scripts/battle/prayer_flow.gd")
+const SKILL_LETTERS = preload("res://scripts/battle/skill_letters.gd")
 var hud: Control
 var fx: Control
 const ABSORB_VFX = preload("res://scripts/battle/absorb_vfx.gd")
@@ -74,6 +75,12 @@ var turn_owner: BattleUnit
 var _announced_skill: StringName = &""
 ## D-048: Yoch's prayer (PRAY command, PP, Refuah / Haganah / Ra'am).
 var prayer: RefCounted
+## Hebrew-letter effects of Lunge, Heat wave, Bleedbuff and Energy Eat (creator 2026-11-23).
+var letter_fx: Node2D
+## Creator 2026-11-23: a Lunge hit shows the normal hit effect normal + mirrored (an X).
+var cross_hit := false
+## Creator 2026-11-23: the Lunge's second hit is part of the same effect: only its number.
+var next_hit := false
 
 
 func _build_ui() -> void:
@@ -113,6 +120,11 @@ func _build_ui() -> void:
 	absorb_fx.hud = hud
 	add_child(absorb_fx)
 	prayer = PRAYER_FLOW.new(self)
+	letter_fx = SKILL_LETTERS.new()
+	letter_fx.name = "SkillLetters"
+	letter_fx.battle = self
+	letter_fx.hud = hud
+	add_child(letter_fx)
 
 
 func _refresh_all() -> void:
@@ -637,7 +649,13 @@ func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, ma
 	hud.feedback = "%s | %s HP %d/%d%s | %s: %d ACTS left" % [outcome, short_name(defender), defender.current_hp, defender.stats.max_hp, " DOWN" if not defender.is_alive() else "", short_name(attacker), attacker.acts_available]
 	phase_text = "RESULT: " + outcome
 	fx.stop_cues()
-	fx.play("DODGE" if outcome.begins_with("DODGE") else ("MISS" if outcome.begins_with("MISS") else ("BLOCK" if outcome.begins_with("BLOCK") else ("CRITICAL" if outcome.contains("CRITICAL") else "HIT"))), defender, damage, attacker)
+	var cue := "DODGE" if outcome.begins_with("DODGE") else ("MISS" if outcome.begins_with("MISS") else ("BLOCK" if outcome.begins_with("BLOCK") else ("CRITICAL" if outcome.contains("CRITICAL") else "HIT")))
+	# Magic: the letter effect is the impact, so the effect layer shows only the number.
+	if magic and cue in ["HIT", "CRITICAL", "BLOCK"]:
+		cue = "MAGIC_BLOCK" if cue == "BLOCK" else "MAGIC"
+	if next_hit and cue in ["HIT", "CRITICAL", "BLOCK"]:
+		cue = "BLOCK_NEXT" if cue == "BLOCK" else "HIT_NEXT"
+	fx.play(cue, defender, damage, attacker, cross_hit and not magic and not next_hit)
 	_refresh_all()
 
 
@@ -1188,11 +1206,13 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 	if d.kind == "buff":
 		_add_stage(unit)
 		fx.play("BUFF", unit, int(d.hp))
+		letter_fx.self_skill(unit, "buff")
 		_append_log("%s: -%d HP, +1 ATK stage (%d active, ATK x%.2f)." % [unit.display_name, int(d.hp),
 			unit.atk_stages.size(), 1.0 + SkillBook.ATK_STAGE_BONUS * unit.atk_stages.size()])
 	else:
 		var healed := unit.heal(int(d.heal) + extra)
 		fx.play("HEAL", unit, healed)
+		letter_fx.self_skill(unit, "heal")
 		_append_log("%s eats energy: +%d HP (%d extra EN)." % [unit.display_name, healed, extra])
 	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	hud.feedback = "%s: HP %d/%d | EN %d/%d" % [short_name(unit), unit.current_hp, unit.stats.max_hp, unit.current_en, unit.stats.max_en]
@@ -1231,6 +1251,7 @@ func _burn_tick() -> void:
 		action_attacker = unit
 		action_defender = unit
 		fx.play("BURN", unit, applied)
+		letter_fx.burn(unit)
 		_append_log("%s burns: -%d HP (%d burn(s) left)." % [unit.display_name, applied, unit.burns.size()])
 		burned = true
 	if burned:
@@ -1348,10 +1369,11 @@ func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 	var defense := await _skill_defense_timing(defender, attacker, marks, defense_paid)
 	for i in marks.size():
 		if not defender.is_alive(): break
-		if i > 0:
-			await _next_hit_on_same_target()
-			if not is_inside_tree(): return
+		cross_hit = true
+		next_hit = i > 0
 		_skill_hit(attacker, defender, int(d.power), reacting, attack[i], defense[i], false)
+		cross_hit = false
+		next_hit = false
 
 
 ## Heat wave by a hero: one attack rail, then each enemy defends on its own; each enemy
@@ -1387,10 +1409,11 @@ func _hero_skill_lands(hero: BattleUnit, counterer: BattleUnit, skill: StringNam
 	if d.kind == "strike":
 		for i in d.marks.size():
 			if not counterer.is_alive(): break
-			if i > 0:
-				await _next_hit_on_same_target()
-				if not is_inside_tree(): return
+			cross_hit = true
+			next_hit = i > 0
 			_skill_hit(hero, counterer, int(d.power), false, timing, BattleMath.RhythmResult.MISS, false)
+			cross_hit = false
+			next_hit = false
 		return
 	var first := true
 	for foe in hud.opponents.duplicate():
@@ -1413,10 +1436,11 @@ func _enemy_skill_lands(enemy: BattleUnit, target: BattleUnit, skill: StringName
 	if d.kind == "strike":
 		for i in d.marks.size():
 			if not target.is_alive(): break
-			if i > 0:
-				await _next_hit_on_same_target()
-				if not is_inside_tree(): return
+			cross_hit = true
+			next_hit = i > 0
 			_skill_hit(enemy, target, int(d.power), false, timing, BattleMath.RhythmResult.MISS, false)
+			cross_hit = false
+			next_hit = false
 		return
 	var first := true
 	for hero in hud.players.duplicate():
@@ -1457,6 +1481,8 @@ func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, i
 		attack: int, defense: int) -> void:
 	var d := SkillBook.def(skill)
 	var applied := _skill_hit(attacker, defender, int(d.power), is_reaction, attack, defense, true)
+	if applied >= 0:
+		letter_fx.heat_hit(attacker, defender)
 	if applied >= 0 and defender.is_alive() and _burn_roll(int(d.get("burn_chance", 0))):
 		defender.burns.append(SkillBook.BURN_ROUNDS)
 		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
@@ -1464,6 +1490,19 @@ func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, i
 
 ## Attack timing per mark: the hero presses on the rail; an enemy rolls each mark (or
 ## lands every mark when no reaction was declared, D-022).
+## Creator 2026-11-23: a multi-hit skill (Lunge: 2) uses one normal bar PER HIT, one after
+## the other (never one bar with several marks); one press per bar, attack or defense.
+func _skill_bars(count: int, point_half: float) -> Array[int]:
+	var results: Array[int] = []
+	_rhythm_marks = [0.5]
+	for i in count:
+		# A chained bar stays on screen between the hits of the same skill.
+		results.append(await _manual_rhythm(BattleMath.RHYTHM_FIXED_SECONDS, point_half, count > 1))
+	if count > 1:
+		rhythm.stop_chain()
+	return results
+
+
 func _skill_attack_timing(attacker: BattleUnit, defender: BattleUnit, marks: Array[float], auto_hit: bool) -> Array[int]:
 	var results: Array[int] = []
 	action_attacker = attacker
@@ -1471,11 +1510,8 @@ func _skill_attack_timing(attacker: BattleUnit, defender: BattleUnit, marks: Arr
 	if attacker.is_player:
 		timing_role = "ATTACK"
 		phase_text = "ATTACK"
-		_rhythm_marks = marks
 		var point_half := BattleMath.point_half_width(attacker.stats.agi, defender.stats.agi, attacker.current_sp, defender.current_sp)
-		await _manual_rhythm(BattleMath.RHYTHM_FIXED_SECONDS, point_half)
-		_rhythm_marks = [0.5]
-		results.assign(rhythm.results)
+		results = await _skill_bars(marks.size(), point_half)
 	else:
 		for _m in marks:
 			results.append(BattleMath.RhythmResult.POINT if auto_hit else _ai_roll(attacker, defender))
@@ -1495,11 +1531,8 @@ func _skill_defense_timing(defender: BattleUnit, attacker: BattleUnit, marks: Ar
 			action_defender = defender
 			timing_role = "DEFEND"
 			phase_text = "DEFENDING"
-			_rhythm_marks = marks
 			var point_half := BattleMath.point_half_width(defender.stats.agi, attacker.stats.agi, defender.current_sp, attacker.current_sp)
-			await _manual_rhythm(BattleMath.RHYTHM_FIXED_SECONDS, point_half)
-			_rhythm_marks = [0.5]
-			results.assign(rhythm.results)
+			results = await _skill_bars(marks.size(), point_half)
 			for r in results:
 				if r == BattleMath.RhythmResult.POINT:
 					defender.add_sp(BattleMath.SP_GAIN_PER_EVENT)

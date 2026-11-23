@@ -194,7 +194,8 @@ func _run() -> void:
 	check(fallen.atk_stages.is_empty(), "If the owner never came back, the stage ends at the end of the next round")
 	battle.queue_free(); await process_frame
 
-	# ---- Lunge by Fallen: one rail with marks at 35% and 65%, two hits of power 5.
+	# ---- Lunge by Fallen: TWO normal bars, one per hit, one after the other (creator
+	# 2026-11-23: "it was never one bar"), two hits of power 5.
 	battle = fresh([&"lunge"])
 	fallen = battle._fallen
 	foe_a = battle.hud.opponents[0]
@@ -205,14 +206,13 @@ func _run() -> void:
 	check(battle.hud.mode == "target", "Lunge asks for a target")
 	var from: int = battle.log_history.size()
 	battle.submit_target(0)
-	check(battle.hud.mode == "timing" and battle.rhythm.marks == [0.35, 0.65], "Lunge rail has two marks (got %s)" % [battle.rhythm.marks])
-	var spans: Array[Vector2] = battle.rhythm.zone_spans()
-	check(spans.size() == 6 and is_equal_approx(spans[1].x, 0.35 - battle.rhythm._point_half_width), "Both marks are drawn with their zones")
-	press_at(battle, [0.35])
-	check(battle.hud.mode == "timing", "The pass continues after the first mark")
-	press_at(battle, [0.65])
+	check(battle.hud.mode == "timing" and battle.rhythm.marks == [0.5], "Lunge: the first bar is a normal bar (got %s)" % [battle.rhythm.marks])
+	press_at(battle, [0.5])
+	await wait_mode(battle, "timing")
+	check(battle.hud.mode == "timing" and battle.rhythm.marks == [0.5], "Lunge: a second normal bar follows the first")
+	press_at(battle, [0.5])
 	await wait_mode(battle, "continue")
-	check(battle.rhythm.results == [R.POINT, R.POINT], "Both marks judged POINT")
+	check(battle.attack_result == R.POINT, "Both bars judged POINT")
 	check(dmg_lines(battle, from, "FALLEN -> GENETIC FOE A").size() == 2, "Lunge lands twice")
 	check(fallen.current_en == fallen.stats.max_en - 4, "Lunge costs 4 EN")
 	battle.proceed()
@@ -224,13 +224,17 @@ func _run() -> void:
 	check(battle.rhythm.marks == [0.5], "A plain ATTACK after Lunge is back to one centre mark")
 	battle.queue_free(); await process_frame
 
-	# ---- A press after the midpoint skips the first mark (MISS) and judges the second.
+	# ---- Each bar is judged on its own: a missed first bar, a POINT on the second.
 	battle = fresh([&"lunge"])
 	battle.hud.opponents[0].current_hp = 999
+	from = battle.log_history.size()
 	battle.submit_plan(0); battle.submit_skill(1); battle.exec_plan(); battle.submit_target(0)
-	press_at(battle, [0.66])
+	press_at(battle, [0.95])
+	await wait_mode(battle, "timing")
+	press_at(battle, [0.5])
 	await wait_mode(battle, "continue")
-	check(battle.rhythm.results == [R.MISS, R.POINT], "Late press: first mark MISS, second POINT (got %s)" % [battle.rhythm.results])
+	var lunge_lines: Array = battle.log_history.slice(from).filter(func(l: String) -> bool: return l.begins_with("FALLEN -> GENETIC FOE A"))
+	check(lunge_lines.size() == 2 and lunge_lines[0].contains("NO CONTACT") and not lunge_lines[1].contains("NO CONTACT"), "First bar MISS, second bar POINT (got %s)" % [lunge_lines])
 	battle.queue_free(); await process_frame
 
 	# ---- Heat wave by Fallen: MAK vs MEF on every enemy, burn, burn ticks next round.
@@ -290,9 +294,12 @@ func _run() -> void:
 	battle.answer_reaction(true)
 	battle.submit_command(battle.hud.command_options.find("DEFEND"))
 	await wait_mode(battle, "timing")
-	check(battle.timing_role == "DEFEND" and battle.rhythm.marks == [0.35, 0.65] and battle.rhythm.style == "defense", "DEFEND against Lunge: one defense rail with both marks")
+	check(battle.timing_role == "DEFEND" and battle.rhythm.marks == [0.5] and battle.rhythm.style == "defense", "DEFEND against Lunge: a normal defense bar")
 	var hp_before: int = hero.current_hp
-	press_at(battle, [0.35, 0.65])
+	press_at(battle, [0.5])
+	await wait_mode(battle, "timing")
+	check(battle.timing_role == "DEFEND", "DEFEND against Lunge: a second defense bar follows")
+	press_at(battle, [0.5])
 	await wait_mode(battle, "continue")
 	check(hero.current_hp == hp_before, "Two perfect defenses: both Lunge hits dodged")
 	battle.queue_free(); await process_frame

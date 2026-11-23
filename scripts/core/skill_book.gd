@@ -19,7 +19,8 @@ const HEAT_WAVE := &"heat_wave"
 const ENERGY_EAT := &"energy_eat"
 
 ## kind: strike (physical, one target), magic (all opponents), buff (self), heal (self).
-## Lunge marks: creator 2026-11-23, one rail with two hit zones at 35% and 65%.
+## Lunge: two hits. Creator 2026-11-23: TWO normal bars, one per hit, one after the other
+## ("it was never one bar"). Only the number of entries in `marks` is used (hits).
 const DEFS := {
 	&"lunge": {"name": "LUNGE", "acts": 1, "en": 4, "hp": 0, "pp": 0, "kind": "strike",
 		"power": 5, "marks": [0.35, 0.65],

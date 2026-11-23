@@ -371,5 +371,36 @@ func _run() -> void:
 	check(ProgressStore.load_pp() == 0, "Defeat zeroes the PP")
 	battle.queue_free(); await process_frame
 
+	# ---- Letter effects of the first-fight skills (creator 2026-11-23).
+	battle = fresh(0)
+	var lf: Node2D = battle.letter_fx
+	var foe: BattleUnit = battle.hud.opponents[0]
+	check(not FileAccess.get_file_as_string("res://scripts/battle/playable_controller.gd").contains("letter_fx.lunge_hit"), "Lunge (physical) plays no letters")
+	battle.fx.play("HIT", foe, 1, battle.hud.players[0], true)
+	check(battle.fx.effects.back().sprites.size() == 32 and bool(battle.fx.effects.back().cross), "Lunge hit: the normal hit cells plus a mirrored copy (an X)")
+	battle.fx.play("HIT", foe, 1, battle.hud.players[0])
+	check(battle.fx.effects.back().sprites.size() == 16, "A normal ATTACK hit is not mirrored")
+	battle.fx.play("HIT", foe, 7, battle.hud.players[0], true)
+	var first_fx: Dictionary = battle.fx.effects.back()
+	battle.fx.play("HIT_NEXT", foe, 5, battle.hud.players[0])
+	var next_fx: Dictionary = battle.fx.effects.back()
+	check(next_fx.sprites.all(func(sp: Sprite2D) -> bool: return not sp.visible) and is_equal_approx(float(next_fx.duration), float(first_fx.duration) + battle.fx.NEXT_NUMBER_GAP), "Lunge 2nd hit: no new effect, its number right after the first")
+	check(battle.fx.label_for("HIT_NEXT", 5) == "-5" and battle.fx.label_for("BLOCK_NEXT", 5) == "BLOCK -5", "Follow-up numbers read like the first")
+	lf.heat_hit(foe, battle.hud.players[0])
+	check(lf.parts.size() == 34 + 16, "Heat wave: a wave of letters plus flames on the target")
+	lf.heat_hit(foe, battle.hud.players[1])
+	check(lf.parts.size() == 34 + 32, "A second target in the same cast gets flames, not a second wave")
+	lf.parts.clear()
+	lf.burn(foe)
+	check(lf.parts.size() == 6, "Burn tick: embers")
+	lf.parts.clear()
+	var card: Rect2 = battle.hud.STATUS_RECTS[0]
+	for kind in ["buff", "heal"]:
+		lf.self_skill(battle.hud.players[0], kind)
+		check(lf.parts.all(func(q: Dictionary) -> bool: return card.grow(2).has_point(q.pos)) and lf.rings.size() == 1, "%s on a hero: letters start inside the card" % kind)
+		check(lf.rings[0].rad.y <= card.size.y * 0.5, "%s ring fits the card height" % kind)
+		lf.parts.clear(); lf.rings.clear()
+	battle.queue_free(); await process_frame
+
 	print("PLAYABLE_PRAYER_OK: %d checks; D-048 PP, PRAY, Refuah, Haganah, Ra'am, allocation, interruption refunds, persistence" % checks)
 	quit(0)
