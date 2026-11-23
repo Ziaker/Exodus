@@ -110,12 +110,12 @@ func _run() -> void:
 	battle.select_reactor(1)
 	battle.answer_reaction(true)
 	check(not battle.hud.command_options.has("ABSORB"), "Ally must not receive Fallen-only absorption")
-	check(battle.reaction_defender == battle._fallen and battle.hud.command_options == ["FIGHT", "ITEM"], "D-045: a reactor who is not the target may only counter-attack or use an item (got %s)" % [battle.hud.command_options])
+	check(battle.reaction_defender == battle._fallen and battle.hud.command_options == ["FIGHT", "PRAY", "ITEM"], "D-045: a reactor who is not the target may only counter-attack or use an item; D-048 (creator 2026-11-23): Yoch may also PRAY (got %s)" % [battle.hud.command_options])
 	battle.submit_command(0)
 	# Both MISS: a tie, so the ally's strike resolves (no contact) and no affinity penalty applies.
 	battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.MISS)
 	check(battle._ally.acts_available == 1 and battle._fallen.acts_available == 2, "Ally may react when Fallen is attacked, spending only Ally's act")
-	check(battle.log_history.any(func(line: String) -> bool: return line.begins_with("ALLY ->")), "Off-turn attack must use the real attack resolver")
+	check(battle.log_history.any(func(line: String) -> bool: return line.begins_with("Yoch ->")), "Off-turn attack must use the real attack resolver")
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle); reserve(battle)

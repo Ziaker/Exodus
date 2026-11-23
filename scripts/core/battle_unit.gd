@@ -22,6 +22,13 @@ var skills: Array[StringName] = []
 var atk_stages: Array[Dictionary] = []
 ## Burns: remaining rounds of each one (they stack).
 var burns: Array[int] = []
+## D-048: humans pray instead of using EN (Yoch). Every current PP is worth +2 SP.
+var prays: bool = false
+var current_pp: int = 0
+## D-048: race (Ra'am has no effect on PrayerBook.ANGEL). Effects beyond that: PENDING.
+var race: StringName = &""
+## D-048 Haganah: {"round": cast round, "step": cast step} while the shield is up, else {}.
+var haganah: Dictionary = {}
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 		player_side: bool, fallen: bool = false) -> void:
@@ -35,8 +42,24 @@ func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 	is_fallen = fallen
 
 func sp_base() -> int:
-	return stats.sp_value()
+	return stats.sp_value() + (PrayerBook.SP_PER_PP * current_pp if prays else 0)
 
+
+## D-048: enables prayer with `pp` stored PP (0..8); the SP follows the PP.
+func start_praying(pp: int) -> void:
+	prays = true
+	current_pp = 0
+	change_pp(pp)
+
+
+## D-048: adds (or removes) PP within 0..8 and moves the SP by 2 per PP actually
+## changed. Returns the PP actually applied.
+func change_pp(amount: int) -> int:
+	var before := current_pp
+	current_pp = clampi(current_pp + amount, 0, PrayerBook.MAX_PP)
+	var applied := current_pp - before
+	add_sp(PrayerBook.SP_PER_PP * applied)
+	return applied
 
 ## ATK with the active stages applied (+25% per stage).
 func effective_atk() -> float:

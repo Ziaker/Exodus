@@ -11,6 +11,7 @@ const HUD_SCRIPT = preload("res://scripts/battle/playable_hud.gd")
 const COMPACT_RHYTHM = preload("res://scripts/battle/compact_rhythm_bar.gd")
 const EFFECTS_SCRIPT = preload("res://scripts/battle/battle_effects.gd")
 const COUNTER_RHYTHM = preload("res://scripts/battle/counter_rhythm_bar.gd")
+const PRAYER_FLOW = preload("res://scripts/battle/prayer_flow.gd")
 var hud: Control
 var fx: Control
 const ABSORB_VFX = preload("res://scripts/battle/absorb_vfx.gd")
@@ -71,6 +72,8 @@ var _rhythm_marks: Array[float] = [0.5]
 var turn_owner: BattleUnit
 ## Skill of the enemy announcement being reacted to (&"" = ATTACK).
 var _announced_skill: StringName = &""
+## D-048: Yoch's prayer (PRAY command, PP, Refuah / Haganah / Ra'am).
+var prayer: RefCounted
 
 
 func _build_ui() -> void:
@@ -109,6 +112,7 @@ func _build_ui() -> void:
 	absorb_fx.battle = self
 	absorb_fx.hud = hud
 	add_child(absorb_fx)
+	prayer = PRAYER_FLOW.new(self)
 
 
 func _refresh_all() -> void:
@@ -309,6 +313,7 @@ func run_battle() -> void:
 		while unit != null:
 			turn_owner = unit
 			_expire_stages(unit)
+			prayer.expire(unit)
 			if unit.is_player:
 				await _player_turn(unit)
 			else:
@@ -318,6 +323,7 @@ func run_battle() -> void:
 			unit = _next_live_actor()
 		if state.is_over(): break
 		_expire_stages(null)
+		prayer.expire(null)
 		state.end_round()
 		_append_log("End of round %d: +20%% EN." % state.round_number)
 	_show_result()
@@ -343,14 +349,16 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 		# another reactor may only counter-attack or use an item.
 		if unit != reaction_defender:
 			var limited: Array[String] = [FIGHT, "ITEM"]
-			return limited
+			return prayer.commands_for(unit, limited)
 		options.append("DEFEND")
 	else:
 		options.append("REACT")
-	return options
+	return prayer.commands_for(unit, options)
 
 
 func _execute_command(unit: BattleUnit, command: String, reacting: bool = false, chain: bool = false, skill: Dictionary = {}) -> bool:
+	if command == "PRAY":
+		return await prayer.execute(unit, skill, reacting)
 	if command == FIGHT and not skill.is_empty():
 		return await _execute_skill(unit, skill, reacting)
 	phase_text = "SELECT " + command + " TARGET"
@@ -401,6 +409,8 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 ## atos restantes (teto D-005) e recupera exatamente 2 EN — a mesma regra do
 ## controlador base e da interface jogável.
 func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
+	if unit.prays:
+		return prayer.rest(unit, reacting)
 	var remaining: int = unit.acts_available
 	unit.store_acts(remaining)
 	unit.acts_available = 0
@@ -436,19 +446,30 @@ func _player_turn(unit: BattleUnit) -> void:
 		var max_acts := mini(BattleMath.MAX_AVAILABLE_ACTS, unit.acts_available)
 		_planned.clear()
 		_planned_skills.clear()
-		while _planned_cost() < max_acts:
+		prayer.begin_plan(unit)
+		while _planned_cost() < max_acts or prayer.can_continue(unit, _planned_skills):
 			var choice := await _wait_plan_command(options)
 			if choice == -2:  # EXEC
 				break
 			if choice == -3:  # UNDO
+				if prayer.undo_allocation(unit, _planned_skills):
+					continue
 				if not _planned.is_empty():
 					_planned.remove_at(_planned.size() - 1)
 					_planned_skills.remove_at(_planned_skills.size() - 1)
+					prayer.recharge(unit, _planned_skills)
 				continue
 			if choice < 0:
 				break
 			var chosen: String = options[choice]
 			var detail: Dictionary = {}
+			# D-048: with every act committed only +1 PP on a queued spell is left.
+			if chosen != "PRAY" and _planned_cost() >= max_acts:
+				continue
+			if chosen == "PRAY":
+				detail = await prayer.plan_pick(unit, _planned_skills, max_acts - _planned_cost())
+				if detail.is_empty() or detail.has("allocated"):
+					continue
 			if chosen == FIGHT and not unit.skills.is_empty():
 				detail = await _wait_skill_menu(unit, max_acts - _planned_cost(),
 					unit.current_en - _planned_en(), unit.current_hp - _planned_hp())
@@ -458,6 +479,7 @@ func _player_turn(unit: BattleUnit) -> void:
 					detail = {}
 			_planned.append(choice)
 			_planned_skills.append(detail)
+			prayer.after_append(unit, _planned_skills)
 			# REST (D-038) encerra a participação; REACT reserva os atos restantes.
 			if chosen in ["REST", "REACT"]:
 				break
@@ -467,6 +489,7 @@ func _player_turn(unit: BattleUnit) -> void:
 		if options[_planned.back()] == "REACT":
 			waiting_players[unit.id] = true
 			_append_log("%s reserves %d acts for enemy announcements." % [unit.display_name, unit.acts_available])
+			prayer.release_unresolved(unit, _planned_skills)
 			_planned.clear()
 			_planned_skills.clear()
 			return
@@ -499,6 +522,7 @@ func _player_turn(unit: BattleUnit) -> void:
 						lost_acts += _entry_cost(_planned_skills[j])
 				_lose_queue(unit, _planned.slice(i + 1).map(func(c: int) -> String: return options[c]), _interrupt_gainer, lost_acts)
 				break
+		prayer.release_unresolved(unit, _planned_skills)
 		_planned.clear()
 		_planned_skills.clear()
 		if chain_used:
@@ -948,6 +972,7 @@ func proceed() -> void:
 
 
 func _show_result() -> void:
+	prayer.battle_end(state.player_victory())
 	_append_log("VICTORY." if state.player_victory() else "DEFEAT.")
 	phase_text = "VICTORY" if state.player_victory() else "DEFEAT"
 	hud.announce(phase_text)
@@ -969,6 +994,7 @@ func handle_confirm() -> void:
 			if rhythm._running:
 				rhythm.press()
 		"skill": submit_skill(hud.command_index)
+		"pray": prayer.submit(hud.command_index)
 		"en_extra": confirm_en_extra()
 		"counter": counter.press_player()
 		"react": answer_reaction(hud.react_index == 0)
@@ -992,6 +1018,9 @@ func handle_back() -> void:
 			hud.press_command(hud.command_index, "reject")
 			cancel_skill()
 		"en_extra": cancel_en_extra()
+		"pray":
+			hud.press_command(hud.command_index, "reject")
+			prayer.cancel()
 		"command":
 			if in_reaction: cancel_reaction_command()
 			else:
@@ -1491,3 +1520,14 @@ func _skill_defense_timing(defender: BattleUnit, attacker: BattleUnit, marks: Ar
 	defense_result = results[0]
 	return results
 
+
+# ------------------------------------------------- D-048 prayer (rules in prayer_flow.gd)
+
+## Overridable by tests: does this enemy attack Yoch's PRAY (33%)?
+func _enemy_pray_reaction_roll(_enemy: BattleUnit) -> bool:
+	return rng.randf() < PrayerBook.ENEMY_PRAY_REACTION_CHANCE
+
+
+## Overridable by tests: does the enemy struck by Ra'am counter-attack it (33%)?
+func _enemy_raam_counter_roll(_enemy: BattleUnit) -> bool:
+	return rng.randf() < PrayerBook.ENEMY_RAAM_COUNTER_CHANCE

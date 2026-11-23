@@ -137,8 +137,7 @@ narrativa — ainda não foi definido.
   + 1 aliado (**Yoch**, D-048) no protótipo. **CONFIRMADO**.
 - Protótipo atual: cena `res://scenes/battle/Battle.tscn`, dois inimigos genéricos e
   o aliado Yoch com arte placeholder. **IMPLEMENTADO**; interface em inglês.
-  **CONFIRMADO**. O código ainda usa o rótulo antigo `ALLY`; a renomeação no
-  código não foi pedida e **não** foi feita (D-048).
+  **CONFIRMADO**. Desde 2026-11-23 o código usa o nome **Yoch** (D-048).
 - Fundo plano `#333333` — **SUBSTITUÍDO** localmente por battleback e janelas inspiradas
   em RPG Maker VX Ace. Essa substituição ainda **não foi publicada**. A validação visual
   pertence ao diretor.
@@ -1388,7 +1387,7 @@ definida pelo criador em D-048 (§9.1). **A forma como Fallen obtém magias ser�
 discutida depois**; envolve a mecânica de absorção e a presença dos elementos do
 jogo. **PENDENTE.**
 
-### 9.1 D-048 — sistema de Reza (Pray Points) — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+### 9.1 D-048 — sistema de Reza (Pray Points) — **CONFIRMADO; IMPLEMENTADO no BattlePlayable (2026-11-23)**
 
 Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 
@@ -1427,6 +1426,16 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
   neles voltam ao Yoch. MISS ou bloqueio não interrompem.
 - **Itens abençoados:** consumíveis que dão efeitos e PP quando usados no aliado (Yoch).
   Lista, efeitos e quantidades: **PENDENTE**.
+- **Implementação e respostas do criador (2026-11-23):** detalhes técnicos em
+  `docs/COMBAT_SPEC.md` §Reza ("Implementação"). Resumo: PRAY após FIGHT abre submenu; alvo
+  escolhido no plano (mesmo alvo = +1 PP, outro alvo = nova conjuração); PP saem ao
+  enfileirar; Ra'am = 10 + MAK + 10/PP extra − MEF com ritmo, crítico, SP e afinidade como o
+  ATTACK; IA 33% contra PRAY e Ra'am; todos os inimigos atacam o PRAY, qualquer contato
+  interrompe, o primeiro que acertou ganha os atos; Yoch sem barra contra ataque ao PRAY;
+  Haganah como marca de 1 round (renova); Refuah só aliados; derrota zera os PP. Visual
+  escolhido e implementado: letras subindo do cartão ao conjurar (PRAY/Refuah/Haganah); Haganah
+  = letra ה ao lado do nome + borda pulsando. Efeito do Ra'am: versão 2 de letras **aprovada e
+  implementada** (raio de letras hebraicas com carga da palavra רעם, impacto e letras no chão).
 
 ---
 
@@ -2089,13 +2098,14 @@ rodada.
 27. **D-046:** fila de comandos com ACT verdes, UNDO/EXEC e linha de
     ritmo persistente entre ataques consecutivos. **IMPLEMENTADO.**
 
-28. **D-048:** Reza de Yoch (PP), raças e renome do aliado aprovados como
-    design, **NÃO IMPLEMENTADOS**. Pendentes: fórmula mágica que modifica o
-    Ra'am; lista, efeitos e PP dos itens abençoados; sistema de condições de
-    status bloqueadas pelo Haganah; efeitos mecânicos das raças e
-    classificação dos anjos; como Fallen obtém magias; destino de `Thunder1.png`
-    e implementação do Zio no Ra'am; renomear `ALLY` no
-    código quando o criador pedir.
+28. **D-048:** Reza de Yoch (PP) e renome do aliado **IMPLEMENTADOS** no
+    BattlePlayable em 2026-11-23 (raças: só a marca `race`). Pendentes: lista,
+    efeitos e PP dos itens abençoados; sistema de condições de status bloqueadas
+    pelo Haganah; efeitos mecânicos das raças e classificação dos anjos; como
+    Fallen obtém magias; efeito visual do Ra'am (o criador pediu 3 opções em
+    protótipo: raio de letras hebraicas + duas originais, no lugar do Zio), marca
+    da Haganah e VFX de PRAY/Refuah/Haganah (protótipos em `prototypes/pray-vfx`);
+    magia cujo alvo cai antes de resolver.
 
 29. **D-049:** contra-ataque com duas barras de ritmo e interrupção por ataque
     sofrido (perfeita rouba 16 SP; BLAST/POINT antes rouba 4 SP; +1 ato por
@@ -2627,7 +2637,11 @@ Formato: ID · data · decisão · estado · impacto documental.
   alocados neles voltando ao Yoch; MISS ou bloqueio não interrompem. `Thunder1.png` do RTP segue a regra de não publicação da D-018.
   A forma como Fallen obtém magias será
   discutida depois (absorção e elementos). **CONFIRMADO como design; NÃO
-  IMPLEMENTADO**; código não alterado (ainda usa `ALLY`). Preserva D-005, D-038,
+  IMPLEMENTADO** na data; **implementado no BattlePlayable em 2026-11-23** com as respostas
+  do criador do mesmo dia (alvo no plano, PP ao enfileirar, Ra'am = 10 + MAK + 10/PP extra −
+  MEF como o ATTACK, IA 33%, todos atacam o PRAY, qualquer contato interrompe, Yoch sem barra
+  contra o ataque ao PRAY, Haganah como marca de 1 round, derrota zera PP; o efeito do Ra'am
+  passa a ser escolhido entre 3 protótipos, não o Zio). Preserva D-005, D-038,
   D-018, D-044, D-046 e D-047; para o PRAY, amplia a D-045 (todos os inimigos com
   atos de reação podem reagir). Pendências no §21, item 28. Impacto: GDD §§4, 9, 9.1,
   13.1, 17, 21; `COMBAT_SPEC.md` §§Identidade, Atributos, Reza, Escopo;

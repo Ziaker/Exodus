@@ -156,7 +156,8 @@ const IMMEDIATE_LABELS := ["MISS", "DODGE"]
 ## Creator 2026-11-22: a number for a lethal hit is painted #ff3b3b.
 const NUMBER_INK := Color("fff3d0")
 const LETHAL_INK := Color("ff3b3b")
-const LETHAL_KINDS := ["HIT", "CRITICAL", "BLOCK"]
+## D-048 RAAM / RAAM_BLOCK: the approved thunder (pray_fx.gd) is the impact; only the number here.
+const LETHAL_KINDS := ["HIT", "CRITICAL", "BLOCK", "RAAM", "RAAM_BLOCK"]
 
 
 ## Creator 2026-11-22: every number stays opaque for the first half of its life
@@ -180,7 +181,8 @@ static func label_for(kind: String, amount: int) -> String:
 		"HEAL": return "+%d HP" % amount
 		"REST": return "+%d EN" % amount
 		"ABSORBED": return "ABSORBED"
-		"BURN": return "-%d" % amount
+		"BURN", "RAAM": return "-%d" % amount
+		"RAAM_BLOCK": return "BLOCK -%d" % amount
 		"BUFF": return "ATK UP"
 	return ""
 
@@ -202,7 +204,7 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		"ABSORB": profile_name = "absorb"
 		"HEAL", "REST", "ABSORBED", "BUFF": profile_name = "heal_flash"
 	var profile: Dictionary = library.profiles[profile_name]
-	if kind in ["MISS", "DODGE", "WHITEN", "BURN"]:
+	if kind in ["MISS", "DODGE", "WHITEN", "BURN", "RAAM", "RAAM_BLOCK"]:
 		# No impact cells, hurt flashes or hit sounds for a non-contact result.
 		profile = {"frames": [[], [], [], [], [], [], [], [], []], "sheets": ["", ""], "timings": []}
 	var target_rect := _unit_rect(unit)

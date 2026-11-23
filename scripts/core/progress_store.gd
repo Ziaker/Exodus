@@ -85,7 +85,17 @@ static func save_skill_progress(absorbs: Dictionary, skills: Array[StringName]) 
 	return _write(load_gains(), absorbs, skills)
 
 
-static func _write(gains: Dictionary, absorbs: Dictionary, skills: Array[StringName]) -> bool:
+## D-048: Yoch's unspent PP persist between battles (0..8; a defeat zeroes them).
+static func load_pp() -> int:
+	return clampi(int(_read().get("pp", 0)), 0, PrayerBook.MAX_PP)
+
+
+static func save_pp(pp: int) -> bool:
+	return _write(load_gains(), load_absorbs(), load_skills(), pp)
+
+
+static func _write(gains: Dictionary, absorbs: Dictionary, skills: Array[StringName], pp: int = -1) -> bool:
+	var stored_pp := clampi(pp if pp >= 0 else load_pp(), 0, PrayerBook.MAX_PP)
 	var entries := {}
 	for key in STAT_KEYS:
 		entries[key] = clampi(int(gains.get(key, 0)), 0, MAX_GAIN)
@@ -95,7 +105,7 @@ static func _write(gains: Dictionary, absorbs: Dictionary, skills: Array[StringN
 	var names: Array[String] = []
 	for skill in skills:
 		names.append(String(skill))
-	var payload := {"version": VERSION, "gains": entries, "absorbs": counts, "skills": names}
+	var payload := {"version": VERSION, "gains": entries, "absorbs": counts, "skills": names, "pp": stored_pp}
 	var file := FileAccess.open(_path(), FileAccess.WRITE)
 	if file == null:
 		return false

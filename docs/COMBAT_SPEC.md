@@ -5,8 +5,7 @@
 - Protagonista: **Fallen** (nome real desconhecido), demônio caído; raça **demônio** (D-048).
 - Inimigos do teste: 2 placeholders genéricos, sem dependência de nomes dos .rvdata.
 - Aliado: **Yoch** (D-048, 2026-11-22), raça **humano**; arte do teste ainda é placeholder
-  genérico. O código ainda usa o rótulo `ALLY` (`battle_controller.gd`); renomear no
-  código não foi pedido.
+  genérico. No código o aliado se chama **Yoch** desde 2026-11-23 (`battle_controller.gd`).
 - Idioma da UI: **inglês**.
 - Visão frontal. Após revisão visual, o fundo plano `#333333` foi substituído por
   battleback e janelas no estilo RPG Maker VX Ace, usando assets temporários da fangame
@@ -1342,7 +1341,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 - Código: `scripts/core/skill_book.gd` e `PlayableController` (seção skills).
   Cobertura em `tests/verify_playable_skills.gd`, captura `captures/skills/skills.mp4`.
 
-## Reza (Pray Points) — D-048; DESIGN, NÃO IMPLEMENTADO
+## Reza (Pray Points) — D-048; IMPLEMENTADO no BattlePlayable (2026-11-23)
 - **Quem:** personagens **humanos** conjuram **magias de luz** rezando, em vez de usar EN.
   Yoch é humano. Fallen (demônio) não usa Reza; como Fallen obtém magias é **PENDENTE**
   (envolve absorção e elementos).
@@ -1380,9 +1379,49 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     se perdem, com seus atos; PP alocados em magias desses comandos **voltam ao Yoch**.
   - MISS ou bloqueio **não** interrompem: o PRAY ou o Ra'am resolve normalmente.
 - **Itens abençoados:** consumíveis que dão efeitos e PP quando usados no aliado (Yoch).
-- **PENDENTES:** fórmula mágica que modifica o Ra'am; lista, efeitos e PP dos itens
-  abençoados; sistema de condições de status bloqueadas pelo Haganah; efeitos de raça
-  e classificação dos anjos.
+- **PENDENTES:** lista, efeitos e PP dos itens abençoados (não implementados); sistema de
+  condições de status bloqueadas pelo Haganah; efeitos de raça e classificação dos anjos.
+  A fórmula do Ra'am foi definida pelo criador em 2026-11-23 (abaixo).
+- **Implementação (2026-11-23):** IMPLEMENTADO no `BattlePlayable` (só nele; a cena antiga
+  `Battle.tscn` não conta, por decisão do criador). Regras em `scripts/core/prayer_book.gd`,
+  fluxo em `scripts/battle/prayer_flow.gd` (ganchos em `playable_controller.gd`), PP em
+  `BattleUnit` (`prays`, `current_pp`, `change_pp`) e no save (`ProgressStore.load_pp/save_pp`),
+  HUD em `playable_hud.gd` (PP no lugar da EN em `#f5f58c`, submenu `pray`, log em `#f5f58c`).
+  Cobertura: `tests/verify_playable_prayer.gd`. Respostas do criador de 2026-11-23 aplicadas:
+  - Aliado exibido como **Yoch** (só a inicial maiúscula); ficha igual, **sem EN** (SP base 29,
+    +2 por PP).
+  - **PRAY** logo após FIGHT no menu; abre um **submenu**: `PRAY +1 PP` e as magias liberadas.
+  - **Alvo** das magias escolhido no plano. Mesma magia no **mesmo alvo** = +1 PP (sem ato);
+    em **outro alvo** = nova conjuração. Com todos os atos comprometidos o plano continua aberto
+    enquanto houver PP para +1 em magia já na fila; UNDO desfaz primeiro o último +1 PP.
+  - PP saem **ao enfileirar**; um PRAY enfileirado antes **conta** para liberar a magia depois
+    (a parte não coberta fica devida e é paga quando esse PRAY resolve); PP reservados saem do
+    disponível.
+  - **Ra'am:** dano = **10 + MAK + 10 por PP extra − MEF do alvo**, com barra de ritmo como o
+    ATTACK (MISS/desvio = 0, BEAM = metade), crítico, rolagem de SP, variação, multiplicador de
+    afinidade e ±1 ato como o ATTACK. Anjo: sem efeito (nenhum anjo existe ainda).
+  - **IA:** cada inimigo com ato de reação ataca o PRAY com **33%**; o inimigo atingido pelo
+    Ra'am contra-ataca com **33%** (barra dupla da D-049). Vários inimigos: **todos atacam**;
+    qualquer contato (POINT ou **BEAM**) interrompe; só o **primeiro** que acertou ganha os atos
+    dos comandos perdidos. Contra o PRAY o Yoch **nunca tem barra** de defesa.
+  - **Reação:** o Yoch pode usar PRAY e magias mesmo sem ser o alvo (amplia a D-045); inimigos
+    reagem também a PRAY/Ra'am usados como reação. Magia em reação não tem PP extra (não há fila).
+  - **Haganah:** marca de 1 round (até o mesmo ponto do round seguinte, como os estágios de ATK);
+    sem efeito prático até existir sistema de condições; reconjurar **renova**.
+  - **Refuah** só em aliados. **Derrota zera os PP**; vitória os mantém no save.
+  - REST do Yoch: só guarda atos (log sem EN).
+  - **Visual escolhido pelo criador (2026-11-23), IMPLEMENTADO em `scripts/battle/pray_fx.gd`:**
+    ao conjurar PRAY, Refuah e Haganah, letras hebraicas em `#f5f58c` sobem do pé do cartão de
+    quem recebe a reza (opção A, "rise"); a Haganah ativa mostra a letra **ה** ao lado do nome
+    **e** a borda do cartão acesa e pulsando em `#f5f58c` (mistura das ideias C e B).
+  - **Efeito do Ra'am APROVADO pelo criador (2026-11-23) e IMPLEMENTADO** (`pray_fx.gd`
+    `play_raam`): versão 2 de letras do protótipo `prototypes/pray-vfx` — carga de 0,7 s
+    (cenário escurece, letras em espiral formam a palavra רעם no céu), quadro branco, raio duplo
+    de letras grandes até o chão com galhos, inimigo piscando em branco, tremor de tela, anel e
+    chuva de letras no chão e letras residuais subindo. O dano cai no instante do raio; a camada
+    de efeitos mostra só o número (cues `RAAM`/`RAAM_BLOCK` em `battle_effects.gd`, sem a
+    garra do ATTACK). Um Ra'am que erra (MISS/desvio) não toca o trovão. **PENDENTE (decisão do criador):** magia cujo alvo cai antes de resolver
+    (hoje: sem efeito, ato gasto, PP voltam).
 
 ## Raças — D-048; DESIGN, NÃO IMPLEMENTADO
 - Em **Maesto** (mundo): humanos, animais, monstros e demônios. No jogo, também a
@@ -1423,5 +1462,5 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 - Verificar a infraestrutura Godot/testes do repositório antes de escolher harness ou arquivos. Fase 1 segue portões D-039/D-040: parse real, testes unitários/integração pertinentes, diff e evidência verificável; Fase 2 de múltiplas zonas e IA especial depende de liberação adequada da Fase 1. **Nenhum teste, código ou recurso foi executado/alterado nesta rodada documental.**
 
 ## Escopo fora deste protótipo
-Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), implementação da oração
-de humanos (design em D-048), progressão narrativa e absorção de longo prazo.
+Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), itens abençoados da
+Reza (D-048), progressão narrativa e absorção de longo prazo.

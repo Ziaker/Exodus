@@ -60,6 +60,8 @@ var plan_index := 0
 var react_index := 0
 ## Kept for the controller and diagnostics; only the log line is drawn (HTML has one line).
 var feedback := ""
+## D-048: the log line equal to this text is a prayer line, drawn in #f5f58c.
+var log_ink_text := ""
 var ui_font: SystemFont
 var ui_bold: SystemFont
 ## Solid white silhouettes (alpha mask, enclosed holes filled) cut from the SMT battlers.
@@ -574,6 +576,7 @@ func _log_text() -> String:
 		"absorb": return "ABSORB [Z]  Mash!  Presses: %d/%d" % [mini(battle._mash_count, BattleMath.ABSORB_MAX_PRESSES), BattleMath.ABSORB_MAX_PRESSES]
 		# Creator 2026-11-23: the log line explains the highlighted FIGHT entry.
 		"skill": return battle.skill_info(command_index)
+		"pray": return battle.prayer.info(command_index)
 		"en_extra": return battle.en_extra_info()
 	return message
 
@@ -586,7 +589,8 @@ func _log_line() -> void:
 	var alpha := lerpf(0.55, 1.0, _ease(_log_age / 0.38))
 	draw_line(Vector2(8, 303.5), Vector2(536, 303.5), Color(1, 1, 1, 0.38))
 	draw_rect(Rect2(11, 312, 5, 5), Color("f6e7df", alpha))
-	_str(_ellipsis(text, 12, 508), 23, 319, Color("f8f1ea", alpha), 12)
+	var log_ink := PrayerBook.INK if not log_ink_text.is_empty() and text == log_ink_text else Color("f8f1ea")
+	_str(_ellipsis(text, 12, 508), 23, 319, Color(log_ink, alpha), 12)
 
 
 func _character(who: int, r: Rect2) -> void:
@@ -626,7 +630,11 @@ func _character(who: int, r: Rect2) -> void:
 	var vitals_alpha := 0.58 if defending else 1.0
 	var hp_w := _str("HP ", x, r.position.y + 40, Color(TEXT, vitals_alpha), 11)
 	_str("%d/%d" % [unit.current_hp, unit.stats.max_hp], x + hp_w, r.position.y + 40, Color(1, 1, 1, vitals_alpha), 11, true)
-	_str("EN %d/%d" % [unit.current_en, unit.stats.max_en], right, r.position.y + 40, Color(TEXT, vitals_alpha), 11, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	# D-048: a praying unit (Yoch) has no EN; its PP take the EN place, in #f5f58c.
+	if unit.prays:
+		_str("PP %d/%d" % [unit.current_pp, PrayerBook.MAX_PP], right, r.position.y + 40, Color(PrayerBook.INK, vitals_alpha), 11, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	else:
+		_str("EN %d/%d" % [unit.current_en, unit.stats.max_en], right, r.position.y + 40, Color(TEXT, vitals_alpha), 11, false, HORIZONTAL_ALIGNMENT_RIGHT)
 	# stat-gain: .65s steps(4) — opacity 1, .55, 1, .55 then back to 1.
 	var sp_alpha: float = _keyframes(seen.sp_age, 0.65, [0.0, 0.25, 0.5, 0.7, 1.0], [1.0, 0.55, 1.0, 0.55, 1.0], 4)
 	var sp_w := _str("SP ", x, r.position.y + 61, Color(GREEN_TEXT, sp_alpha), 12, true)
@@ -667,7 +675,7 @@ func _menu_rows() -> Array[String]:
 	var rows: Array[String] = []
 	if mode == "react": rows.assign(["REACT", "DENY"])
 	elif mode == "plan": rows.assign(plan_options)
-	elif mode in ["command", "target", "skill"]: rows.assign(command_options)
+	elif mode in ["command", "target", "skill", "pray"]: rows.assign(command_options)
 	elif mode == "en_extra": rows.assign(["EXTRA EN  < %d >" % battle.en_extra])
 	return rows
 
@@ -715,7 +723,7 @@ func _menu() -> void:
 		# Creator 2026-11-23: skills the unit cannot pay now are dimmed.
 		var ink := Color(1, 1, 1, 0.35) if mode == "skill" and battle.skill_disabled.has(i) else Color.WHITE
 		_str(rows[i], row.position.x + 19 + shift, row.position.y + row_h - 3, ink, row_px)
-		var key_prefix := "live-react-row:" if mode == "react" else ("live-plan:" if mode == "plan" else ("live-skill:" if mode == "skill" else ("live-en:" if mode == "en_extra" else "live-command:")))
+		var key_prefix := "live-react-row:" if mode == "react" else ("live-plan:" if mode == "plan" else ("live-skill:" if mode == "skill" else ("live-pray:" if mode == "pray" else ("live-en:" if mode == "en_extra" else "live-command:"))))
 		hitboxes.append({"rect": row, "key": key_prefix + str(i)})
 
 
@@ -733,6 +741,9 @@ func _input(event: InputEvent) -> void:
 				battle.submit_command(command_index)
 			elif key.begins_with("live-plan:") and mode == "plan":
 				battle.submit_plan(int(key.split(":")[1]))
+			elif key.begins_with("live-pray:") and mode == "pray":
+				command_index = int(key.split(":")[1])
+				battle.prayer.submit(command_index)
 			elif key.begins_with("live-skill:") and mode == "skill":
 				command_index = int(key.split(":")[1])
 				battle.submit_skill(command_index)
@@ -773,7 +784,7 @@ func _input(event: InputEvent) -> void:
 				if players[next].is_alive() and players[next].acts_available > 0:
 					battle.select_reactor(next)
 					break
-		elif mode in ["command", "skill"] and event.keycode in [KEY_UP, KEY_DOWN]:
+		elif mode in ["command", "skill", "pray"] and event.keycode in [KEY_UP, KEY_DOWN]:
 			command_index = posmod(command_index + (1 if event.keycode == KEY_DOWN else -1), command_options.size())
 		elif mode == "en_extra" and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 			battle.adjust_en_extra(1 if event.keycode == KEY_RIGHT else -1)

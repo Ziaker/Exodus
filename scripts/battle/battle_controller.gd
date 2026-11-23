@@ -162,7 +162,7 @@ func _build_ui() -> void:
 		var row := StatusRow.new()
 		row.position = Vector2(12, 272 + i * 66)
 		row.custom_minimum_size = Vector2(330, 64)
-		row.setup("FALLEN" if i == 0 else "ALLY")
+		row.setup("FALLEN" if i == 0 else "Yoch")
 		add_child(row)
 		ally_rows.append(row)
 
@@ -263,13 +263,17 @@ func _create_units() -> void:
 
 	var ally_stats := UnitStats.new()
 	ally_stats.max_hp = 11
-	ally_stats.max_en = 7
+	# D-048 (creator 2026-11-23): Yoch is human, has no EN (SP base 29) and prays with PP,
+	# +2 SP per current PP; unspent PP persist between battles (a defeat zeroes them).
+	ally_stats.max_en = 0
 	ally_stats.atk = 5
 	ally_stats.mak = 2
 	ally_stats.defense = 4
 	ally_stats.mef = 2
 	ally_stats.agi = 5
-	_ally = BattleUnit.new(&"ally", "ALLY", ally_stats, true)
+	_ally = BattleUnit.new(&"ally", "Yoch", ally_stats, true)
+	_ally.race = &"human"
+	_ally.start_praying(ProgressStore.load_pp())
 
 	state.add_unit(_fallen)
 	state.add_unit(_ally)

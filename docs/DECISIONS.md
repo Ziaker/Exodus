@@ -54,7 +54,7 @@ qualquer alteração em documentos ou código.
 | D-045 | 2026-11-21 | Reação de quem não é o alvo | `docs/GDD.md` Apêndice A |
 | D-046 | 2026-11-21 (implementação da fila D-043 no Godot) | O Fallen pode planejar de 1 a 4 comandos antes da resolução. | `docs/GDD.md` Apêndice A |
 | D-047 | 2026-11-22 (decisão do criador) | Combo inimigo: dois ataques anunciados por turno, com reação e número de dano próprios. **Corrigida pela D-051: o inimigo não gasta sempre dois atos em ataques.** | `docs/GDD.md` Apêndice A |
-| D-048 | 2026-11-22 (decisão do criador) | Reza de Yoch (PP no lugar da EN, teto 8, Refuah/Haganah/Ra'am), raças e renome do aliado para Yoch. | `docs/GDD.md` Apêndice A |
+| D-048 | 2026-11-22 (decisão do criador) | Reza de Yoch (PP no lugar da EN, teto 8, Refuah/Haganah/Ra'am), raças e renome do aliado para Yoch. Implementada no BattlePlayable em 2026-11-23 com as respostas do criador do mesmo dia. | `docs/GDD.md` Apêndice A |
 | D-049 | 2026-11-22 (decisão do criador) | Contra-ataque com duas barras de ritmo e interrupção (perfeita: 16 SP; BLAST/POINT antes: 4 SP; +1 ato por comando da fila perdido). | `docs/GDD.md` Apêndice A |
 | D-050 | 2026-11-22 (roteiro do criador) | Prólogo: cutscenes de abertura, primeiro combate (fichas e habilidades dos 2 inimigos), resgate pelo humano, absorção tutorial (+2 MEF, +2 MAK) e saída para oeste/leste. | `docs/PROLOGUE_SCRIPT.md` e `docs/GDD.md` Apêndice A |
 
