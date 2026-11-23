@@ -1,0 +1,163 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Using "default" pen tablet driver...
+
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+CORE API HASH: 2004498165
+EDITOR API HASH: 1696660745
+Loading resource: res://tests/verify_playable_fx.gd remapped: res://tests/verify_playable_fx.gd
+Completed load for: 'res://tests/verify_playable_fx.gd' remapped 'res://tests/verify_playable_fx.gd' at thread -1
+SceneTreeFTI: traversal method DEFAULT
+Loading resource: res://addons/dialogue_manager/dialogue_manager.gd remapped: res://addons/dialogue_manager/dialogue_manager.gd
+Loading resource: res://addons/dialogue_manager/test_scene.tscn remapped: res://addons/dialogue_manager/test_scene.tscn
+Loading resource: res://addons/dialogue_manager/test_scene.gd remapped: res://addons/dialogue_manager/test_scene.gd
+Completed load for: 'res://addons/dialogue_manager/test_scene.gd' remapped 'res://addons/dialogue_manager/test_scene.gd' at thread -1
+Completed load for: 'res://addons/dialogue_manager/test_scene.tscn' remapped 'res://addons/dialogue_manager/test_scene.tscn' at thread -1
+Completed load for: 'res://addons/dialogue_manager/dialogue_manager.gd' remapped 'res://addons/dialogue_manager/dialogue_manager.gd' at thread -1
+Loaded system CA certificates
+Loading resource: res://assets/graphics/battle_sprites/Avatar Anubis.png remapped: res://assets/graphics/battle_sprites/Avatar Anubis.png
+Loading resource: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex remapped: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Anubis.png' remapped 'res://assets/graphics/battle_sprites/Avatar Anubis.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Chimera.png remapped: res://assets/graphics/battle_sprites/Avatar Chimera.png
+Loading resource: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex remapped: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Chimera.png' remapped 'res://assets/graphics/battle_sprites/Avatar Chimera.png' at thread -1
+Loading resource: res://assets/graphics/parallaxes/BB01-001.png remapped: res://assets/graphics/parallaxes/BB01-001.png
+Loading resource: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex remapped: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex
+Completed load for: 'res://assets/graphics/parallaxes/BB01-001.png' remapped 'res://assets/graphics/parallaxes/BB01-001.png' at thread -1
+Loading resource: res://addons/gut/fonts/AnonymousPro-Bold.ttf remapped: res://addons/gut/fonts/AnonymousPro-Bold.ttf
+Loading resource: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata remapped: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata
+Completed load for: 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' remapped 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' at thread -1
+Loading resource: res://assets/graphics/animations/004-Attack02.png remapped: res://assets/graphics/animations/004-Attack02.png
+Loading resource: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex remapped: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex
+Completed load for: 'res://assets/graphics/animations/004-Attack02.png' remapped 'res://assets/graphics/animations/004-Attack02.png' at thread -1
+Loading resource: res://assets/graphics/animations/005-Attack03.png remapped: res://assets/graphics/animations/005-Attack03.png
+Loading resource: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex remapped: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex
+Completed load for: 'res://assets/graphics/animations/005-Attack03.png' remapped 'res://assets/graphics/animations/005-Attack03.png' at thread -1
+Loading resource: res://assets/graphics/animations/000-magic01.png remapped: res://assets/graphics/animations/000-magic01.png
+Loading resource: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex remapped: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex
+Completed load for: 'res://assets/graphics/animations/000-magic01.png' remapped 'res://assets/graphics/animations/000-magic01.png' at thread -1
+Loading resource: res://assets/graphics/animations/TARGET01.png remapped: res://assets/graphics/animations/TARGET01.png
+Loading resource: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex remapped: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex
+Completed load for: 'res://assets/graphics/animations/TARGET01.png' remapped 'res://assets/graphics/animations/TARGET01.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Anubis.png remapped: res://assets/graphics/battle_sprites/Avatar Anubis.png
+Loading resource: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex remapped: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Anubis.png' remapped 'res://assets/graphics/battle_sprites/Avatar Anubis.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Chimera.png remapped: res://assets/graphics/battle_sprites/Avatar Chimera.png
+Loading resource: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex remapped: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Chimera.png' remapped 'res://assets/graphics/battle_sprites/Avatar Chimera.png' at thread -1
+Loading resource: res://assets/graphics/parallaxes/BB01-001.png remapped: res://assets/graphics/parallaxes/BB01-001.png
+Loading resource: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex remapped: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex
+Completed load for: 'res://assets/graphics/parallaxes/BB01-001.png' remapped 'res://assets/graphics/parallaxes/BB01-001.png' at thread -1
+Loading resource: res://addons/gut/fonts/AnonymousPro-Bold.ttf remapped: res://addons/gut/fonts/AnonymousPro-Bold.ttf
+Loading resource: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata remapped: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata
+Completed load for: 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' remapped 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' at thread -1
+Loading resource: res://assets/graphics/animations/004-Attack02.png remapped: res://assets/graphics/animations/004-Attack02.png
+Loading resource: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex remapped: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex
+Completed load for: 'res://assets/graphics/animations/004-Attack02.png' remapped 'res://assets/graphics/animations/004-Attack02.png' at thread -1
+Loading resource: res://assets/graphics/animations/005-Attack03.png remapped: res://assets/graphics/animations/005-Attack03.png
+Loading resource: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex remapped: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex
+Completed load for: 'res://assets/graphics/animations/005-Attack03.png' remapped 'res://assets/graphics/animations/005-Attack03.png' at thread -1
+Loading resource: res://assets/graphics/animations/000-magic01.png remapped: res://assets/graphics/animations/000-magic01.png
+Loading resource: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex remapped: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex
+Completed load for: 'res://assets/graphics/animations/000-magic01.png' remapped 'res://assets/graphics/animations/000-magic01.png' at thread -1
+Loading resource: res://assets/graphics/animations/TARGET01.png remapped: res://assets/graphics/animations/TARGET01.png
+Loading resource: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex remapped: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex
+Completed load for: 'res://assets/graphics/animations/TARGET01.png' remapped 'res://assets/graphics/animations/TARGET01.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Anubis.png remapped: res://assets/graphics/battle_sprites/Avatar Anubis.png
+Loading resource: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex remapped: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Anubis.png' remapped 'res://assets/graphics/battle_sprites/Avatar Anubis.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Chimera.png remapped: res://assets/graphics/battle_sprites/Avatar Chimera.png
+Loading resource: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex remapped: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Chimera.png' remapped 'res://assets/graphics/battle_sprites/Avatar Chimera.png' at thread -1
+Loading resource: res://assets/graphics/parallaxes/BB01-001.png remapped: res://assets/graphics/parallaxes/BB01-001.png
+Loading resource: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex remapped: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex
+Completed load for: 'res://assets/graphics/parallaxes/BB01-001.png' remapped 'res://assets/graphics/parallaxes/BB01-001.png' at thread -1
+Loading resource: res://addons/gut/fonts/AnonymousPro-Bold.ttf remapped: res://addons/gut/fonts/AnonymousPro-Bold.ttf
+Loading resource: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata remapped: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata
+Completed load for: 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' remapped 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' at thread -1
+Loading resource: res://assets/graphics/animations/004-Attack02.png remapped: res://assets/graphics/animations/004-Attack02.png
+Loading resource: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex remapped: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex
+Completed load for: 'res://assets/graphics/animations/004-Attack02.png' remapped 'res://assets/graphics/animations/004-Attack02.png' at thread -1
+Loading resource: res://assets/graphics/animations/005-Attack03.png remapped: res://assets/graphics/animations/005-Attack03.png
+Loading resource: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex remapped: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex
+Completed load for: 'res://assets/graphics/animations/005-Attack03.png' remapped 'res://assets/graphics/animations/005-Attack03.png' at thread -1
+Loading resource: res://assets/graphics/animations/000-magic01.png remapped: res://assets/graphics/animations/000-magic01.png
+Loading resource: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex remapped: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex
+Completed load for: 'res://assets/graphics/animations/000-magic01.png' remapped 'res://assets/graphics/animations/000-magic01.png' at thread -1
+Loading resource: res://assets/graphics/animations/TARGET01.png remapped: res://assets/graphics/animations/TARGET01.png
+Loading resource: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex remapped: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex
+Completed load for: 'res://assets/graphics/animations/TARGET01.png' remapped 'res://assets/graphics/animations/TARGET01.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Anubis.png remapped: res://assets/graphics/battle_sprites/Avatar Anubis.png
+Loading resource: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex remapped: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Anubis.png' remapped 'res://assets/graphics/battle_sprites/Avatar Anubis.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Chimera.png remapped: res://assets/graphics/battle_sprites/Avatar Chimera.png
+Loading resource: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex remapped: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Chimera.png' remapped 'res://assets/graphics/battle_sprites/Avatar Chimera.png' at thread -1
+Loading resource: res://assets/graphics/parallaxes/BB01-001.png remapped: res://assets/graphics/parallaxes/BB01-001.png
+Loading resource: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex remapped: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex
+Completed load for: 'res://assets/graphics/parallaxes/BB01-001.png' remapped 'res://assets/graphics/parallaxes/BB01-001.png' at thread -1
+Loading resource: res://addons/gut/fonts/AnonymousPro-Bold.ttf remapped: res://addons/gut/fonts/AnonymousPro-Bold.ttf
+Loading resource: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata remapped: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata
+Completed load for: 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' remapped 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' at thread -1
+Loading resource: res://assets/graphics/animations/004-Attack02.png remapped: res://assets/graphics/animations/004-Attack02.png
+Loading resource: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex remapped: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex
+Completed load for: 'res://assets/graphics/animations/004-Attack02.png' remapped 'res://assets/graphics/animations/004-Attack02.png' at thread -1
+Loading resource: res://assets/graphics/animations/005-Attack03.png remapped: res://assets/graphics/animations/005-Attack03.png
+Loading resource: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex remapped: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex
+Completed load for: 'res://assets/graphics/animations/005-Attack03.png' remapped 'res://assets/graphics/animations/005-Attack03.png' at thread -1
+Loading resource: res://assets/graphics/animations/000-magic01.png remapped: res://assets/graphics/animations/000-magic01.png
+Loading resource: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex remapped: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex
+Completed load for: 'res://assets/graphics/animations/000-magic01.png' remapped 'res://assets/graphics/animations/000-magic01.png' at thread -1
+Loading resource: res://assets/graphics/animations/TARGET01.png remapped: res://assets/graphics/animations/TARGET01.png
+Loading resource: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex remapped: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex
+Completed load for: 'res://assets/graphics/animations/TARGET01.png' remapped 'res://assets/graphics/animations/TARGET01.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Anubis.png remapped: res://assets/graphics/battle_sprites/Avatar Anubis.png
+Loading resource: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex remapped: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Anubis.png' remapped 'res://assets/graphics/battle_sprites/Avatar Anubis.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Chimera.png remapped: res://assets/graphics/battle_sprites/Avatar Chimera.png
+Loading resource: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex remapped: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Chimera.png' remapped 'res://assets/graphics/battle_sprites/Avatar Chimera.png' at thread -1
+Loading resource: res://assets/graphics/parallaxes/BB01-001.png remapped: res://assets/graphics/parallaxes/BB01-001.png
+Loading resource: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex remapped: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex
+Completed load for: 'res://assets/graphics/parallaxes/BB01-001.png' remapped 'res://assets/graphics/parallaxes/BB01-001.png' at thread -1
+Loading resource: res://addons/gut/fonts/AnonymousPro-Bold.ttf remapped: res://addons/gut/fonts/AnonymousPro-Bold.ttf
+Loading resource: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata remapped: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata
+Completed load for: 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' remapped 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' at thread -1
+Loading resource: res://assets/graphics/animations/004-Attack02.png remapped: res://assets/graphics/animations/004-Attack02.png
+Loading resource: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex remapped: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex
+Completed load for: 'res://assets/graphics/animations/004-Attack02.png' remapped 'res://assets/graphics/animations/004-Attack02.png' at thread -1
+Loading resource: res://assets/graphics/animations/005-Attack03.png remapped: res://assets/graphics/animations/005-Attack03.png
+Loading resource: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex remapped: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex
+Completed load for: 'res://assets/graphics/animations/005-Attack03.png' remapped 'res://assets/graphics/animations/005-Attack03.png' at thread -1
+Loading resource: res://assets/graphics/animations/000-magic01.png remapped: res://assets/graphics/animations/000-magic01.png
+Loading resource: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex remapped: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex
+Completed load for: 'res://assets/graphics/animations/000-magic01.png' remapped 'res://assets/graphics/animations/000-magic01.png' at thread -1
+Loading resource: res://assets/graphics/animations/TARGET01.png remapped: res://assets/graphics/animations/TARGET01.png
+Loading resource: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex remapped: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex
+Completed load for: 'res://assets/graphics/animations/TARGET01.png' remapped 'res://assets/graphics/animations/TARGET01.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Anubis.png remapped: res://assets/graphics/battle_sprites/Avatar Anubis.png
+Loading resource: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex remapped: res://.godot/imported/Avatar Anubis.png-ee5831b97a64f5da3b60803c056dd8a6.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Anubis.png' remapped 'res://assets/graphics/battle_sprites/Avatar Anubis.png' at thread -1
+Loading resource: res://assets/graphics/battle_sprites/Avatar Chimera.png remapped: res://assets/graphics/battle_sprites/Avatar Chimera.png
+Loading resource: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex remapped: res://.godot/imported/Avatar Chimera.png-3b70807ee73300889cb02dd06a6747e1.ctex
+Completed load for: 'res://assets/graphics/battle_sprites/Avatar Chimera.png' remapped 'res://assets/graphics/battle_sprites/Avatar Chimera.png' at thread -1
+Loading resource: res://assets/graphics/parallaxes/BB01-001.png remapped: res://assets/graphics/parallaxes/BB01-001.png
+Loading resource: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex remapped: res://.godot/imported/BB01-001.png-75822d8888af4544eda12216b01928e0.ctex
+Completed load for: 'res://assets/graphics/parallaxes/BB01-001.png' remapped 'res://assets/graphics/parallaxes/BB01-001.png' at thread -1
+Loading resource: res://addons/gut/fonts/AnonymousPro-Bold.ttf remapped: res://addons/gut/fonts/AnonymousPro-Bold.ttf
+Loading resource: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata remapped: res://.godot/imported/AnonymousPro-Bold.ttf-9d8fef4d357af5b52cd60afbe608aa49.fontdata
+Completed load for: 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' remapped 'res://addons/gut/fonts/AnonymousPro-Bold.ttf' at thread -1
+Loading resource: res://assets/graphics/animations/004-Attack02.png remapped: res://assets/graphics/animations/004-Attack02.png
+Loading resource: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex remapped: res://.godot/imported/004-Attack02.png-83ad2b59d86abe1222f2b40646a3e15f.ctex
+Completed load for: 'res://assets/graphics/animations/004-Attack02.png' remapped 'res://assets/graphics/animations/004-Attack02.png' at thread -1
+Loading resource: res://assets/graphics/animations/005-Attack03.png remapped: res://assets/graphics/animations/005-Attack03.png
+Loading resource: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex remapped: res://.godot/imported/005-Attack03.png-5151a7dba9fde953b6c57c7e91df8dc5.ctex
+Completed load for: 'res://assets/graphics/animations/005-Attack03.png' remapped 'res://assets/graphics/animations/005-Attack03.png' at thread -1
+Loading resource: res://assets/graphics/animations/000-magic01.png remapped: res://assets/graphics/animations/000-magic01.png
+Loading resource: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex remapped: res://.godot/imported/000-magic01.png-e2798556a592878dd88ec36b39b89d41.ctex
+Completed load for: 'res://assets/graphics/animations/000-magic01.png' remapped 'res://assets/graphics/animations/000-magic01.png' at thread -1
+Loading resource: res://assets/graphics/animations/TARGET01.png remapped: res://assets/graphics/animations/TARGET01.png
+Loading resource: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex remapped: res://.godot/imported/TARGET01.png-8405bcb4d3a11b5252ad0c3379aa0fa7.ctex
+Completed load for: 'res://assets/graphics/animations/TARGET01.png' remapped 'res://assets/graphics/animations/TARGET01.png' at thread -1
+PLAYABLE_FX_OK: 20 checks; source frames, flashes, valid sounds, hit/death, heal, miss, dodge, enemy cue, input gating

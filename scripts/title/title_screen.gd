@@ -1,7 +1,8 @@
 extends Control
 ## Title screen modeled on RPG Maker XP's Scene_Title (proposal 1).
 ## Creator decisions (2026-11-21): black background + "EXODUS" text, no music,
-## this scene is the game's main scene and New Game opens the current battle.
+## this scene is the game's main scene. New Game now opens the PLACEHOLDER map
+## prototype (wiring pending the creator's decision about the exploration loop).
 ## Geometry follows XP's default Scene_Title (192 px command window at y=288 on
 ## 640x480) scaled to this project's 544x416 viewport. Continue stays disabled
 ## until a save system exists (proposal 10), like XP with no Save*.rxdata files.
@@ -10,7 +11,7 @@ signal command_executed(command: String)
 
 const GAME_TITLE := "EXODUS"
 const COMMANDS := ["New Game", "Continue", "Shutdown"]
-const NEW_GAME_SCENE := "res://scenes/battle/BattlePlayable.tscn"
+const NEW_GAME_SCENE := "res://scenes/map/Map.tscn"
 const SCALE := 416.0 / 480.0
 const WINDOW_WIDTH := 192.0 * SCALE
 const ROW_HEIGHT := 32.0 * SCALE

@@ -1,0 +1,98 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+---  GUT  ---
+[INFO]:  using [C:/Users/zerke/AppData/Roaming/Godot/app_userdata/Exodus] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.7.1
+
+
+res://tests/test_asset_manifest.gd
+* test_manifest_is_readable_and_declares_requirements
+* test_manifest_covers_paths_used_by_environment_tests
+* test_manifest_lists_derived_battle_sprites
+3/3 passed.
+
+
+res://tests/test_battle_combat.gd
+* test_player_attack_uses_manual_rhythm_and_spends_one_act
+* test_enemy_attack_never_opens_an_attack_bar
+* test_player_defense_is_available_when_a_reaction_is_declared
+* test_ai_defense_resolves_without_human_input
+* test_rest_spends_exactly_one_act
+* test_absorption_without_input_grants_nothing
+* test_absorption_success_eliminates_target_once
+* test_absorption_of_last_enemy_ends_battle
+* test_ally_cannot_absorb
+* test_menu_input_does_not_trigger_reaction_or_mash
+10/10 passed.
+
+
+res://tests/test_battle_integration.gd
+* test_attack_resolves_through_rhythm
+1/1 passed.
+
+
+res://tests/test_battle_math.gd
+* test_sp_is_sum_of_seven_stats
+* test_crit_chance_uses_agi_and_sp_difference
+* test_rhythm_duration_is_bounded
+* test_rhythm_zones
+* test_physical_damage_uses_ratio_and_affinity
+* test_press_turn_act_delta
+* test_extra_block_rolls
+* test_critical_chance_positive_negative_and_zero_sp_gap
+* test_critical_sp_bonus_is_capped_at_thirty_points
+* test_point_against_point_gives_no_contact
+* test_critical_roll_is_deterministic_with_seed
+* test_sp_roll_sign_follows_superiority
+* test_affinity_interacts_with_damage
+* test_dominance_ratio_requires_seventy_percent_share
+* test_press_turn_uses_contact_semantics
+15/15 passed.
+
+
+res://tests/test_battle_state.gd
+* test_two_acts_are_both_usable_in_agi_order
+* test_stored_acts_are_consumed_as_extra_turns
+* test_reaction_and_action_share_the_same_act_pool
+* test_consecutive_attacks_spend_one_act_each
+* test_unused_acts_are_stored_on_end_round
+* test_act_consumption_never_goes_negative
+* test_end_round_recovers_en_and_caps_at_maximum
+* test_defeated_unit_does_not_take_remaining_acts
+* test_no_infinite_turns_when_acts_are_exhausted
+* test_rules_are_symmetric_for_player_and_enemy
+* test_superiority_bonus_still_grants_one_act
+* test_d005_cap_defers_surplus_acts
+* test_d005_grant_overflow_is_deferred
+* test_d005_penalty_only_reduces_available_acts
+* test_deferred_acts_reappear_next_round
+* test_dominance_requires_real_superiority
+* test_battle_ends_when_one_side_is_down
+17/17 passed.
+
+
+res://tests/test_environment.gd
+* test_project_identity
+* test_required_plugins_are_enabled
+* test_temporary_assets_are_imported
+3/3 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+Totals
+------
+Scripts               6
+Tests                49
+Passing Tests        49
+Asserts             158
+Time              11.137s
+
+
+---- All tests passed! ----
+

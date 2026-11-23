@@ -61,7 +61,7 @@ func _run() -> void:
 	_check(title.index == 0, "Input locked during fade")
 	await create_timer(title.FADE_TIME + 0.3).timeout
 	await process_frame
-	_check(current_scene != null and current_scene.scene_file_path == "res://scenes/battle/BattlePlayable.tscn",
-			"New Game opens the battle scene (got %s)" % (current_scene.scene_file_path if current_scene else "null"))
+	_check(current_scene != null and current_scene.scene_file_path == "res://scenes/map/Map.tscn",
+			"New Game opens the placeholder map (got %s)" % (current_scene.scene_file_path if current_scene else "null"))
 	print("TITLE CHECKS PASSED: ", checks)
 	quit(0)

@@ -556,14 +556,14 @@ Decisão do criador (2026-11-22):
 
 - **Interrupção:** um personagem é interrompido na sua ação por um ataque que sofre, seja ataque normal ou magia. Quem é interrompido **perde o ato** da ação interrompida, e a ação não acontece.
 - **Contra-ataque com duas barras:** ao reagir a um ataque com contra-ataque, aparecem **duas barras de ritmo** em vez de uma. Em cima fica a do oponente, com ponteiro **vermelho** da **direita para a esquerda**. Embaixo fica a do jogador, com ponteiro **branco** da **esquerda para a direita**.
-- **Ritmo:** MISS, BLAST e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
+- **Ritmo:** MISS, BEAM e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
 - **Velocidade do ponteiro do oponente:** diferente da do jogador e definida pela **AGI**. Oponente com AGI maior que a do jogador tem ponteiro vermelho **mais rápido**; com AGI menor, mais lento.
 - **Interrupção perfeita:** se o jogador ou o oponente aperta na hora certa quando os dois ponteiros estão na mesma posição, a tela pisca num **impact frame**, quem foi interrompido recebe **shake** e quem interrompeu **rouba 16 SP** do outro.
-- **Interrupção comum:** acertar BLAST ou POINT antes do outro rouba **4 SP**.
+- **Interrupção comum:** quem tira o **resultado melhor** (POINT > BEAM > MISS) interrompe e rouba **4 SP**, não importa quem apertou primeiro (confirmado pelo criador em 2026-11-23; ver Resolução da troca).
 - **Magias:** mantêm seus efeitos normais e também usam esse sistema para causar interrupção.
 - **Fila:** quem interrompe ações em fila ganha **+1 ato por comando da fila perdido**, respeitando o teto de 4 atos disponíveis da D-005 (excedente vai ao estoque).
 - **Decisões anteriores:** substitui **só o cancelamento** da D-025 (7A), que cancelava apenas por eliminação ou efeito explícito. A ordem por AGI (D-014, 5C) e o desempate lexicográfico por ID (D-031) continuam valendo. A interrupção da reza da D-048 segue a mesma ideia: o ataque de reação que acerta interrompe.
-- **Empate:** se os dois acertam, ou os dois erram, **ambos se interrompem**, perdendo os atos, e **ninguém perde SP**.
+- **Empate:** resultados iguais: **os dois golpes resolvem** (ambos acertam ou ambos erram), cada lado perde **só os comandos seguintes da sua fila** e **ninguém perde SP** (confirmado pelo criador em 2026-11-23; substitui a redação antiga "ambos se interrompem, perdendo os atos").
 - **SP roubado:** é SP de combate, portanto **temporário**: vale até o fim da batalha, como o +1 SP por evento (GDD §5). Só o SP de absorção e de atributos é permanente (D-028).
 - **Dano:** o contra-ataque **causa dano** normalmente, além de interromper.
 - **Magias:** a barra dupla funciona **exatamente como nos ataques**.
@@ -573,10 +573,10 @@ Decisão do criador (2026-11-22):
 - **Velocidade pela AGI:** velocidade do ponteiro vermelho = velocidade base × **AGI do oponente / AGI do jogador**.
 - **SP zero:** o roubo pode deixar a vítima com **0 SP**, nunca negativo.
 - **Só contra-ataque:** a barra dupla aparece só no contra-ataque (e em magias, como nos ataques). DEFEND/desvio e item usam a barra única de sempre.
-- **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (ambos interrompidos, perdem os atos, sem perder SP) e **cada golpe causa seu dano**; a D-015 continua valendo para defesa contra ataque.
+- **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (os dois golpes resolvem e **cada golpe causa seu dano**; cada lado perde só os comandos seguintes da fila; sem perder SP); a D-015 continua valendo para defesa contra ataque.
 - **D-022 mantida:** sem reação declarada, o inimigo acerta automaticamente, sem barra dupla nem interrupção.
 - **Shake:** treme **só o sprite/cartão** de quem foi interrompido, por **0,4 s**, com amplitude de **4 px**.
-- **Resolução da troca:** os resultados são comparados (POINT > BLAST > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
+- **Resolução da troca:** os resultados são comparados (POINT > BEAM > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
 - **Golpe da perfeita:** conta como **POINT**, onde quer que o alinhamento aconteça.
 - **Alvo do contra-ataque:** sempre o inimigo que anunciou o ataque. Se quem contra-ataca não é o alvo anunciado (D-045) e tira resultado pior, **ele leva o dano** no lugar do alvo e perde o SP equivalente.
 - **Posição das barras:** sobre o inimigo quando é o inimigo quem contra-ataca; no painel de status do jogador quando é o jogador.
@@ -1423,7 +1423,10 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
   de reação que **acerta** interrompe a reza: no PRAY o ato se perde e não há PP; no
   Ra'am o ato se perde, não há efeito e os PP alocados (inclusive os extras) voltam ao Yoch. Na interrupção,
   **todos os comandos seguintes da fila de Yoch se perdem** com seus atos; PP alocados
-  neles voltam ao Yoch. MISS ou bloqueio não interrompem.
+  neles voltam ao Yoch. MISS ou bloqueio não interrompem. O PRAY não é ataque: o
+  inimigo **ataca** em reação (não é contra-ataque). Um contra-ataque ao **Ra'am** usa a
+  **barra dupla da D-049**. O inimigo que interrompe ganha **+1 ato por comando
+  perdido** na fila de Yoch (teto 4, D-005). Respostas do criador em 2026-11-23.
 - **Itens abençoados:** consumíveis que dão efeitos e PP quando usados no aliado (Yoch).
   Lista, efeitos e quantidades: **PENDENTE**.
 - **Implementação e respostas do criador (2026-11-23):** detalhes técnicos em
@@ -1520,7 +1523,8 @@ superior direito; primeiro combate contra 2 criaturas-sombra com nomes hebraicos
 IA, que cura Fallen e corta pela metade seu SP atual; absorção tutorial forçada (+2 MEF
 sem mash, depois +2 MAK com mash, permanentes); o humano parte para sua mesquita a
 oeste; o jogador escolhe oeste ou leste, com montanhas avermelhadas à frente.
-**D-051:** o humano é Yoch (0 PP no início da batalha); reinício = Fallen com HP cheio;
+**D-051:** o humano é Yoch (0 PP no início da batalha); reinício = Fallen com HP cheio
+e **SP atual pela metade** (confirmado pelo criador em 2026-11-23);
 absorção por disputa de SP (D-029 revogada). Conflito restante: fichas dos inimigos
 versus o protótipo atual.
 
@@ -1551,14 +1555,14 @@ Localizações nomeadas, geografia, hubs, dungeons e regras de exploração: **P
   placeholders próprios na cena de batalha. **CONFIRMADO como decisão**;
   **implementação pendente — não executada nesta entrega**.
 - Idioma da UI: inglês. **CONFIRMADO**.
-- Acessibilidade, navegação por teclado/gamepad, escalonamento e contraste: **PENDENTE**.
-
-### 17.1 Tactical Altar — decisões de HUD das Rodadas Visuais 1 a 3 — **CONFIRMADO como design; NÃO IMPLEMENTADO**
-
 - **Layout de batalha (D-053, criador 2026-11-22/23): fundo D** (céu de plasma animado
   atrás da cena fixa) com **inimigos 15% menores**. Deve ser usado **SEMPRE** a partir de
   2026-11-23, no jogo, nos protótipos e nas capturas. **IMPLEMENTADO** em
   `PlayableController._build_ui`, com o shader `scenes/battle/battle_stage.gdshader`.
+- Acessibilidade, navegação por teclado/gamepad, escalonamento e contraste: **PENDENTE**.
+
+### 17.1 Tactical Altar — decisões de HUD das Rodadas Visuais 1 a 3 — **CONFIRMADO como design; NÃO IMPLEMENTADO**
+
 A nova direção visual deve preservar o aspecto de **RPG clássico próximo de RPG
 Maker XP**, a visão frontal e a escala nativa 544×416. **Tactical Altar** é a
 direção aprovada: janelas e painéis legíveis, geometria contida, estética sombria e
@@ -2108,8 +2112,20 @@ rodada.
     magia cujo alvo cai antes de resolver.
 
 29. **D-049:** contra-ataque com duas barras de ritmo e interrupção por ataque
-    sofrido (perfeita rouba 16 SP; BLAST/POINT antes rouba 4 SP; +1 ato por
+    sofrido (perfeita rouba 16 SP; resultado melhor rouba 4 SP; +1 ato por
     comando da fila perdido, teto 4). **IMPLEMENTADO** no BattlePlayable; detalhes no §7.5.
+
+30. **D-050:** prólogo aprovado como roteiro, **NÃO IMPLEMENTADO**. Pendentes (lista
+    completa em `docs/PROLOGUE_SCRIPT.md`): estágios de ATK, dano mágico, IGNI, burn,
+    EN extra, "dano o bastante", detalhes do resgate e conflito das fichas com o protótipo.
+
+31. **D-051:** absorção por disputa de SP **IMPLEMENTADA** (`dd0813e`); o restante
+    (prólogo, IA contextual do inimigo após a correção da D-047) é design, **NÃO
+    IMPLEMENTADO**.
+
+32. **D-052:** VFX da absorção em letras hebraicas, **IMPLEMENTADO** em
+    `scripts/battle/absorb_vfx.gd` (2026-11-23). Pendentes: cor, tempos, trajetória
+    e destino das letras da quebra, e visual da falha.
 
 ## Apêndice A — Registro de decisões
 
@@ -2635,6 +2651,9 @@ Formato: ID · data · decisão · estado · impacto documental.
   perdido, sem PP; Ra'am: ato perdido, sem efeito, PP alocados, inclusive extras, voltam ao Yoch) e
   todos os comandos seguintes da fila de Yoch se perdem com seus atos, com os PP
   alocados neles voltando ao Yoch; MISS ou bloqueio não interrompem. `Thunder1.png` do RTP segue a regra de não publicação da D-018.
+  Complemento de 2026-11-23: contra o PRAY o inimigo ataca (não há contra-ataque a algo
+  que não é ataque); contra-ataque ao Ra'am usa a barra dupla da D-049; o inimigo que
+  interrompe ganha +1 ato por comando perdido na fila de Yoch (teto 4).
   A forma como Fallen obtém magias será
   discutida depois (absorção e elementos). **CONFIRMADO como design; NÃO
   IMPLEMENTADO** na data; **implementado no BattlePlayable em 2026-11-23** com as respostas
@@ -2650,14 +2669,14 @@ Formato: ID · data · decisão · estado · impacto documental.
 - **D-049 · 2026-11-22 (decisão do criador) — contra-ataque com duas barras e interrupção.**
   **Interrupção:** um personagem é interrompido na sua ação por um ataque que sofre, seja ataque normal ou magia. Quem é interrompido **perde o ato** da ação interrompida, e a ação não acontece.
   **Contra-ataque com duas barras:** ao reagir a um ataque com contra-ataque, aparecem **duas barras de ritmo** em vez de uma. Em cima fica a do oponente, com ponteiro **vermelho** da **direita para a esquerda**. Embaixo fica a do jogador, com ponteiro **branco** da **esquerda para a direita**.
-  **Ritmo:** MISS, BLAST e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
+  **Ritmo:** MISS, BEAM e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
   **Velocidade do ponteiro do oponente:** diferente da do jogador e definida pela **AGI**. Oponente com AGI maior que a do jogador tem ponteiro vermelho **mais rápido**; com AGI menor, mais lento.
   **Interrupção perfeita:** se o jogador ou o oponente aperta na hora certa quando os dois ponteiros estão na mesma posição, a tela pisca num **impact frame**, quem foi interrompido recebe **shake** e quem interrompeu **rouba 16 SP** do outro.
-  **Interrupção comum:** acertar BLAST ou POINT antes do outro rouba **4 SP**.
+  **Interrupção comum:** quem tira o **resultado melhor** (POINT > BEAM > MISS) interrompe e rouba **4 SP**, não importa quem apertou primeiro (confirmado pelo criador em 2026-11-23; ver Resolução da troca).
   **Magias:** mantêm seus efeitos normais e também usam esse sistema para causar interrupção.
   **Fila:** quem interrompe ações em fila ganha **+1 ato por comando da fila perdido**, respeitando o teto de 4 atos disponíveis da D-005 (excedente vai ao estoque).
   **Decisões anteriores:** substitui **só o cancelamento** da D-025 (7A), que cancelava apenas por eliminação ou efeito explícito. A ordem por AGI (D-014, 5C) e o desempate lexicográfico por ID (D-031) continuam valendo. A interrupção da reza da D-048 segue a mesma ideia: o ataque de reação que acerta interrompe.
-  **Empate:** se os dois acertam, ou os dois erram, **ambos se interrompem**, perdendo os atos, e **ninguém perde SP**.
+  **Empate:** resultados iguais: **os dois golpes resolvem** (ambos acertam ou ambos erram), cada lado perde **só os comandos seguintes da sua fila** e **ninguém perde SP** (confirmado pelo criador em 2026-11-23; substitui a redação antiga "ambos se interrompem, perdendo os atos").
   **SP roubado:** é SP de combate, portanto **temporário**: vale até o fim da batalha, como o +1 SP por evento (GDD §5). Só o SP de absorção e de atributos é permanente (D-028).
   **Dano:** o contra-ataque **causa dano** normalmente, além de interromper.
   **Magias:** a barra dupla funciona **exatamente como nos ataques**.
@@ -2667,10 +2686,10 @@ Formato: ID · data · decisão · estado · impacto documental.
   **Velocidade pela AGI:** velocidade do ponteiro vermelho = velocidade base × **AGI do oponente / AGI do jogador**.
   **SP zero:** o roubo pode deixar a vítima com **0 SP**, nunca negativo.
   **Só contra-ataque:** a barra dupla aparece só no contra-ataque (e em magias, como nos ataques). DEFEND/desvio e item usam a barra única de sempre.
-  **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (ambos interrompidos, perdem os atos, sem perder SP) e **cada golpe causa seu dano**; a D-015 continua valendo para defesa contra ataque.
+  **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (os dois golpes resolvem e **cada golpe causa seu dano**; cada lado perde só os comandos seguintes da fila; sem perder SP); a D-015 continua valendo para defesa contra ataque.
   **D-022 mantida:** sem reação declarada, o inimigo acerta automaticamente, sem barra dupla nem interrupção.
   **Shake:** treme **só o sprite/cartão** de quem foi interrompido, por **0,4 s**, com amplitude de **4 px**.
-  **Resolução da troca:** os resultados são comparados (POINT > BLAST > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
+  **Resolução da troca:** os resultados são comparados (POINT > BEAM > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
   **Golpe da perfeita:** conta como **POINT**, onde quer que o alinhamento aconteça.
   **Alvo do contra-ataque:** sempre o inimigo que anunciou o ataque. Se quem contra-ataca não é o alvo anunciado (D-045) e tira resultado pior, **ele leva o dano** no lugar do alvo e perde o SP equivalente.
   **Posição das barras:** sobre o inimigo quando é o inimigo quem contra-ataca; no painel de status do jogador quando é o jogador.
@@ -2688,7 +2707,9 @@ Formato: ID · data · decisão · estado · impacto documental.
   reiniciado), absorção tutorial (+2 MEF; depois +2 MAK com mash; permanentes), fala de
   despedida e escolha oeste/leste. **CONFIRMADO como roteiro; NÃO IMPLEMENTADO.**
   Conflitos abertos com D-029/§10 (absorção), com as fichas do protótipo e com a
-  identidade de Yoch (D-048). Impacto: GDD §14.1; `COMBAT_SPEC.md` §Prólogo;
+  identidade de Yoch (D-048). **Atualização pela D-051:** os conflitos com a D-029 e
+  com a identidade de Yoch foram resolvidos (D-029 revogada; o humano é Yoch); resta o
+  conflito das fichas com o protótipo. Impacto: GDD §14.1; `COMBAT_SPEC.md` §Prólogo;
   `docs/DECISIONS.md`.
 
 - **D-051 · 2026-11-22 (correção do criador) — absorção por disputa de SP e respostas ao prólogo.**
@@ -2725,10 +2746,6 @@ Formato: ID · data · decisão · estado · impacto documental.
   letras da quebra, e visual da falha. **IMPLEMENTADO no jogo em 2026-11-23**
   (`scripts/battle/absorb_vfx.gd`; a animação antiga `ABSORB` do SMT saiu). Impacto: GDD §10;
   `COMBAT_SPEC.md` §Itens e absorção; `docs/DECISIONS.md`.
-
-Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
-escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
-`docs/COMBAT_SPEC.md`. Este apêndice não as duplica.
 - **D-053 · 2026-11-23 (decisão do criador) — layout de batalha com o fundo D, sempre.**
   O criador aprovou em 2026-11-22, no protótipo `prototypes/battle-bg`, o **fundo D**: o
   céu de plasma animado, mais escuro (brilho 0,6) e 20% mais lento, com a cena fixa de
@@ -2739,3 +2756,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   atrás do HUD e aplica `stage_backdrop = false` e `enemy_depth = 0.85`, com `enemy_horizon`
   no pé original. O fundo antigo desenhado pelo HUD deixa de ser usado. Impacto: GDD §17;
   `docs/DECISIONS.md`.
+
+Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
+escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
+`docs/COMBAT_SPEC.md`. Este apêndice não as duplica.

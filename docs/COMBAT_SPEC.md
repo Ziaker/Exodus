@@ -191,7 +191,9 @@
   ataques no mesmo bloco de turno**, cada um com reação própria e **um número
   de dano próprio na camada principal** (`DamageLayer`). Sem reação declarada,
   cada golpe usa o autoacerto D-022. A cadeia para se o atacante ou o alvo cair,
-  ou se o combate terminar. Um jogador que reservou atos com REACT não trava
+  ou se o combate terminar. **Corrigida pela D-051:** o criador nunca aprovou
+  que o inimigo gaste **sempre** dois atos em ataques independente do contexto;
+  a IA contextual está pendente. Um jogador que reservou atos com REACT não trava
   o agendamento (`BattleState.skip_active_actor()`). **IMPLEMENTADO** em
   `playable_controller.gd` (`_enemy_turn()`), com regressão em
   `tests/verify_playable_reactions.gd`.
@@ -1195,14 +1197,14 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 ## Contra-ataque e interrupção — D-049; IMPLEMENTADO no motor Godot
 - **Interrupção:** um personagem é interrompido na sua ação por um ataque que sofre, seja ataque normal ou magia. Quem é interrompido **perde o ato** da ação interrompida, e a ação não acontece.
 - **Contra-ataque com duas barras:** ao reagir a um ataque com contra-ataque, aparecem **duas barras de ritmo** em vez de uma. Em cima fica a do oponente, com ponteiro **vermelho** da **direita para a esquerda**. Embaixo fica a do jogador, com ponteiro **branco** da **esquerda para a direita**.
-- **Ritmo:** MISS, BLAST e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
+- **Ritmo:** MISS, BEAM e POINT funcionam normalmente, como dois ataques consecutivos, um de cada lado.
 - **Velocidade do ponteiro do oponente:** diferente da do jogador e definida pela **AGI**. Oponente com AGI maior que a do jogador tem ponteiro vermelho **mais rápido**; com AGI menor, mais lento.
 - **Interrupção perfeita:** se o jogador ou o oponente aperta na hora certa quando os dois ponteiros estão na mesma posição, a tela pisca num **impact frame**, quem foi interrompido recebe **shake** e quem interrompeu **rouba 16 SP** do outro.
-- **Interrupção comum:** acertar BLAST ou POINT antes do outro rouba **4 SP**.
+- **Interrupção comum:** quem tira o **resultado melhor** (POINT > BEAM > MISS) interrompe e rouba **4 SP**, não importa quem apertou primeiro (confirmado pelo criador em 2026-11-23; ver Resolução da troca).
 - **Magias:** mantêm seus efeitos normais e também usam esse sistema para causar interrupção.
 - **Fila:** quem interrompe ações em fila ganha **+1 ato por comando da fila perdido**, respeitando o teto de 4 atos disponíveis da D-005 (excedente vai ao estoque).
 - **Decisões anteriores:** substitui **só o cancelamento** da D-025 (7A), que cancelava apenas por eliminação ou efeito explícito. A ordem por AGI (D-014, 5C) e o desempate lexicográfico por ID (D-031) continuam valendo. A interrupção da reza da D-048 segue a mesma ideia: o ataque de reação que acerta interrompe.
-- **Empate:** se os dois acertam, ou os dois erram, **ambos se interrompem**, perdendo os atos, e **ninguém perde SP**.
+- **Empate:** resultados iguais: **os dois golpes resolvem** (ambos acertam ou ambos erram), cada lado perde **só os comandos seguintes da sua fila** e **ninguém perde SP** (confirmado pelo criador em 2026-11-23; substitui a redação antiga "ambos se interrompem, perdendo os atos").
 - **SP roubado:** é SP de combate, portanto **temporário**: vale até o fim da batalha, como o +1 SP por evento (GDD §5). Só o SP de absorção e de atributos é permanente (D-028).
 - **Dano:** o contra-ataque **causa dano** normalmente, além de interromper.
 - **Magias:** a barra dupla funciona **exatamente como nos ataques**.
@@ -1212,10 +1214,10 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 - **Velocidade pela AGI:** velocidade do ponteiro vermelho = velocidade base × **AGI do oponente / AGI do jogador**.
 - **SP zero:** o roubo pode deixar a vítima com **0 SP**, nunca negativo.
 - **Só contra-ataque:** a barra dupla aparece só no contra-ataque (e em magias, como nos ataques). DEFEND/desvio e item usam a barra única de sempre.
-- **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (ambos interrompidos, perdem os atos, sem perder SP) e **cada golpe causa seu dano**; a D-015 continua valendo para defesa contra ataque.
+- **D-015 no contra-ataque:** se os dois tiram POINT, vale o **empate da D-049** (os dois golpes resolvem e **cada golpe causa seu dano**; cada lado perde só os comandos seguintes da fila; sem perder SP); a D-015 continua valendo para defesa contra ataque.
 - **D-022 mantida:** sem reação declarada, o inimigo acerta automaticamente, sem barra dupla nem interrupção.
 - **Shake:** treme **só o sprite/cartão** de quem foi interrompido, por **0,4 s**, com amplitude de **4 px**.
-- **Resolução da troca:** os resultados são comparados (POINT > BLAST > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
+- **Resolução da troca:** os resultados são comparados (POINT > BEAM > MISS). Quem tem resultado **melhor** interrompe: o seu golpe acerta, o do outro não acontece, e ele rouba 4 SP. Com resultados **iguais**, os dois golpes resolvem (ambos acertam ou ambos erram) e cada lado perde **só os comandos seguintes da sua fila**, sem ato extra e sem SP.
 - **Golpe da perfeita:** conta como **POINT**, onde quer que o alinhamento aconteça.
 - **Alvo do contra-ataque:** sempre o inimigo que anunciou o ataque. Se quem contra-ataca não é o alvo anunciado (D-045) e tira resultado pior, **ele leva o dano** no lugar do alvo e perde o SP equivalente.
 - **Posição das barras:** sobre o inimigo quando é o inimigo quem contra-ataca; no painel de status do jogador quando é o jogador.
@@ -1234,12 +1236,16 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
     de dano mágico IGNI em todos; 25% de burn, 3 de dano por round por 3 rounds);
     Energy Eat (1 ACT, 6 EN: recupera 5 HP + 1 por EN extra alocado).
 - Resgate: diante de dano mortal ao protagonista, o humano entra (IA), cura tudo, corta
-  o SP atual do protagonista pela metade e o combate reinicia.
+  o SP atual do protagonista pela metade e o combate reinicia. **D-051:** o humano é
+  **Yoch** (0 PP no início da batalha) e reiniciar significa Fallen completamente
+  recuperado, com HP cheio, e o SP atual continua **cortado pela metade** (confirmado
+  pelo criador em 2026-11-23).
 - Absorção tutorial: fraqueza indicada por chacoalhar; todas as opções viram ABSORB;
   +2 MEF do primeiro inimigo, depois +2 MAK com mash; permanentes.
-- **PENDENTES** (lista completa no roteiro): "dano o bastante", detalhes do resgate e conflito com a D-029.
+- **PENDENTES** (lista completa no roteiro): "dano o bastante" e detalhes do resgate.
   Estágios de ATK, dano mágico, IGNI, burn e EN extra foram definidos pelo criador em
-  2026-11-23 e estão implementados (seção "Habilidades do primeiro combate" abaixo).
+  2026-11-23 e estão implementados (seção "Habilidades do primeiro combate" abaixo). O conflito com a D-029 foi
+  resolvido pela D-051 (D-029 revogada).
 
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
@@ -1388,6 +1394,13 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
   - **Mecânica de interrupção:** todos os comandos seguintes da fila de Yoch também
     se perdem, com seus atos; PP alocados em magias desses comandos **voltam ao Yoch**.
   - MISS ou bloqueio **não** interrompem: o PRAY ou o Ra'am resolve normalmente.
+  - **PRAY** não é ataque, então não há contra-ataque: o inimigo **ataca** em reação, e o
+    Yoch se defende com a barra única de sempre; vale a regra acima.
+  - **Ra'am** é magia: um contra-ataque a ele usa a **barra dupla da D-049** (resultado
+    melhor interrompe e rouba SP; iguais, os dois resolvem). Se o Ra'am for interrompido,
+    vale a devolução de PP acima.
+  - O inimigo que interrompe ganha **+1 ato por comando perdido** na fila de Yoch, como
+    na D-049 (teto 4, D-005).
 - **Itens abençoados:** consumíveis que dão efeitos e PP quando usados no aliado (Yoch).
 - **PENDENTES:** lista, efeitos e PP dos itens abençoados (não implementados); sistema de
   condições de status bloqueadas pelo Haganah; efeitos de raça e classificação dos anjos.
