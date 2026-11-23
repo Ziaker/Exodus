@@ -33,15 +33,61 @@ func _equal_state() -> BattleState:
 	return state
 
 
-func test_two_acts_are_consecutive_before_the_next_combatant() -> void:
+func test_turns_cycle_fastest_first() -> void:
 	var state := _equal_state()
 	assert_eq(state.units[0].acts_available, 2)
 	assert_eq(state.units[1].acts_available, 2)
 	assert_eq(_take(state), state.units[0])
-	assert_eq(_take(state), state.units[0], "D-044: second act stays with the same unit")
-	assert_eq(_take(state), state.units[1])
+	assert_eq(_take(state), state.units[1], "Creator 2026-11-23: one turn each, fastest first")
+	assert_eq(_take(state), state.units[0])
 	assert_eq(_take(state), state.units[1])
 	assert_null(state.next_actor())
+
+
+func test_turn_order_example_fallen_enemy_yoch_enemy_fallen() -> void:
+	var state := BattleState.new()
+	var fallen := _make_unit(&"fallen", true, 20, 6)
+	var yoch := _make_unit(&"ally", true, 20, 5)
+	var fast_foe := _make_unit(&"foe_b", false, 20, 5)
+	var slow_foe := _make_unit(&"foe_a", false, 20, 4)
+	for unit in [slow_foe, yoch, fallen, fast_foe]:
+		state.add_unit(unit)
+	state.start_round()
+	for unit in state.units:
+		unit.acts_available = 2
+	# Same AGI: the higher SP at the start of the round goes first.
+	fast_foe.current_sp = 30
+	state.start_round()
+	for unit in state.units:
+		unit.acts_available = 2
+	var seen: Array[BattleUnit] = []
+	for _i in 5:
+		seen.append(_take(state))
+	assert_eq(seen, [fallen, fast_foe, yoch, slow_foe, fallen] as Array[BattleUnit])
+
+
+func test_equal_agi_goes_to_higher_sp() -> void:
+	var state := BattleState.new()
+	var low := _make_unit(&"a_low", true, 20, 5)
+	var high := _make_unit(&"z_high", false, 24, 5)
+	state.add_unit(low)
+	state.add_unit(high)
+	state.start_round()
+	assert_eq(state.turn_order[0], high, "Equal AGI: higher SP first")
+	high.current_sp = 10
+	state.start_round()
+	assert_eq(state.turn_order[0], low, "SP is read again at the start of each round")
+
+
+func test_a_queued_turn_spends_several_acts_then_hands_over() -> void:
+	var state := _equal_state()
+	var fast := state.units[0]
+	assert_eq(state.next_actor(), fast)
+	fast.spend_act()
+	fast.spend_act()
+	assert_eq(state.next_actor(), state.units[1], "Two queued attacks spend both acts in one turn")
+	state.units[1].spend_act()
+	assert_eq(state.next_actor(), state.units[1], "Only the slow unit has acts left")
 
 
 func test_stored_acts_are_consumed_as_extra_turns() -> void:
@@ -68,7 +114,7 @@ func test_reaction_and_action_share_the_same_act_pool() -> void:
 	assert_eq(unit.acts_available, 1)
 	assert_eq(_take(state), unit, "remaining act is still offered")
 	assert_eq(_take(state), state.units[1])
-	assert_eq(_take(state), state.units[1])
+	assert_eq(_take(state), state.units[1], "the spent unit is skipped")
 	assert_null(state.next_actor())
 
 
@@ -147,15 +193,14 @@ func test_rules_are_symmetric_for_player_and_enemy() -> void:
 	hero.acts_available = 2
 	foe.acts_available = 2
 	assert_eq(_take(state), hero)
-	assert_eq(_take(state), hero)
 	assert_eq(_take(state), foe)
+	assert_eq(_take(state), hero)
 	assert_eq(_take(state), foe)
 	assert_null(state.next_actor())
 
 
 func test_next_round_resets_the_active_combatant() -> void:
 	var state := _equal_state()
-	_take(state)
 	_take(state)
 	assert_eq(_take(state), state.units[1])
 	state.end_round()

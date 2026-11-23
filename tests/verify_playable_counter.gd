@@ -34,7 +34,10 @@ func fresh() -> Control:
 	root.add_child(battle)
 	return battle
 
+## Creator 2026-11-23: FOE B plays right after Fallen, before Yoch, so once Fallen reserves
+## the enemy announces at once; a second call (Yoch's REACT) then has no own turn to use.
 func reserve(battle: Control) -> void:
+	if battle.hud.mode not in ["plan", "command"]: return
 	battle.submit_command(battle.hud.command_options.find("REACT"))
 
 ## Both heroes reserve, the first enemy announces; `who` reacts with ATTACK.

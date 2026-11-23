@@ -51,7 +51,10 @@ func advance(battle: Control, frames: int = 60) -> void:
 		else: return
 		await process_frame
 
+## Creator 2026-11-23: FOE B plays right after Fallen, before Yoch, so once Fallen reserves
+## the enemy announces at once; a second call (Yoch's REACT) then has no own turn to use.
 func reserve(battle: Control) -> void:
+	if battle.hud.mode not in ["plan", "command"]: return
 	var index: int = battle.hud.command_options.find("REACT")
 	check(index >= 0, "Own-turn menu must expose REACT to reserve acts")
 	battle.submit_command(index)
@@ -65,8 +68,18 @@ func _run() -> void:
 	battle.submit_command(0); battle.submit_target(0)
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	check(battle._fallen.acts_available == 1, "One attack spends exactly one act")
+	# Creator 2026-11-23: one turn each by speed. Fallen (AGI 6) used his turn; FOE B (AGI 5,
+	# more SP than Yoch) attacks, then Yoch (AGI 5) plays, FOE A (AGI 4), then Fallen again.
+	var foe_b: BattleUnit = battle.state.units[3]
+	var foe_a: BattleUnit = battle.state.units[2]
+	check(battle.state.turn_order == ([battle._fallen, foe_b, battle._ally, foe_a] as Array[BattleUnit]), "Turn order: fastest first, AGI tie to the higher SP (%s)" % [battle.state.turn_order.map(func(u: BattleUnit) -> String: return u.display_name)])
 	await advance(battle)
-	check(battle.active_actor == battle._fallen, "D-044: o mesmo combatente esgota seus atos em bloco (A,A,B,B)")
+	check(battle.active_actor == battle._ally and battle._fallen.acts_available == 1, "After Fallen's one-command turn the turn passes on (FOE B, then Yoch)")
+	check(foe_b.acts_available == 0 and foe_a.acts_available == 2, "FOE B played its turn before Yoch, FOE A not yet")
+	battle.submit_command(battle.hud.command_options.find("REST"))
+	await advance(battle)
+	check(foe_a.acts_available == 0, "FOE A plays after Yoch")
+	check(battle.active_actor == battle._fallen and battle.hud.mode == "plan", "The cycle comes back to Fallen for his act left")
 	battle.submit_command(0); battle.submit_target(0)
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	check(battle._fallen.acts_available == 0, "Two attacks consume the two available acts")
@@ -92,6 +105,9 @@ func _run() -> void:
 		check(battle.state.round_number == 1, "Both reactions must occur in round one")
 		if reaction == 0:
 			battle.proceed()
+			# The counter tie cost FOE B its second attack; Yoch's turn comes before FOE A's.
+			check(battle.active_actor == battle._ally and battle.hud.mode == "plan", "After FOE B, Yoch plays before FOE A")
+			reserve(battle)
 			check(battle.hud.mode == "react", "A second enemy announcement must offer the remaining reaction")
 	battle.queue_free(); await process_frame
 	# D-038: REST como reação também consome zero ACT, guarda os atos e dá 2 EN fixos.

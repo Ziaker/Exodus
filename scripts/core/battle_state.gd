@@ -7,7 +7,6 @@ var units: Array[BattleUnit] = []
 var round_number: int = 0
 var turn_order: Array[BattleUnit] = []
 var turn_index: int = 0
-var _active_unit: BattleUnit = null
 
 func add_unit(unit: BattleUnit) -> void:
 	units.append(unit)
@@ -47,20 +46,22 @@ func start_round() -> void:
 		turn_order.append(unit)
 	turn_order.sort_custom(_faster_first)
 	turn_index = 0
-	_active_unit = null
 
 
+## Creator 2026-11-23: fastest first; equal AGI goes to the higher SP at the start of
+## the round. Equal AGI and SP has no rule yet (PENDENTE).
 func _faster_first(a: BattleUnit, b: BattleUnit) -> bool:
-	return a.stats.agi > b.stats.agi
+	if a.stats.agi != b.stats.agi:
+		return a.stats.agi > b.stats.agi
+	return a.current_sp > b.current_sp
 
 
-## D-044: a combatant keeps acting until its available acts run out, then the
-## next combatant in AGI order takes over. Two acts produce A,A,B,B instead of
-## the old interleaved A,B,A,B. Reactions still spend from the same act pool.
+## Creator 2026-11-23 (replaces D-044's A,A,B,B): each call is a new turn. The next
+## combatant in speed order with acts left takes it, runs the whole queue it plans
+## (two queued attacks spend both acts in that one turn) and hands over; the cycle
+## repeats until nobody has acts, e.g. Fallen > enemy > Yoch > enemy > Fallen.
+## Reactions still spend from the same act pool.
 func next_actor() -> BattleUnit:
-	if _active_unit != null and _active_unit.is_alive() \
-			and _active_unit.acts_available > 0:
-		return _active_unit
 	var scanned: int = 0
 	while scanned < turn_order.size():
 		if turn_index >= turn_order.size():
@@ -69,20 +70,11 @@ func next_actor() -> BattleUnit:
 		turn_index += 1
 		scanned += 1
 		if unit.is_alive() and unit.acts_available > 0:
-			_active_unit = unit
 			return unit
-	_active_unit = null
 	return null
 
 
-## D-047: um combatente que reservou atos para reagir não pode travar o
-## agendamento — liberar o ativo faz o próximo next_actor() seguir na ordem de AGI.
-func skip_active_actor() -> void:
-	_active_unit = null
-
-
 func end_round() -> void:
-	_active_unit = null
 	for unit in units:
 		if unit.is_alive():
 			unit.recover_en(0.2)

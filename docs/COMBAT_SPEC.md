@@ -180,10 +180,19 @@
   **mais** 2 novos simultaneamente disponíveis. **IMPLEMENTADO:** o excedente é
   **adiado** ao estoque (`stored_acts`), limitado a 4, e pode reaparecer em rodada
   posterior. Atos novos e bônus entram primeiro; o que sobrar volta ao estoque.
-- Ordem de turnos por `AGI`. **D-044 (2026-11-21): o combatente esgota seus
-  atos antes de passar a vez** — dois atos produzem `A, A, B, B`, e não mais
-  `A, B, A, B`. Cada ato é consumido por uma ação ou reação.
-  **IMPLEMENTADO** em `BattleState.next_actor()`.
+- **Ordem de turnos (criador, 2026-11-23; substitui a D-044 `A, A, B, B`):** a vez é
+  sempre dos **mais rápidos primeiro** e dos mais lentos por último, **uma vez por
+  combatente**, e o ciclo se repete enquanto alguém tiver atos (ex.: `Fallen > inimigo >
+  Yoch > inimigo > Fallen`). Na sua vez, o combatente executa **a fila inteira** que
+  planejou (dois ataques na fila gastam os dois atos naquela vez só) e passa a vez; se
+  sobrar ato, ele planeja de novo quando o ciclo voltar. A fila da D-046 continua.
+  - **Empate de AGI:** age antes quem tem **mais SP no início da rodada**. Empate de AGI
+    **e** SP: **PENDENTE**.
+  - Inimigo: a quantidade de ataques por vez fica como está (combo D-047 de até 2); o
+    criador quer um **rework completo da IA** para ser forte e estratégica (**PENDENTE**).
+  - Cada ato é consumido por uma ação ou reação. **IMPLEMENTADO** em
+    `BattleState.next_actor()` / `_faster_first()`, com `tests/test_battle_state.gd` e a
+    ordem real da batalha em `tests/verify_playable_reactions.gd`.
 - **Correção do criador (D-051, 2026-11-22):** ele **nunca aprovou** que o inimigo gaste
   **sempre** dois atos em ataques independente do contexto. A escolha deve depender do
   contexto (IA **PENDENTE**); o código ainda ataca duas vezes.
@@ -194,7 +203,7 @@
   ou se o combate terminar. **Corrigida pela D-051:** o criador nunca aprovou
   que o inimigo gaste **sempre** dois atos em ataques independente do contexto;
   a IA contextual está pendente. Um jogador que reservou atos com REACT não trava
-  o agendamento (`BattleState.skip_active_actor()`). **IMPLEMENTADO** em
+  o agendamento (as vezes dele são puladas em `_next_live_actor()`). **IMPLEMENTADO** em
   `playable_controller.gd` (`_enemy_turn()`), com regressão em
   `tests/verify_playable_reactions.gd`.
 - **D-007 (2026-11-21): limiar de superioridade por dominância em razão.** Ganha
@@ -223,7 +232,9 @@
   é executada como **bloco contínuo** — o combatente resolve todos os atos
   comprometidos antes que qualquer outro combatente aja. A ordem entre
   combatentes continua por AGI, mas dentro do bloco não há intercalação.
-  **IMPLEMENTADO** em `BattleState.next_actor()`.
+  **Atualizada pelo criador em 2026-11-23:** a fila planejada continua em bloco, mas
+  é uma vez só; os atos que não entraram na fila esperam a próxima vez do ciclo
+  (ver §Atos e reações, ordem de turnos).
 - **D-046 (2026-11-21): fila e linha persistente implementadas no Godot.**
   O Fallen planeja 1–4 comandos antes da resolução; cada ato comprometido
   acende um marcador **verde**, e **UNDO** (Backspace) remove o último.

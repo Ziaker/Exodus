@@ -53,7 +53,12 @@ func yoch(battle: Control) -> BattleUnit: return battle.hud.players[1]
 func fallen(battle: Control) -> BattleUnit: return battle.hud.players[0]
 
 ## Fallen rests; Yoch (with `acts` acts) opens his plan.
+## These cases test the prayer, not the turn order (verify_playable_reactions), so Yoch is
+## moved right after Fallen: FOE B would otherwise win the AGI 5 tie on SP and play first.
 func to_yoch(battle: Control, acts: int) -> void:
+	var order: Array[BattleUnit] = battle.state.turn_order
+	order.erase(yoch(battle))
+	order.insert(order.find(fallen(battle)) + 1, yoch(battle))
 	yoch(battle).acts_available = acts
 	battle.submit_plan(battle.hud.plan_options.find("REST"))
 	battle.proceed()
@@ -230,7 +235,10 @@ func _run() -> void:
 	check(last_line(battle, "queued command").contains("loses 1"), "The rest of Yoch's queue is lost")
 	var first_hitter: BattleUnit = foes[1] if battle.log_history.find(last_line(battle, "%s attacks Yoch's prayer" % foes[1].display_name)) < battle.log_history.find(last_line(battle, "%s attacks Yoch's prayer" % foes[0].display_name)) else foes[0]
 	check(last_line(battle, "queued command").contains("%s gains 1" % first_hitter.display_name), "The first enemy that hit gains the lost command's act (%s)" % last_line(battle, "queued command"))
-	check(foes[0].acts_available + foes[1].acts_available == foe_acts[0] + foe_acts[1] - 2 + 1, "Each attack spent 1 enemy act; +1 act to the first hitter")
+	# Creator 2026-11-23: Yoch's turn ends with his queue; his act left waits for the next
+	# cycle and FOE B (next by speed) has already announced its attack, spending 1 act.
+	check(y.acts_available == 1 and battle.action_attacker == foes[1] and battle.hud.mode == "react", "After the interrupted queue the turn passes to FOE B; Yoch keeps his act left")
+	check(foes[0].acts_available + foes[1].acts_available == foe_acts[0] + foe_acts[1] - 2 + 1 - 1, "Each attack spent 1 enemy act; +1 act to the first hitter (FOE B's own attack: -1)")
 	battle.queue_free(); await process_frame
 
 	# ---- Enemy MISS does not interrupt.

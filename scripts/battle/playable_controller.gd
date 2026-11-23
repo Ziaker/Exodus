@@ -384,10 +384,9 @@ func _next_live_actor() -> BattleUnit:
 	for i in state.turn_order.size():
 		var unit := state.next_actor()
 		if unit == null: return null
-		if not waiting_players.has(unit.id): return unit
-		# D-047: REACT reserves acts without spending them; release the scheduler
+		# D-047: REACT reserves acts without spending them; skip that player's turns
 		# so the enemy still gets its turn instead of skipping to the next round.
-		state.skip_active_actor()
+		if not waiting_players.has(unit.id): return unit
 	return null
 
 

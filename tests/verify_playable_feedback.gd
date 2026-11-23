@@ -35,7 +35,10 @@ func key(battle: Control, code: Key) -> void:
 	event.keycode = code
 	battle.hud._input(event)
 
+## Creator 2026-11-23: FOE B plays right after Fallen, before Yoch, so once Fallen reserves
+## the enemy announces at once; a second call (Yoch's REACT) then has no own turn to use.
 func reserve(battle: Control) -> void:
+	if battle.hud.mode not in ["plan", "command"]: return
 	battle.submit_command(battle.hud.command_options.find("REACT"))
 
 func _run() -> void:
@@ -79,8 +82,8 @@ func _run() -> void:
 		await process_frame
 	key(battle, KEY_X)
 	await process_frame
-	# D-044: Fallen still has an act left, so the block continues with Fallen.
-	check(battle.hud.mode == "plan" and battle.active_actor == battle._fallen, "X must dismiss feedback and reopen planning (D-044 block)")
+	# Creator 2026-11-23: Fallen's one-command turn is over; the next fastest (FOE B) plays.
+	check(battle.hud.mode != "continue" and battle.action_attacker == battle.state.units[3] and battle._fallen.acts_available == 1, "X must dismiss feedback and pass the turn to the next fastest")
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle); reserve(battle)
@@ -113,10 +116,9 @@ func _run() -> void:
 	check(battle.hud._log_text().contains("DODGE"), "Perfect defense feedback must remain visible in the log")
 	battle.queue_free(); await process_frame
 	battle = fresh()
-	reserve(battle)
-	battle._fallen.acts_available = 0
-	battle._ally.acts_available = 1
-	battle.submit_command(2); battle.proceed()
+	# Creator 2026-11-23: FOE B plays right after Fallen, so nobody may hold an act then.
+	battle._ally.acts_available = 0
+	battle.submit_command(battle.hud.command_options.find("REST")); battle.proceed()
 	check(battle.hud.mode == "announce", "Enemy attack must be announced even if nobody can react")
 	check(battle.hud.announcement_text == "NO REACTION AVAILABLE", "No-act announcement must say no reaction is available")
 	key(battle, KEY_Z)
