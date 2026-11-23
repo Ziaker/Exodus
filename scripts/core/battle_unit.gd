@@ -14,6 +14,14 @@ var is_player: bool = false
 var is_fallen: bool = false
 var absorbed: bool = false
 var sprite_path: String = ""
+## Enemy kind for the absorption counter (SkillBook.KIND_SKILLS); empty for heroes.
+var kind: StringName = &""
+## Skills this unit can use (Fallen: learned by absorption; enemies: their sheet).
+var skills: Array[StringName] = []
+## ATK stages (SkillBook.ATK_STAGE_BONUS each): {"round": cast round, "owner": turn owner id}.
+var atk_stages: Array[Dictionary] = []
+## Burns: remaining rounds of each one (they stack).
+var burns: Array[int] = []
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 		player_side: bool, fallen: bool = false) -> void:
@@ -28,6 +36,11 @@ func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 
 func sp_base() -> int:
 	return stats.sp_value()
+
+
+## ATK with the active stages applied (+25% per stage).
+func effective_atk() -> float:
+	return float(stats.atk) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(atk_stages.size()))
 
 func is_alive() -> bool:
 	return current_hp > 0

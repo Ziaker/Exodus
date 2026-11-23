@@ -1238,8 +1238,9 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   o SP atual do protagonista pela metade e o combate reinicia.
 - Absorção tutorial: fraqueza indicada por chacoalhar; todas as opções viram ABSORB;
   +2 MEF do primeiro inimigo, depois +2 MAK com mash; permanentes.
-- **PENDENTES** (lista completa no roteiro): estágios de ATK, dano mágico, IGNI, burn,
-  EN extra, "dano o bastante", detalhes do resgate e conflito com a D-029.
+- **PENDENTES** (lista completa no roteiro): "dano o bastante", detalhes do resgate e conflito com a D-029.
+  Estágios de ATK, dano mágico, IGNI, burn e EN extra foram definidos pelo criador em
+  2026-11-23 e estão implementados (seção "Habilidades do primeiro combate" abaixo).
 
 ## Itens e absorção
 - Itens utilizáveis em batalha; itens de cura custam **+2 SP ao Fallen**.
@@ -1272,14 +1273,74 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   **IMPLEMENTADO no jogo (2026-11-23):** `scripts/battle/absorb_vfx.gd`, chamado pelos ganchos
   `_on_absorb_press` e `_on_absorb_break` de `BattleController._perform_absorption`. Por enquanto,
   as letras da quebra vão até o card do Fallen, como na captura aprovada, e a falha não tem
-  efeito próprio. A animação antiga `ABSORB` do SMT saiu. O flash `ABSORBED` no Fallen continua, por decisão do criador em 2026-11-23.
+  efeito próprio. A animação antiga `ABSORB` do SMT saiu. O flash `ABSORBED` no Fallen continua, por decisão do criador em 2026-11-23. O texto
+  "ABSORBED" também continua, mas agora **em verde** (o verde do SP), com o **ganho escolhido**
+  na linha de baixo (ex.: "+2 ATK"), **onde ficava o inimigo absorvido**, e não mais sobre a
+  linha do log (criador, 2026-11-23).
   O tremor desloca o canvas da viewport. Cobertura em `tests/verify_playable_fx.gd`.
 - **D-028 (2026-11-21): os ganhos persistem entre batalhas.** Os deltas de
   atributos são salvos em `user://exodus_progress.json` com versão e validação
   contra corrupção, e reaplicados ao Fallen ao criar a próxima batalha.
   **IMPLEMENTADO.**
 - **PENDENTE:** novas tentativas após falha e limite de HP. Não foram inventadas.
-- Sem equipamentos e sem magia implementados neste protótipo (Reza D-048 é design).
+- Sem equipamentos neste protótipo. A única magia implementada é o **Heat wave** (seção
+  abaixo); a Reza (D-048) é tratada na sessão própria.
+
+## Habilidades do primeiro combate e contador de absorção (criador, 2026-11-23); IMPLEMENTADO
+Número de decisão ainda não atribuído no `DECISIONS.md`.
+- **Contador de absorção:** abaixo de "ABSORBED" e do ganho, o texto verde mostra quantas
+  vezes aquele **tipo** de inimigo foi absorvido, no formato **"3/4"**. O contador é **salvo
+  entre batalhas** (`absorbs` em `user://exodus_progress.json`).
+- **Aprendizado:** a cada **4 absorções** do mesmo tipo, Deviron (o Fallen) aprende **uma
+  habilidade daquele inimigo, sorteada** entre as que ele ainda não tem, **para sempre**.
+  O contador volta a 0. Habilidades que ele já tem (inclusive vindas de outro inimigo) são
+  ignoradas, e as que usam PP nunca são aprendidas. Na 4ª absorção aparece mais uma linha
+  verde, **"NEW SKILL: <nome>"**. Quando já não resta nada a aprender daquele tipo, o
+  contador mostra **"MAX"**. As habilidades valem **sempre**, inclusive no reinício após
+  derrota (os ganhos de atributo, não).
+- **Inimigos:** GENETIC FOE A/B **mantêm os atributos atuais** e recebem as habilidades
+  do roteiro: **FOE A = Lunge + Bleedbuff**, **FOE B = Heat wave + Energy Eat**.
+- **Menu:** o comando ATTACK passou a se chamar **FIGHT**. Com habilidades aprendidas,
+  FIGHT abre um submenu com **ATTACK** (ataque normal) e as habilidades, só pelo nome. A
+  linha do battle log explica a linha destacada (atos, custo, efeito) e, quando falta
+  recurso, diz o motivo ("NO ACT", "NO EN" ou "NO HP"). As habilidades sem ACT, EN ou HP
+  suficientes ficam **escurecidas** e recusam a confirmação. Sem habilidades, FIGHT vai
+  direto ao alvo. Uma habilidade de 2 ACT ocupa dois atos do plano. O submenu também
+  aparece na **reação** (habilidades podem ser usadas como reação).
+- **Lunge** (1 ACT, 4 EN): **poder 5** na fórmula poder×ATK÷DEF, **dois golpes** numa
+  **só barra com duas marcas, a 35% e 65%**. Um aperto vale para a primeira marca até o
+  ponteiro passar do meio entre as duas; depois disso, a primeira conta como MISS. A
+  defesa do jogador contra o Lunge inimigo usa a mesma barra de duas marcas, e cada aperto
+  defende um golpe.
+- **Bleedbuff** (2 ACT, 4 HP): **+1 estágio de ATK = +25% de ATK**, por **1 round inteiro**
+  (até o mesmo ponto do round seguinte). Usado de novo, **acumula**. Com **4 HP ou menos**,
+  não pode ser usado.
+- **Heat wave** (2 ACT, 6 EN): dano mágico **5×MAK÷MEF** (mesma fórmula da física) em todos
+  os oponentes. O **IGNI vale ×1 para todos** até existirem afinidades elementais. O atacante
+  faz **uma barra**, e cada alvo defende por conta própria. Cada acerto tem **25% de burn**:
+  3 de dano **no início de cada round**, por 3 rounds. Burns **acumulam**.
+- **Energy Eat** (1 ACT, 6 EN): cura **5 HP + 1 por EN extra**. O jogador escolhe o extra
+  numa linha **"EXTRA EN < n >"** (esquerda/direita, Z confirma, X volta). A IA sorteia o
+  extra entre 0 e o EN que sobrar.
+- **IA:** em cada escolha do bloco de dois atos, o inimigo **sorteia com chance igual**
+  entre ATTACK e cada habilidade que ele pode pagar.
+- **Reações e contra-ataques:**
+  - Lunge e Heat wave inimigos são anunciados e respondidos **como o ATTACK**: sem reação,
+    acertam direto; com DEFEND, a barra de defesa aparece. O Heat wave é anunciado a cada
+    herói.
+  - O jogador pode contra-atacar essas habilidades. Se o inimigo vence ou empata a troca,
+    o **Lunge sai inteiro** sobre quem contra-atacou e o **Heat wave atinge todos os
+    heróis**. Se o herói vence, a habilidade é interrompida.
+  - O inimigo pode contra-atacar (33%) o Lunge e o Heat wave do Fallen. No Heat wave, cada
+    inimigo atingido rola, e **o primeiro que passa** contra-ataca.
+- **Escolhas de apresentação minhas, ainda não julgadas pelo criador:**
+  - a barra do Heat wave aparece sobre o primeiro inimigo vivo;
+  - o segundo golpe do Lunge espera o número do primeiro sumir;
+  - o Bleedbuff usa o flash de cura com o texto "ATK UP";
+  - o burn mostra só o número "-3", sem animação;
+  - o texto das explicações do submenu.
+- Código: `scripts/core/skill_book.gd` e `PlayableController` (seção skills).
+  Cobertura em `tests/verify_playable_skills.gd`, captura `captures/skills/skills.mp4`.
 
 ## Reza (Pray Points) — D-048; DESIGN, NÃO IMPLEMENTADO
 - **Quem:** personagens **humanos** conjuram **magias de luz** rezando, em vez de usar EN.

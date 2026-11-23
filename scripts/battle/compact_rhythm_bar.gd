@@ -36,11 +36,13 @@ func progress() -> float:
 	return clampf(_elapsed / maxf(duration, 0.001), 0.0, 1.0)
 
 
-## Zone spans as fractions of the rail: [beam left, point, beam right].
+## Zone spans as fractions of the rail: [beam left, point, beam right] per hit mark.
 func zone_spans() -> Array[Vector2]:
 	var half := _point_half_width
 	var beam := BattleMath.BEAM_HALF_WIDTH
-	var spans: Array[Vector2] = [Vector2(0.5 - beam, 0.5 - half), Vector2(0.5 - half, 0.5 + half), Vector2(0.5 + half, 0.5 + beam)]
+	var spans: Array[Vector2] = []
+	for c in marks:
+		spans.append_array([Vector2(c - beam, c - half), Vector2(c - half, c + half), Vector2(c + half, c + beam)])
 	return spans
 
 
@@ -60,16 +62,16 @@ func _draw() -> void:
 		var inner := w - 2.0
 		_track(Rect2(1, 3, inner, 4), Color(1, 1, 1, 0.7))
 		var spans := zone_spans()
-		for i in 3:
-			draw_rect(Rect2(1 + inner * spans[i].x, 4, inner * (spans[i].y - spans[i].x), 2), point_color if i == 1 else beam_color)
+		for i in spans.size():
+			draw_rect(Rect2(1 + inner * spans[i].x, 4, inner * (spans[i].y - spans[i].x), 2), point_color if i % 3 == 1 else beam_color)
 		_cursor(Rect2(1 + inner * progress() - 2, -1, 2, 12))
 	else:
 		# .attack-rail: drop-shadow(0 1px 2px #111); track top 4 h 5, zones top 5 h 3, cursor h 13.
 		draw_rect(Rect2(0, 5, w, 5), Color("111111", 0.6))
 		_track(Rect2(0, 4, w, 5), Color(1, 1, 1, 0.65))
 		var spans := zone_spans()
-		for i in 3:
-			draw_rect(Rect2(w * spans[i].x, 5, w * (spans[i].y - spans[i].x), 3), point_color if i == 1 else beam_color)
+		for i in spans.size():
+			draw_rect(Rect2(w * spans[i].x, 5, w * (spans[i].y - spans[i].x), 3), point_color if i % 3 == 1 else beam_color)
 		_cursor(Rect2(w * progress() - 2, 0, 2, 13))
 
 

@@ -23,6 +23,11 @@ var _point_zone: ColorRect
 var _beam_right: ColorRect
 var _point_half_width: float = BattleMath.POINT_HALF_WIDTH
 var _chain_mode: bool = false
+## Hit marks along the rail (fractions). One mark at the centre for every normal
+## strike; Lunge uses two marks in one pass (creator 2026-11-23: 35% and 65%).
+var marks: Array[float] = [0.5]
+## One result per mark, in order, filled by press() during the current pass.
+var results: Array[int] = []
 
 func _ready() -> void:
 	anchor_left = 0.0
@@ -104,8 +109,37 @@ func stop_chain() -> void:
 	hide()
 
 
+## Next passes use these hit marks (call before start/start_chain).
+func set_marks(new_marks: Array[float]) -> void:
+	marks = new_marks.duplicate() if not new_marks.is_empty() else [0.5]
+	queue_redraw()
+
+
+## Judges a press at the current position. With several marks, a press belongs to the
+## first unresolved mark until the pointer passes the midpoint to the next mark (the
+## skipped mark is a MISS); the pass ends when every mark has a result.
+func press() -> void:
+	if not _running:
+		return
+	var progress := clampf(_elapsed / maxf(duration, 0.001), 0.0, 1.0)
+	_skip_passed_marks(progress)
+	if results.size() < marks.size():
+		results.append(BattleMath.rhythm_zone_at(progress, marks[results.size()], _point_half_width))
+	if results.size() >= marks.size():
+		_finish(results[0])
+
+
+func _skip_passed_marks(progress: float) -> void:
+	while results.size() < marks.size() - 1:
+		var i := results.size()
+		if progress <= (marks[i] + marks[i + 1]) * 0.5:
+			break
+		results.append(BattleMath.RhythmResult.MISS)
+
+
 func _begin(seconds: float) -> void:
 	duration = maxf(seconds, 0.05)
+	results.clear()
 	_elapsed = 0.0
 	_running = true
 	_marker.position.x = 10.0
@@ -119,7 +153,9 @@ func _process(delta: float) -> void:
 	var progress := clampf(_elapsed / duration, 0.0, 1.0)
 	_marker.position.x = 10.0 + progress * (BAR_WIDTH - 20.0)
 	if progress >= 1.0:
-		_finish(BattleMath.RhythmResult.MISS)
+		while results.size() < marks.size():
+			results.append(BattleMath.RhythmResult.MISS)
+		_finish(results[0])
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -128,8 +164,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key := event as InputEventKey
 		if key.keycode == KEY_Z or key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER:
-			var progress := (_marker.position.x - 10.0) / (BAR_WIDTH - 20.0)
-			_finish(BattleMath.rhythm_zone(progress, _point_half_width))
+			press()
 			accept_event()
 
 
@@ -137,6 +172,11 @@ func _finish(result: int) -> void:
 	if not _running:
 		return
 	_running = false
+	# Direct callers (tests, drivers) finish a one-mark pass with an explicit result.
+	if results.is_empty():
+		results.append(result)
+	while results.size() < marks.size():
+		results.append(BattleMath.RhythmResult.MISS)
 	if _chain_mode:
 		# Same line stays visible; the next marker starts from the left again.
 		_elapsed = 0.0

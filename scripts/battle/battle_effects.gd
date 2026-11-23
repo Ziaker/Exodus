@@ -39,6 +39,9 @@ class DamageLayer extends Control:
 			if effect.kind in fx.IMMEDIATE_LABELS: shown.append(effect)
 		shown.append_array(fx.numbers)
 		for effect in shown:
+			if effect.has("lines"):
+				_draw_lines(font, effect)
+				continue
 			var r: Rect2 = fx.number_rect(effect)
 			var label: String = fx.label_for(effect.kind, effect.amount)
 			if label.is_empty():
@@ -60,6 +63,26 @@ class DamageLayer extends Control:
 			ink.a *= alpha
 			draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, size, ink)
 
+	## Label with custom lines, rect and ink (label_override): lines centred in the
+	## rect, rising like the other numbers, same outline and fade.
+	func _draw_lines(font: Font, effect: Dictionary) -> void:
+		var alpha: float = fx.number_alpha(effect.age, effect.duration)
+		if alpha <= 0.0: return
+		var r: Rect2 = effect.label_rect
+		var lines: Array = effect.lines
+		var size := 20
+		var line_h := size + 4
+		var top: float = r.get_center().y - lines.size() * line_h * 0.5 - minf(34, effect.age * 34)
+		var ink: Color = effect.ink
+		for i in lines.size():
+			var text := String(lines[i])
+			if text.is_empty(): continue
+			var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+			var pos := Vector2(r.get_center().x - w * 0.5, top + (i + 1) * line_h)
+			for offset in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
+				draw_string(font, pos + offset, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0, 0, 0, 0.95 * alpha))
+			draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(ink, ink.a * alpha))
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -77,6 +100,17 @@ func _ready() -> void:
 		for sheet in profile.sheets:
 			if not String(sheet).is_empty() and not textures.has(sheet):
 				textures[sheet] = load("res://assets/graphics/animations/" + sheet + ".png")
+
+
+## Replaces the label of unit's latest effect: custom text lines, drawn centred in rect
+## with ink (creator 2026-11-23: green ABSORBED + gain where the enemy stood).
+func label_override(unit: BattleUnit, lines: Array, rect: Rect2, ink: Color) -> void:
+	for i in range(effects.size() - 1, -1, -1):
+		if effects[i].unit == unit:
+			effects[i].lines = lines
+			effects[i].label_rect = rect
+			effects[i].ink = ink
+			return
 
 
 func count_kind(kind: String) -> int:
@@ -146,6 +180,8 @@ static func label_for(kind: String, amount: int) -> String:
 		"HEAL": return "+%d HP" % amount
 		"REST": return "+%d EN" % amount
 		"ABSORBED": return "ABSORBED"
+		"BURN": return "-%d" % amount
+		"BUFF": return "ATK UP"
 	return ""
 
 
@@ -164,9 +200,9 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 	match kind:
 		"HIT", "CRITICAL", "BLOCK": profile_name = "bite" if battle.hud.opponents.find(source) == 1 else "claw"
 		"ABSORB": profile_name = "absorb"
-		"HEAL", "REST", "ABSORBED": profile_name = "heal_flash"
+		"HEAL", "REST", "ABSORBED", "BUFF": profile_name = "heal_flash"
 	var profile: Dictionary = library.profiles[profile_name]
-	if kind in ["MISS", "DODGE", "WHITEN"]:
+	if kind in ["MISS", "DODGE", "WHITEN", "BURN"]:
 		# No impact cells, hurt flashes or hit sounds for a non-contact result.
 		profile = {"frames": [[], [], [], [], [], [], [], [], []], "sheets": ["", ""], "timings": []}
 	var target_rect := _unit_rect(unit)
@@ -217,9 +253,12 @@ func _process(delta: float) -> void:
 			effect.container.queue_free()
 			effects.remove_at(i)
 			if effect.kind not in IMMEDIATE_LABELS and not label_for(effect.kind, effect.amount).is_empty():
-				numbers.append({"kind": effect.kind, "amount": effect.amount, "unit": effect.unit,
+				var number := {"kind": effect.kind, "amount": effect.amount, "unit": effect.unit,
 					"target_rect": effect.target_rect, "age": 0.0, "duration": effect.duration,
-					"dying": effect.dying})
+					"dying": effect.dying}
+				for key in ["lines", "label_rect", "ink"]:
+					if effect.has(key): number[key] = effect[key]
+				numbers.append(number)
 		else: _update_effect(effect, delta)
 	for i in range(numbers.size() - 1, -1, -1):
 		numbers[i].age += delta

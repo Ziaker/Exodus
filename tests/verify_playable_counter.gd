@@ -6,6 +6,8 @@ const SANDBOX := preload("res://tests/progress_sandbox.gd")
 ## Enemy timing rolls MISS and enemies never counter on their own, so every outcome
 ## below comes from the exchange results the test chooses.
 class CounterBattle extends "res://scripts/battle/playable_controller.gd":
+	## ATTACK-flow checks: the enemy AI never draws a skill here (skills: verify_playable_skills).
+	func _enemy_skill_pick(_n: int) -> int: return 0
 	var force_enemy_counter := false
 	func _ai_roll(_a: BattleUnit, _b: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
@@ -41,7 +43,7 @@ func open_counter(battle: Control, who: int) -> void:
 	check(battle.hud.mode == "react", "An enemy announcement must open the reaction prompt")
 	battle.select_reactor(who)
 	battle.answer_reaction(true)
-	battle.submit_command(battle.hud.command_options.find("ATTACK"))
+	battle.submit_command(battle.hud.command_options.find("FIGHT"))
 
 func wait_seconds(seconds: float) -> void:
 	var waited := 0.0
@@ -111,8 +113,8 @@ func _run() -> void:
 	var reactor_index: int = battle.hud.players.find(target)
 	battle.select_reactor(reactor_index)
 	battle.answer_reaction(true)
-	check(battle.hud.command_options.has("ATTACK"), "The attacked hero may counter-attack")
-	battle.submit_command(battle.hud.command_options.find("ATTACK"))
+	check(battle.hud.command_options.has("FIGHT"), "The attacked hero may counter-attack")
+	battle.submit_command(battle.hud.command_options.find("FIGHT"))
 	check(battle.hud.mode == "counter", "D-049: ATTACK as a reaction opens the two-rail exchange, no target choice")
 	check(battle.counter.style == "panel", "Hero counter: rails sit in the hero's status panel")
 	var panel: Rect2 = battle.hud.STATUS_RECTS[reactor_index]
@@ -146,7 +148,7 @@ func _run() -> void:
 	var other: BattleUnit = battle._ally if target == battle._fallen else battle._fallen
 	battle.select_reactor(battle.hud.players.find(other))
 	battle.answer_reaction(true)
-	battle.submit_command(battle.hud.command_options.find("ATTACK"))
+	battle.submit_command(battle.hud.command_options.find("FIGHT"))
 	check(battle.hud.mode == "counter", "A non-target hero may counter-attack on the two rails (D-045)")
 	target_hp = target.current_hp
 	var other_hp: int = other.current_hp
@@ -170,7 +172,7 @@ func _run() -> void:
 	enemy.current_hp = 999
 	battle.select_reactor(battle.hud.players.find(target))
 	battle.answer_reaction(true)
-	battle.submit_command(battle.hud.command_options.find("ATTACK"))
+	battle.submit_command(battle.hud.command_options.find("FIGHT"))
 	enemy_sp = enemy.current_sp
 	var hero_sp: int = target.current_sp
 	enemy_acts = enemy.acts_available
@@ -192,7 +194,7 @@ func _run() -> void:
 	target = battle.action_defender
 	battle.select_reactor(battle.hud.players.find(target))
 	battle.answer_reaction(true)
-	battle.submit_command(battle.hud.command_options.find("ATTACK"))
+	battle.submit_command(battle.hud.command_options.find("FIGHT"))
 	enemy.current_sp = 40
 	battle.counter.finish(R.MISS, R.MISS, true, false)
 	check(enemy.current_sp == 24, "Perfect interruption steals 16 SP")
@@ -277,6 +279,12 @@ func _run() -> void:
 	check(fallen.stats.mak == mak0 + 1 and fallen.stats.mef == mef0 + 1, "+1/+1 applies to both chosen attributes")
 	check(fallen.stats.max_hp == hp0 + 2, "Absorption still grants +HP of the same amount")
 	check(foe.absorbed and not foe.is_alive(), "The absorbed target is eliminated")
+	check(battle.absorb_gain_label == "+1 MAK / +1 MEF", "The chosen gain is the one labelled (got %s)" % battle.absorb_gain_label)
+	# Creator 2026-11-23: green ABSORBED + gain, where the absorbed enemy stood.
+	var label_fx: Array = battle.fx.effects.filter(func(e: Dictionary) -> bool: return e.kind == "ABSORBED")
+	check(label_fx.size() == 1 and label_fx[0].lines == ["ABSORBED", "+1 MAK / +1 MEF", "1/4", ""], "ABSORBED label carries the gain and the 1/4 counter (got %s)" % [label_fx[0].lines if label_fx.size() > 0 else []])
+	check(label_fx[0].label_rect == battle.hud.enemy_sprite_rect(0) and label_fx[0].ink == battle.ABSORBED_INK, "ABSORBED label sits on the enemy, in green")
+	check(ProgressStore.load_gains().get("mak", 0) == 1 and ProgressStore.load_gains().get("mef", 0) == 1, "The chosen +1/+1 is what gets saved")
 	battle.queue_free(); await process_frame
 
 	print("PLAYABLE_COUNTER_OK: %d checks; D-049 rails, AGI speed, perfect window, 4/16 SP theft, ties, redirect, lost queues, impact flash, shake, enemy counter" % checks)

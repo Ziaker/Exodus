@@ -164,7 +164,13 @@ static func resolve_counter(player_result: int, enemy_result: int,
 
 static func rhythm_zone(marker_position: float,
 		point_half: float = POINT_HALF_WIDTH) -> RhythmResult:
-	var distance := absf(marker_position - 0.5)
+	return rhythm_zone_at(marker_position, 0.5, point_half)
+
+
+## Zone of a press against a hit mark centred at `center` (Lunge: 0.35 and 0.65).
+static func rhythm_zone_at(marker_position: float, center: float,
+		point_half: float = POINT_HALF_WIDTH) -> RhythmResult:
+	var distance := absf(marker_position - center)
 	if distance <= point_half:
 		return RhythmResult.POINT
 	if distance <= BEAM_HALF_WIDTH:
@@ -186,7 +192,9 @@ static func extra_block_rolls(advantage: int) -> int:
 	return advantage / BLOCK_ROLLS_PER_SP
 
 ## Result keys: amount, crit, affinity, sp_roll, variation, base.
-static func physical_damage(power: int, attacker_atk: int, attacker_agi: int,
+## Magic damage uses the same formula with MAK for ATK and MEF for DEF (creator 2026-11-23).
+## attacker_atk is a float so ATK stages (+25% each) keep their fraction.
+static func physical_damage(power: int, attacker_atk: float, attacker_agi: int,
 		defender_defense: int, attacker_sp: int, defender_sp: int,
 		affinity: Affinity, rng: RandomNumberGenerator) -> Dictionary:
 	var difference := attacker_sp - defender_sp

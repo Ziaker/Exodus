@@ -121,6 +121,7 @@ func play_break(target: BattleUnit) -> void:
 	var index: int = hud.opponents.find(target)
 	if index < 0: return
 	await get_tree().create_timer(MASH_SETTLE).timeout
+	if not is_inside_tree(): return
 	var art: Rect2 = hud.enemy_sprite_rect(index)
 	var image: Image = hud.silhouettes[index % hud.silhouettes.size()].get_image()
 	var size := image.get_size()

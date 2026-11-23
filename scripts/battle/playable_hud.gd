@@ -572,6 +572,9 @@ func _log_text() -> String:
 		"turn", "react", "announce": return feedback if not feedback.is_empty() else message
 		"result": return message + " " + feedback
 		"absorb": return "ABSORB [Z]  Mash!  Presses: %d/%d" % [mini(battle._mash_count, BattleMath.ABSORB_MAX_PRESSES), BattleMath.ABSORB_MAX_PRESSES]
+		# Creator 2026-11-23: the log line explains the highlighted FIGHT entry.
+		"skill": return battle.skill_info(command_index)
+		"en_extra": return battle.en_extra_info()
 	return message
 
 
@@ -664,7 +667,8 @@ func _menu_rows() -> Array[String]:
 	var rows: Array[String] = []
 	if mode == "react": rows.assign(["REACT", "DENY"])
 	elif mode == "plan": rows.assign(plan_options)
-	elif mode in ["command", "target"]: rows.assign(command_options)
+	elif mode in ["command", "target", "skill"]: rows.assign(command_options)
+	elif mode == "en_extra": rows.assign(["EXTRA EN  < %d >" % battle.en_extra])
 	return rows
 
 
@@ -690,7 +694,7 @@ func _menu() -> void:
 	# D-046: sete linhas (comandos + EXEC + UNDO) cabem na janela de 77 px com passo 10.
 	var row_h := 10.0 if mode == "plan" else 14.0
 	var row_px := 9 if mode == "plan" else 11
-	var current := react_index if mode == "react" else (plan_index if mode == "plan" else command_index)
+	var current := react_index if mode == "react" else (plan_index if mode == "plan" else (0 if mode == "en_extra" else command_index))
 	for i in rows.size():
 		var row := Rect2(r.position.x + 3, y0 + i * row_h, r.size.x - 6, row_h)
 		if row.end.y > visible_bottom: break
@@ -708,8 +712,10 @@ func _menu() -> void:
 		if i == current:
 			var bob := 1.5 if fmod(time + 0.325, 1.3) >= 0.65 else 0.0
 			_str("›", row.position.x + 6 + bob + shift, row.position.y + row_h - 3, Color.WHITE, row_px)
-		_str(rows[i], row.position.x + 19 + shift, row.position.y + row_h - 3, Color.WHITE, row_px)
-		var key_prefix := "live-react-row:" if mode == "react" else ("live-plan:" if mode == "plan" else "live-command:")
+		# Creator 2026-11-23: skills the unit cannot pay now are dimmed.
+		var ink := Color(1, 1, 1, 0.35) if mode == "skill" and battle.skill_disabled.has(i) else Color.WHITE
+		_str(rows[i], row.position.x + 19 + shift, row.position.y + row_h - 3, ink, row_px)
+		var key_prefix := "live-react-row:" if mode == "react" else ("live-plan:" if mode == "plan" else ("live-skill:" if mode == "skill" else ("live-en:" if mode == "en_extra" else "live-command:")))
 		hitboxes.append({"rect": row, "key": key_prefix + str(i)})
 
 
@@ -727,6 +733,11 @@ func _input(event: InputEvent) -> void:
 				battle.submit_command(command_index)
 			elif key.begins_with("live-plan:") and mode == "plan":
 				battle.submit_plan(int(key.split(":")[1]))
+			elif key.begins_with("live-skill:") and mode == "skill":
+				command_index = int(key.split(":")[1])
+				battle.submit_skill(command_index)
+			elif key.begins_with("live-en:") and mode == "en_extra":
+				battle.confirm_en_extra()
 			elif key.begins_with("target:") and mode == "target":
 				battle.submit_target(int(key.split(":")[1]))
 			elif key.begins_with("player-target:") and mode == "target":
@@ -762,8 +773,10 @@ func _input(event: InputEvent) -> void:
 				if players[next].is_alive() and players[next].acts_available > 0:
 					battle.select_reactor(next)
 					break
-		elif mode == "command" and event.keycode in [KEY_UP, KEY_DOWN]:
+		elif mode in ["command", "skill"] and event.keycode in [KEY_UP, KEY_DOWN]:
 			command_index = posmod(command_index + (1 if event.keycode == KEY_DOWN else -1), command_options.size())
+		elif mode == "en_extra" and event.keycode in [KEY_LEFT, KEY_RIGHT]:
+			battle.adjust_en_extra(1 if event.keycode == KEY_RIGHT else -1)
 		elif mode == "target" and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 			var units: Array[BattleUnit] = battle.target_units()
 			for i in units.size():

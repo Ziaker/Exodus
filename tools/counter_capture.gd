@@ -69,7 +69,7 @@ func _process(delta: float) -> void:
 			if exchanges < 1:
 				battle.select_reactor(battle.hud.players.find(battle.action_defender))
 				battle.answer_reaction(true)
-				battle.submit_command(battle.hud.command_options.find("ATTACK"))
+				battle.submit_command(battle.hud.command_options.find("FIGHT"))
 				exchanges += 1
 			else:
 				battle.answer_reaction(false)

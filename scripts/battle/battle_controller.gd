@@ -13,6 +13,7 @@ const ENEMY_SPRITES := [
 	"res://assets/graphics/battle_sprites/Avatar Chimera.png",
 ]
 const ENEMY_NAMES: Array[String] = ["GENETIC FOE A", "GENETIC FOE B"]
+const ENEMY_KINDS: Array[StringName] = [&"genetic_foe_a", &"genetic_foe_b"]
 
 class StatusRow extends Control:
 	var name_label: Label
@@ -84,6 +85,13 @@ var _mash_active: bool = false
 var _mash_count: int = 0
 ## D-051: chance of the latest absorption roll, in percent (HUD feedback).
 var absorb_chance: int = 0
+## Label of the gain taken by the last successful absorption (e.g. "+2 ATK").
+var absorb_gain_label := ""
+## Creator 2026-11-23: counter shown under the gain ("3/4", "4/4" or "MAX") and,
+## when the 4th absorption teaches a skill, "NEW SKILL: <name>" (else empty).
+var absorb_count_label := ""
+var absorb_skill_label := ""
+var _absorb_counts: Dictionary = {}
 var _feedback_token: int = 0
 var _progress_gains: Dictionary = {}
 ## Creator decision (2026-11-21): a Restart after DEFEAT starts Fallen at base
@@ -249,6 +257,9 @@ func _create_units() -> void:
 		for key in _progress_gains.keys():
 			fallen_stats.set(key, int(fallen_stats.get(key)) + int(_progress_gains[key]))
 	_fallen = BattleUnit.new(&"fallen", "FALLEN", fallen_stats, true, true)
+	# Creator 2026-11-23: learned skills are permanent, even after a defeat restart.
+	_fallen.skills = ProgressStore.load_skills()
+	_absorb_counts = ProgressStore.load_absorbs()
 
 	var ally_stats := UnitStats.new()
 	ally_stats.max_hp = 11
@@ -272,6 +283,8 @@ func _create_units() -> void:
 		enemy_stats.mef = 2
 		enemy_stats.agi = 4 + i
 		var enemy := BattleUnit.new(StringName("foe_%d" % i), ENEMY_NAMES[i], enemy_stats, false)
+		enemy.kind = ENEMY_KINDS[i]
+		enemy.skills = SkillBook.skills_of(enemy.kind)
 		enemy.affinity = BattleMath.Affinity.WEAK if i == 0 else BattleMath.Affinity.RESIST
 		state.add_unit(enemy)
 
@@ -412,10 +425,11 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 
 ## Damage, Press Turn and SP rewards of one strike whose timings are already known.
 ## Shared by the single rail and by the D-049 counter-attack exchange.
+## Returns the HP removed, or -1 when there was no contact.
 func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
-		is_reaction: bool, attack_timing: int, defense_timing: int) -> void:
+		is_reaction: bool, attack_timing: int, defense_timing: int, magic: bool = false) -> int:
 	if not defender.is_alive():
-		return
+		return -1
 	# No contact: skip damage, crit, affinity and SP rolls entirely. This also
 	# avoids consuming random numbers for an outcome already determined.
 	var contact := BattleMath.has_contact(attack_timing, defense_timing)
@@ -424,11 +438,15 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 			attacker.display_name, defender.display_name,
 			_rhythm_name(attack_timing), _rhythm_name(defense_timing)])
 		_flash_feedback("DODGE" if defense_timing == BattleMath.RhythmResult.POINT else "MISS")
-		return
+		return -1
 
-	var result := BattleMath.physical_damage(power, attacker.stats.atk, attacker.stats.agi,
-		defender.stats.defense, attacker.current_sp, defender.current_sp,
-		defender.affinity, rng)
+	# Creator 2026-11-23: magic = same formula with MAK/MEF; IGNI is normal (x1) for
+	# everyone until elemental affinities exist. ATK stages raise physical ATK only.
+	var affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL if magic else defender.affinity
+	var result := BattleMath.physical_damage(power,
+		float(attacker.stats.mak) if magic else attacker.effective_atk(), attacker.stats.agi,
+		defender.stats.mef if magic else defender.stats.defense, attacker.current_sp, defender.current_sp,
+		affinity, rng)
 
 	var amount := int(result.amount)
 	if attack_timing == BattleMath.RhythmResult.BEAM \
@@ -437,10 +455,10 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 
 	var applied := defender.take_damage(amount)
 	# Press Turn applies to a landed hit, not to a miss or a perfect dodge.
-	attacker.grant_acts(BattleMath.press_turn_acts(defender.affinity))
+	attacker.grant_acts(BattleMath.press_turn_acts(affinity))
 	if bool(result.crit):
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-	if defender.affinity == BattleMath.Affinity.WEAK and applied > 0:
+	if affinity == BattleMath.Affinity.WEAK and applied > 0:
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	if is_reaction:
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
@@ -456,8 +474,9 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 	_append_log("%s -> %s: %d dmg (%s, rhythm %s, def %s, crit %s, affinity %s, SP roll %+d)" % [
 		attacker.display_name, defender.display_name, applied, outcome,
 		_rhythm_name(attack_timing), _rhythm_name(defense_timing),
-		"YES" if bool(result.crit) else "no", _affinity_name(defender.affinity),
+		"YES" if bool(result.crit) else "no", _affinity_name(affinity),
 		int(result.sp_roll)])
+	return applied
 
 
 func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
@@ -579,6 +598,8 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	_mash_count = 0
 	for _i in BattleMath.ABSORB_TICKS:
 		await get_tree().create_timer(BattleMath.ABSORB_SECONDS / BattleMath.ABSORB_TICKS).timeout
+		# Scene timers outlive this node: stop if the battle was freed meanwhile.
+		if not is_inside_tree(): return
 		while presses < mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES) and not absorbed:
 			presses += 1
 			var step := BattleMath.absorb_press(target.current_sp, base_chance, taken, _absorb_roll())
@@ -600,9 +621,12 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 		_flash_feedback("ABSORB FAILED")
 		return
 	await _on_absorb_break(actor, target)
+	if not is_inside_tree(): return
 	var options := BattleMath.absorb_gain_options(target.stats)
 	var pick: int = await _choose_absorb_gain(options)
-	var gains: Dictionary = options[clampi(pick, 0, options.size() - 1)].gains
+	var chosen: Dictionary = options[clampi(pick, 0, options.size() - 1)]
+	var gains: Dictionary = chosen["gains"]
+	absorb_gain_label = str(chosen.get("label", ""))
 	var base_before := actor.sp_base()
 	var total := 0
 	for stat in gains:
@@ -619,10 +643,38 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	_progress_gains["max_hp"] = int(_progress_gains.get("max_hp", 0)) + total
 	_progress_gains["max_en"] = int(_progress_gains.get("max_en", 0)) + total
 	ProgressStore.save_gains(_progress_gains)
+	_count_absorption(actor, target)
 	target.consume_by_absorption()
 	_flash_feedback("ABSORBED")
 	_append_log("Absorbed %s (+%d HP/EN) after %d press(es), %d SP taken; %s eliminated; SP base %d." % [
 		options[clampi(pick, 0, options.size() - 1)].label, total, presses, taken, target.display_name, actor.sp_base()])
+
+
+## Creator 2026-11-23: every 4 absorptions of one enemy kind, Fallen learns one random
+## skill of that kind he does not know (PP skills never); with none left: MAX.
+func _count_absorption(actor: BattleUnit, target: BattleUnit) -> void:
+	absorb_skill_label = ""
+	var pool := SkillBook.learnable(target.kind, actor.skills)
+	if pool.is_empty():
+		absorb_count_label = "MAX"
+		return
+	var key := String(target.kind)
+	var count := int(_absorb_counts.get(key, 0)) + 1
+	absorb_count_label = "%d/%d" % [count, SkillBook.ABSORBS_PER_SKILL]
+	if count >= SkillBook.ABSORBS_PER_SKILL:
+		var skill: StringName = pool[clampi(_skill_pick(pool.size()), 0, pool.size() - 1)]
+		actor.skills.append(skill)
+		absorb_skill_label = "NEW SKILL: " + SkillBook.display_name(skill)
+		_append_log("%s learns %s (%d absorptions of %s)." % [actor.display_name,
+			SkillBook.display_name(skill), count, target.display_name])
+		count = 0
+	_absorb_counts[key] = count
+	ProgressStore.save_skill_progress(_absorb_counts, actor.skills)
+
+
+## Overridable by tests: index of the skill learned among the learnable ones.
+func _skill_pick(choices: int) -> int:
+	return rng.randi_range(0, choices - 1)
 
 
 func _add_stat(stats: UnitStats, stat: StringName, amount: int) -> void:

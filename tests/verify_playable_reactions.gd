@@ -2,6 +2,8 @@ extends SceneTree
 const SANDBOX := preload("res://tests/progress_sandbox.gd")
 
 class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
+	## ATTACK-flow checks: the enemy AI never draws a skill here (skills: verify_playable_skills).
+	func _enemy_skill_pick(_n: int) -> int: return 0
 	func _ai_roll(_attacker: BattleUnit, _defender: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
 	func _defender_reaction(_defender: BattleUnit, _attacker: BattleUnit) -> int:
@@ -15,6 +17,8 @@ class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
 
 ## D-022: enemy timing always rolls MISS, so a landed POINT can only come from auto-hit.
 class AutoHitBattle extends "res://scripts/battle/playable_controller.gd":
+	## ATTACK-flow checks: the enemy AI never draws a skill here (skills: verify_playable_skills).
+	func _enemy_skill_pick(_n: int) -> int: return 0
 	func _ai_roll(_attacker: BattleUnit, _defender: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
 	func _defender_reaction(_defender: BattleUnit, _attacker: BattleUnit) -> int:
@@ -79,7 +83,7 @@ func _run() -> void:
 	for reaction in 2:
 		battle.select_reactor(0)
 		battle.answer_reaction(true)
-		check(battle.hud.command_options.has("ATTACK") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps every command plus DEFEND as a reaction")
+		check(battle.hud.command_options.has("FIGHT") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps every command plus DEFEND as a reaction")
 		battle.submit_command(0)  # counter-attack: D-038 REST no longer spends acts
 		# D-049: the counter uses the two-rail exchange; both MISS = tie, no damage.
 		check(battle.hud.mode == "counter", "D-049: a counter-attack opens the two-rail exchange")
@@ -106,7 +110,7 @@ func _run() -> void:
 	battle.select_reactor(1)
 	battle.answer_reaction(true)
 	check(not battle.hud.command_options.has("ABSORB"), "Ally must not receive Fallen-only absorption")
-	check(battle.reaction_defender == battle._fallen and battle.hud.command_options == ["ATTACK", "ITEM"], "D-045: a reactor who is not the target may only counter-attack or use an item (got %s)" % [battle.hud.command_options])
+	check(battle.reaction_defender == battle._fallen and battle.hud.command_options == ["FIGHT", "ITEM"], "D-045: a reactor who is not the target may only counter-attack or use an item (got %s)" % [battle.hud.command_options])
 	battle.submit_command(0)
 	# Both MISS: a tie, so the ally's strike resolves (no contact) and no affinity penalty applies.
 	battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.MISS)

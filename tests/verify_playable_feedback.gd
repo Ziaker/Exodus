@@ -2,6 +2,8 @@ extends SceneTree
 const SANDBOX := preload("res://tests/progress_sandbox.gd")
 
 class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
+	## ATTACK-flow checks: the enemy AI never draws a skill here (skills: verify_playable_skills).
+	func _enemy_skill_pick(_n: int) -> int: return 0
 	func _ai_roll(_a: BattleUnit, _b: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
 	func _defender_reaction(_a: BattleUnit, _b: BattleUnit) -> int:
