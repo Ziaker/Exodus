@@ -37,10 +37,11 @@ var in_reaction := false
 ## D-022: set when the player actually executes any reaction command to an
 ## announced enemy attack; without it the enemy attack is an automatic hit.
 var reaction_declared := false
-## Survives reload_current_scene(): the next battle starts at base attributes.
-## Kept as Engine metadata, not a static var: a static var on this script made
-## Godot 4.7.2 crash at shutdown whenever a subclass of it had been loaded.
-const RESTART_AT_BASE_META := &"exodus_restart_at_base"
+## Creator 2026-11-23: Fallen's death plays this cutscene, halves the stat gains of
+## absorptions and returns to the title screen (no save points exist yet).
+const DEATH_CUTSCENE = preload("res://scripts/battle/death_cutscene.gd")
+const DEATH_SCENE := "res://scenes/title/Title.tscn"
+var death_cutscene: Node2D
 var reaction_attacker: BattleUnit
 var reaction_defender: BattleUnit
 var reaction_actor: BattleUnit
@@ -338,7 +339,44 @@ func run_battle() -> void:
 		prayer.expire(null)
 		state.end_round()
 		_append_log("End of round %d: +20%% EN." % state.round_number)
-	_show_result()
+	if state.fallen_fell():
+		await _play_death()
+	else:
+		_show_result()
+
+
+## Creator 2026-11-23: Fallen died. The penalty is stored first (half of every stat gain,
+## the odd half kept; counters and skills stay), then the cutscene plays over the battle
+## and the game goes back to the title screen. A defeat also zeroes Yoch's PP (D-048).
+func _play_death() -> void:
+	prayer.battle_end(false)
+	var before := ProgressStore.load_gains()
+	var after := ProgressStore.halve_gains()
+	ProgressStore.add_death()
+	var losses := {}
+	for stat in before.keys():
+		losses[stat] = int(before[stat]) - int(after[stat])
+	_append_log("DEFEAT.")
+	phase_text = "DEFEAT"
+	hud.mode = "death"
+	hud.feedback = ""
+	_refresh_all()
+	var layer := CanvasLayer.new()
+	layer.name = "DeathLayer"
+	layer.layer = 50
+	add_child(layer)
+	death_cutscene = DEATH_CUTSCENE.new()
+	death_cutscene.name = "DeathCutscene"
+	death_cutscene.losses = losses
+	layer.add_child(death_cutscene)
+	await death_cutscene.finished
+	if is_inside_tree():
+		_leave_after_death()
+
+
+## Overridden by tests, which must not change the scene.
+func _leave_after_death() -> void:
+	get_tree().change_scene_to_file(DEATH_SCENE)
 
 
 func _next_live_actor() -> BattleUnit:
@@ -603,12 +641,6 @@ func _enemy_turn(unit: BattleUnit) -> void:
 				following.append(FIGHT)
 			_lose_queue(unit, following, _interrupt_gainer)
 			break
-
-
-func _create_units() -> void:
-	apply_saved_gains = not bool(Engine.get_meta(RESTART_AT_BASE_META, false))
-	Engine.remove_meta(RESTART_AT_BASE_META)
-	super._create_units()
 
 
 func short_name(unit: BattleUnit) -> String:
@@ -1021,7 +1053,6 @@ func handle_confirm() -> void:
 				_mash_count += 1
 		"continue", "announce": proceed()
 		"result":
-			Engine.set_meta(RESTART_AT_BASE_META, not state.player_victory())
 			get_tree().reload_current_scene()
 
 

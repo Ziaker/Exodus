@@ -146,7 +146,9 @@ func _run() -> void:
 	battle.queue_free()
 	await process_frame
 	battle = _new_battle()
-	# A second full run with failed physical input and no defense exercises defeat.
+	var before_death: Dictionary = ProgressStore.load_gains()
+	_check(int(before_death.get("max_hp", 0)) > 0, "The victory run must have stored gains (got %s)" % before_death)
+	# A second full run with failed physical input and no defense exercises Fallen's death.
 	for frame in 2400:
 		match battle.hud.mode:
 			"command", "plan": battle.submit_command(0)
@@ -155,29 +157,29 @@ func _run() -> void:
 			"counter": battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.POINT)
 			"react": battle.answer_reaction(false)
 			"continue", "announce": battle.proceed()
-			"result": break
+			"result", "death": break
 		await process_frame
-	_check(battle.hud.mode == "result", "Failed-input battle must finish")
-	_check(battle.log_history.has("DEFEAT."), "Defeat must appear in the battle log")
-	current_scene = battle
-	battle.handle_confirm()
-	await process_frame
-	await process_frame
-	battle = current_scene
-	_check(battle != null and battle.hud.mode == "plan", "Restart must launch a fresh playable battle (D-046 planning)")
-	_check(battle._fallen.current_hp == 14 and battle.state.round_number == 1, "Restart must restore battle resources")
-	# Creator decision: Restart after DEFEAT starts at base attributes but keeps the save.
+	# Creator 2026-11-23: Fallen's death plays the death cutscene and goes to the title.
+	_check(battle.hud.mode == "death", "Failed-input battle must end in Fallen's death (mode %s)" % battle.hud.mode)
+	_check(not battle._fallen.is_alive() and battle.log_history.has("DEFEAT."), "Defeat must appear in the battle log")
+	_check(battle.death_cutscene != null and battle.death_cutscene.is_inside_tree(), "The death cutscene must play")
 	var kept: Dictionary = ProgressStore.load_gains()
-	_check(int(kept.get("max_hp", 0)) > 0, "Defeat restart must keep the saved absorption gains (got %s)" % kept)
-	_check(battle._fallen.stats.max_hp == 14, "Defeat restart must ignore saved gains for this battle")
-	# A later battle (not a defeat restart) applies the kept gains again.
+	for stat in before_death.keys():
+		var gain := int(before_death[stat])
+		_check(int(kept[stat]) == gain - gain / 2, "Death keeps the larger half of %s (+%d -> got +%d)" % [stat, gain, int(kept[stat])])
+	current_scene = battle
+	var deadline := Time.get_ticks_msec() + 30000
+	while current_scene == battle and Time.get_ticks_msec() < deadline:
+		await process_frame
+	await process_frame
+	_check(current_scene != null and current_scene.scene_file_path == "res://scenes/title/Title.tscn", "After the cutscene the game returns to the title screen (got %s)" % (current_scene.scene_file_path if current_scene != null else "null"))
+	# The next battle starts with the halved gains applied (no more base-attribute restart).
 	var later: Control = load("res://scenes/battle/BattlePlayable.tscn").instantiate()
 	root.add_child(later)
-	_check(later._fallen.stats.max_hp == 14 + int(kept["max_hp"]), "The next normal battle applies the saved gains")
+	_check(later._fallen.stats.max_hp == 14 + int(kept["max_hp"]), "The next battle applies the halved gains")
 	later.queue_free()
-	battle.queue_free()
 	await process_frame
-	print("PLAYABLE_LAYOUT_OK: %d checks; live resources, keyboard, item/rest, cancel, targeting, absorption, victory, defeat, restart" % checks)
+	print("PLAYABLE_LAYOUT_OK: %d checks; live resources, keyboard, item/rest, cancel, targeting, absorption, victory, death, title" % checks)
 	quit(0)
 
 func _finalize() -> void:

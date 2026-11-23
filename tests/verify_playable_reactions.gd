@@ -167,6 +167,8 @@ func _run() -> void:
 	# D-047: o mesmo inimigo resolve dois ataques em bloco, cada um com seu número.
 	battle = AutoHitBattle.new()
 	root.add_child(battle)
+	# Creator 2026-11-23: Fallen's death ends the battle; he must survive both hits here.
+	battle._fallen.current_hp = 999
 	reserve(battle); reserve(battle)
 	check(battle.hud.mode == "react", "D-047: first enemy announcement opens a reaction prompt")
 	var combo_attacker: BattleUnit = battle.action_attacker

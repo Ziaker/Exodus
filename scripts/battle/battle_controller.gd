@@ -94,8 +94,8 @@ var absorb_skill_label := ""
 var _absorb_counts: Dictionary = {}
 var _feedback_token: int = 0
 var _progress_gains: Dictionary = {}
-## Creator decision (2026-11-21): a Restart after DEFEAT starts Fallen at base
-## attributes; the saved gains are ignored for that battle but kept in the save.
+## Saved gains applied to Fallen. Creator 2026-11-23: Fallen's death halves the saved
+## gains instead of the old base-attribute restart (2026-11-21), so this stays true.
 var apply_saved_gains := true
 var _fallen: BattleUnit = null
 var _ally: BattleUnit = null

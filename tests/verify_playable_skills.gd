@@ -102,11 +102,11 @@ func _run() -> void:
 	check(battle.absorb_count_label == "1/4", "FOE B counts on its own (got %s)" % battle.absorb_count_label)
 	battle.queue_free(); await process_frame
 
-	# ---- Skills survive a defeat restart (gains do not).
-	Engine.set_meta(&"exodus_restart_at_base", true)
+	# ---- Skills survive Fallen's death (only half of the stat gains are lost).
+	ProgressStore.halve_gains()
 	battle = SkillBattle.new()
 	root.add_child(battle)
-	check(battle._fallen.skills == [&"bleedbuff", &"lunge"] and not battle.apply_saved_gains, "Learned skills are kept after a defeat restart")
+	check(battle._fallen.skills == [&"bleedbuff", &"lunge"], "Learned skills are kept after Fallen's death")
 	check(int(ProgressStore.load_absorbs().get("genetic_foe_b", 0)) == 1, "Counters are loaded from the save")
 	battle.queue_free(); await process_frame
 	ProgressStore.clear()

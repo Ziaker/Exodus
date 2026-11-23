@@ -91,7 +91,18 @@ func end_round() -> void:
 				unit.acts_available = 0
 
 
+## Creator 2026-11-23: the battle ends as soon as Fallen falls, even with the ally up
+## (death cutscene, then the title screen).
+func fallen_fell() -> bool:
+	for unit in units:
+		if unit.is_fallen and not unit.is_alive():
+			return true
+	return false
+
+
 func is_over() -> bool:
+	if fallen_fell():
+		return true
 	var players_alive := false
 	var enemies_alive := false
 	for unit in units:
@@ -105,6 +116,8 @@ func is_over() -> bool:
 
 
 func player_victory() -> bool:
+	if fallen_fell():
+		return false
 	for unit in units:
 		if not unit.is_player and unit.is_alive():
 			return false

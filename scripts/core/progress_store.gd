@@ -81,8 +81,31 @@ static func save_gains(gains: Dictionary) -> bool:
 	return _write(gains, load_absorbs(), load_skills())
 
 
+## Creator 2026-11-23: Fallen's death costs half of every stat gain from absorptions;
+## an odd gain loses the smaller half (+3 keeps +2). Counters and skills are kept.
+## Every enemy so far is a normal enemy, so every stored gain is affected.
+static func halve_gains() -> Dictionary:
+	var gains := load_gains()
+	for key in gains.keys():
+		var gain := int(gains[key])
+		gains[key] = gain - gain / 2
+	save_gains(gains)
+	return gains
+
+
 static func save_skill_progress(absorbs: Dictionary, skills: Array[StringName]) -> bool:
 	return _write(load_gains(), absorbs, skills)
+
+
+## Creator 2026-11-23: how many times Fallen died (shown on the title in Roman numerals).
+static func load_deaths() -> int:
+	return maxi(0, int(_read().get("deaths", 0)))
+
+
+static func add_death() -> int:
+	var deaths := load_deaths() + 1
+	_write(load_gains(), load_absorbs(), load_skills(), -1, deaths)
+	return deaths
 
 
 ## D-048: Yoch's unspent PP persist between battles (0..8; a defeat zeroes them).
@@ -94,8 +117,9 @@ static func save_pp(pp: int) -> bool:
 	return _write(load_gains(), load_absorbs(), load_skills(), pp)
 
 
-static func _write(gains: Dictionary, absorbs: Dictionary, skills: Array[StringName], pp: int = -1) -> bool:
+static func _write(gains: Dictionary, absorbs: Dictionary, skills: Array[StringName], pp: int = -1, deaths: int = -1) -> bool:
 	var stored_pp := clampi(pp if pp >= 0 else load_pp(), 0, PrayerBook.MAX_PP)
+	var stored_deaths := deaths if deaths >= 0 else load_deaths()
 	var entries := {}
 	for key in STAT_KEYS:
 		entries[key] = clampi(int(gains.get(key, 0)), 0, MAX_GAIN)
@@ -105,7 +129,7 @@ static func _write(gains: Dictionary, absorbs: Dictionary, skills: Array[StringN
 	var names: Array[String] = []
 	for skill in skills:
 		names.append(String(skill))
-	var payload := {"version": VERSION, "gains": entries, "absorbs": counts, "skills": names, "pp": stored_pp}
+	var payload := {"version": VERSION, "gains": entries, "absorbs": counts, "skills": names, "pp": stored_pp, "deaths": stored_deaths}
 	var file := FileAccess.open(_path(), FileAccess.WRITE)
 	if file == null:
 		return false

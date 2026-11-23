@@ -1287,7 +1287,32 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   atributos são salvos em `user://exodus_progress.json` com versão e validação
   contra corrupção, e reaplicados ao Fallen ao criar a próxima batalha.
   **IMPLEMENTADO.**
-- **PENDENTE:** novas tentativas após falha e limite de HP. Não foram inventadas.
+- **Morte do Fallen (criador, 2026-11-23); IMPLEMENTADO** (`scripts/battle/death_cutscene.gd`,
+  `tests/verify_death.gd`, captura `tools/capture_death.gd`):
+  - A batalha acaba **assim que o Fallen cai**, mesmo com o aliado de pé (DEFEAT; os PP do
+    Yoch zeram, D-048).
+  - Ele perde **metade de cada ganho de status** das absorções; com valor ímpar perde a
+    metade menor (+3 fica +2). Contadores de absorção e habilidades aprendidas ficam.
+    Todos os inimigos atuais são normais, então todo ganho guardado entra na conta.
+  - Isso **substitui** a regra de 2026-11-21 (Restart após DEFEAT nos atributos base): a
+    próxima batalha aplica os ganhos que sobraram.
+  - Sem pontos salvos no jogo ainda, o "último ponto salvo" é a **tela de título**.
+  - **Contador de mortes:** cada morte soma 1 no save; a tela de título mostra o total em
+    **algarismos romanos**, na fonte do título, **44 px**, **#a8182a**, centrado entre o
+    título e o menu (nada antes da primeira morte).
+  - Cutscene, **14 s** (3/2/5/3/1; antes 22 s): (1) 3 s de letras hebraicas vermelhas **#a8182a** escritas em linhas
+    da direita para a esquerda (opção C do prólogo) enquanto o fundo escurece até o preto;
+    (2) 2 s de voo formando o anjo e a caixa de diálogo do prólogo (mesma figura, tamanho
+    e posição), em vermelho; (3) 5 s de fala, digitada no ritmo do prólogo: "Levanta-te,
+    [hebraico], que a ti não é dada a bênção da morte. Do que te fortaleceu, parte
+    perderás, como punição.", com "Do que te fortaleceu, parte perderás" em **#81e6a8**;
+    (4) 3 s das perdas em texto ("-1 ATK"), em #a8182a, saindo dos **quatro cantos** até o
+    anjo; (5) 1 s com anjo e caixa se desfazendo em letras.
+  - **Provisório, para o julgamento do criador:** cada rótulo de perda voa 1,5 s, as
+    saídas se distribuem nos 3 s, ordem dos cantos (sup. esq., sup. dir., inf. dir.,
+    inf. esq.), tamanho 14 px em negrito e o ponto de chegada (centro da figura).
+- **PENDENTE:** limite de HP; pontos salvos (a morte volta ao título até existirem) e
+  diferença entre inimigos normais e chefes na perda da morte.
 - Sem equipamentos neste protótipo. A única magia implementada é o **Heat wave** (seção
   abaixo); a Reza (D-048) é tratada na sessão própria.
 

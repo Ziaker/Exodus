@@ -22,11 +22,16 @@ const TITLE_PX := 48
 const FADE_TIME := 20.0 / 40.0 # XP Graphics.transition default: 20 frames at 40 fps.
 const INK := Color("ece9dc")
 const DISABLED_INK := Color(0.93, 0.91, 0.86, 0.5) # XP disabled_color: alpha 128.
+## Creator 2026-11-23: Fallen's deaths in Roman numerals, in the title font, #a8182a,
+## 44 px, centred between the title and the command window (hidden before any death).
+const DEATHS_PX := 44
+const DEATHS_INK := Color("a8182a")
 
 var font: FontFile
 var index := 0
 var busy := false
 var fade_alpha := 0.0
+var deaths := 0
 
 
 func _ready() -> void:
@@ -35,6 +40,7 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	index = 1 if has_save() else 0
+	deaths = ProgressStore.load_deaths()
 	queue_redraw()
 
 
@@ -64,6 +70,11 @@ func _draw() -> void:
 	var title_w := font.get_string_size(GAME_TITLE, HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_PX).x
 	draw_string(font, Vector2((size.x - title_w) / 2.0, WINDOW_Y / 2.0 + TITLE_PX / 3.0),
 			GAME_TITLE, HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_PX, INK)
+	if deaths > 0:
+		var numeral := roman(deaths)
+		var numeral_w := font.get_string_size(numeral, HORIZONTAL_ALIGNMENT_LEFT, -1, DEATHS_PX).x
+		draw_string(font, Vector2((size.x - numeral_w) / 2.0, deaths_center_y() + DEATHS_PX / 3.0),
+				numeral, HORIZONTAL_ALIGNMENT_LEFT, -1, DEATHS_PX, DEATHS_INK)
 	var w := window_rect()
 	draw_rect(w, Color("252531f2"))
 	draw_rect(w, Color("080b14"), false, 1)
@@ -79,6 +90,23 @@ func _draw() -> void:
 				COMMANDS[i], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_PX, color)
 	if fade_alpha > 0.0:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, fade_alpha))
+
+
+## Midway between the title's baseline and the top of the command window.
+func deaths_center_y() -> float:
+	var title_baseline := WINDOW_Y / 2.0 + TITLE_PX / 3.0
+	return (title_baseline + window_rect().position.y) / 2.0
+
+
+static func roman(n: int) -> String:
+	var values := [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+	var symbols := ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+	var out := ""
+	for i in values.size():
+		while n >= values[i]:
+			out += symbols[i]
+			n -= values[i]
+	return out
 
 
 func move_cursor(step: int) -> void:
