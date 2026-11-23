@@ -1432,14 +1432,21 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 
 ## 10. Absorção e progressão sem níveis — **CONFIRMADO (conceito)**
 
-Fallen absorve adversários. **D-051 (correção do criador, 2026-11-22; NÃO IMPLEMENTADO):**
+Fallen absorve adversários. **D-051 (correção do criador, 2026-11-22; IMPLEMENTADO no
+combate jogável, commit `dd0813e`):**
 os ganhos vêm dos atributos do inimigo que são múltiplos de 8, até +2 em um atributo ou
 +1/+1 em dois; o mash é uma disputa de SP (10 apertos, até 20 SP) e a absorção se
 completa ao esgotar o SP do inimigo. A regra anterior (1–3 pontos do maior atributo
 mais SP base/HP/EN) e a D-029 estão revogadas. **D-017:** a absorção bem-sucedida
 elimina o alvo. Detalhes em `docs/COMBAT_SPEC.md`.
-Ambiguidade pendente em A-07. Implementação atual é protótipo, sem o sistema completo
-de mashing escalonado.
+**VFX da absorção (D-052, criador 2026-11-22):** a arte do inimigo se reparte em **letras
+hebraicas soltas**, espaçadas **8 px**, **20% maiores** que a primeira versão de 12 px
+(protótipo `prototypes/absorb-fragments`, opção `letters`, no layout do fundo D). Um golpe
+branco em anel de raios chapados quebra o inimigo no instante do impacto, com tremor de tela
+(`--hit=ringburst`, aprovado). No mash, cada aperto solta letras verdes do oponente intacto
+até a barra de SP (`--mash`, aprovado). Ainda **PENDENTE:** cor, tempos, trajetória e
+destino das letras da quebra, e visual da falha; no jogo continua a animação antiga do SMT.
+Ambiguidade pendente em A-07.
 
 ---
 
@@ -2679,9 +2686,25 @@ Formato: ID · data · decisão · estado · impacto documental.
   Yoch começa a batalha com **0 PP**; "reiniciar o combate" significa Fallen
   **completamente recuperado, com HP cheio**; Lunge é **habilidade** (ataque normal todo
   mundo tem e não entra na ficha). **D-047:** o criador nunca aprovou que inimigos gastem
-  **sempre** dois atos em ataques. **CONFIRMADO como design; NÃO IMPLEMENTADO.** Impacto:
-  GDD §10, §14.1; `COMBAT_SPEC.md` §Itens e absorção, §D-047; `PROLOGUE_SCRIPT.md`;
-  `docs/DECISIONS.md`.
+  **sempre** dois atos em ataques. **Absorção IMPLEMENTADA (commit `dd0813e`); o restante
+  é design, NÃO IMPLEMENTADO.** Impacto: GDD §10, §14.1; `COMBAT_SPEC.md` §Itens e
+  absorção, §D-047; `PROLOGUE_SCRIPT.md`; `docs/DECISIONS.md`.
+- **D-052 · 2026-11-22 (decisão do criador) — VFX da absorção em letras hebraicas.** Entre
+  cacos, blocos, faixas, partículas e letras, o criador aprovou as **letras hebraicas
+  soltas**, pedindo letras **mais separadas (8 px)** e **20% maiores** que a versão de
+  12 px. **Golpe que causa a quebra (aprovado pelo criador em 2026-11-22, protótipo
+  `--hit=ringburst`):** expansão do anel com o visual do estouro, ou seja, um impacto de anime
+  sem muito detalhe: 12 raios chapados **brancos**, alternando longos e curtos, que se abrem
+  em anel a partir do ponto de impacto, com clarão central. O inimigo **se parte em letras
+  no mesmo instante do impacto**. Há **tremor de tela**, com deslocamento aleatório a cada
+  quadro e força decrescente; a borda exposta fica preta. Valores da captura aprovada: golpe
+  0,35 s, tremor 6 px por 0,35 s. **Cena do mash (criador 2026-11-22):** acontece na própria
+  batalha. A cada aperto saem **letras hebraicas verdes** (o verde do SP no HUD) do oponente,
+  **sem desmantelá-lo**, e elas vão até a **barra de SP**. O protótipo `--mash` foi
+  **aprovado pelo criador em 2026-11-23**, com 3 letras por aperto, voo de 0,6 s e chegada
+  na divisa verde/vermelho da barra. **PENDENTE:** cor, tempos, trajetória e destino das
+  letras da quebra, e visual da falha. **NÃO IMPLEMENTADO no jogo.** Impacto: GDD §10;
+  `COMBAT_SPEC.md` §Itens e absorção; `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

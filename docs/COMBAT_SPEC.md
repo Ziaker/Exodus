@@ -1248,7 +1248,8 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 - **D-017 (2026-11-21): uma absorção bem-sucedida sempre elimina o alvo** (`current_hp =
   0`), que deixa de agir e pode encerrar o combate se for o último inimigo.
   **IMPLEMENTADO.**
-- **D-051 (2026-11-22) — absorção por disputa de SP; DESIGN, NÃO IMPLEMENTADO.** Substitui
+- **D-051 (2026-11-22) — absorção por disputa de SP; IMPLEMENTADO (`BattleMath.absorb_press`,
+  `absorb_gain_options`, `BattleController._perform_absorption`, commit `dd0813e`).** Substitui
   a regra antiga (1–3 pontos do maior atributo mais SP base/HP/EN) e **revoga a D-029**
   (4/8/12 apertos), que o criador nunca aprovou:
 - **Ganho:** baseado nos atributos do inimigo que são **múltiplos de 8** (o maior). Até **+2 em um atributo** ou **+1 e +1 em dois atributos diferentes** múltiplos de 8. Nem todo inimigo tem 8 em tudo: precisa ter **pelo menos 1 ou 2** atributos múltiplos de 8.
@@ -1259,7 +1260,16 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 - **Falha:** se o mash acaba sem sucesso, a absorção falha, o ato é gasto e o **SP perdido pelo inimigo não volta**.
 - **Atributos elegíveis:** ATK, MAK, DEF, MEF e AGI (sem HP e EN) cujo valor é múltiplo de 8. Com **dois ou mais**, **o jogador escolhe** entre +2 em um ou +1/+1 em dois; com **um**, +2 nele; com **nenhum**, o ganho vem do **maior** desses atributos.
 - **HP/EN:** a absorção continua dando **+HP e +EN** do mesmo valor do ganho de atributo (como no código anterior).
-  O código atual ainda usa a regra antiga (mash de 2 s, `apertos / 4`).
+- **VFX (D-052, criador 2026-11-22):** a arte do inimigo se reparte em **letras hebraicas
+  soltas**, espaçadas **8 px** e **20% maiores** que a versão de 12 px (protótipo
+  `prototypes/absorb-fragments`, opção `letters`). O golpe aprovado (`--hit=ringburst`) tem
+  12 raios brancos chapados abrindo em anel com clarão central. A quebra acontece no instante do
+  impacto e vem com tremor de tela aleatório e decrescente, borda preta, 0,35 s e 6 px.
+  No **mash**, dentro da batalha, cada aperto solta do oponente, sem desmantelá-lo, **letras
+  verdes** (verde do SP) que vão até a **barra de SP** (protótipo `--mash`, aprovado em
+  2026-11-23: 3 letras por aperto, voo de 0,6 s, chegada na divisa verde/vermelho).
+  **PENDENTE:** cor, tempos, trajetória e destino das letras da quebra, e visual da falha. **NÃO IMPLEMENTADO no jogo** (segue a
+  animação antiga do SMT).
 - **D-028 (2026-11-21): os ganhos persistem entre batalhas.** Os deltas de
   atributos são salvos em `user://exodus_progress.json` com versão e validação
   contra corrupção, e reaplicados ao Fallen ao criar a próxima batalha.
