@@ -120,6 +120,11 @@ func _run() -> void:
 	var mash_deadline := Time.get_ticks_msec() + 5000
 	while battle._mash_active and Time.get_ticks_msec() < mash_deadline:
 		await process_frame
+	# D-052: on success the hit and the break into letters (~2.3 s) play before the target
+	# is consumed, so wait for the absorption itself (real time, 6 s cap).
+	var break_deadline := Time.get_ticks_msec() + 6000
+	while not battle.state.units[2].absorbed and Time.get_ticks_msec() < break_deadline:
+		await process_frame
 	_check(battle.state.units[2].absorbed, "Successful absorption must mark the real target")
 	_check(battle._fallen.stats.max_hp > 14, "Absorption must grant actual attributes")
 	battle.queue_free()

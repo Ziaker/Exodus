@@ -18,7 +18,6 @@ const ALPHABET := "אבגדהוזחטיכלמנסעפצקרשת"
 const LETTER_CELL := 8.0
 const LETTER_PX := 12
 const LETTER_SCALE := 1.2
-const STAGE_SHADER := "res://prototypes/battle-bg/bg_d_plasma_sky.gdshader"
 ## New hit VFX that strikes the enemy and causes the break (creator 2026-11-22, three
 ## options under review; --hit=<name>): slash = a blade cut across the silhouette,
 ## burst = rays exploding from the body centre, ring = a shock ring expanding from the
@@ -106,18 +105,7 @@ func _ready() -> void:
 		break_at = impact_at + HIT_TIME
 	battle = load("res://scenes/battle/BattlePlayable.tscn").instantiate()
 	add_child(battle)
-	# Approved layout from prototypes/battle-bg: moving stage D, enemies 15% smaller.
-	var stage := ColorRect.new()
-	stage.size = battle.hud.STAGE_RECT.size
-	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var material := ShaderMaterial.new()
-	material.shader = load(STAGE_SHADER)
-	stage.material = material
-	battle.add_child(stage)
-	battle.move_child(stage, 0)
-	battle.hud.stage_backdrop = false
-	battle.hud.enemy_horizon = battle.hud.enemy_sprite_rect(0).end.y
-	battle.hud.enemy_depth = 0.85
+	# The approved layout (stage D, enemies 15% smaller) is now built by the game itself.
 	font = SystemFont.new()
 	font.font_names = PackedStringArray(["Tahoma", "Arial", "David Libre"])
 	font.font_weight = 800

@@ -1268,8 +1268,12 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   No **mash**, dentro da batalha, cada aperto solta do oponente, sem desmantelá-lo, **letras
   verdes** (verde do SP) que vão até a **barra de SP** (protótipo `--mash`, aprovado em
   2026-11-23: 3 letras por aperto, voo de 0,6 s, chegada na divisa verde/vermelho).
-  **PENDENTE:** cor, tempos, trajetória e destino das letras da quebra, e visual da falha. **NÃO IMPLEMENTADO no jogo** (segue a
-  animação antiga do SMT).
+  **PENDENTE:** cor, tempos, trajetória e destino das letras da quebra, e visual da falha.
+  **IMPLEMENTADO no jogo (2026-11-23):** `scripts/battle/absorb_vfx.gd`, chamado pelos ganchos
+  `_on_absorb_press` e `_on_absorb_break` de `BattleController._perform_absorption`. Por enquanto,
+  as letras da quebra vão até o card do Fallen, como na captura aprovada, e a falha não tem
+  efeito próprio. A animação antiga `ABSORB` do SMT saiu. O flash `ABSORBED` no Fallen continua, por decisão do criador em 2026-11-23.
+  O tremor desloca o canvas da viewport. Cobertura em `tests/verify_playable_fx.gd`.
 - **D-028 (2026-11-21): os ganhos persistem entre batalhas.** Os deltas de
   atributos são salvos em `user://exodus_progress.json` com versão e validação
   contra corrupção, e reaplicados ao Fallen ao criar a próxima batalha.

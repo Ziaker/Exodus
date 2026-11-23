@@ -59,6 +59,7 @@ qualquer alteração em documentos ou código.
 | D-050 | 2026-11-22 (roteiro do criador) | Prólogo: cutscenes de abertura, primeiro combate (fichas e habilidades dos 2 inimigos), resgate pelo humano, absorção tutorial (+2 MEF, +2 MAK) e saída para oeste/leste. | `docs/PROLOGUE_SCRIPT.md` e `docs/GDD.md` Apêndice A |
 
 | D-051 | 2026-11-22 (correção do criador) | Absorção por disputa de SP (múltiplos de 8, até +2 ou +1/+1, 10 apertos, até 20 SP, sucesso ao esgotar o SP inimigo), revoga a D-029; respostas ao prólogo D-050; inimigo não ataca sempre duas vezes. | `docs/GDD.md` Apêndice A |
-| D-052 | 2026-11-22 (decisão do criador) | VFX da absorção: a arte do inimigo vira letras hebraicas soltas, espaçadas 8 px e 20% maiores que a versão de 12 px; golpe branco em anel de raios com quebra no impacto e tremor de tela (aprovado); no mash, letras verdes saem do oponente intacto a cada aperto e vão até a barra de SP (aprovado). Cor, tempos, trajetória e destino das letras da quebra e visual da falha pendentes. | `docs/GDD.md` §10 e Apêndice A |
+| D-052 | 2026-11-22 (decisão do criador) | VFX da absorção: a arte do inimigo vira letras hebraicas soltas, espaçadas 8 px e 20% maiores que a versão de 12 px; golpe branco em anel de raios com quebra no impacto e tremor de tela (aprovado); no mash, letras verdes saem do oponente intacto a cada aperto e vão até a barra de SP (aprovado; implementado no jogo em `absorb_vfx.gd`). Cor, tempos, trajetória e destino das letras da quebra e visual da falha pendentes. | `docs/GDD.md` §10 e Apêndice A |
+| D-053 | 2026-11-23 (decisão do criador) | Layout de batalha: fundo D (plasma animado) e inimigos 15% menores, usado SEMPRE a partir de agora; implementado em `PlayableController._build_ui` com `scenes/battle/battle_stage.gdshader`. | `docs/GDD.md` §17 e Apêndice A |
 
-Total: 50 decisões indexadas.
+Total: 51 decisões indexadas.

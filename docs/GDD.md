@@ -1445,7 +1445,8 @@ hebraicas soltas**, espaçadas **8 px**, **20% maiores** que a primeira versão 
 branco em anel de raios chapados quebra o inimigo no instante do impacto, com tremor de tela
 (`--hit=ringburst`, aprovado). No mash, cada aperto solta letras verdes do oponente intacto
 até a barra de SP (`--mash`, aprovado). Ainda **PENDENTE:** cor, tempos, trajetória e
-destino das letras da quebra, e visual da falha; no jogo continua a animação antiga do SMT.
+destino das letras da quebra, e visual da falha. **IMPLEMENTADO no jogo** em 2026-11-23
+(`scripts/battle/absorb_vfx.gd`), substituindo a animação antiga do SMT.
 Ambiguidade pendente em A-07.
 
 ---
@@ -1545,6 +1546,10 @@ Localizações nomeadas, geografia, hubs, dungeons e regras de exploração: **P
 
 ### 17.1 Tactical Altar — decisões de HUD das Rodadas Visuais 1 a 3 — **CONFIRMADO como design; NÃO IMPLEMENTADO**
 
+- **Layout de batalha (D-053, criador 2026-11-22/23): fundo D** (céu de plasma animado
+  atrás da cena fixa) com **inimigos 15% menores**. Deve ser usado **SEMPRE** a partir de
+  2026-11-23, no jogo, nos protótipos e nas capturas. **IMPLEMENTADO** em
+  `PlayableController._build_ui`, com o shader `scenes/battle/battle_stage.gdshader`.
 A nova direção visual deve preservar o aspecto de **RPG clássico próximo de RPG
 Maker XP**, a visão frontal e a escala nativa 544×416. **Tactical Altar** é a
 direção aprovada: janelas e painéis legíveis, geometria contida, estética sombria e
@@ -2703,9 +2708,20 @@ Formato: ID · data · decisão · estado · impacto documental.
   **sem desmantelá-lo**, e elas vão até a **barra de SP**. O protótipo `--mash` foi
   **aprovado pelo criador em 2026-11-23**, com 3 letras por aperto, voo de 0,6 s e chegada
   na divisa verde/vermelho da barra. **PENDENTE:** cor, tempos, trajetória e destino das
-  letras da quebra, e visual da falha. **NÃO IMPLEMENTADO no jogo.** Impacto: GDD §10;
+  letras da quebra, e visual da falha. **IMPLEMENTADO no jogo em 2026-11-23**
+  (`scripts/battle/absorb_vfx.gd`; a animação antiga `ABSORB` do SMT saiu). Impacto: GDD §10;
   `COMBAT_SPEC.md` §Itens e absorção; `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
 `docs/COMBAT_SPEC.md`. Este apêndice não as duplica.
+- **D-053 · 2026-11-23 (decisão do criador) — layout de batalha com o fundo D, sempre.**
+  O criador aprovou em 2026-11-22, no protótipo `prototypes/battle-bg`, o **fundo D**: o
+  céu de plasma animado, mais escuro (brilho 0,6) e 20% mais lento, com a cena fixa de
+  lua, cordilheiras e chão em perspectiva por cima. Aprovou também os **inimigos 15% menores**,
+  com os pés na mesma linha do chão. Em 2026-11-23 determinou que esse layout deve ser usado
+  **SEMPRE a partir de agora**, no jogo e em todo protótipo e captura. **IMPLEMENTADO:**
+  `PlayableController._build_ui` cria o nó `Stage` com `scenes/battle/battle_stage.gdshader`
+  atrás do HUD e aplica `stage_backdrop = false` e `enemy_depth = 0.85`, com `enemy_horizon`
+  no pé original. O fundo antigo desenhado pelo HUD deixa de ser usado. Impacto: GDD §17;
+  `docs/DECISIONS.md`.

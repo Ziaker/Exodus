@@ -587,6 +587,7 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 			taken = int(step.taken)
 			absorb_chance = int(step.chance)
 			absorbed = bool(step.absorbed)
+			_on_absorb_press(actor, target)
 		if absorbed or presses >= BattleMath.ABSORB_MAX_PRESSES:
 			break
 	_mash_active = false
@@ -598,6 +599,7 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 		_append_log("ABSORB failed: %s resisted (%d SP taken, last chance %d%%)." % [target.display_name, taken, absorb_chance])
 		_flash_feedback("ABSORB FAILED")
 		return
+	await _on_absorb_break(actor, target)
 	var options := BattleMath.absorb_gain_options(target.stats)
 	var pick: int = await _choose_absorb_gain(options)
 	var gains: Dictionary = options[clampi(pick, 0, options.size() - 1)].gains
@@ -635,6 +637,17 @@ func _add_stat(stats: UnitStats, stat: StringName, amount: int) -> void:
 ## Overridable: one absorption roll in [0, 100), compared with the chance.
 func _absorb_roll() -> float:
 	return rng.randf_range(0.0, 100.0)
+
+
+## Overridable presentation hook: one counted mash press moved SP (D-052 letters).
+func _on_absorb_press(_actor: BattleUnit, _target: BattleUnit) -> void:
+	pass
+
+
+## Overridable presentation hook: the absorption succeeded, before the gain choice
+## (D-052 hit and break into letters). Awaited by _perform_absorption.
+func _on_absorb_break(_actor: BattleUnit, _target: BattleUnit) -> void:
+	pass
 
 
 ## Overridable: which gain option the player takes (the playable HUD asks).

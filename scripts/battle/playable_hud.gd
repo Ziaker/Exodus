@@ -50,6 +50,8 @@ const DOWN_MARK := Color("f2a7a5")
 var battle: Control
 var players: Array[BattleUnit] = []
 var opponents: Array[BattleUnit] = []
+## D-052: opponents already broken into letters by absorb_vfx (not drawn any more).
+var broken_units: Array[BattleUnit] = []
 var command_options: Array[String] = []
 var command_index := 0
 ## D-046: linhas do plano (comandos + EXEC + UNDO) no mesmo menu desenhado.
@@ -494,7 +496,7 @@ func _selected_enemy() -> int:
 func _enemy(_x: float, index: int) -> void:
 	if index >= opponents.size(): return
 	var unit := opponents[index]
-	if not unit.is_alive(): return
+	if not unit.is_alive() or broken_units.has(unit): return
 	var column := enemy_column(index)
 	var art := enemy_sprite_rect(index)
 	art.position += shake_offset(unit)

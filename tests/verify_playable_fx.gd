@@ -4,6 +4,9 @@ const SANDBOX := preload("res://tests/progress_sandbox.gd")
 class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
 	func _ai_roll(_a: BattleUnit, _b: BattleUnit) -> int: return BattleMath.RhythmResult.POINT
 	func _defender_reaction(_a: BattleUnit, _b: BattleUnit) -> int: return BattleMath.RhythmResult.MISS
+	# D-051 rolls always miss, so the absorption only completes by draining the SP:
+	# the number of counted presses (and of D-052 letters) is deterministic.
+	func _absorb_roll() -> float: return 100.0
 	func _enemy_counter_roll(_e: BattleUnit) -> bool:
 		return false  # D-049 counters are covered by verify_playable_counter.gd
 
@@ -96,14 +99,37 @@ func _run() -> void:
 	battle = fresh(); fx = battle.get_node("BattleEffects")
 	battle.hud.opponents[0].current_sp = 10  # D-051: drained by the presses, absorption guaranteed
 	battle.submit_command(3); battle.submit_target(0)
-	check(fx.count_kind("ABSORB") == 1, "Mashing must animate the selected absorption target")
+	# D-052: the old SMT absorb animation is replaced by AbsorbVFX.
+	check(fx.count_kind("ABSORB") == 0, "D-052: the old SMT absorb animation must not play")
+	var vfx: Node2D = battle.get_node("AbsorbVFX")
+	var foe_a: BattleUnit = battle.hud.opponents[0]
 	for i in 12: battle.handle_confirm()
 	# Absorption mashing lasts 2 s of timers; headless frames run faster than
 	# 60 fps, so wait on real time (5 s cap) instead of a fixed frame count.
 	var mash_deadline := Time.get_ticks_msec() + 5000
 	while battle._mash_active and Time.get_ticks_msec() < mash_deadline:
 		await process_frame
+	# 10 SP drained by 5 counted presses (2 SP each): the guaranteed absorption stops there.
+	check(vfx.letters_sent == 5 * vfx.MASH_LETTERS, "D-052: every counted mash press sends MASH_LETTERS green letters (got %d)" % vfx.letters_sent)
+	var break_deadline := Time.get_ticks_msec() + 6000
+	var saw_break := false
+	var saw_shake := false
+	while not foe_a.absorbed and Time.get_ticks_msec() < break_deadline:
+		if not vfx.pieces.is_empty():
+			saw_break = true
+			check(battle.hud.broken_units.has(foe_a), "D-052: the broken opponent must leave the HUD at the impact")
+		if vfx._shaking:
+			check(root.canvas_transform.origin == vfx.shake_offset, "D-052: the screen shake moves the viewport canvas")
+			check(battle.position == Vector2.ZERO, "D-052: the shake must not move the battle node (HUD culling)")
+			saw_shake = saw_shake or vfx.shake_offset != Vector2.ZERO
+		await process_frame
+	check(saw_shake, "D-052: the impact must shake the screen")
+	check(saw_break, "D-052: a successful absorption must break the opponent into letters")
+	check(foe_a.absorbed, "Absorption must complete after the break")
 	check(fx.count_kind("ABSORBED") == 1, "Successful absorption must visibly signal its reward")
+	while vfx._shaking and Time.get_ticks_msec() < break_deadline:
+		await process_frame
+	check(root.canvas_transform == Transform2D.IDENTITY, "D-052: the screen shake must end at rest")
 	battle.queue_free(); await process_frame
 	print("PLAYABLE_FX_OK: %d checks; source frames, flashes, silent combat, hit/death, heal, miss, dodge, enemy cue, input gating" % checks)
 	quit(0)

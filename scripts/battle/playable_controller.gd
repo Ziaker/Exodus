@@ -11,6 +11,11 @@ const EFFECTS_SCRIPT = preload("res://scripts/battle/battle_effects.gd")
 const COUNTER_RHYTHM = preload("res://scripts/battle/counter_rhythm_bar.gd")
 var hud: Control
 var fx: Control
+const ABSORB_VFX = preload("res://scripts/battle/absorb_vfx.gd")
+const STAGE_SHADER = preload("res://scenes/battle/battle_stage.gdshader")
+const ENEMY_DEPTH := 0.85
+var stage: ColorRect
+var absorb_fx: Node2D
 ## D-049: two-rail counter-attack exchange and its interruption bookkeeping.
 var counter: Control
 var last_counter: Dictionary = {}
@@ -43,10 +48,24 @@ var defense_result := BattleMath.RhythmResult.MISS
 
 
 func _build_ui() -> void:
+	# Approved battle layout (creator 2026-11-22, prototype battle-bg; "always use the new
+	# one" 2026-11-23): the stage is background D, an animated plasma sky shader painted
+	# behind the HUD, and the enemies are 15% smaller with their feet on the same ground line.
+	stage = ColorRect.new()
+	stage.name = "Stage"
+	stage.size = HUD_SCRIPT.STAGE_RECT.size
+	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var stage_material := ShaderMaterial.new()
+	stage_material.shader = STAGE_SHADER
+	stage.material = stage_material
+	add_child(stage)
 	hud = HUD_SCRIPT.new()
 	hud.battle = self
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(hud)
+	hud.stage_backdrop = false
+	hud.enemy_horizon = hud.enemy_sprite_rect(0).end.y
+	hud.enemy_depth = ENEMY_DEPTH
 	rhythm = COMPACT_RHYTHM.new()
 	add_child(rhythm)
 	# Its own black-space slot keeps the log, menu and both status rows visible.
@@ -59,6 +78,11 @@ func _build_ui() -> void:
 	fx.name = "BattleEffects"
 	fx.battle = self
 	add_child(fx)
+	absorb_fx = ABSORB_VFX.new()
+	absorb_fx.name = "AbsorbVFX"
+	absorb_fx.battle = self
+	absorb_fx.hud = hud
+	add_child(absorb_fx)
 
 
 func _refresh_all() -> void:
@@ -756,10 +780,20 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	hud.mode = "absorb"
 	hud.announce("ABSORB")
 	var was_absorbed := defender.absorbed
-	fx.play("ABSORB", defender)
+	# D-052: the old SMT absorb animation is replaced by absorb_vfx (letters per press,
+	# hit and break on success).
 	await super._perform_absorption(unit, defender)
 	if not was_absorbed and defender.absorbed: fx.play("ABSORBED", unit)
 	hud.mode = "busy"
+
+
+func _on_absorb_press(_unit: BattleUnit, defender: BattleUnit) -> void:
+	absorb_fx.mash_press(defender)
+	_refresh_all()
+
+
+func _on_absorb_break(_unit: BattleUnit, defender: BattleUnit) -> void:
+	await absorb_fx.play_break(defender)
 
 
 ## D-051: with two or more eligible attributes the player picks the gain.

@@ -69,6 +69,9 @@ func test_absorption_writes_gains_to_save() -> void:
 		if battle._fallen != null:
 			break
 		await get_tree().process_frame
+	# D-051: the absorption is a per-press roll unless the presses drain the target's SP;
+	# 10 SP is drained by 5 presses, so the success (and the saved gains) is guaranteed.
+	battle.state.units[2].current_sp = 10
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 12)
 	battle._perform_absorption(battle._fallen, battle.state.units[2])
 	await get_tree().create_timer(2.4).timeout
