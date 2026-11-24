@@ -36,28 +36,54 @@ func _run() -> void:
 		_check(is_equal_approx((spans[1].x + spans[1].y) / 2.0, 0.5), "Drawn POINT must stay centered")
 		_check(is_equal_approx(spans[0].x, 0.5 - BattleMath.BEAM_HALF_WIDTH) and is_equal_approx(spans[2].y, 0.5 + BattleMath.BEAM_HALF_WIDTH), "Drawn BEAM must use the real width")
 	battle.rhythm.configure(BattleMath.POINT_HALF_WIDTH)
-	# exodus_feedback_lab.html geometry (544 x 416).
+	# exodus_feedback_lab.html geometry, D-055 816 x 624 (sizes kept, stage drawn 1.5x).
 	var hud: Control = battle.hud
-	_check(hud.enemy_column(0) == Rect2(37, 86, 220, 206) and hud.enemy_column(1) == Rect2(287, 86, 220, 206), "Enemy columns must follow the HTML space-evenly layout")
+	_check(hud.enemy_column(0) == Rect2(128, 212, 220, 206) and hud.enemy_column(1) == Rect2(468, 212, 220, 206), "Enemy columns must follow the HTML space-evenly layout")
+	_check(is_equal_approx(hud.enemy_sprite_rect(0).end.y / hud.STAGE_SCALE, 252.0) or is_equal_approx(hud.enemy_horizon / hud.STAGE_SCALE, 252.0), "D-055: enemy feet on the scaled floor line (old 252 x 1.5)")
+	_check(battle.stage.size == hud.STAGE_RECT.size and hud.STAGE_RECT.size == Vector2(544, 298) * hud.STAGE_SCALE, "D-055/D-053: stage D fills the width at 1.5x")
+	_check(hud.LOG_LINES == 3 and hud.BATTLE_LOG_RECT.end.y <= hud.STATUS_RECTS[0].position.y, "D-055: 3-line Battle Log above the status panels")
 	for i in 2:
 		var art: Rect2 = hud.enemy_sprite_rect(i)
 		var box := Rect2(hud.enemy_column(i).position + Vector2(32, 0), Vector2(156, 166))
 		_check(box.grow(0.01).encloses(art) and is_equal_approx(art.end.y, box.end.y), "Silhouette %d must fit the HTML sprite box and stand on its floor" % i)
 		_check(hud.STAGE_RECT.encloses(art), "Silhouette must be on the stage")
-	_check(hud.STATUS_RECTS[0] == Rect2(8, 332, 168, 77) and hud.STATUS_RECTS[1] == Rect2(182, 332, 168, 77), "Status windows must follow the HTML")
-	_check(hud.COMMAND_RECT == Rect2(356, 332, 180, 77), "Command window must follow the HTML")
+	_check(hud.STATUS_RECTS[0] == Rect2(8, 540, 168, 77) and hud.STATUS_RECTS[1] == Rect2(182, 540, 168, 77), "Status windows keep the HTML size (D-055 position)")
+	_check(hud.COMMAND_RECT == Rect2(628, 540, 180, 77), "Command window keeps the HTML size (D-055 position)")
 	_check(hud._round_caption() == "ROUND 01", "Header must show the HTML round label")
 	await process_frame
 	await process_frame
 	_check(hud._menu_rows().size() == 7 and hud._menu_rows()[4] == "REACT", "D-046: Fallen menu lists five commands plus EXEC and UNDO")
 	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-plan:0")[0].rect
-	_check(first_row.position.y == 335, "D-046: the title is hidden and plan rows start at the top of the command window")
+	_check(first_row.position.y == hud.COMMAND_RECT.position.y + 3, "D-046: the title is hidden and plan rows start at the top of the command window")
 	# Silhouettes: opaque pixels plus enclosed dither holes become one solid mask.
 	var ring := Image.create_empty(5, 5, false, Image.FORMAT_RGBA8)
 	for p in [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(1, 2), Vector2i(3, 2), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]:
 		ring.set_pixelv(p, Color.RED)
 	var mask: Image = hud.make_silhouette(ring)
 	_check(mask.get_pixel(2, 2).a == 1.0 and mask.get_pixel(1, 1) == Color.WHITE, "Enclosed holes must be filled; shape pixels become the white mask")
+	# D-055: Battle Log with 3 visible lines (newest at the bottom); menu explanations
+	# are transient and never pushed into the history.
+	var saved_mode: String = hud.mode
+	var saved_message: String = hud.message
+	var saved_lines: Array[String] = hud.log_lines.duplicate()
+	hud.mode = "command"
+	hud.log_lines.clear()
+	for text in ["LOG A", "LOG B", "LOG B", "LOG C", "LOG D"]:
+		hud.message = text
+		hud.visible_log_lines()
+	_check(hud.visible_log_lines() == ["LOG B", "LOG C", "LOG D"], "D-055: the log shows the last 3 distinct lines, oldest first")
+	hud.mode = "absorb"
+	var shown: Array[String] = hud.visible_log_lines()
+	_check(shown.size() == 3 and shown[0] == "LOG C" and shown[2].begins_with("ABSORB [Z]"), "D-055: a transient line (absorb mash) is the newest line while it lasts")
+	_check(hud.log_lines[-1] == "LOG D", "D-055: transient lines are not kept in the history")
+	hud.mode = "command"
+	_check(hud.visible_log_lines() == ["LOG B", "LOG C", "LOG D"], "D-055: the transient line goes away with its mode")
+	hud.mode = saved_mode
+	hud.message = saved_message
+	hud.log_lines.assign(saved_lines)
+	for i in 3:
+		var baseline: float = hud.BATTLE_LOG_RECT.position.y + 0.5 + 15.5 + i * hud.LOG_STEP
+		_check(baseline <= hud.BATTLE_LOG_RECT.end.y and baseline + 4 < hud.STATUS_RECTS[0].position.y, "D-055: log line %d inside the log rect, above the panels" % (i + 1))
 	_check(mask.get_pixel(0, 0).a == 0.0 and mask.get_pixel(4, 2).a == 0.0, "Outside transparency must stay transparent")
 	_check(hud.silhouettes.size() == 2 and hud.silhouettes[0].get_size() == hud.battler_regions[0].size, "One silhouette per SMT battler, same size as its art")
 	# Silhouette: drawn with a black modulate; the whiten ghost starts at alpha 128/255.

@@ -94,7 +94,6 @@ const L_SHAKE_TIME := 0.45
 const L_BURST_TIME := 0.9
 const L_AFTER_TIME := 1.1
 const L_END := 1.45
-const STAGE := Rect2(0, 0, 544, 298)
 const INK_DARK := Color(0.12, 0.08, 0.0)
 var raam_at := -99.0
 var r_target := Rect2()
@@ -242,7 +241,7 @@ func _draw_raam() -> void:
 	elif age < 1.4:
 		dark = 0.62 * (1.0 - clampf((age - 0.4) / 1.0, 0.0, 1.0))
 	if dark > 0.0:
-		draw_rect(STAGE, Color(0.02, 0.0, 0.05, dark))
+		draw_rect(hud.STAGE_RECT, Color(0.02, 0.0, 0.05, dark))
 	if age < 0.0:
 		var c := clampf((age + L_CHARGE) / L_CHARGE, 0.0, 1.0)
 		for g in r_gather:
@@ -257,7 +256,7 @@ func _draw_raam() -> void:
 			_glyph("רעם", r_sky + Vector2(0, 9), int(14 + 12 * word_k), Color(1, 1, 0.85, word_k), Color(INK_DARK, word_k))
 		return
 	if age < L_FLASH:
-		draw_rect(Rect2(0, 0, 544, 416), Color(1, 1, 1, 0.92))
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1, 1, 1, 0.92))
 	var gap: bool = age >= L_REFLASH[0] and age < L_REFLASH[1]
 	if age < L_BOLT_HOLD and not gap:
 		_glow(r_bolt, 11.0, Color(PrayerBook.INK, 0.07 * flick))
@@ -289,5 +288,5 @@ func _draw_raam() -> void:
 		var bk := age / L_BURST_TIME
 		for g in r_burst:
 			var pos: Vector2 = r_ground + g.vel.normalized() * 14.0 + g.vel * age + Vector2(0, 520.0 * age * age)
-			if pos.y > STAGE.end.y - 4: continue
+			if pos.y > hud.STAGE_RECT.end.y - 4: continue
 			_glyph(g.glyph, pos, int(g.px), Color(PrayerBook.INK, 1.0 - bk * bk), Color(INK_DARK, 1.0 - bk))

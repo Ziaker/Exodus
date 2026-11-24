@@ -1547,7 +1547,7 @@ Localizações nomeadas, geografia, hubs, dungeons e regras de exploração: **P
 
 ## 17. Direção de arte, HUD, UX e acessibilidade — **CONFIRMADO / PENDENTE**
 
-- Resolução base 544×416, visão frontal, filtro de textura nearest. **CONFIRMADO** em ambiente.
+- Resolução base **816×624** (D-055, era 544×416), visão frontal, filtro de textura nearest. **CONFIRMADO** em ambiente.
 - HUD em janelas inspiradas em RPG Maker VX Ace, com battleback, sprites de inimigos,
   retratos, barras HP/EN e barra vertical de SP. **IMPLEMENTADO localmente**, ainda não
   publicado e ainda não julgado pelo diretor.
@@ -2756,6 +2756,72 @@ Formato: ID · data · decisão · estado · impacto documental.
   atrás do HUD e aplica `stage_backdrop = false` e `enemy_depth = 0.85`, com `enemy_horizon`
   no pé original. O fundo antigo desenhado pelo HUD deixa de ser usado. Impacto: GDD §17;
   `docs/DECISIONS.md`.
+
+- **D-054 · 2026-11-23 (decisão do criador) — overworld em primeira pessoa, primeiro teste.**
+  O criador definiu o overworld como **dungeon crawler** com movimento e ambientação no estilo
+  Shin Megami Tensei, começando por testes. Para o teste escolheu: referência **SMT VX The
+  Genesis**; render **3D real no Godot**; passo com **deslize animado de 0,15 s**; giro de 90°
+  com **rotação animada de 0,15 s**; **texturas do próprio VX só no teste** (não vão para o
+  jogo; a pasta de referência não é versionada); enquadramento **igual ao VX**; **labirinto de
+  teste pequeno**; **automapa**; **tremor como no VX** ao andar contra a parede; **só setas, sem
+  strafe**. Ajuste do mesmo dia: o passo reto ficou **30% mais lento** (0,15 s / 0,7 ≈ 0,214 s; depois, em 2026-11-23, **mais 30% mais lento**: 0,214 / 0,7 ≈ 0,306 s) e
+  **segurar X corre** com o passo original de 0,15 s; o giro continua em 0,15 s. **Movimento do teste aprovado pelo criador em 2026-11-23**
+  ("de resto está bom"); o visual segue em aberto. **Interface de exploração (criador, 2026-11-23):** estilo
+  parecido com o HUD de batalha, porém **mais preto e branco**; painel de baixo com **status do
+  grupo + nome do local**; automapa no **canto superior direito**; vista 3D com **moldura de
+  linha fina**. Ambiente do teste: genérico; referência: a arte do Exodus. Visual **não
+  aprovado**. **IMPLEMENTADO COMO TESTE** em `prototypes/dungeon-crawler/` (verificação
+  `tests/verify_dungeon_proto.gd`, capturas `tools/capture_dungeon_proto.gd`). **Visual NÃO
+  aprovado; aguarda o criador.** Escolhas do agente, tiradas do script 3D do VX e pendentes de
+  confirmação: seta para baixo = meia-volta (como no VX); tela de exploração do VX (vista na
+  largura toda e janela de status vazia embaixo) no lugar da moldura `999-BASE`, que no VX é
+  só da batalha; escurecimento contínuo por distância; corte de visão em 5,5 tiles com a cor
+  BG (10,10,10); deslize e giro lineares. §3 e §16 continuam **PENDENTES**. Impacto:
+  `docs/MAP_PROTOTYPE.md`; `docs/DECISIONS.md`.
+
+- **D-055 · 2026-11-23 (decisão do criador) — tela maior, diálogos e NPCs.**
+  Motivo: deve haver muito espaço para diálogos e um Battle Log maior. **Resolução base do
+  jogo inteiro: 816×624** (era 544×416, D-§17). **Manter o tamanho** de textos, sprites e painéis
+  e usar a **área extra** para caixas de texto, log e vistas (não ampliar tudo 1,5×). **Battle
+  Log com 3 linhas** visíveis (era 1). **Caixa de diálogo de 3 linhas, só nome e texto, sem
+  retrato**; na exploração fica **sobre o painel de baixo** (cobre nome do local e status
+  enquanto aberta). **NPCs na exploração como sprites no corredor 3D** (como os eventos do VX:
+  menores com a distância; de frente + Z abre o diálogo), usando **assets do SMT VX, um humano e
+  um demônio, só no teste**. Respostas do criador na implementação (2026-11-23): figura humana e
+  demoniaca "qualquer uma" (o agente usou `Pictures/P15` e `Pictures/D_Brute Onia`); os dois no
+  **corredor inicial**, um atrás do outro ((3,1) e (5,1)); **atravessáveis**. As sprites no
+  corredor em perspectiva (50% e depois 1:1 no tile à frente) foram reprovadas ("MINÚSCULOS",
+  "péssimos"). Referência conferida nos dados do VX: nenhum evento é desenhado no corredor 3D; a
+  figura entra por "Mostrar Imagem" centrada na tela em (272, 170), 100%. **Decisão do criador:
+  como o VX, 1,5×** — nada no corredor; ao falar, a figura aparece centrada sobre a vista
+  (x 408, 10,5 px acima do horizonte), 1,5× o tamanho original, e some quando o diálogo fecha.
+  **IMPLEMENTADO e aprovado pelo criador em 2026-11-23** ("está ótimo, podemos finalizar esta
+  parte"): `project.godot` 816×624.
+  Batalha (`playable_hud.gd`): fundo D (D-053) desenhado 1,5× como vista (816×447; cena 544×298
+  inalterada), inimigos, textos e painéis no tamanho de antes, pés na linha do chão escalado (378);
+  **Battle Log de 3 linhas** (a mais nova embaixo; explicações de menu/absorção só como linha
+  temporária); status em y 540 e comando à direita (628, 540). Título: janela e fontes no mesmo
+  tamanho, posições na proporção do XP na altura nova. Mapa top-down placeholder: **removido pelo
+  criador** (2026-11-23); New Game abre o teste de dungeon. Corte da morte: composição do prólogo centrada, letras na tela
+  toda. Diálogo (`scripts/ui/dialogue_box.gd`): 3 linhas, só nome e texto, quebra por pixels, página
+  longa vira várias; na exploração, estilo P&B sobre o painel de baixo (6, 502, 804×116).
+  Dungeon (`prototypes/dungeon-crawler`): parede a 1 tile 304×192, olho a 1/3, escurecimento e corte
+  mantidos; vista 3D 804×490 com o horizonte no centro (y 251); fundo MP001 com a faixa preta em 1:1
+  e teto/chão esticados; automapa em (676, 12); figura do NPC como `TextureRect` sobre a vista
+  enquanto o diálogo está aberto. Verificação:
+  `tests/verify_dungeon_proto.gd`, `tests/verify_playable_layout.gd` e demais `verify_*`.
+  **Marca no automapa (criador):** o círculo do `AutoMapMarker` do VX em P&B (corpo branco, brilho
+  preto), que aparece quando a célula do NPC entra na vista 3D (até 5,5 tiles, sem parede no
+  caminho); na célula do jogador fica só a seta. **Figura de frente (criador, 2026-11-23, "é
+  impossível saber que tem um NPC assim"):** parado com o NPC no tile logo à frente, a figura 1,5×
+  centrada já aparece antes do Z; some ao andar ou girar; mais longe, só a marca no automapa.
+  **Em cima do NPC (criador):** na célula dele a figura aparece (qualquer direção) e o Z fala com
+  ele; se houvesse NPC na célula e à frente, vale o da célula (escolha do agente, sem caso no teste).
+  **Texto do diálogo (criador, 2026-11-23, "o texto podia ser maior"):** a caixa passou de 3 linhas
+  de 12 px para **2 linhas de 20 px**, com o nome no mesmo tamanho (negrito); a caixa continua do
+  mesmo tamanho sobre o painel de baixo. **Pendente:** protótipos antigos (`prototypes/battle-bg`, `combat-ui`,
+  `pray-vfx`, `hebrew-transition`) continuam em 544×416. Impacto: §17; `project.godot`; HUD de
+  batalha; título; `prototypes/dungeon-crawler`; `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

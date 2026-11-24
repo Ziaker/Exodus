@@ -17,7 +17,7 @@ func _ready() -> void:
 	ProgressStore.clear()
 	battle = CaptureBattle.new()
 	# Same layout as scenes/battle/BattlePlayable.tscn (full-rect root), so the HUD has
-	# the real 544x416 size instead of the zero size of a bare .new() Control.
+	# the real viewport size (816x624, D-055) instead of the zero size of a bare .new() Control.
 	battle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(battle)
 

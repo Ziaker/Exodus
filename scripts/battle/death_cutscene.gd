@@ -11,20 +11,23 @@ extends Node2D
 
 signal finished
 
-const W := 544.0
-const H := 416.0
+## D-055: 816 x 624 screen. The prologue composition (figure + box, 544 x 416) keeps its
+## size and is centred; the letters still fill the whole screen.
+const W := 816.0
+const H := 624.0
+const OFFSET := Vector2((W - 544.0) * 0.5, (H - 416.0) * 0.5)
 const ALPHABET := "אבגדהוזחטיכלמנסעפצקרשת"
 ## Creator 2026-11-23: letters and angel in #a8182a.
 const INK := Color("a8182a")
 const TEXT_INK := Color("f8f1ea")
-const BOX := Rect2(28, 288, 488, 104)
+const BOX := Rect2(28 + OFFSET.x, 288 + OFFSET.y, 488, 104)
 const BOX_STEP := 13.0
 const SIL_STEP := 6.0
 const LETTER_PX := 14.0
 const SIL_PX := 9.0
 const FIGURE_ART := "res://prototypes/hebrew-transition/art/angel_human_mask.png"
-const FIGURE_TOP := 22.0
-const FIGURE_BOTTOM := 243.0
+const FIGURE_TOP := 22.0 + OFFSET.y
+const FIGURE_BOTTOM := 243.0 + OFFSET.y
 ## Timeline (seconds), creator 2026-11-23: 3 s of letters filling the screen, 2 s of
 ## flight, 5 s of the line (typed at the prologue's 34 chars/s, then held), 3 s of the
 ## losses flying into the angel, 1 s to come apart; 14 s in all.

@@ -28,8 +28,7 @@ const SHAKE_TIME := 0.35
 const BURST_TIME := 0.5
 const FLY_TIME := 0.9
 const FLY_STAGGER := 0.5
-## Track of the HUD SP bar (playable_hud._sp_window).
-const SP_TRACK := Rect2(8, 59, 528, 8)
+## Track of the HUD SP bar: playable_hud.SP_TRACK (D-055: 800 px wide).
 ## Time from the impact until the last break letter has reached Fallen's card.
 const BREAK_SECONDS := BURST_TIME + FLY_STAGGER + FLY_TIME
 
@@ -175,7 +174,8 @@ func _draw_mash() -> void:
 	if mash_letters.is_empty() or mash_target == null: return
 	var own: BattleUnit = battle._fallen
 	var share := float(own.current_sp) / maxf(1.0, own.current_sp + mash_target.current_sp)
-	var bar_point := Vector2(SP_TRACK.position.x + 1.0 + (SP_TRACK.size.x - 2.0) * share, SP_TRACK.get_center().y)
+	var track: Rect2 = hud.SP_TRACK
+	var bar_point := Vector2(track.position.x + 1.0 + (track.size.x - 2.0) * share, track.get_center().y)
 	for letter in mash_letters:
 		var k: float = (time - float(letter.born)) / MASH_FLY
 		if k < 0.0 or k >= 1.0: continue

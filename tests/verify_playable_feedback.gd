@@ -52,8 +52,8 @@ func _run() -> void:
 		rows += 1
 		check(not hit.rect.intersects(battle.hud.BATTLE_LOG_RECT), "Battle log must not cover any command row")
 		check(battle.hud.COMMAND_RECT.encloses(hit.rect), "Every command row must stay inside the HTML command window")
-		check(hit.rect.position.y >= 333, "Every command must be below the battlefield, in the footer")
-		check(hit.rect.end.y <= 416, "Every command must fit inside the screen")
+		check(hit.rect.position.y >= battle.hud.BATTLE_LOG_RECT.end.y, "Every command must be below the battlefield and the log, in the footer")
+		check(hit.rect.end.y <= battle.hud.SCREEN.y, "Every command must fit inside the screen")
 		for who in battle.hud.STATUS_RECTS:
 			check(not hit.rect.intersects(who), "Commands must not cover either character's status")
 	check(rows == 7, "D-046: five Fallen commands plus EXEC and UNDO must be visible and clickable")

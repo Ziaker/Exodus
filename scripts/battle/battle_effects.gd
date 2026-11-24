@@ -87,7 +87,7 @@ class DamageLayer extends Control:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	size = Vector2(544, 416)
+	size = Vector2(ProjectSettings.get_setting("display/window/size/viewport_width"), ProjectSettings.get_setting("display/window/size/viewport_height"))
 	z_index = 3
 	damage_layer = DamageLayer.new()
 	damage_layer.fx = self

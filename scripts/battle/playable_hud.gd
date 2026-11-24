@@ -7,11 +7,21 @@ extends "res://prototypes/combat-ui/preview-xp.gd"
 ## is replaced by its four green diagonal brackets only (they also replace the white HTML
 ## corners), and an announcing enemy shows a red "!" (#bb3d48) to the left of its art.
 
-const STAGE_RECT := Rect2(0, 0, 544, 298)
-const FIELD_RECT := Rect2(7, 82, 530, 210)
-const BATTLE_LOG_RECT := Rect2(8, 303, 528, 21)
-const STATUS_RECTS := [Rect2(8, 332, 168, 77), Rect2(182, 332, 168, 77)]
-const COMMAND_RECT := Rect2(356, 332, 180, 77)
+## D-055 (creator 2026-11-23): base resolution 816 x 624. Texts, sprites and panels keep
+## their size; the extra area goes to the views and the Battle Log (3 lines).
+const SCREEN := Vector2(816, 624)
+## The approved stage D (544 x 298 scene) is the view: it is drawn 1.5x to fill the width.
+const STAGE_SCALE := 1.5
+const STAGE_RECT := Rect2(0, 0, 816, 447)
+## Feet line = old 252 x 1.5 = 378, the same spot of the scaled floor.
+const FIELD_RECT := Rect2(8, 82, 800, 336)
+const LOG_LINES := 3
+const LOG_STEP := 16.0
+## Line at the stage bottom + 5.5 (as before); 3 rows of 16 px.
+const BATTLE_LOG_RECT := Rect2(8, 452, 800, 53)
+const STATUS_RECTS := [Rect2(8, 540, 168, 77), Rect2(182, 540, 168, 77)]
+const COMMAND_RECT := Rect2(628, 540, 180, 77)
+const SP_TRACK := Rect2(8, 59, 800, 8)
 const COLUMN_SIZE := Vector2(220, 206)
 const SPRITE_BOX := Vector2(156, 166)
 const SVG_SCALE_Y := 298.0 / 251.0
@@ -83,6 +93,10 @@ var announcement_text := ""
 var announcement_age := 99.0
 var _log_shown := ""
 var _log_age := 99.0
+## D-055: committed log lines (newest last). Menu explanations (skill/pray/EN/absorb)
+## are transient: they show as the newest line only while their menu is open.
+var log_lines: Array[String] = []
+const TRANSIENT_LOG_MODES := ["skill", "pray", "en_extra", "absorb"]
 var _menu_height := 77.0
 var _menu_from := 77.0
 var _menu_to := 77.0
@@ -382,26 +396,28 @@ func _draw() -> void:
 		_character(who, STATUS_RECTS[who])
 	_menu()
 	if mode in ["timing", "counter", "absorb", "continue", "announce", "turn", "result"]:
-		hitboxes.append({"rect": Rect2(0, 0, 544, 416), "key": "live-confirm"})
+		hitboxes.append({"rect": Rect2(Vector2.ZERO, SCREEN), "key": "live-confirm"})
 
 
 func _backdrop() -> void:
 	if impact_left > 0.0:
 		draw_rect(STAGE_RECT, Color.WHITE)
-		draw_polygon(PackedVector2Array([Vector2(0, 297), Vector2(544, 297), Vector2(544, 416), Vector2(0, 416)]), PackedColorArray([Color("2a111a"), Color("2a111a"), Color("210d16"), Color("210d16")]))
+		_footer()
 		return
 	if not stage_backdrop:
 		# Prototype hook: a node behind the HUD paints the stage; keep only the footer.
-		draw_polygon(PackedVector2Array([Vector2(0, 297), Vector2(544, 297), Vector2(544, 416), Vector2(0, 416)]), PackedColorArray([Color("2a111a"), Color("2a111a"), Color("210d16"), Color("210d16")]))
+		_footer()
 		return
-	# exodus_feedback_lab.html .bg svg (viewBox 544 x 251 stretched to 298 px).
+	# exodus_feedback_lab.html .bg svg (viewBox 544 x 251 stretched to 298 px), drawn
+	# at STAGE_SCALE so it fills the D-055 stage like the shader stage.
+	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE * STAGE_SCALE)
 	var sky := [Color("280b14"), Color("5c1c2b"), Color("431a26")]
 	var mid := 298.0 * 0.54
 	draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(544, 0), Vector2(544, mid), Vector2(0, mid)]), PackedColorArray([sky[0], sky[0], sky[1], sky[1]]))
 	draw_polygon(PackedVector2Array([Vector2(0, mid), Vector2(544, mid), Vector2(544, 298), Vector2(0, 298)]), PackedColorArray([sky[1], sky[1], sky[2], sky[2]]))
-	draw_set_transform(Vector2.ZERO, 0, Vector2(1, SVG_SCALE_Y))
+	draw_set_transform(Vector2.ZERO, 0, Vector2(STAGE_SCALE, STAGE_SCALE * SVG_SCALE_Y))
 	draw_circle(Vector2(426, 85), 37, Color("ae565d", 0.22))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE * STAGE_SCALE)
 	_svg_poly("0 168 62 138 95 143 131 108 170 134 227 130 268 94 307 141 371 127 417 100 460 131 505 116 544 145 544 251 0 251", Color("351924"))
 	_svg_poly("0 202 84 188 120 198 187 169 243 195 315 181 374 192 437 162 500 189 544 174 544 251 0 251", Color("3b2728"))
 	_svg_poly("10 221 84 205 152 223 239 205 318 221 394 207 481 222 544 210 544 251 0 251", Color("61442e"))
@@ -417,8 +433,14 @@ func _backdrop() -> void:
 	# .bg:after — warm shade rising from the floor to 60% of the height.
 	var top := 298.0 * 0.4
 	draw_polygon(PackedVector2Array([Vector2(0, top), Vector2(544, top), Vector2(544, 298), Vector2(0, 298)]), PackedColorArray([Color(0.141, 0.067, 0.051, 0), Color(0.141, 0.067, 0.051, 0), Color(0.141, 0.067, 0.051, 0.18), Color(0.141, 0.067, 0.051, 0.18)]))
-	# .game::before — the command area below the battlefield.
-	draw_polygon(PackedVector2Array([Vector2(0, 297), Vector2(544, 297), Vector2(544, 416), Vector2(0, 416)]), PackedColorArray([Color("2a111a"), Color("2a111a"), Color("210d16"), Color("210d16")]))
+	draw_set_transform(Vector2.ZERO)
+	_footer()
+
+
+## .game::before — the command area below the battlefield (1 px over the stage edge).
+func _footer() -> void:
+	var y := STAGE_RECT.end.y - 1.0
+	draw_polygon(PackedVector2Array([Vector2(0, y), Vector2(SCREEN.x, y), SCREEN, Vector2(0, SCREEN.y)]), PackedColorArray([Color("2a111a"), Color("2a111a"), Color("210d16"), Color("210d16")]))
 
 
 func _svg_points(spec: String) -> PackedVector2Array:
@@ -435,8 +457,8 @@ func _svg_poly(spec: String, color: Color) -> void:
 
 func _header() -> void:
 	# Creator 2026-11-21: no "Exodus" title; the header line carries the announcements.
-	draw_line(Vector2(8, 29.5), Vector2(536, 29.5), Color(1, 1, 1, 0.32))
-	_str(_round_caption(), 534, 20, TEXT, 12, true, HORIZONTAL_ALIGNMENT_RIGHT)
+	draw_line(Vector2(8, 29.5), Vector2(SCREEN.x - 8, 29.5), Color(1, 1, 1, 0.32))
+	_str(_round_caption(), SCREEN.x - 10, 20, TEXT, 12, true, HORIZONTAL_ALIGNMENT_RIGHT)
 
 
 func _sp_pair() -> Array:
@@ -467,13 +489,13 @@ func _sp_window() -> void:
 	var foe: BattleUnit = pair[1]
 	if own == null or foe == null: return
 	_str("%s · %d SP" % [own.display_name, own.current_sp], 8, 51, GREEN_TEXT, 12, true)
-	_str("%s · %d SP" % [battle.short_name(foe), foe.current_sp], 536, 51, RED_TEXT, 12, true, HORIZONTAL_ALIGNMENT_RIGHT)
+	_str("%s · %d SP" % [battle.short_name(foe), foe.current_sp], SCREEN.x - 8, 51, RED_TEXT, 12, true, HORIZONTAL_ALIGNMENT_RIGHT)
 	var share := float(own.current_sp) / maxf(1.0, own.current_sp + foe.current_sp)
 	if not is_equal_approx(share, _sp_anim.to):
 		var current := lerpf(_sp_anim.from, _sp_anim.to, _stepped(_sp_anim.age, 0.36, 9))
 		_sp_anim = {"from": current, "to": share, "age": 0.0}
 	var shown := lerpf(_sp_anim.from, _sp_anim.to, _stepped(_sp_anim.age, 0.36, 9))
-	var track := Rect2(8, 59, 528, 8)
+	var track := SP_TRACK
 	draw_rect(track, Color(8 / 255.0, 8 / 255.0, 8 / 255.0, 0.5))
 	var inner := track.grow(-1)
 	draw_rect(Rect2(inner.position, Vector2(roundf(inner.size.x * shown), inner.size.y)), OWN_FILL)
@@ -566,7 +588,7 @@ func _announcement() -> void:
 	var t := announcement_age / 0.75
 	if t >= 1.0 or announcement_text.is_empty(): return
 	var alpha := _ease(t / 0.23) if t < 0.23 else (1.0 if t < 0.8 else 1.0 - _ease((t - 0.8) / 0.2))
-	_str(announcement_text, 272, 20, Color("fff9f2", alpha), 12, true, HORIZONTAL_ALIGNMENT_CENTER, Color("14080a", alpha))
+	_str(announcement_text, SCREEN.x * 0.5, 20, Color("fff9f2", alpha), 12, true, HORIZONTAL_ALIGNMENT_CENTER, Color("14080a", alpha))
 
 
 func _log_text() -> String:
@@ -581,16 +603,36 @@ func _log_text() -> String:
 	return message
 
 
+## D-055: the lines the Battle Log shows now, oldest first (at most LOG_LINES).
+func visible_log_lines() -> Array[String]:
+	var text := _log_text()
+	var transient := mode in TRANSIENT_LOG_MODES
+	if not transient and not text.is_empty() and (log_lines.is_empty() or log_lines[-1] != text):
+		log_lines.append(text)
+		while log_lines.size() > 32:
+			log_lines.pop_front()
+	var shown: Array[String] = log_lines.duplicate()
+	if transient and not text.is_empty():
+		shown.append(text)
+	return shown.slice(maxi(0, shown.size() - LOG_LINES))
+
+
 func _log_line() -> void:
 	var text := _log_text()
 	if text != _log_shown:
 		_log_shown = text
 		_log_age = 0.0
-	var alpha := lerpf(0.55, 1.0, _ease(_log_age / 0.38))
-	draw_line(Vector2(8, 303.5), Vector2(536, 303.5), Color(1, 1, 1, 0.38))
-	draw_rect(Rect2(11, 312, 5, 5), Color("f6e7df", alpha))
-	var log_ink := PrayerBook.INK if not log_ink_text.is_empty() and text == log_ink_text else Color("f8f1ea")
-	_str(_ellipsis(text, 12, 508), 23, 319, Color(log_ink, alpha), 12)
+	var lines := visible_log_lines()
+	var top := BATTLE_LOG_RECT.position.y + 0.5
+	draw_line(Vector2(BATTLE_LOG_RECT.position.x, top), Vector2(BATTLE_LOG_RECT.end.x, top), Color(1, 1, 1, 0.38))
+	for i in lines.size():
+		# Newest line at the bottom row; only it fades in (the old single-line motion).
+		var row := LOG_LINES - lines.size() + i
+		var alpha := lerpf(0.55, 1.0, _ease(_log_age / 0.38)) if i == lines.size() - 1 else 1.0
+		var baseline := top + 15.5 + row * LOG_STEP
+		draw_rect(Rect2(BATTLE_LOG_RECT.position.x + 3, baseline - 7, 5, 5), Color("f6e7df", alpha))
+		var log_ink := PrayerBook.INK if not log_ink_text.is_empty() and lines[i] == log_ink_text else Color("f8f1ea")
+		_str(_ellipsis(lines[i], 12, BATTLE_LOG_RECT.size.x - 20), BATTLE_LOG_RECT.position.x + 15, baseline, Color(log_ink, alpha), 12)
 
 
 func _character(who: int, r: Rect2) -> void:

@@ -1,22 +1,25 @@
 extends Control
 ## Title screen modeled on RPG Maker XP's Scene_Title (proposal 1).
 ## Creator decisions (2026-11-21): black background + "EXODUS" text, no music,
-## this scene is the game's main scene. New Game now opens the PLACEHOLDER map
-## prototype (wiring pending the creator's decision about the exploration loop).
+## this scene is the game's main scene. Creator 2026-11-23: the top-down placeholder
+## map was removed; New Game opens the first-person dungeon TEST (D-054/D-055).
 ## Geometry follows XP's default Scene_Title (192 px command window at y=288 on
-## 640x480) scaled to this project's 544x416 viewport. Continue stays disabled
+## 640x480) scaled to this project's old 544x416 viewport. D-055 (816x624): the window,
+## rows and fonts keep that size; only the positions follow XP's proportions on the new
+## height (window at 288/480 of the screen, title halfway to it). Continue stays disabled
 ## until a save system exists (proposal 10), like XP with no Save*.rxdata files.
 
 signal command_executed(command: String)
 
 const GAME_TITLE := "EXODUS"
 const COMMANDS := ["New Game", "Continue", "Shutdown"]
-const NEW_GAME_SCENE := "res://scenes/map/Map.tscn"
+const NEW_GAME_SCENE := "res://prototypes/dungeon-crawler/DungeonProto.tscn"
 const SCALE := 416.0 / 480.0
 const WINDOW_WIDTH := 192.0 * SCALE
 const ROW_HEIGHT := 32.0 * SCALE
 const PADDING := 16.0 * SCALE
-const WINDOW_Y := 288.0 * SCALE
+const SCREEN_HEIGHT := 624.0
+const WINDOW_Y := 288.0 / 480.0 * SCREEN_HEIGHT
 const FONT_PX := 18
 const TITLE_PX := 48
 const FADE_TIME := 20.0 / 40.0 # XP Graphics.transition default: 20 frames at 40 fps.

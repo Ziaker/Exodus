@@ -54,7 +54,7 @@ func _run() -> void:
 	var killed: Array = fx.effects.filter(func(e: Dictionary) -> bool: return e.kind in ["HIT", "CRITICAL"])
 	check(killed.size() == 1 and fx.number_color(killed[0]) == fx.LETHAL_INK, "The live killing blow on the defeated enemy is painted red")
 	for effect in fx.effects:
-		check(not effect.clip_rect.intersects(battle.hud.LOG_RECT), "Effects must not cover the battle log")
+		check(not effect.clip_rect.intersects(battle.hud.BATTLE_LOG_RECT), "Effects must not cover the battle log")
 		check(not effect.clip_rect.intersects(battle.hud.COMMAND_RECT), "Effects must not cover the command menu")
 	var before: BattleUnit = battle.active_actor
 	battle.handle_confirm()

@@ -2,8 +2,8 @@ extends GutTest
 
 func test_project_identity() -> void:
 	assert_eq(ProjectSettings.get_setting("application/config/name"), "Exodus")
-	assert_eq(ProjectSettings.get_setting("display/window/size/viewport_width"), 544)
-	assert_eq(ProjectSettings.get_setting("display/window/size/viewport_height"), 416)
+	assert_eq(ProjectSettings.get_setting("display/window/size/viewport_width"), 816)
+	assert_eq(ProjectSettings.get_setting("display/window/size/viewport_height"), 624)
 
 func test_required_plugins_are_enabled() -> void:
 	var enabled: PackedStringArray = PackedStringArray(

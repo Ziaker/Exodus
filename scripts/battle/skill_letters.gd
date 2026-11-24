@@ -113,12 +113,14 @@ func _wave(caster: BattleUnit, target: BattleUnit) -> void:
 	var on_heroes: bool = target.is_player
 	var y := r.get_center().y if not on_heroes else r.position.y - 6.0
 	var from_left: bool = caster.is_player or on_heroes
-	var x0 := 0.0 if from_left else 544.0
+	# D-055: the wave still crosses the whole (now 816 px) screen in the same time.
+	var width: float = hud.SCREEN.x
+	var x0 := 0.0 if from_left else width
 	var dir := 1.0 if from_left else -1.0
 	for i in 34:
 		var lane := float(i % 3) - 1.0
 		_add(Vector2(x0 - dir * rng.randf_range(0, 60), y + lane * 14.0 + rng.randf_range(-4, 4)),
-			Vector2(dir * rng.randf_range(520, 640), rng.randf_range(-12, 12)), 1.0, 14 + int(rng.randi_range(0, 4)),
+			Vector2(dir * rng.randf_range(520, 640) * width / 544.0, rng.randf_range(-12, 12)), 1.0, 14 + int(rng.randi_range(0, 4)),
 			FIRE_HOT, Color(FIRE_INK, 0.0), float(i) * 0.012, Vector2(0, -40), rng.randf_range(-2, 2))
 
 

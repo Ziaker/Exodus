@@ -5,8 +5,9 @@ extends SceneTree
 #               --script res://tests/verify_environment.gd
 
 const EXPECTED_NAME := "Exodus"
-const EXPECTED_WIDTH := 544
-const EXPECTED_HEIGHT := 416
+## D-055 (criador, 2026-11-23): resolução base 816x624.
+const EXPECTED_WIDTH := 816
+const EXPECTED_HEIGHT := 624
 
 func _initialize() -> void:
 	var failures: Array[String] = []
