@@ -172,6 +172,9 @@
     longas (habilidades, rezas) viram uma coluna e a janela cresce para cima.
   - **Números de dano nos aliados** aparecem **sobre a janela do herói**, 20 px, metade
     do tempo de antes.
+- **D-100 (criador, 2026-11-25): letras hebraicas de SP flutuantes. IMPLEMENTADO.** Toda mudança
+  de SP (ganho, perda, roubo) faz uma letra hebraica aleatória (nunca o valor), verde no ganho e
+  vermelha na perda, subir de quem mudou até o rótulo de SP do seu lado; heróis e inimigos. Duração e tamanho aguardam o julgamento do criador.
 - **D-061 (criador, 2026-11-25): blocos de papel por 0,3 s. IMPLEMENTADO.** Os cinco blocos
   aparecem por 0,3 s e somem de uma vez; o papel segue valendo para setas e cores do log, e um
   papel novo ou novo golpe mostra o bloco de novo.

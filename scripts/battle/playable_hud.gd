@@ -381,6 +381,7 @@ func _process(delta: float) -> void:
 	_press_age += delta
 	_corner_age += delta
 	_sp_anim.age += delta
+	track_sp()
 	impact_left = maxf(0.0, impact_left - delta)
 	shake_age += delta
 	for key in _unit_seen:
@@ -877,11 +878,15 @@ func _sp_window() -> void:
 	# Texto nunca invade a barra: cada lado tem seu espaço reservado antes dela.
 	var own_limit := SP_TRACK.position.x - 64.0 - 6.0
 	var foe_limit := (SCREEN.x - 20.0 / 3.0) - SP_TRACK.end.x - 6.0
-	_str(own_text, 64, HEADER_BASELINE, GREEN_TEXT, _fit_px(own_text, 10, own_limit, true),
+	var own_px := _fit_px(own_text, 10, own_limit, true)
+	var foe_px := _fit_px(foe_text, 10, foe_limit, true)
+	_str(own_text, 64, HEADER_BASELINE, GREEN_TEXT, own_px,
 			true, HORIZONTAL_ALIGNMENT_LEFT, Color(0, 0, 0, 0.85))
-	_str(foe_text, SCREEN.x - 20.0 / 3.0, HEADER_BASELINE, RED_TEXT,
-			_fit_px(foe_text, 10, foe_limit, true), true,
+	_str(foe_text, SCREEN.x - 20.0 / 3.0, HEADER_BASELINE, RED_TEXT, foe_px, true,
 			HORIZONTAL_ALIGNMENT_RIGHT, Color(0, 0, 0, 0.85))
+	# Where the floating SP letters (D-100) land: the middle of each label.
+	_sp_label_own = Vector2(64.0 + _width(own_text, own_px, true) * 0.5, HEADER_BASELINE + SP_FLOAT_LAND)
+	_sp_label_foe = Vector2(SCREEN.x - 20.0 / 3.0 - _width(foe_text, foe_px, true) * 0.5, HEADER_BASELINE + SP_FLOAT_LAND)
 	var share := float(own.current_sp) / maxf(1.0, own.current_sp + foe.current_sp)
 	if not is_equal_approx(share, _sp_anim.to):
 		var current := lerpf(_sp_anim.from, _sp_anim.to, _stepped(_sp_anim.age, 0.36, 9))
@@ -1085,6 +1090,7 @@ func _draw_role_tags() -> void:
 	for a in arrows:
 		_draw_moving_arrow(a, arrow_age(a.key))
 	_draw_role_boxes()
+	_draw_sp_floats()
 
 
 ## How far an arrow has run (0..1) and how visible it is, by its age in seconds.
@@ -1174,6 +1180,132 @@ func _age_boxes() -> void:
 		if not _box_started.has(key): _box_started[key] = time
 	for key in _box_started.keys():
 		if not seen.has(key): _box_started.erase(key)
+
+
+## D-100 (creator 2026-11-25): every SP change floats ONE random Hebrew letter (never the value)
+## from the unit that gained or lost it up to that side's SP label in the header — green for a
+## gain, red for a loss, for heroes and enemies alike (a steal shows red on the loser, green on
+## the winner). The alphabet is the one of the absorption letters (D-052).
+const SP_ALPHABET := "אבגדהוזחטיכלמנסעפצקרשת"
+var _sp_font: SystemFont
+var _sp_rng := RandomNumberGenerator.new()
+## Every letter takes the same quick SP_FLOAT_TIME, along an arc, at its own random speed curve.
+const SP_FLOAT_TIME := 0.5
+const SP_FLOAT_FADE := 0.12
+const SP_ARC_MIN := 18.0
+const SP_ARC_MAX := 46.0
+const SP_CURVE_MIN := 0.55
+const SP_CURVE_MAX := 1.9
+const SP_FLOAT_PX := 14
+## The letters stop this far under the label's baseline so they never print over its text.
+const SP_FLOAT_LAND := 7.0
+const SP_FLOAT_INKS := {"gain": Color("81e6a8"), "loss": Color("ff6b6b")}
+## unit id -> SP last seen; unit ids are never reused inside a battle.
+var _sp_last := {}
+var _sp_floats: Array[Dictionary] = []
+var _sp_label_own := Vector2(100, 20)
+var _sp_label_foe := Vector2(440, 20)
+
+
+## Looks for SP changes since the last call and starts one float for each.
+func track_sp() -> void:
+	if battle == null: return
+	var changes: Array[Dictionary] = []
+	for unit in players + opponents:
+		if not _sp_last.has(unit.id):
+			_sp_last[unit.id] = unit.current_sp
+			continue
+		var delta: int = unit.current_sp - int(_sp_last[unit.id])
+		_sp_last[unit.id] = unit.current_sp
+		if delta != 0: changes.append({"unit": unit, "delta": delta})
+	if changes.is_empty(): return
+	if _sp_font == null:
+		_sp_font = SystemFont.new()
+		_sp_font.font_names = PackedStringArray(["Tahoma", "Arial", "David Libre"])
+		_sp_font.font_weight = 800
+		_sp_rng.seed = 100
+	# An enemy that lost SP in the same moment is the source of a steal.
+	var loser: BattleUnit = null
+	for c in changes:
+		if int(c.delta) < 0 and opponents.has(c.unit): loser = c.unit
+	for c in changes:
+		var unit: BattleUnit = c.unit
+		var hero := players.has(unit)
+		var origin := Vector2.ZERO
+		if hero and int(c.delta) > 0:
+			# Creator 2026-11-25: a hero's SP gain comes OUT OF THE ENEMY it was earned against
+			# (the one hit or interrupted), not out of the hero's card.
+			var art := enemy_sprite_rect(maxi(0, opponents.find(_sp_source(loser))))
+			origin = art.get_center() + Vector2(_sp_rng.randf_range(-8.0, 8.0), _sp_rng.randf_range(-8.0, 8.0))
+		elif hero:
+			# A hero's loss leaves from the top edge of the log above its window (like the role
+			# arrows, D-059) so the letter never runs across the log's text.
+			var r: Rect2 = STATUS_RECTS[mini(players.find(unit), STATUS_RECTS.size() - 1)]
+			origin = Vector2(r.get_center().x, BATTLE_LOG_RECT.position.y - 2.0)
+		else:
+			var art := enemy_sprite_rect(opponents.find(unit))
+			origin = Vector2(art.get_center().x, art.position.y)
+		var glyph := SP_ALPHABET[_sp_rng.randi_range(0, SP_ALPHABET.length() - 1)]
+		# Arc: the middle of the flight is pushed sideways (random side and height); the speed
+		# curve (exponent) is random too, but the flight always lasts SP_FLOAT_TIME.
+		var arc := _sp_rng.randf_range(SP_ARC_MIN, SP_ARC_MAX) * (1.0 if _sp_rng.randf() < 0.5 else -1.0)
+		var curve := _sp_rng.randf_range(SP_CURVE_MIN, SP_CURVE_MAX)
+		_sp_floats.append({"unit": unit, "amount": int(c.delta), "glyph": glyph, "started": time, "from": origin,
+				"to": _sp_label_own if hero else _sp_label_foe, "arc": arc, "curve": curve})
+
+
+## The enemy a hero's SP gain comes out of: the one that lost SP at the same time, else the
+## enemy of the action on screen, else the selected one, else the first one alive.
+func _sp_source(loser: BattleUnit) -> BattleUnit:
+	if loser != null: return loser
+	if battle.action_defender != null and opponents.has(battle.action_defender): return battle.action_defender
+	if battle.action_attacker != null and opponents.has(battle.action_attacker): return battle.action_attacker
+	var selected := _selected_enemy()
+	if selected >= 0: return opponents[selected]
+	for foe in opponents:
+		if foe.is_alive(): return foe
+	return opponents[0]
+
+
+func sp_floats() -> Array[Dictionary]:
+	return _sp_floats
+
+
+func sp_float_age(f: Dictionary) -> float:
+	return time - float(f.started)
+
+
+## Position of a float by its age: a quadratic arc from its source to the SP label; the speed
+## curve is random per letter and the duration is the same for all.
+func sp_float_pos(f: Dictionary, age: float) -> Vector2:
+	var t := pow(clampf(age / SP_FLOAT_TIME, 0.0, 1.0), float(f.curve))
+	var from: Vector2 = f.from
+	var to: Vector2 = f.to
+	var dir := (to - from).normalized()
+	var control := from.lerp(to, 0.5) + Vector2(-dir.y, dir.x) * float(f.arc)
+	return from.lerp(control, t).lerp(control.lerp(to, t), t)
+
+
+func sp_float_alpha(age: float) -> float:
+	return 1.0 - clampf((age - (SP_FLOAT_TIME - SP_FLOAT_FADE)) / SP_FLOAT_FADE, 0.0, 1.0)
+
+
+func sp_float_text(f: Dictionary) -> String:
+	return String(f.glyph)
+
+
+func _draw_sp_floats() -> void:
+	_sp_floats = _sp_floats.filter(func(f: Dictionary) -> bool: return sp_float_age(f) < SP_FLOAT_TIME)
+	for f in _sp_floats:
+		var age := sp_float_age(f)
+		var at := sp_float_pos(f, age)
+		var ink: Color = SP_FLOAT_INKS.gain if int(f.amount) > 0 else SP_FLOAT_INKS.loss
+		var alpha := sp_float_alpha(age)
+		var text := sp_float_text(f)
+		var w := _sp_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, SP_FLOAT_PX).x
+		var left := Vector2(at.x - w * 0.5, at.y)
+		role_layer.draw_string(_sp_font, left + Vector2(0, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, SP_FLOAT_PX, Color(0, 0, 0, 0.85 * alpha))
+		role_layer.draw_string(_sp_font, left, text, HORIZONTAL_ALIGNMENT_LEFT, -1, SP_FLOAT_PX, Color(ink, alpha))
 
 
 ## SP comparison arrow: top-centre anchor, ARROW_HEIGHT tall, head ARROW_HEAD, shaft ARROW_SHAFT.

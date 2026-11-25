@@ -1541,7 +1541,52 @@ Nenhuma definição foi inventada neste GDD.
 ## 16. Regiões, ambientes e level design — **PENDENTE**
 
 Imagens confirmadas: mar de areia branca, lugar desolado, céu vermelho-escuro.
-Localizações nomeadas, geografia, hubs, dungeons e regras de exploração: **PENDENTE**.
+**Cafarnaum e mapa-múndi (D-062).** A vista superior de Cafarnaum deve mostrar a saída
+para o mapa-múndi por uma travessa lateral. Nas duas vistas, o filtro **Cartucho ocre +
+Fita de horror** é obrigatório e a estética deve seguir a dos ambientes aprovados de
+Cafarnaum. A transição jogável e sua integração com o Godot estão **PENDENTES**.
+
+### Cratera de areia branca da abertura
+
+O mesmo terreno serve às duas vistas. Na vista superior, a crista elevada
+cerca a cratera quase circular. A parede interna íngreme desce até um fundo
+amplo e baixo. A sombra da crista revela parte desse desnível. O quadro
+inclui um trecho da Estrada Ocre reaproveitado de `Untitled.blend`, com rochas
+da margem, uma árvore seca e parte do paredão. A primeira pessoa parte do local
+onde Fallen desperta (cena 03 do prólogo), com as montanhas e as nuvens escuras
+sob o céu vermelho acima da borda da cratera.
+
+A revisão do relevo usou as vistas aéreas de Barringer e Wolf Creek e o perfil
+de uma cratera de impacto simples como referências de forma.
+[Barringer, USGS](https://www.usgs.gov/media/images/aerial-view-meteor-crater-color-coconino-county-arizona) ·
+[Wolf Creek, LPI](https://www.lpi.usra.edu/publications/slidesets/craters/slide_12.html) ·
+[Perfis de crateras, LPI](https://www.lpi.usra.edu/publications/slidesets/craters/slide_1.shtml)
+
+Na animação aprovada, a areia desce pelas ladeiras, se junta no fundo, levanta
+uma nuvem baixa e se assenta. As formas pixeladas acompanham superfícies 3D na
+cena. As prévias usam o filtro **Cartucho ocre + Fita de horror**.
+[Roteiro do prólogo](ROTEIRO_PROLOGO.md) ·
+[Shader do filtro](../prototypes/dungeon-crawler/dungeon_mixed_filter.gdshader)
+
+| Arquivo | Uso |
+|---|---|
+| [Abertura_Cratera.blend](../assets/generated/ambiente-e-interacoes/abertura/Abertura_Cratera.blend) | Modelo editável com as cinco câmeras e as prévias filtradas empacotadas. |
+| [Abertura_Cratera_Areia.blend](../assets/generated/ambiente-e-interacoes/abertura/Abertura_Cratera_Areia.blend) | Animação editável em primeira pessoa, com formas pixeladas empacotadas e marcadores de descida, impacto e assentamento. |
+| [cratera_vista_superior.png](../assets/generated/ambiente-e-interacoes/abertura/cratera_vista_superior.png) | Quadro 1. Vista vertical com a borda completa e a Estrada Ocre. |
+| [cratera_primeira_pessoa.png](../assets/generated/ambiente-e-interacoes/abertura/cratera_primeira_pessoa.png) | Quadro 2. Vista do ponto onde Fallen desperta. |
+| [cratera_aerea_obliqua.png](../assets/generated/ambiente-e-interacoes/abertura/cratera_aerea_obliqua.png) | Quadro 3. Cratera e Estrada Ocre vistas do alto em ângulo oblíquo. |
+| [cratera_lado_estrada.png](../assets/generated/ambiente-e-interacoes/abertura/cratera_lado_estrada.png) | Quadro 4. Vista do lado da estrada, olhando para a parede interna em sombra. |
+| [cratera_vista_da_borda.png](../assets/generated/ambiente-e-interacoes/abertura/cratera_vista_da_borda.png) | Quadro 5. Vista próxima da parede e do fundo a partir da borda. |
+| [cratera_areia_impacto.gif](../assets/generated/ambiente-e-interacoes/abertura/cratera_areia_impacto.gif) | Prévia aprovada em loop, 804 × 490, 25 quadros e 2,45 s. |
+
+As cinco imagens filtradas têm 804 × 490 px. No Blender, selecione os quadros de
+1 a 5 do modelo estático para trocar de câmera. No arquivo animado, use os
+marcadores da linha do tempo para inspecionar cada fase. A animação e o GIF
+conservam o cenário da aprovação. O GIF já inclui o pós-processamento. Ao
+exportar novos quadros, aplique o filtro do jogo depois do render. A montagem
+da abertura e a integração no Godot estão **PENDENTES**.
+
+Demais localizações, geografia, hubs, dungeons e regras de exploração: **PENDENTE**.
 
 ---
 
@@ -2920,6 +2965,34 @@ Formato: ID · data · decisão · estado · impacto documental.
   da D-060); um papel novo ou um novo golpe do atacante mostra o bloco de novo. Impacto:
   `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`; `docs/COMBAT_SPEC.md`,
   `docs/DECISIONS.md`.
+- **D-100 · 2026-11-25 (pedido do criador) — letras hebraicas de SP flutuantes.**
+  Motivo: o criador pediu ``faca flutuar letras ate o SP toda vez que um inimigo ganha ou jogador
+  ganha SP tambem, de quem perdeu, verde e vermelho``; esclareceu ``com letras eu quero dizer letras
+  hebraicas, nao valores`` e ``uma letra so aleatoria do alfabeto``. Toda mudança de SP (ganho,
+  perda e roubo) faz **uma** letra hebraica aleatória (alfabeto da D-052) flutuar de quem mudou
+  até o rótulo de SP do seu lado no topo (heróis à esquerda, inimigos à direita): verde no ganho,
+  vermelha na perda. **Escolhas do agente, aguardando o julgamento visual do criador:** duração
+  0,5 s para todas (rápido), em arco (lado e altura aleatórios) com curva de velocidade aleatória por letra, sumiço nos últimos 0,12 s, letra em 14 px, parada 7 px abaixo do rótulo. **Origem (pedido do criador):** o
+  ganho de SP do herói sai do inimigo contra quem foi ganho (o atingido ou interrompido; no
+  roubo, o que perdeu), no momento do ganho, e não do cartão do herói; a perda do herói sai da
+  borda superior do log acima do seu cartão e o SP de inimigo sai do topo da arte dele. Impacto: `scripts/battle/playable_hud.gd`,
+  `tests/verify_sp_float.gd`; `docs/COMBAT_SPEC.md`, `docs/DECISIONS.md`.
+
+- **D-062 · 2026-11-25 (decisão do criador) — vista superior de Cafarnaum e saída para o mapa-múndi.**
+  A vista superior deve mostrar uma saída para o mapa-múndi por uma travessa lateral.
+  Usar obrigatoriamente o filtro **Cartucho ocre + Fita de horror** na cidade e no
+  mapa-múndi e seguir uma estética visual semelhante à dos ambientes aprovados de
+  Cafarnaum. A ligação jogável fica para uma etapa posterior no Godot.
+  Referências de produção: [assets de Cafarnaum](../assets/generated/ambiente-e-interacoes/cafarnaum)
+  com a [vista superior e saída](../assets/generated/ambiente-e-interacoes/cafarnaum/cafarnaum_vista_superior_saida.png)
+  e o [shader do filtro](../prototypes/dungeon-crawler/dungeon_mixed_filter.gdshader).
+
+- **D-063 · 2026-11-25 (aprovação visual do criador) — cratera e animação da areia da abertura.**
+  O terreno de areia branca tem ladeiras que convergem no ponto de impacto, com
+  vista superior e primeira pessoa desde o despertar de Fallen. O criador
+  aprovou o GIF da areia que desce, levanta uma nuvem baixa e se assenta
+  (“ok perfeito”). Fontes editáveis e prévias filtradas em [Cratera de areia
+  branca da abertura](#cratera-de-areia-branca-da-abertura).
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

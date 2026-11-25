@@ -69,5 +69,8 @@ qualquer alteração em documentos ou código.
 | D-059 | 2026-11-25 (decisão do criador) | Indicadores de papel: ficam as caixas da D-057 e entram setas animadas — cada golpe corre do atacante ao alvo em 0,55 s e some perdendo opacidade rápido; no contra-ataque uma seta sai de cada lado, elas se encontram no meio e uma faísca marca o choque. Ícones, texto solto e cor no nome foram descartados. | `docs/GDD.md` Apêndice A |
 | D-060 | 2026-11-25 (decisão do criador) | Nomes coloridos no Battle Log: em cada frase, o nome de quem tem papel na ação ganha a cor desse papel naquele momento (atacante vermelho, alvo amarelo, quem defende azul, quem contra-ataca laranja, quem reage verde); o resto da frase não muda. | `docs/GDD.md` Apêndice A |
 | D-061 | 2026-11-25 (decisão do criador) | Os blocos de papel (ATTACK, TARGET, DEFEND, COUNTER, REACT) aparecem por 0,3 s e somem de uma vez (corte seco); o papel continua valendo para as setas e as cores do log, e um novo golpe ou papel mostra o bloco de novo. | `docs/GDD.md` Apêndice A |
+| D-062 | 2026-11-25 (decisão do criador) | Cafarnaum em vista superior com saída por uma travessa lateral para o mapa-múndi. Filtro e continuidade visual obrigatórios. Ligação no Godot pendente. | `docs/GDD.md` §16 e Apêndice A |
+| D-063 | 2026-11-25 (aprovação visual do criador) | Abertura na cratera de areia branca, com vista superior e primeira pessoa do ponto onde Fallen desperta. Aprovado o GIF da areia que desce pelas ladeiras, se junta no impacto, levanta uma nuvem baixa e se assenta. | `docs/GDD.md` §16 e Apêndice A |
+| D-100 | 2026-11-25 (pedido do criador) | Toda mudança de SP faz uma letra hebraica aleatória (nunca o valor) flutuar de quem ganhou ou perdeu até o rótulo de SP do seu lado no topo: verde no ganho, vermelha na perda, para heróis e inimigos (roubo: vermelha em quem perde e verde em quem ganha). | `docs/GDD.md` Apêndice A |
 
-Total: 59 decisões indexadas.
+Total: 62 decisões indexadas.
