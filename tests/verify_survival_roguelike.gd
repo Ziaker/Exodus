@@ -165,13 +165,15 @@ func _run() -> void:
 			_check(SurvivalData.elite_affix(i, id).length() > 0, "Elite %s has an affix" % id)
 	_check(absf(float(elites) / 2000.0 - 0.2) < 0.04, "Elite chance ~20%% (got %.1f%%)" % (float(elites) / 20.0))
 
-	# Risco/recompensa: HP baixo garante +4.
+	# Risco/recompensa (D-071): HP baixo sobe a raridade um nível — nunca COMMON.
 	var low := RandomNumberGenerator.new()
 	low.seed = 99
 	var low_opts := SurvivalAbsorb.roll_options(low, SurvivalData.demon_by_id("pixie"), [], 0.2)
 	for o in low_opts:
-		if String(o.kind) == "stat":
-			_check(int(o.amount) == 4, "Low HP guarantees +4 (got %d)" % int(o.amount))
+		if String(o.kind) != "skill":
+			_check(String(o.rarity) in ["RARE", "EPIC"], "Low HP rolls RARE or EPIC (got %s)" % String(o.rarity))
+			if String(o.kind) == "stat" and not (StringName(o.stat) in [&"max_hp", &"max_en"]):
+				_check(int(o.amount) >= 3, "Low HP stat offer is at least +3 (got %d)" % int(o.amount))
 
 	# Meta-progresso separado da run: score, melhor e unlocks.
 	var meta_path := SurvivalMeta.SAVE_PATH

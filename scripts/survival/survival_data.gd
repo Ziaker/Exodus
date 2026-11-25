@@ -50,7 +50,38 @@ const SHOP_ITEMS := [
 		"label": "BEAD (+20 HP) - 20M", "info": "Restores 20 HP to one ally in battle."},
 	{"id": "chakra", "name": "CHAKRA", "price": 20, "kind": "en", "amount": 10,
 		"label": "CHAKRA (+10 EN) - 20M", "info": "Restores 10 EN to one ally in battle."},
+	# D-072: consumíveis novos (estoque rotativo da loja por estrato).
+	{"id": "medicine", "name": "MEDICINE", "price": 45, "kind": "hp", "amount": 50,
+		"label": "MEDICINE (+50 HP) - 45M", "info": "Restores 50 HP to one ally in battle."},
+	{"id": "soma", "name": "SOMA", "price": 110, "kind": "full", "amount": 0,
+		"label": "SOMA (FULL) - 110M", "info": "Fully restores HP and EN (or PP) of one ally."},
+	{"id": "blast", "name": "BLAST STONE", "price": 35, "kind": "damage", "amount": 18,
+		"label": "BLAST STONE (18 DMG) - 35M", "info": "Deals 18 fixed damage to one foe."},
 ]
+## Sempre à venda; os outros 2 do estoque giram por estrato.
+const SHOP_FIXED := ["bead", "chakra"]
+const SHOP_ROTATING := ["medicine", "soma", "blast"]
+## Preço de relíquia à venda no santuário (sobe por estrato).
+const RELIC_BASE_PRICE := 90
+## D-068: a cura do santuário é grátis uma vez por estrato; depois custa isto × estrato.
+const HEAL_PRICE_PER_STRATUM := 15
+
+## D-070: afixos de elite com efeito real.
+const ELITE_AFFIXES := ["BRUTAL", "SWIFT", "STONE", "BURNING", "VAMPIRIC"]
+const ELITE_CHANCE := 0.20
+const ELITE_CHANCE_OMEN := 0.35
+
+## D-074: figuras SMT dos eventos (só no teste, como o atendente; D-018).
+const EVENT_DEFS := {
+	"altar": {"name": "BLOOD ALTAR", "picture": REF_PICTURES + "生贄01.png",
+		"text": "A starving altar. It will trade a relic for your blood."},
+	"spirit": {"name": "WANDERING SPIRIT", "picture": REF_PICTURES + "霊体♀.png",
+		"text": "A pale spirit offers rest, or a colder communion."},
+	"oracle": {"name": "HOODED ORACLE", "picture": REF_PICTURES + "神の使い.png",
+		"text": "The oracle sells secrets and dares you to gamble your flesh."},
+	"merchant": {"name": "FROST MERCHANT", "picture": REF_PICTURES + "901-店員ジャックフロスト【1】.png",
+		"text": "Hee-ho! A wandering merchant with one rare relic."},
+}
 
 ## Atributos base do grupo no Survival (balanceados para enfrentar 35 demônios).
 ## HP alto de propósito: o criador pediu que o protagonista não morra "do nada"
@@ -449,6 +480,22 @@ static func demon_cells(seed: int) -> Array[Vector2i]:
 	return cells
 
 
+## D-066: só os demônios do estrato, nas células do layout da semente.
+static func stratum_enemy_defs(seed: int, stratum: int) -> Array:
+	var cells: Dictionary = SurvivalStrata.layout(seed, stratum).demons
+	var out: Array = []
+	for id in SurvivalStrata.ids_for(stratum):
+		var entry := demon_by_id(id)
+		out.append({
+			"id": id,
+			"name": String(entry.name),
+			"cell": cells[id],
+			"picture": String(entry.silhouette),
+			"warden": SurvivalStrata.warden_of(stratum) == id,
+		})
+	return out
+
+
 static func overworld_enemy_defs(seed: int = -1) -> Array:
 	var cells: Array[Vector2i] = []
 	if seed >= 0:
@@ -471,22 +518,93 @@ static func daily_seed() -> int:
 
 
 ## Elite é determinístico por semente + id: mesmo seed, mesmo demônio elite.
-static func is_elite(seed: int, id: String) -> bool:
+## Guardiões nunca são elites (já têm o próprio reforço, D-066). OMEN 3 sobe a chance.
+static func is_elite(seed: int, id: String, omen: int = 0) -> bool:
+	if SurvivalStrata.is_warden(id):
+		return false
 	var rng := RandomNumberGenerator.new()
 	rng.seed = (absi(seed) + absi(id.hash()) * 13) % 2147483647
-	return rng.randf() < 0.20
+	return rng.randf() < (ELITE_CHANCE_OMEN if omen >= 3 else ELITE_CHANCE)
 
 
 static func elite_affix(seed: int, id: String) -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = (absi(seed) + absi(id.hash()) * 13 + 1) % 2147483647
-	var affixes := ["BRUTAL", "BURNING", "SWIFT", "STONE"]
-	return String(affixes[rng.randi_range(0, affixes.size() - 1)])
+	return String(ELITE_AFFIXES[rng.randi_range(0, ELITE_AFFIXES.size() - 1)])
+
+
+## D-070/D-066/D-075: aplica elite, guardião e OMEN aos status do inimigo.
+## Retorna as habilidades extras e a afinidade (pode mudar com STONE).
+static func empower(stats: UnitStats, id: String, seed: int, omen: int) -> Dictionary:
+	var extra: Array[StringName] = []
+	var affinity: int = int(demon_by_id(id).get("affinity", BattleMath.Affinity.NORMAL))
+	var tag := ""
+	if SurvivalStrata.is_warden(id):
+		tag = "WARDEN"
+		stats.max_hp = int(round(float(stats.max_hp) * 1.5))
+		stats.atk += 2
+		stats.mak += 2
+		stats.defense += 2
+		stats.mef += 2
+		if omen >= 5:
+			stats.atk += 3
+			stats.mak += 3
+	elif is_elite(seed, id, omen):
+		var affix := elite_affix(seed, id)
+		tag = "ELITE:" + affix
+		stats.max_hp += 12
+		stats.atk += 3
+		stats.mak += 2
+		stats.defense += 2
+		match affix:
+			"BRUTAL": stats.atk += 4
+			"SWIFT": stats.agi += 5
+			"STONE":
+				stats.defense += 4
+				affinity = BattleMath.Affinity.RESIST
+			"BURNING": extra.append(&"ember_touch")
+			"VAMPIRIC": extra.append(&"life_drain")
+	if omen >= 1:
+		stats.max_hp = int(round(float(stats.max_hp) * 1.15))
+	return {"skills": extra, "affinity": affinity, "tag": tag}
+
+
+static func battle_label(id: String, seed: int, omen: int) -> String:
+	var def := demon_by_id(id)
+	var base := String(def.get("name", id))
+	if SurvivalStrata.is_warden(id):
+		return "WARDEN " + base
+	if is_elite(seed, id, omen):
+		return "ELITE %s [%s]" % [base, elite_affix(seed, id)]
+	return base
+
+
+## D-072: estoque da loja no estrato (2 fixos + 2 dos 3 rotativos).
+static func shop_stock(seed: int, stratum: int) -> Array[String]:
+	var out: Array[String] = []
+	out.assign(SHOP_FIXED)
+	var rot: Array = SHOP_ROTATING.duplicate()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = (absi(seed) + stratum * 31_337) % 2147483647
+	rot.remove_at(rng.randi_range(0, rot.size() - 1))
+	for id in rot:
+		out.append(String(id))
+	return out
+
+
+## Preço com inflação por estrato e descontos de relíquia (−25% / MAMMON −50%).
+static func price(base: int, stratum: int, state: Dictionary) -> int:
+	var p := float(base) * (1.0 + 0.15 * float(clampi(stratum, 1, 5) - 1))
+	if SurvivalRelics.party_has(state, "mammon"):
+		p *= 0.5
+	elif SurvivalRelics.party_has(state, "shop_discount"):
+		p *= 0.75
+	return maxi(1, int(round(p)))
 
 
 ## Combate de teste: lutas com 1, 2 ou 3 demônios conforme o tier do encontrado.
 ## O demônio tocado no mapa sempre abre a luta; os reforços vêm da mesma lista.
-static func encounter_for(id: String) -> Array[String]:
+static func encounter_for(id: String, defeated: Array = []) -> Array[String]:
 	var found := -1
 	for i in DEMONS.size():
 		if String(DEMONS[i].id) == id:
@@ -501,10 +619,20 @@ static func encounter_for(id: String) -> Array[String]:
 		count = 2
 	if tier >= 5:
 		count = 3
+	# D-066: guardião sempre traz 2 escoltas.
+	if SurvivalStrata.is_warden(id):
+		count = 3
 	var out: Array[String] = [id]
-	for step in range(1, count):
-		var pick: Dictionary = DEMONS[(found + step * 7) % DEMONS.size()]
-		out.append(String(pick.id))
+	# D-066: escoltas do MESMO estrato, ainda vivas (antes vinham de qualquer tier).
+	var mates := SurvivalStrata.ids_for(SurvivalStrata.stratum_of(id))
+	var start := mates.find(id)
+	for step in range(1, mates.size()):
+		if out.size() >= count:
+			break
+		var pick: String = mates[(start + step * 3) % mates.size()]
+		if pick == id or out.has(pick) or defeated.has(pick) or SurvivalStrata.is_warden(pick):
+			continue
+		out.append(pick)
 	return out
 
 

@@ -62,10 +62,18 @@ func _run() -> void:
 				_check(not owned.has(StringName(option.skill)), "New skill is not already owned")
 				_check(not SkillBook.def(StringName(option.skill)).is_empty(), "New skill exists in SkillBook")
 			else:
-				_check(int(option.amount) >= 1 and int(option.amount) <= 4,
-						"Stat amount in 1..4 (got %d)" % int(option.amount))
-				_check(not stats_seen.has(String(option.stat)), "Stat options are distinct")
-				stats_seen[String(option.stat)] = true
+				# D-071: raridade COMMON/RARE/EPIC; HP/EN têm valores fixos por raridade;
+				# EPIC pode ser +3/+3 em dois atributos (kind "stat2"); "yoch" vai para a Yoch.
+				var keys: Array = option.stats if String(option.kind) == "stat2" else [option.stat]
+				for key in keys:
+					var hp_en := StringName(key) in [&"max_hp", &"max_en"]
+					var amount := int(option.amount)
+					_check((hp_en and amount in [3, 5, 6, 8, 10, 16]) or (not hp_en and amount >= 1 and amount <= SurvivalAbsorb.MAX_POINTS),
+							"Stat amount follows the rarity table (got %d %s)" % [amount, key])
+					_check(String(option.rarity) in SurvivalAbsorb.RARITIES, "Option has a rarity")
+					if String(option.kind) != "yoch":
+						_check(not stats_seen.has(String(key)), "Stat options are distinct")
+						stats_seen[String(key)] = true
 		skills += skill_options
 	_check(absf(float(skills) / 1000.0 - SurvivalAbsorb.SKILL_CHANCE) < 0.05,
 			"Skill chance is ~30%% (got %.1f%%)" % (float(skills) / 10.0))
@@ -141,6 +149,7 @@ func _run() -> void:
 	foe.current_sp = 0 # primeira pressão absorve
 	var cmds: Array[String] = battle._commands(battle._fallen)
 	_check(cmds.has("ABSORB"), "Fallen has the ABSORB command in Survival")
+	# Cerberus pode liderar com escoltas do estrato: absorve o primeiro (com SP 0).
 	_pump_mash(battle)
 	battle.submit_plan(cmds.find("ABSORB"))
 	battle.exec_plan()

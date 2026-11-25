@@ -69,5 +69,18 @@ qualquer alteração em documentos ou código.
 | D-059 | 2026-11-25 (decisão do criador) | Indicadores de papel: ficam as caixas da D-057 e entram setas animadas — cada golpe corre do atacante ao alvo em 0,55 s e some perdendo opacidade rápido; no contra-ataque uma seta sai de cada lado, elas se encontram no meio e uma faísca marca o choque. Ícones, texto solto e cor no nome foram descartados. | `docs/GDD.md` Apêndice A |
 | D-060 | 2026-11-25 (decisão do criador) | Nomes coloridos no Battle Log: em cada frase, o nome de quem tem papel na ação ganha a cor desse papel naquele momento (atacante vermelho, alvo amarelo, quem defende azul, quem contra-ataca laranja, quem reage verde); o resto da frase não muda. | `docs/GDD.md` Apêndice A |
 | D-061 | 2026-11-25 (decisão do criador) | Os blocos de papel (ATTACK, TARGET, DEFEND, COUNTER, REACT) aparecem por 0,3 s e somem de uma vez (corte seco); o papel continua valendo para as setas e as cores do log, e um novo golpe ou papel mostra o bloco de novo. | `docs/GDD.md` Apêndice A |
+| D-066 | 2026-11-25 (liberdade criativa do criador, Survival) | Survival em 5 estratos de 7 demônios (tier/SP); guardião por estrato (HP ×1,5, 2 escoltas, não persegue, no ponto mais fundo); DESCEND; vencer o 5º guardião encerra a run. | `docs/GDD.md` Apêndice A |
+| D-067 | 2026-11-25 (liberdade criativa, Survival) | Estrato 1 com o labirinto feito à mão; estratos 2–5 com labirinto 25×21 gerado pela semente (laços, mesmo santuário). | `docs/GDD.md` Apêndice A |
+| D-068 | 2026-11-25 (liberdade criativa, Survival) | HEAL do santuário grátis 1× por estrato; depois 15 × estrato Macca. | `docs/GDD.md` Apêndice A |
+| D-069 | 2026-11-25 (liberdade criativa, Survival) | Temperamentos (BRUTE/CASTER/SUPPORT/HUNTER/TRICKSTER) e intenção da 1ª ação de cada inimigo mostrada acima dele e executada. | `docs/GDD.md` Apêndice A |
+| D-070 | 2026-11-25 (liberdade criativa, Survival) | Afixos de elite com efeito real; elite dá 1 relíquia; guardião dá Macca ×2 e escolha de 1 entre 3 relíquias. | `docs/GDD.md` Apêndice A |
+| D-071 | 2026-11-25 (liberdade criativa, Survival) | Absorção com raridade (COMMON/RARE/EPIC por estrato), herança do atributo forte, HP/EN máximos e opção YOCH +n. | `docs/GDD.md` Apêndice A |
+| D-072 | 2026-11-25 (liberdade criativa, Survival) | MEDICINE, SOMA, BLAST STONE; painel SHOP com estoque por estrato, 1 relíquia à venda e inflação de 15%/estrato. | `docs/GDD.md` Apêndice A |
+| D-073 | 2026-11-25 (liberdade criativa, Survival) | 1 relíquia inicial; 11 relíquias de efeito; 7 pactos por pares no mesmo aliado; validador do save corrigido para HP de relíquia. | `docs/GDD.md` Apêndice A |
+| D-074 | 2026-11-25 (liberdade criativa, Survival) | 3 eventos por estrato (BLOOD ALTAR, WANDERING SPIRIT, HOODED ORACLE, FROST MERCHANT) como figuras SMT no corredor. | `docs/GDD.md` Apêndice A |
+| D-075 | 2026-11-25 (liberdade criativa, Survival) | OMEN 0–5 desbloqueado por vitória, CODEX de demônios e score novo com multiplicador de OMEN. | `docs/GDD.md` Apêndice A |
+| D-076 | 2026-11-25 (liberdade criativa, Survival) | Save da run v2 com migração da v1 e validação ampliada. | `docs/GDD.md` Apêndice A |
 
-Total: 59 decisões indexadas.
+D-062 a D-065 estão reservadas por sessões paralelas (ainda não integradas neste ramo).
+
+Total: 70 decisões indexadas.

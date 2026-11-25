@@ -4,6 +4,40 @@ Não faz parte da lore nem da campanha. Sandbox de combate e exploração para
 testar os **35 demônios**, 27 habilidades placeholder, itens e continues. A
 entrada é o 4º comando do título (`Survival`).
 
+## Roguelike (2026-11-25, D-066 a D-076)
+
+Plano e referências (Slay the Spire, Hades, Darkest Dungeon, SMT/Persona, Inscryption,
+Balatro, Risk of Rain, FTL): `docs/plans/2026-11-25-survival-roguelike.md`.
+
+- **5 estratos** (`survival_strata.gd`): os 35 demônios ordenados por tier/SP em grupos de 7.
+  Estrato 1 = labirinto feito à mão; 2–5 = labirinto gerado pela semente. O **GUARDIÃO**
+  (o mais forte do grupo) espera na célula mais funda, não persegue, tem moldura dourada no
+  automapa, HP ×1,5 e 2 escoltas. Derrotá-lo libera `DESCEND`; o 5º encerra a run.
+  Guardiões: SUCCUBUS, INCUBUS, LAKSHMI, PAZUZU, BEELZEBUB.
+- **Intenções**: cada inimigo mostra, acima da arte, seu temperamento (BRUTE, CASTER,
+  SUPPORT, HUNTER, TRICKSTER) e a 1ª ação da rodada (`ATTACK ▸ YOCH`, `HELLFIRE ▸ ALL`,
+  `MEND`), que é a ação executada.
+- **Elites** com afixo real (BRUTAL, SWIFT, STONE, BURNING, VAMPIRIC) e 1 relíquia de saque;
+  guardião: Macca ×2 e escolha de 1 entre 3 relíquias.
+- **Absorção** com raridade COMMON/RARE/EPIC (sobe por estrato e com HP < 35%), herança do
+  atributo forte do demônio, HP/EN máximos e ofertas `YOCH +n` (a Yoch cresce na run).
+- **Santuário**: `HEAL` grátis 1× por estrato (depois 15×estrato M), `SHOP` (BEAD, CHAKRA +
+  2 de MEDICINE/SOMA/BLAST STONE + 1 relíquia; +15% por estrato), `RELICS`, `DESCEND`,
+  `OMEN` (só antes da 1ª luta), `NEW RUN`, `DAILY`, `TITLE`, `LEAVE`.
+- **Relíquias**: começa com 1; 23 no total (12 de atributo + 11 de efeito), 2 por aliado,
+  7 pactos por pares no mesmo aliado.
+- **Eventos**: 3 por estrato — BLOOD ALTAR, WANDERING SPIRIT, HOODED ORACLE, FROST MERCHANT.
+- **Meta**: OMEN 0–5 desbloqueado por vitória, CODEX dos demônios derrotados, score novo.
+
+Capturas desta rodada (`tools/capture_survival_roguelike.gd`, janela real):
+`captures/survrl_01_*` a `survrl_23_*` e `captures/survrl_contact_sheet.png` — estrato 1
+e 2, barra com OMEN/HEAL pago/DESCEND, loja, relíquias com pacto, os 4 eventos, guardião
+no automapa, escolha de relíquia do guardião, fim de run, batalhas com intenções (guardião
++2 escoltas, elite, 2 inimigos), painel de absorção com raridade e 4 opções, CONTINUE e
+SURVIVAL OVER. Inspecionadas pelo agente; **o julgamento visual é do criador**.
+
+As seções abaixo descrevem a base anterior; onde divergem, vale o bloco acima.
+
 ## Como funciona
 
 - **Overworld exclusivo** (`scenes/survival/SurvivalWorld.tscn`, script
@@ -24,8 +58,7 @@ entrada é o 4º comando do título (`Survival`).
 - **Perseguição**: demônios a até 6 tiles avançam um tile por passo do jogador
   (eixo maior primeiro) e nunca entram no santuário. Contato inicia a batalha.
 - **Curandeiro + Vendedor** são o mesmo NPC (`SANCTUARY KEEPER`, sprite SMT
-  `P99_メシア01.png`) com uma barra de opções única: `HEAL (FREE)` restaura
-  HP/EN de todo o grupo; `BEAD +20HP (20M)` e `CHAKRA +10EN (20M)` compram
+  `P99_メシア01.png`) com uma barra de opções única: `HEAL` restaura HP/EN de todo o grupo (grátis 1× por estrato, D-068); `BEAD +20HP (20M)` e `CHAKRA +10EN (20M)` compram
   itens; `NEW RUN` zera a run (pede um segundo Z para confirmar; X cancela);
   `TITLE` volta ao menu e salva a run; `LEAVE` fecha. Setas/Left-Right
   selecionam, Z confirma, X sai/cancela.
@@ -38,8 +71,8 @@ entrada é o 4º comando do título (`Survival`).
   continue, restaura HP/EN completo e **mantém todos os status** (nunca chama
   `ProgressStore.halve_gains()` nem `add_deaths()`); a mesma luta continua.
   X/Esc encerra a run e apaga o save. Com 0 restantes, `SURVIVAL OVER`.
-- **Fim de run**: ao derrotar os 35 aparece `SURVIVAL CLEARED` com Macca e
-  continues; Z reinicia, X volta ao título.
+- **Fim de run**: ao derrotar o guardião do estrato 5 aparece `SURVIVAL CLEARED`
+  com Macca, continues, OMEN, score e CODEX; Z reinicia, X volta ao título (D-066).
 - **Absorção roguelike** (`scripts/survival/survival_absorb.gd`): a cada absorção
   bem-sucedida aparecem **3 opções na barra de comandos**. **30%** das rolagens
   trazem uma **habilidade nova ainda não obtida** (do demônio ou do pool de 27),
@@ -50,8 +83,8 @@ entrada é o 4º comando do título (`Survival`).
 - **Relíquias antigas** (`survival_relics.gd`): 12 relíquias com nomes hebraicos
   e efeitos de atributo, **no máximo 2 por aliado**. `RELICS` na barra do
   santuário abre o painel: ←/→ escolhe, Z equipa no Fallen, X equipa na Yoch,
-  Esc fecha. A relíquia é única e muda de aliado. 6 são iniciais; 6 desbloqueiam
-  por score.
+  Esc fecha. A relíquia é única e muda de aliado. A run começa com 1 inicial
+  (D-073); 6 de atributo desbloqueiam por score e 11 de efeito caem na run.
 - **Identificação**: habilidade absorvida entra como **nome hebraico** no
   submenu FIGHT (`גל רוח`, `אש גיהנום`...); ao usá-la uma vez ela é identificada
   e passa a mostrar o nome/emfeite reais.
@@ -60,8 +93,8 @@ entrada é o 4º comando do título (`Survival`).
   (células válidas, conectadas, fora do santuário). O seed aparece no HUD.
 - **Elites** (~20% determinístico por semente + id): demônio com nome
   `ELITE ... [AFIXO]`, status maiores e **Macca em dobro**.
-- **Risco/recompensa**: absorver com menos de 35% de HP garante **+4** nas
-  opções de atributo.
+- **Risco/recompensa**: absorver com menos de 35% de HP sobe a raridade das
+  ofertas um nível (D-071; antes garantia +4).
 - **Meta-progresso** (`survival_meta.gd`): score = derrotados×100 + Macca +
   continues×50, salvo em `user://exodus_survival_meta.json`, separado da run;
   melhor score e relíquias desbloqueadas aparecem na tela de clear.
@@ -88,6 +121,12 @@ modo (100 na campanha), na mesma ordem das habilidades placeholder (4–13).
 
 ## Verificação
 
+- `verify_survival_strata.gd` — 15827 checks (estratos, guardiões, 800 labirintos
+  gerados com BFS, layout, temperamentos, afixos, raridade/herança/Yoch, relíquias e
+  pactos, cura paga, descida, preços, OMEN, meta, migração v1→v2 e saves inválidos).
+- `verify_survival_run.gd` — 107 checks com cenas reais (guardião e escoltas, intenção
+  executada, temperamentos, relíquias de batalha, BLAST/SOMA/MEDICINE, saque de elite e
+  guardião, estrato gerado, loja, 4 eventos, DESCEND, OMEN, escolha da relíquia, clear).
 - `verify_survival_data.gd` — 629 checks (35 demônios/sprites/células, 15 novas
   skills, encounters 1/2/3, save JSON, isolamento).
 - `verify_survival_world.gd` — 30 checks (mapa, 35 silhuetas, barra com 8
