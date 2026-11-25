@@ -190,7 +190,7 @@ func _temperaments() -> void:
 		var st5 := UnitStats.new()
 		st5.max_hp = 40; st5.atk = 10
 		SurvivalData.empower(st5, w, 1, 5)
-		_check(st5.atk == 15 and st5.max_hp == 69, "OMEN 5 warden +3 ATK and OMEN 1 +15% HP (%d/%d)" % [st5.atk, st5.max_hp])
+		_check(st5.atk == 15 and st5.max_hp == 69, "OMEN 5 warden +3 ATK and OMEN 1 +15%% HP (%d/%d)" % [st5.atk, st5.max_hp])
 		_check(SurvivalData.battle_label(w, 1, 0).begins_with("WARDEN "), "Warden battle label")
 	var elites0 := 0
 	var elites3 := 0
@@ -386,7 +386,7 @@ func _economy() -> void:
 	SurvivalState.patch({"yoch_gains": {"max_hp": 10, "max_en": 0, "atk": 2, "mak": 0, "defense": 0, "mef": 0, "agi": 0},
 		"yoch_relics": ["blood_vessel", "manna_jar"]})
 	var ys := SurvivalState.yoch_stats()
-	_check(ys.max_hp == 90 + 10 + 20 + 20 and ys.atk == 9, "Yoch stats include gains, relic and BLOOD PACT (%d)" % ys.max_hp)
+	_check(ys.max_hp == int(SurvivalData.YOCH_BASE.max_hp) + 10 + 20 + 20 and ys.atk == int(SurvivalData.YOCH_BASE.atk) + 2, "Yoch stats include gains, relic and BLOOD PACT (%d)" % ys.max_hp)
 	_check(SurvivalState.yoch_max_hp() == ys.max_hp, "yoch_max_hp matches yoch_stats")
 
 
@@ -413,13 +413,13 @@ func _meta() -> void:
 
 func _save() -> void:
 	# v1 migra: relíquias iniciais antigas, estrato 1, campos novos com padrão.
-	var v1 := {"fallen_hp": 100, "fallen_en": 20, "yoch_hp": 50, "yoch_pp": 2,
+	var v1 := {"fallen_hp": 20, "fallen_en": 10, "yoch_hp": 12, "yoch_pp": 2,
 		"gains": {"max_hp": 0, "max_en": 0, "atk": 2, "mak": 0, "defense": 0, "mef": 0, "agi": 0},
 		"skills": [], "unidentified": [], "relics": SurvivalRelics.STARTER_IDS.duplicate(),
 		"fallen_relics": ["blood_vessel"], "yoch_relics": [], "absorbs": {}, "seed": 77, "macca": 50,
 		"bead": 1, "chakra": 0, "continues": 3, "defeated": [], "encounter_id": "", "cell": [12, 10],
 		"facing": 0, "visited": [], "seen": [], "enemies": []}
-	v1["fallen_hp"] = 155 # acima de 140: só vale com a BLOOD VESSEL (bug antigo do validador)
+	v1["fallen_hp"] = int(SurvivalData.FALLEN_BASE.max_hp) + 15 # acima do maximo: so vale com a BLOOD VESSEL (bug antigo do validador)
 	var f := FileAccess.open(SurvivalState.SAVE_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify({"version": 1, "state": v1}))
 	f.close()

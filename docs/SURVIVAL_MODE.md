@@ -115,9 +115,17 @@ depois de cada evento para garantir isso.
 
 ## Escala de dano
 
-Fallen **140 HP / 32 EN** e Yoch **90 HP** por pedido do criador: nenhum golpe
-isolado derruba o protagonista. O ataque básico usa `basic_power = 10` neste
-modo (100 na campanha), na mesma ordem das habilidades placeholder (4–13).
+**D-101 (SP parecido).** O dano soma um sorteio de até a diferença de SP e o SP é a soma dos
+sete atributos, então a ficha antiga (Fallen HP 140 / EN 32, SP 205, contra inimigos de SP 59 a
+139) o tornava invencível. Agora o Fallen começa com a média do estrato 1 (HP 26, EN 12, ATK 7,
+MAK 7, DEF 6, MEF 6, AGI 9; SP 73) e a Yoch com HP 17, ATK 8, DEF 6, AGI 8 (sem EN, SP 45). Ao
+começar cada batalha, cada inimigo recebe (ou perde) a diferença entre o SP atual do Fallen e o SP
+esperado no estrato (`SurvivalStrata.par_sp`), repartida pelos atributos (`SurvivalData.follow_hero`),
+antes de guardião, elite e OMEN. Simulação de 5 estratos com absorções reais (poder básico 10):
+quem sempre pega a maior oferta mata o inimigo em 3 a 6 golpes (14 no estrato 5) e aguenta 3 a 8;
+quem escolhe ao acaso, 2 a 3 golpes para matar e 2 a 5 para morrer; no máximo 8% dos golpes dão 0.
+`BEAD`, `MEDICINE` e `CHAKRA` seguem nos valores antigos (pendente). O ataque básico usa
+`basic_power = 10` neste modo (100 na campanha), na mesma ordem das habilidades placeholder (4–13).
 
 ## Verificação
 

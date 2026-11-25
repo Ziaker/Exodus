@@ -127,6 +127,8 @@ func _create_units() -> void:
 		enemy_stats.defense = int(ds.defense)
 		enemy_stats.mef = int(ds.mef)
 		enemy_stats.agi = int(ds.agi)
+		# D-101: os inimigos acompanham o SP atual do Fallen (com o herói no esperado, nada muda).
+		SurvivalData.follow_hero(enemy_stats, _fallen.stats.sp_value(), SurvivalStrata.par_sp(maxi(1, SurvivalStrata.stratum_of(String(def.id)))))
 		var power := SurvivalData.empower(enemy_stats, String(def.id), run_seed, omen_level)
 		var label := SurvivalData.battle_label(String(def.id), run_seed, omen_level)
 		var enemy := BattleUnit.new(StringName("foe_%d" % i), label, enemy_stats, false)

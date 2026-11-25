@@ -89,7 +89,12 @@ func _battle_warden() -> void:
 	_check(b.hud.opponents.size() == 3, "Warden LAKSHMI fights with 2 escorts (%d)" % b.hud.opponents.size())
 	var lead: BattleUnit = b.hud.opponents[0]
 	_check(lead.display_name == "WARDEN LAKSHMI", "Warden label (%s)" % lead.display_name)
-	_check(lead.stats.max_hp == 57, "Warden HP x1.5 (38 -> %d)" % lead.stats.max_hp)
+	# D-101: os inimigos acompanham o SP do Fallen (aqui 73 + 30 de AGI), depois o guardiao ganha HP x1,5.
+	var expected := UnitStats.new()
+	for k in SurvivalData.demon_by_id("lakshmi").stats: expected.set(k, int(SurvivalData.demon_by_id("lakshmi").stats[k]))
+	SurvivalData.follow_hero(expected, b._fallen.stats.sp_value(), SurvivalStrata.par_sp(3))
+	SurvivalData.empower(expected, "lakshmi", 1, 0)
+	_check(lead.stats.max_hp == expected.max_hp, "Warden HP follows the hero then x1.5 (%d, expected %d)" % [lead.stats.max_hp, expected.max_hp])
 	for foe in b.hud.opponents:
 		_check(SurvivalStrata.stratum_of(String(foe.kind)) == 3, "Escort %s from stratum 3" % foe.kind)
 	_check(b._fallen.stats.atk == int(SurvivalData.FALLEN_BASE.atk) + 4, "SLING OF DAVID +4 ATK vs warden (%d)" % b._fallen.stats.atk)
@@ -212,7 +217,7 @@ func _battle_items() -> void:
 	_check(int(SurvivalState.data().blast) == 0, "BLAST STONE consumed")
 	await _wait_mode(b, "plan")
 	_check(await _use_item(b, "bead", 0), "BEAD on Fallen")
-	_check(b._fallen.current_hp == 50, "SHEPHERD'S STAFF: BEAD heals 30 (20 -> %d)" % b._fallen.current_hp)
+	_check(b._fallen.current_hp == mini(b._fallen.stats.max_hp, 20 + 30), "SHEPHERD'S STAFF: BEAD heals 30 up to the max (20 -> %d)" % b._fallen.current_hp)
 	await _wait_mode(b, "plan")
 	_check(await _use_item(b, "soma", 0), "SOMA on Fallen")
 	_check(b._fallen.current_hp == b._fallen.stats.max_hp and b._fallen.current_en == b._fallen.stats.max_en, "SOMA fully restores HP and EN")
@@ -245,18 +250,18 @@ func _battle_loot() -> void:
 	var seed := _elite_seed("cerberus")
 	_check(seed >= 0, "Found an elite Cerberus seed")
 	var b := await _battle("cerberus", {"seed": seed, "macca": 0, "fallen_relics": ["golden_calf", "manna_jar"],
-		"fallen_hp": 50})
+		"fallen_hp": 8})
 	_freeze(b)
 	_check(b.hud.opponents[0].display_name.begins_with("ELITE CERBERUS"), "Elite label (%s)" % b.hud.opponents[0].display_name)
 	var relics_before: int = (SurvivalState.data().relics as Array).size()
 	for foe in b.hud.opponents:
 		foe.current_hp = 0
-	b._fallen.current_hp = 50
+	b._fallen.current_hp = 8
 	b._show_result()
 	var s := SurvivalState.data()
 	_check(int(s.macca) == int(round(35 * 2 * 1.5)), "Elite x2 and GOLDEN CALF x1.5 Macca (%d)" % int(s.macca))
 	_check((s.relics as Array).size() == relics_before + 1 and not String(s.last_loot).is_empty(), "Elite drops a relic (%s)" % s.last_loot)
-	_check(int(s.fallen_hp) == 65, "MANNA JAR heals 15 after victory (%d)" % int(s.fallen_hp))
+	_check(int(s.fallen_hp) == 8 + 15, "MANNA JAR heals 15 after victory (%d)" % int(s.fallen_hp))
 	_check(int(s.battles) == 1, "Battle counter")
 	b.queue_free()
 	await process_frame

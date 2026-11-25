@@ -76,6 +76,15 @@ static func stratum_of(id: String) -> int:
 	return 0 if idx < 0 else idx / PER_STRATUM + 1
 
 
+## SP médio dos demônios do estrato: o SP que o Fallen deve ter ao entrar nele (D-101).
+static func par_sp(stratum: int) -> int:
+	var ids := ids_for(stratum)
+	var total := 0
+	for id in ids:
+		total += power(SurvivalData.demon_by_id(id))
+	return int(round(float(total) / float(maxi(1, ids.size()))))
+
+
 ## O mais forte do grupo guarda o estrato.
 static func warden_of(stratum: int) -> String:
 	var ids := ids_for(stratum)

@@ -83,14 +83,17 @@ const EVENT_DEFS := {
 		"text": "Hee-ho! A wandering merchant with one rare relic."},
 }
 
-## Atributos base do grupo no Survival (balanceados para enfrentar 35 demônios).
-## HP alto de propósito: o criador pediu que o protagonista não morra "do nada"
-## com um golpe. Mesmo três demônios tier 5 não derrubam o Fallen numa rodada.
+## Atributos base do grupo no Survival. D-101 (criador 2026-11-25: "SP parecido"): o dano soma um
+## sorteio de até a diferença de SP, e o SP é a soma dos sete atributos (HP e EN incluídos). A ficha
+## antiga (HP 140, EN 32: SP 205) contra inimigos de SP 59 a 139 fazia o Fallen matar em menos de
+## 1 golpe e ignorar 65 a 72% dos golpes. Agora o Fallen começa com a média dos 7 inimigos do
+## estrato 1 (HP 25,7 EN 11,7 ATK 7 MAK 7 DEF 5,6 MEF 6,3 AGI 8,7 -> SP 73 contra 72) e a Yoch com a
+## mesma proporção que tem no jogo base (29/46).
 const FALLEN_BASE := {
-	"max_hp": 140, "max_en": 32, "atk": 9, "mak": 5, "defense": 7, "mef": 5, "agi": 7,
+	"max_hp": 26, "max_en": 12, "atk": 7, "mak": 7, "defense": 6, "mef": 6, "agi": 9,
 }
 const YOCH_BASE := {
-	"max_hp": 90, "max_en": 0, "atk": 7, "mak": 4, "defense": 6, "mef": 5, "agi": 6, "pp": 2,
+	"max_hp": 17, "max_en": 0, "atk": 8, "mak": 3, "defense": 6, "mef": 3, "agi": 8, "pp": 2,
 }
 
 ## Mapa 25x21 exclusivo do Survival Mode: santuário central com 4 saídas e 4 grandes alas.
@@ -531,6 +534,23 @@ static func elite_affix(seed: int, id: String) -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = (absi(seed) + absi(id.hash()) * 13 + 1) % 2147483647
 	return String(ELITE_AFFIXES[rng.randi_range(0, ELITE_AFFIXES.size() - 1)])
+
+
+## D-101: os inimigos acompanham o herói. A diferença entre o SP atual do Fallen e o SP esperado dele
+## no estrato (a média dos inimigos do estrato) é somada ao inimigo, repartida pelos sete atributos
+## na proporção que ele já tem; HP e EN entram como no SP. Com o herói no esperado, nada muda. Um
+## inimigo nunca cai abaixo de metade do próprio SP nem de 1 em cada atributo (EN fica em 0 se era 0).
+static func follow_hero(stats: UnitStats, hero_sp: int, par_sp: int) -> void:
+	var own := stats.sp_value()
+	var target := maxi(own / 2, own + hero_sp - par_sp)
+	if target == own: return
+	var keys := ["max_hp", "max_en", "atk", "mak", "defense", "mef", "agi"]
+	var scale := float(target) / float(own)
+	for k in keys:
+		var base := int(stats.get(k))
+		stats.set(k, 0 if base == 0 else maxi(1, int(round(float(base) * scale))))
+	# O arredondamento pode errar alguns pontos: o HP absorve a diferença.
+	stats.max_hp = maxi(1, stats.max_hp + target - stats.sp_value())
 
 
 ## D-070/D-066/D-075: aplica elite, guardião e OMEN aos status do inimigo.

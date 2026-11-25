@@ -80,7 +80,8 @@ qualquer alteração em documentos ou código.
 | D-074 | 2026-11-25 (liberdade criativa, Survival) | 3 eventos por estrato (BLOOD ALTAR, WANDERING SPIRIT, HOODED ORACLE, FROST MERCHANT) como figuras SMT no corredor. | `docs/GDD.md` Apêndice A |
 | D-075 | 2026-11-25 (liberdade criativa, Survival) | OMEN 0–5 desbloqueado por vitória, CODEX de demônios e score novo com multiplicador de OMEN. | `docs/GDD.md` Apêndice A |
 | D-076 | 2026-11-25 (liberdade criativa, Survival) | Save da run v2 com migração da v1 e validação ampliada. | `docs/GDD.md` Apêndice A |
+| D-101 | 2026-11-25 (decisão do criador) | Survival: o SP do Fallen fica parecido com o dos inimigos em cada estrato (ficha inicial = média do estrato 1, SP 73 contra 72) e os inimigos acompanham o SP atual do Fallen ao começar cada batalha (`follow_hero`); corrige o protagonista "mil vezes mais forte". | `docs/GDD.md` Apêndice A |
 
 D-062 a D-065 estão reservadas por sessões paralelas (ainda não integradas neste ramo).
 
-Total: 70 decisões indexadas.
+Total: 71 decisões indexadas.

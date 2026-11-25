@@ -2989,6 +2989,24 @@ Formato: ID · data · decisão · estado · impacto documental.
   v1 (campos novos com padrão; run v1 mantém as 6 relíquias que já tinha e continua no estrato 1);
   validação de relíquias, itens, ganhos da Yoch, estrato, OMEN e célula no labirinto do estrato.
   Impacto: `survival_state.gd`, `verify_survival_strata.gd`.
+- **D-101 · 2026-11-25 (decisão do criador) — SP parecido no Survival.**
+  Motivo: o criador disse que o protagonista era ``mil vezes mais forte do que deveria`` e que os
+  stats dos personagens não tinham sido corrigidos. Medição com a fórmula real: o dano soma um
+  sorteio de até a diferença de SP, e o SP é a soma dos sete atributos; a ficha antiga (HP 140, EN
+  32: SP 205) contra inimigos de SP 59 a 139 fazia o Fallen matar os tiers 1 a 4 em menos de 1
+  golpe e ignorar 65 a 72% dos golpes inimigos. Escolha do criador: ``SP parecido, estilo D-032``
+  e ``Inimigos acompanham o herói``. Regra: ficha inicial do Fallen = média dos 7 inimigos do
+  estrato 1 (HP 26, EN 12, ATK 7, MAK 7, DEF 6, MEF 6, AGI 9; SP 73 contra 72) e da Yoch na
+  proporção que tem no jogo base (HP 17, EN 0, ATK 8, MAK 3, DEF 6, MEF 3, AGI 8). Ao começar cada
+  batalha o inimigo recebe (ou perde) a diferença entre o SP atual do Fallen e o SP esperado no
+  estrato (média dos inimigos dele), repartida pelos sete atributos na proporção que ele já tem
+  (nunca abaixo de metade do próprio SP; EN 0 continua 0); guardião, elite e OMEN somam depois.
+  **Escolhas do agente, aguardando o criador:** a ficha derivada da média do estrato 1, a
+  repartição proporcional e valer nos dois sentidos (herói abaixo do esperado enfraquece os
+  inimigos). **Não alterado, pendente:** BEAD +20 HP, MEDICINE +50 HP e CHAKRA +10 EN continuam
+  nos valores da ficha antiga (BEAD cura 77% do HP inicial). Impacto: `survival_data.gd`,
+  `survival_strata.gd`, `survival_battle.gd`, `tests/verify_survival_balance.gd`;
+  `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

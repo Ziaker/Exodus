@@ -106,7 +106,8 @@ func _run() -> void:
 	_check(await _wait_mode(battle, "target"), "BEAD asks for ally target")
 	battle.submit_target(0) # Fallen
 	# O inimigo também age: confere o cura no mesmo instante em que ele resolve.
-	_check(battle._fallen.current_hp == 35, "BEAD healed Fallen 15 -> 35 HP (got %d)" % battle._fallen.current_hp)
+	# D-101: a ficha nova tem HP 26; a cura de 20 e limitada pelo HP maximo.
+	_check(battle._fallen.current_hp == mini(battle._fallen.stats.max_hp, 15 + 20), "BEAD healed Fallen 15 -> %d HP (got %d)" % [mini(battle._fallen.stats.max_hp, 35), battle._fallen.current_hp])
 	_check(int(SurvivalState.data().bead) == 0, "BEAD count decremented to 0")
 	await _wait_mode(battle, "plan")
 
@@ -122,7 +123,7 @@ func _run() -> void:
 	battle.submit_target(0) # Fallen
 	for _i in 20:
 		await process_frame
-	_check(battle._fallen.current_en == 14, "CHAKRA restored Fallen EN 4 -> 14 (got %d)" % battle._fallen.current_en)
+	_check(battle._fallen.current_en == mini(battle._fallen.stats.max_en, 4 + 10), "CHAKRA restored Fallen EN 4 -> %d (got %d)" % [mini(battle._fallen.stats.max_en, 14), battle._fallen.current_en])
 	_check(int(SurvivalState.data().chakra) == 0, "CHAKRA count decremented to 0")
 	_check(not battle._commands(battle._fallen).has("ITEM"), "ITEM command hidden when bag is empty")
 
