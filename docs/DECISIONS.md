@@ -69,5 +69,6 @@ qualquer alteração em documentos ou código.
 | D-059 | 2026-11-25 (decisão do criador) | Indicadores de papel: ficam as caixas da D-057 e entram setas animadas — cada golpe corre do atacante ao alvo em 0,55 s e some perdendo opacidade rápido; no contra-ataque uma seta sai de cada lado, elas se encontram no meio e uma faísca marca o choque. Ícones, texto solto e cor no nome foram descartados. | `docs/GDD.md` Apêndice A |
 | D-060 | 2026-11-25 (decisão do criador) | Nomes coloridos no Battle Log: em cada frase, o nome de quem tem papel na ação ganha a cor desse papel naquele momento (atacante vermelho, alvo amarelo, quem defende azul, quem contra-ataca laranja, quem reage verde); o resto da frase não muda. | `docs/GDD.md` Apêndice A |
 | D-061 | 2026-11-25 (decisão do criador) | Os blocos de papel (ATTACK, TARGET, DEFEND, COUNTER, REACT) aparecem por 0,3 s e somem de uma vez (corte seco); o papel continua valendo para as setas e as cores do log, e um novo golpe ou papel mostra o bloco de novo. | `docs/GDD.md` Apêndice A |
+| D-064 | 2026-11-25 (decisão do criador) | ABSORB vira ação imediata de custo 2 ACT: não entra na fila, resolve na hora em que é escolhido (a fila já montada não muda) e só existe na ação do próprio turno, nunca como reação. Sem 2 atos livres da fila a linha fica apagada e recusa, como uma habilidade que o herói não pode pagar. | `docs/GDD.md` Apêndice A |
 
-Total: 59 decisões indexadas.
+Total: 60 decisões indexadas.

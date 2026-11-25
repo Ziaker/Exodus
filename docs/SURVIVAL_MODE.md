@@ -40,6 +40,9 @@ entrada é o 4º comando do título (`Survival`).
   X/Esc encerra a run e apaga o save. Com 0 restantes, `SURVIVAL OVER`.
 - **Fim de run**: ao derrotar os 35 aparece `SURVIVAL CLEARED` com Macca e
   continues; Z reinicia, X volta ao título.
+- **ABSORB (D-064)**: o mesmo comando da batalha principal — ação imediata do turno do
+  Fallen, **2 ACT**, não entra na fila e resolve na hora; nunca aparece como reação. Com
+  menos de 2 atos livres a linha fica apagada e recusa.
 - **Absorção roguelike** (`scripts/survival/survival_absorb.gd`): a cada absorção
   bem-sucedida aparecem **3 opções na barra de comandos**. **30%** das rolagens
   trazem uma **habilidade nova ainda não obtida** (do demônio ou do pool de 27),

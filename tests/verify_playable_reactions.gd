@@ -108,7 +108,8 @@ func _run() -> void:
 	for reaction in 2:
 		battle.select_reactor(0)
 		battle.answer_reaction(true)
-		check(battle.hud.command_options.has("FIGHT") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps every command plus DEFEND as a reaction")
+		check(battle.hud.command_options.has("FIGHT") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps FIGHT, ITEM, REST plus DEFEND as a reaction")
+		check(not battle.hud.command_options.has("ABSORB"), "D-064: ABSORB is never a reaction (got %s)" % [battle.hud.command_options])
 		battle.submit_command(0)  # counter-attack: D-038 REST no longer spends acts
 		# D-049: the counter uses the two-rail exchange; both MISS = tie, no damage.
 		check(battle.hud.mode == "counter", "D-049: a counter-attack opens the two-rail exchange")
