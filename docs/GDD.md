@@ -1528,6 +1528,16 @@ e **SP atual pela metade** (confirmado pelo criador em 2026-11-23);
 absorção por disputa de SP (D-029 revogada). Conflito restante: fichas dos inimigos
 versus o protótipo atual.
 
+### 14.2 Temas centrais e simetria dos Maziks — **CONFIRMADO PELO DIRETOR (2026-11-25)**
+
+A história de **EXODUS** aborda **simetria**, **perfeição** e **falsos Messias**. O diretor confirmou a presença de **um falso Jesus** e de **anjos caídos** na narrativa.
+
+**Sentido da perfeição:** a perfeição consiste na **imperfeição** e na **não simetria** das coisas. Assim, a simetria não deve ser tratada como sinônimo da perfeição verdadeira.
+
+**Maziks:** os Maziks são os **inimigos de silhueta** e possuem **simetria perfeita**. A perfeição simétrica dos Maziks deve ser distinguida do sentido de perfeição acima estabelecido. Essa definição descreve sua característica visual/temática; **não** determina origem, natureza espiritual, comportamento, hierarquia ou novas regras de combate.
+
+**PENDENTE:** identidade, origem, função e relação do falso Jesus com outras figuras ou THÉOS; natureza, origem e relação dos anjos caídos com as raças existentes; explicação cosmológica da simetria dos Maziks; consequências narrativas ou mecânicas desses temas. Não converter interpretações editoriais anteriores (por exemplo, Maziks sem alma, produto de uma força criadora ou falso Messias necessariamente simétrico) em cânone sem aprovação explícita.
+
 ---
 
 ## 15. Cosmologia e teologia — **PENDENTE**
