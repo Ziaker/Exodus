@@ -187,27 +187,38 @@ func test_counter_red_pointer_speed_follows_agi_ratio() -> void:
 	assert_false(BattleMath.pointers_aligned(0.4, 0.425))
 
 
-## D-051: absorption as an SP dispute.
-func test_absorb_press_moves_two_sp_and_adds_one_percent_per_sp() -> void:
-	var step := BattleMath.absorb_press(30, 11, 0, 99.0)
-	assert_eq(step.steal, 2)
-	assert_eq(step.taken, 2)
-	assert_eq(step.chance, 13)
-	assert_false(step.absorbed)
-	step = BattleMath.absorb_press(28, 11, 2, 14.9)
-	assert_eq(step.chance, 15)
-	assert_true(step.absorbed, "a roll under the chance absorbs")
+## D-051 SP dispute, resolved once by D-063 (creator, 2026-11-25).
+func test_absorb_result_takes_two_sp_per_press_and_rolls_once() -> void:
+	var r := BattleMath.absorb_result(30, 11, 3, 99.0)
+	assert_eq(r.presses, 3)
+	assert_eq(r.steal, 6, "3 presses x 2 SP, applied in the result")
+	assert_eq(r.chance, 17, "start gap 11 + 1% per SP taken")
+	assert_false(r.absorbed)
+	r = BattleMath.absorb_result(30, 11, 3, 16.9)
+	assert_true(r.absorbed, "the single roll under the chance absorbs")
+	r = BattleMath.absorb_result(30, 11, 3, 17.0)
+	assert_false(r.absorbed, "a roll equal to the chance fails")
 
 
-func test_absorb_press_negative_gap_is_zero_and_drain_is_guaranteed() -> void:
-	var step := BattleMath.absorb_press(50, -40, 0, 1.0)
-	assert_eq(step.chance, 2, "a negative SP gap counts as 0%")
-	assert_true(step.absorbed)
-	step = BattleMath.absorb_press(2, 0, 18, 99.9)
-	assert_true(step.absorbed, "draining the target to 0 SP absorbs for sure")
-	step = BattleMath.absorb_press(1, 0, 18, 99.9)
-	assert_eq(step.steal, 1, "only the SP the target still has can be taken")
-	assert_true(step.absorbed)
+func test_absorb_result_caps_at_ten_presses_and_zero_never_absorbs() -> void:
+	var r := BattleMath.absorb_result(500, 0, 14, 99.9)
+	assert_eq(r.presses, 10, "never more than 10 counted presses")
+	assert_eq(r.steal, 20, "up to 20 SP in total")
+	assert_eq(r.chance, 20)
+	r = BattleMath.absorb_result(0, 90, 0, 0.0)
+	assert_eq(r.steal, 0)
+	assert_false(r.absorbed, "zero presses never absorb, even with a 0 SP target")
+
+
+func test_absorb_result_negative_gap_is_zero_and_drain_is_guaranteed() -> void:
+	var r := BattleMath.absorb_result(50, -40, 1, 1.0)
+	assert_eq(r.chance, 2, "a negative SP gap counts as 0%")
+	assert_true(r.absorbed)
+	r = BattleMath.absorb_result(10, 0, 5, 99.9)
+	assert_true(r.absorbed, "draining the target to 0 SP in the result absorbs for sure")
+	r = BattleMath.absorb_result(7, 0, 10, 99.9)
+	assert_eq(r.steal, 7, "only the SP the target still has can be taken")
+	assert_true(r.absorbed)
 
 
 func test_absorb_gain_options_follow_multiples_of_eight() -> void:

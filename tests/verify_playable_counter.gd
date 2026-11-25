@@ -326,10 +326,11 @@ func _run() -> void:
 	battle.submit_target(0)
 	check(battle.hud.mode == "absorb", "ABSORB opens the mash")
 	for i in 3: battle.handle_confirm()
-	deadline = Time.get_ticks_msec() + 4000
+	# D-063: under 10 presses the result waits for the 2 s window, then the break (~2.3 s).
+	deadline = Time.get_ticks_msec() + 8000
 	while battle.hud.mode != "command" and Time.get_ticks_msec() < deadline:
 		await process_frame
-	check(fallen.current_sp - sp0 == 6 - foe.current_sp and foe.current_sp <= 4, "Each press moves 2 SP from the target into Fallen")
+	check(fallen.current_sp - sp0 == 6 - foe.current_sp and foe.current_sp <= 4, "The result moves 2 SP per press from the target into Fallen")
 	check(battle.hud.mode == "command" and battle.hud.command_options == ["+2 MAK", "+2 MEF", "+1 MAK / +1 MEF"], "Two multiples of 8: the player chooses the gain (got %s)" % [battle.hud.command_options])
 	battle.submit_command(2)
 	check(fallen.stats.mak == mak0 + 1 and fallen.stats.mef == mef0 + 1, "+1/+1 applies to both chosen attributes")

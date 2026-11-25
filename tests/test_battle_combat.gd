@@ -348,10 +348,56 @@ func test_absorption_takes_sp_and_keeps_it_on_failure() -> void:
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 3)
 	await _plan(battle, [3])
 	await get_tree().create_timer(2.4).timeout
-	# Chances are 2/4/6%: whether or not a roll landed, each press moved 2 SP.
+	# D-063: one roll at a 6% chance; the 6 SP move in the result either way.
 	if target.absorbed:
-		assert_true(battle._fallen.current_sp >= fallen_sp + 2, "SP moved before the successful roll")
+		assert_true(battle._fallen.current_sp >= fallen_sp + 6, "the result moved 6 SP before the absorption")
 	else:
 		assert_eq(target.current_sp, 494, "three presses took 6 SP and failure keeps them taken")
 		assert_eq(battle._fallen.current_sp, fallen_sp + 6, "the taken SP went to Fallen")
 		assert_true(battle.log_history.any(func(l: String) -> bool: return l.contains("resisted")))
+
+
+## D-063 (creator, 2026-11-25): real Z key events only count; nothing moves until the
+## result, which comes at the 10th press without waiting for the 2 s; later presses
+## are ignored.
+func test_mash_presses_only_count_and_tenth_press_resolves_at_once() -> void:
+	var battle := await _fresh_battle()
+	var target: BattleUnit = battle.state.units[2]
+	target.current_sp = 500
+	battle._fallen.current_sp = 0
+	await _plan(battle, [3])
+	for _i in range(60):
+		if battle._mash_active:
+			break
+		await get_tree().process_frame
+	assert_true(battle._mash_active, "ABSORB opens the mash")
+	var started := Time.get_ticks_msec()
+	var event := InputEventKey.new()
+	event.keycode = KEY_Z
+	event.pressed = true
+	for i in 9:
+		battle._input(event)
+		assert_eq(battle._mash_count, i + 1)
+		assert_eq(target.current_sp, 500, "no SP taken per press")
+		assert_eq(battle._fallen.current_sp, 0, "no SP given per press")
+	await get_tree().process_frame
+	assert_true(battle._mash_active, "nine presses keep waiting")
+	assert_eq(target.current_sp, 500)
+	battle._input(event)
+	assert_false(battle._mash_active, "the 10th press closes the mash")
+	assert_eq(target.current_sp, 480, "the 10th press applies the result in the same call")
+	await get_tree().process_frame
+	assert_lt(Time.get_ticks_msec() - started, 1500, "no wait for the 2 s window")
+	assert_eq(target.current_sp, 480, "the result took 10 x 2 SP once")
+	# The single 20% roll may absorb, whose gain can raise Fallen's SP base further.
+	if target.absorbed:
+		assert_true(battle._fallen.current_sp >= 20, "the 20 SP reached Fallen")
+	else:
+		assert_eq(battle._fallen.current_sp, 20, "the 20 SP reached Fallen")
+	var sp_after: int = battle._fallen.current_sp
+	for _i in 4:
+		battle._input(event)
+	battle.register_mash_press()
+	assert_eq(battle._mash_count, 10, "presses after the 10th are not counted")
+	assert_eq(target.current_sp, 480, "late presses move nothing")
+	assert_eq(battle._fallen.current_sp, sp_after, "late presses give nothing")

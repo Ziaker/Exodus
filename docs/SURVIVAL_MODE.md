@@ -62,6 +62,10 @@ entrada é o 4º comando do título (`Survival`).
   `ELITE ... [AFIXO]`, status maiores e **Macca em dobro**.
 - **Risco/recompensa**: absorver com menos de 35% de HP garante **+4** nas
   opções de atributo.
+- **Mash da absorção (D-063, criador 2026-11-25)**: igual à campanha — os apertos
+  só contam; o resultado (2 SP por aperto, até 10 apertos, e **um único sorteio**
+  com o RNG da run) é aplicado uma vez quando acabam os 2 s ou no 10º aperto, o
+  que vier primeiro. Só depois de uma absorção bem-sucedida aparecem as 3 opções.
 - **Meta-progresso** (`survival_meta.gd`): score = derrotados×100 + Macca +
   continues×50, salvo em `user://exodus_survival_meta.json`, separado da run;
   melhor score e relíquias desbloqueadas aparecem na tela de clear.
