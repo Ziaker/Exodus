@@ -1,5 +1,10 @@
 extends Control
 ## TESTE de overworld em primeira pessoa (dungeon crawler) no estilo SMT VX The Genesis.
+## Inimigos vermelhos no automapa avançam um tile por passo do jogador e iniciam o
+## combate novo (BattlePlayable, com habilidades/reza/contra-ataque).
+## Visual do OVERWORLD trocado em 2026-11-24: texturas/fundo gerados por
+## tools/generate_dungeon_art.py, na paleta do fundo D da batalha. Os assets SMT
+## continuam intactos na BATALHA — este arquivo não os lê.
 ##
 ## Decisões do criador (2026-11-23): referência SMT VX The Genesis; render 3D real no
 ## Godot; passo com deslize animado de 0,15 s; giro animado de 90° em 0,15 s; texturas
@@ -22,12 +27,17 @@ extends Control
 ## figura do NPC como o VX: "Mostrar Imagem" com origem no centro em (272, 170) da tela
 ## 544x416 (7 px acima do horizonte), aqui 1,5x (criador, 2026-11-23) e centrada na vista.
 ## No VX não há NPC desenhado no corredor (nenhum evento visível em 3D nos mapas). Figuras do VX (Pictures/P15 e D_Brute Onia; o criador deixou a escolha ao
-## agente) só no teste.
+## agente) só no teste. Paredes, piso e fundo do overworld são gerados; personagens e
+## inimigos voltam a usar os assets SMT como placeholder, por decisão do criador.
 
 const REF := "res://Shin Megami Tensei VX The Genesis/Shin Megami Tensei The Genesis/Graphics/"
-const WALL_TEX_PATH := REF + "System/Wall001.png"
-const PARALLAX_PATH := REF + "Parallaxes/MP001.png"
-## D-055: um humano e um demônio do VX, só no teste. Textos [PLACEHOLDER].
+const ART := "res://assets/generated/dungeon/"
+const WALL_TEX_PATH := ART + "wall.png"
+const PARALLAX_PATH := ART + "backdrop.png"
+const FLOOR_TILE_PATH := ART + "floor_tile.png"
+const FLOOR_SHADER := preload("res://prototypes/dungeon-crawler/dungeon_floor.gdshader")
+const MIXED_FILTER := preload("res://prototypes/dungeon-crawler/dungeon_mixed_filter.gdshader")
+const MIXED_PALETTE := preload("res://prototypes/dungeon-crawler/dungeon_mixed_palette.res")
 const NPCS := [
 	{"id": "human", "cell": Vector2i(3, 1), "picture": REF + "Pictures/P15.png", "name": "[PLACEHOLDER] HUMAN",
 		"pages": ["[PLACEHOLDER] Human NPC line. Filler that only fills the two lines of the dialogue box; the real text is still to be written by the creator."]},
@@ -43,6 +53,24 @@ const NPC_PICTURE_CENTER := Vector2(408, 251.0 - 7.0 * 1.5)
 ## aparece quando a célula do NPC entra na vista 3D (até o corte de 5,5 tiles).
 const MARKER_PATH := REF + "System/AutoMapMarker.png"
 const MARKER_REGION := Rect2i(0, 32, 16, 16)
+
+## Inimigos de exploração: pontos vermelhos que avançam um tile por passo do jogador.
+## Ao alcançar o jogador (ou ao serem alcançados) iniciam o combate novo.
+const ENEMY_DEFS := [
+	{"id": "stalker", "name": "CRIMSON STALKER", "cell": Vector2i(4, 1),
+		"picture": ART + "enemy_stalker.png"},
+	{"id": "hound", "name": "ASH HOUND", "cell": Vector2i(7, 3),
+		"picture": ART + "enemy_hound.png"},
+	{"id": "wraith", "name": "CINDER WRAITH", "cell": Vector2i(7, 7),
+		"picture": ART + "enemy_wraith.png"},
+]
+const ENEMY_INK := Color("bb3d48")
+const ENEMY_DARK := Color("5c1c2b")
+## Volta ao dungeon depois de uma vitória; o motor de batalha lê este meta.
+const DUNGEON_RETURN_META := &"exodus_dungeon_return_scene"
+const DUNGEON_STATE_META := &"exodus_dungeon_state"
+const BATTLE_SCENE := "res://scenes/battle/BattlePlayable.tscn"
+const DUNGEON_SCENE := "res://prototypes/dungeon-crawler/DungeonProto.tscn"
 
 # Passo reto: velocidade normal 30% menor que a corrida (0,15 s / 0,7 = 0,214 s) e, por
 # ordem do criador (2026-11-23), mais 30% menor: 0,214 s / 0,7 = 0,306 s.
@@ -94,6 +122,8 @@ const SHAKE_DURATION := 10
 
 enum Act { NONE, FORWARD, TURN_LEFT, TURN_RIGHT, TURN_BACK }
 
+signal encounter_started(id: String)
+
 ## Labirinto de teste: '#' parede, '.' chão, 'S' início (olhando para o leste).
 const MAZE := [
 	"###########",
@@ -134,11 +164,20 @@ var marker_tex: Texture2D
 var talking_npc: Dictionary = {}
 var dialogue: DialogueBox
 var talk_count := 0
+
+## Inimigos do mapa. `enemies_enabled` existe para os testes de geometria/UI poderem
+## andar pelo labirinto sem disparar combate; o jogo usa o padrão (ligado).
+var enemies: DungeonEnemies
+var enemy_sprites := {}
+var enemies_enabled := true
+var encounter_pending := false
+var battle_scene := BATTLE_SCENE
+var _last_action_was_step := false
 var viewport: SubViewport
 var view_container: SubViewportContainer
 var pivot: Node3D
 var camera: Camera3D
-## Fundo do VX (MP001, 544x416): faixa preta do horizonte em 1:1, teto e chão esticados
+## Fundo gerado (backdrop.png, 544x416): faixa preta do horizonte em 1:1, teto e chão esticados
 ## até a borda da vista nova (são degradês verticais; as cores das pontas ficam).
 var parallax: Control
 var parallax_texture: Texture2D
@@ -149,15 +188,46 @@ var ui_font: SystemFont
 var ui_bold: SystemFont
 
 
+func _maze_rows() -> Array:
+	return MAZE
+
+
+func _npc_defs() -> Array:
+	return NPCS
+
+
+func _enemy_defs() -> Array:
+	return ENEMY_DEFS
+
+
+func _location_title() -> String:
+	return LOCATION_NAME
+
+
+func _default_facing() -> int:
+	return 1
+
+
+func _is_modal_open() -> bool:
+	return dialogue != null and dialogue.is_open
+
+
+func _draw_extra_hud() -> void:
+	pass
+
+
 func _ready() -> void:
-	for row in MAZE:
+	for row in _maze_rows():
 		grid.append(row)
 	for y in grid.size():
 		var x := grid[y].find("S")
 		if x >= 0:
 			cell = Vector2i(x, y)
-	for npc in NPCS:
+	facing = _default_facing()
+	for npc in _npc_defs():
 		npcs.append(npc.duplicate())
+	enemies = DungeonEnemies.new(_enemy_defs())
+	_restore_state()
 	_build_ui()
 	_build_world()
 	_snap_to_state()
@@ -187,7 +257,7 @@ func _build_ui() -> void:
 	parallax.size = Vector2(SCREEN.x + PARALLAX_OVERSCAN * 2.0, SCREEN.y)
 	parallax.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(parallax)
-	# MP001: teto 0..166, faixa preta 166..183 em volta do horizonte (177), chão 183..288
+	# backdrop gerado: teto 0..166, faixa preta 166..183 em volta do horizonte (177), chão 183..288
 	# (abaixo disso fica escondido pelo painel). Gradiente vertical: esticar na
 	# horizontal não muda nada.
 	var band_top := HORIZON_Y - 11.0
@@ -219,6 +289,7 @@ func _build_ui() -> void:
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	view_container.add_child(viewport)
+	_add_overworld_filter()
 
 	hud = Control.new()
 	hud.size = size
@@ -250,6 +321,28 @@ func _build_ui() -> void:
 	add_child(dialogue)
 	dialogue.opened.connect(_on_dialogue_toggled)
 	dialogue.closed.connect(_on_dialogue_toggled)
+
+
+func _add_overworld_filter() -> void:
+	# Capture the parallax and the transparent 3D viewport together, before the UI.
+	var world_copy := BackBufferCopy.new()
+	# Whole-viewport copy: a COPY_MODE_RECT region is taken in window pixels, not scaled
+	# by the content scale, so in any window other than 816 x 624 (e.g. back from a
+	# battle) only the top-left part of the view was copied and the rest went black.
+	world_copy.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	add_child(world_copy)
+
+	var filter_material := ShaderMaterial.new()
+	filter_material.shader = MIXED_FILTER
+	filter_material.set_shader_parameter("mixed_palette", MIXED_PALETTE)
+	filter_material.set_shader_parameter("frame_height", FRAME_RECT.size.y)
+	var filter_rect := ColorRect.new()
+	filter_rect.name = "OverworldFilter"
+	filter_rect.position = FRAME_RECT.position
+	filter_rect.size = FRAME_RECT.size
+	filter_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	filter_rect.material = filter_material
+	add_child(filter_rect)
 
 
 ## Grupo com os mesmos atributos do BattleController (FALLEN com os ganhos de absorção
@@ -308,9 +401,18 @@ func _draw_hud() -> void:
 	# Nome do local, na linha e na posição do Battle Log.
 	hud.draw_line(Vector2(8, LOCATION_LINE_Y), Vector2(SCREEN.x - 8, LOCATION_LINE_Y), Color(1, 1, 1, 0.38))
 	hud.draw_rect(Rect2(11, LOCATION_LINE_Y + 8.5, 5, 5), INK)
-	_str(LOCATION_NAME, 23, LOCATION_LINE_Y + 15.5, INK, 12)
+	_str(_location_title(), 23, LOCATION_LINE_Y + 15.5, INK, 12)
+	# Feedback de passo: coordenada e direção mudam a cada movimento.
+	var headings := ["N", "E", "S", "W"]
+	_str("POS %d,%d  %s" % [cell.x, cell.y, headings[facing]], SCREEN.x - 23,
+			LOCATION_LINE_Y + 15.5, INK, 12, true, HORIZONTAL_ALIGNMENT_RIGHT)
+	if enemies_enabled and enemies != null:
+		var threat: Dictionary = enemies.in_front(cell, DIRS[facing], 3)
+		if not threat.is_empty():
+			_str("! HOSTILE AHEAD", 250, LOCATION_LINE_Y + 15.5, ENEMY_INK, 12, true)
 	for i in party.size():
 		_draw_status(party[i], STATUS_RECTS[i])
+	_draw_extra_hud()
 
 
 func _draw_status(unit: BattleUnit, r: Rect2) -> void:
@@ -350,6 +452,24 @@ func _build_world() -> void:
 	mi.material_override = mat
 	world.add_child(mi)
 
+	# Piso real em 3D: lajes quadradas com perspectiva, em vez de só degradê no fundo.
+	var floor_span := maxf(40.0, float(maxi(grid.size(), grid[0].length() if not grid.is_empty() else 11)) + 16.0)
+	var floor_plane := PlaneMesh.new()
+	floor_plane.size = Vector2(floor_span, floor_span)
+	var floor_mi := MeshInstance3D.new()
+	floor_mi.name = "FloorGrid"
+	floor_mi.mesh = floor_plane
+	var floor_mat := ShaderMaterial.new()
+	floor_mat.shader = FLOOR_SHADER
+	floor_mat.set_shader_parameter("floor_tex", load(FLOOR_TILE_PATH))
+	floor_mat.set_shader_parameter("tiles", Vector2(floor_span, floor_span))
+	floor_mi.material_override = floor_mat
+	# PlaneMesh já é horizontal no Godot 4: girar 90° o transformaria numa parede.
+	var center_x := float(grid[0].length()) * 0.5 if not grid.is_empty() else 5.0
+	var center_z := float(grid.size()) * 0.5 if not grid.is_empty() else 5.0
+	floor_mi.position = Vector3(center_x, 0.0, center_z)
+	world.add_child(floor_mi)
+
 	pivot = Node3D.new()
 	world.add_child(pivot)
 	camera = Camera3D.new()
@@ -360,6 +480,12 @@ func _build_world() -> void:
 	camera.far = FAR_TILES
 	camera.current = true
 	pivot.add_child(camera)
+	# As silhuetas usam material padrão iluminado; sem luz elas ficam pretas.
+	var lamp := OmniLight3D.new()
+	lamp.light_color = Color("ffd2c4")
+	lamp.light_energy = 3.5
+	lamp.omni_range = 9.0
+	camera.add_child(lamp)
 
 	var backdrop := MeshInstance3D.new()
 	var quad := QuadMesh.new()
@@ -372,6 +498,50 @@ func _build_world() -> void:
 	backdrop.position = Vector3(0, WALL_HEIGHT / 2.0 - EYE_HEIGHT, -BACKDROP_DIST)
 	backdrop.name = "FarBackdrop"
 	camera.add_child(backdrop)
+
+	_build_enemy_sprites(world)
+
+
+## Altura da silhueta no mundo. As células têm centro em coordenadas inteiras e as
+## paredes ficam nas bordas (meio-inteiro), com WALL_HEIGHT de altura; a silhueta tem
+## que caber no corredor e ficar de pé sobre o piso.
+const ENEMY_HEIGHT := 0.56
+
+
+## Silhuetas dos inimigos no corredor, em billboard: o jogador vê onde eles estão
+## e vê cada um deles avançar um tile quando dá um passo.
+func _build_enemy_sprites(world: Node3D) -> void:
+	for enemy in enemies.entries:
+		var tex: Texture2D = load(String(enemy.picture))
+		var sprite := Sprite3D.new()
+		sprite.name = "Enemy:" + String(enemy.id)
+		# Forma extraída do battler SMT, sem a arte colorida nem a moldura: só silhueta.
+		sprite.texture = tex
+		sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sprite.centered = true
+		# Escala uniforme para a altura fixa, em vez de um fator solto que
+		# ultrapassava a parede e deixava a figura flutuando.
+		var fit := ENEMY_HEIGHT / (float(tex.get_height()) * sprite.pixel_size)
+		sprite.scale = Vector3(fit, fit, fit)
+		var c: Vector2i = enemy.cell
+		sprite.position = _enemy_sprite_position(c)
+		world.add_child(sprite)
+		enemy_sprites[String(enemy.id)] = sprite
+
+
+## Centro da célula (os inimigos vivem no centro do corredor, nunca na borda da parede),
+## com a base da silhueta no piso.
+func _enemy_sprite_position(c: Vector2i) -> Vector3:
+	return Vector3(float(c.x), ENEMY_HEIGHT * 0.5, float(c.y))
+
+
+func _animate_enemy_sprite(id: String, from: Vector2i, to: Vector2i) -> void:
+	var sprite: Sprite3D = enemy_sprites.get(id)
+	if sprite == null:
+		return
+	sprite.position = _enemy_sprite_position(from)
+	var tw := create_tween()
+	tw.tween_property(sprite, "position", _enemy_sprite_position(to), minf(0.16, step_time()))
 
 
 func _add_wall_quad(st: SurfaceTool, c: Vector2i, d: int) -> void:
@@ -466,14 +636,19 @@ static func yaw_for(f: int) -> float:
 func _snap_to_state() -> void:
 	pivot.position = Vector3(cell.x, 0, cell.y)
 	pivot.rotation.y = yaw_for(facing)
+	pivot.rotation.z = 0.0
+	camera.position.y = EYE_HEIGHT
 
 
 func _map_cell(c: Vector2i) -> void:
 	visited[c] = true
 	_update_npc_seen()
+	_update_enemy_seen()
 	if npc_picture != null:
 		refresh_front_picture()
 	automap.queue_redraw()
+	if hud != null:
+		hud.queue_redraw()
 
 
 ## Círculo do VX em P&B: pixels brancos do original (o brilho) viram pretos, o resto branco.
@@ -527,6 +702,93 @@ func _update_npc_seen() -> void:
 			npc_seen[npc.id] = true
 
 
+# ---------------------------------------------------------------- inimigos (combate novo)
+
+func _update_enemy_seen() -> void:
+	if enemies == null or camera == null:
+		return
+	enemies.observe(func(c: Vector2i) -> bool: return npc_cell_in_view(c))
+	automap.queue_redraw()
+
+
+## Chamado só depois de um passo (não de um giro): cada inimigo avança um tile.
+func _after_player_step() -> void:
+	if not enemies_enabled or encounter_pending or enemies == null:
+		return
+	var before := {}
+	for enemy in enemies.entries:
+		before[String(enemy.id)] = enemy.cell
+	var hit: Dictionary = enemies.at(cell)
+	if hit.is_empty():
+		hit = enemies.step_toward(cell, func(c: Vector2i) -> bool: return not is_wall(c))
+	# A silhueta desliza até a nova célula no mesmo passo do jogador.
+	for enemy in enemies.entries:
+		var id := String(enemy.id)
+		if before.has(id) and before[id] != enemy.cell:
+			_animate_enemy_sprite(id, before[id], enemy.cell)
+	if not hit.is_empty():
+		_begin_battle(hit)
+	else:
+		_update_enemy_seen()
+
+
+func _begin_battle(enemy: Dictionary) -> void:
+	if encounter_pending:
+		return
+	encounter_pending = true
+	var id := String(enemy.get("id", ""))
+	encounter_started.emit(id)
+	# A silhueta some junto com o inimigo encontrado.
+	var sprite: Sprite3D = enemy_sprites.get(id)
+	if sprite != null:
+		sprite.queue_free()
+		enemy_sprites.erase(id)
+	# O inimigo encontrado sai do mapa: voltar da batalha não dispara outra luta.
+	enemies.entries.erase(enemy)
+	_save_state()
+	if battle_scene.is_empty():
+		return
+	# Busca em runtime: scripts -s compilam antes dos autoloads.
+	var fader := get_tree().root.get_node_or_null("SceneFader")
+	if fader != null:
+		fader.fade_to(battle_scene, true)
+	else:
+		get_tree().change_scene_to_file(battle_scene)
+
+
+func _save_state() -> void:
+	var route: Array = []
+	for key in visited.keys():
+		var c: Vector2i = key
+		route.append([c.x, c.y])
+	Engine.set_meta(DUNGEON_STATE_META, {
+		"cell": [cell.x, cell.y],
+		"facing": facing,
+		"enemies": enemies.serialise(),
+		"visited": route,
+		"seen": enemies.seen.keys(),
+	})
+	Engine.set_meta(DUNGEON_RETURN_META, DUNGEON_SCENE)
+
+
+func _restore_state() -> void:
+	if not Engine.has_meta(DUNGEON_STATE_META):
+		return
+	var saved: Dictionary = Engine.get_meta(DUNGEON_STATE_META)
+	Engine.remove_meta(DUNGEON_STATE_META)
+	var pos: Array = saved.get("cell", [])
+	if pos.size() == 2:
+		cell = Vector2i(int(pos[0]), int(pos[1]))
+	facing = int(saved.get("facing", facing))
+	enemies.restore(saved.get("enemies", []))
+	for item in saved.get("visited", []):
+		var c: Array = item
+		if c.size() == 2:
+			visited[Vector2i(int(c[0]), int(c[1]))] = true
+	for id in saved.get("seen", []):
+		enemies.seen[String(id)] = true
+
+
 # ---------------------------------------------------------------- entrada
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -562,7 +824,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	_update_shake(delta)
 	dialogue.process_text(delta)
-	if dialogue.is_open:
+	if _is_modal_open() or encounter_pending:
 		return
 	# Seta para cima segurada continua andando (Input.press? no VX). Contra a parede,
 	# só bate de novo depois de soltar e apertar (Input.trigger? no VX).
@@ -572,7 +834,7 @@ func _process(delta: float) -> void:
 
 ## Pede uma ação. Durante um movimento, guarda uma entrada (set_next_input do VX).
 func request(act: int) -> void:
-	if dialogue.is_open:
+	if _is_modal_open() or encounter_pending:
 		return
 	if busy:
 		if _queued == Act.NONE:
@@ -597,10 +859,18 @@ func _step_forward() -> void:
 		_clash()
 		return
 	busy = true
+	_last_action_was_step = true
 	cell = target
 	var tw := create_tween()
 	tw.tween_property(pivot, "position", Vector3(cell.x, 0, cell.y), step_time())
 	tw.finished.connect(_on_action_done)
+	# Balanço de câmera e leve rolagem: o passo precisa ser perceptível.
+	var bob := create_tween()
+	bob.tween_property(camera, "position:y", EYE_HEIGHT + 0.06, step_time() * 0.45)
+	bob.tween_property(camera, "position:y", EYE_HEIGHT, step_time() * 0.55)
+	var roll := create_tween()
+	roll.tween_property(pivot, "rotation:z", 0.012, step_time() * 0.5)
+	roll.tween_property(pivot, "rotation:z", 0.0, step_time() * 0.5)
 
 
 ## Duração do passo: corre (0,15 s) enquanto X estiver segurado.
@@ -610,9 +880,12 @@ func step_time() -> float:
 
 func _turn(step: int, then_again: bool) -> void:
 	busy = true
+	_last_action_was_step = false
 	var from_yaw := pivot.rotation.y
 	facing = posmod(facing + step, 4)
 	automap.queue_redraw()
+	if hud != null:
+		hud.queue_redraw()
 	var tw := create_tween()
 	tw.tween_property(pivot, "rotation:y", from_yaw - step * PI / 2.0, TURN_TIME)
 	if then_again:
@@ -627,6 +900,7 @@ func _turn(step: int, then_again: bool) -> void:
 func _clash() -> void:
 	clash_count += 1
 	_up_needs_release = true
+	_last_action_was_step = false
 	busy = true
 	start_shake(SHAKE_POWER, SHAKE_SPEED, SHAKE_DURATION)
 
@@ -636,7 +910,11 @@ func _on_action_done() -> void:
 	_map_cell(cell)
 	busy = false
 	refresh_front_picture()
-	_flush_queue()
+	if _last_action_was_step:
+		_last_action_was_step = false
+		_after_player_step()
+	if not encounter_pending:
+		_flush_queue()
 
 
 func _flush_queue() -> void:
@@ -719,6 +997,16 @@ func _draw_automap() -> void:
 							automap.draw_line(p + ends[d][0], p + ends[d][1], Color(1, 1, 1, 0.9), 1)
 	for m in marked_cells():
 		automap.draw_texture(marker_tex, center + Vector2((m - cell) * CELL_PX))
+	# Inimigos vistos: pontos vermelhos com contorno escuro, distintos da marca P&B.
+	if enemies_enabled and enemies != null:
+		for enemy in enemies.entries:
+			var m: Vector2i = enemy.cell
+			if not enemies.seen.has(enemy.id) or m == cell:
+				continue
+			var p := center + Vector2((m - cell) * CELL_PX)
+			automap.draw_rect(Rect2(p + Vector2(3, 3), Vector2(10, 10)), ENEMY_DARK)
+			automap.draw_rect(Rect2(p + Vector2(5, 5), Vector2(6, 6)), ENEMY_INK)
+			automap.draw_rect(Rect2(p + Vector2(6, 6), Vector2(2, 2)), Color("f2b9b2"))
 	var c := center + Vector2(CELL_PX / 2.0, CELL_PX / 2.0)
 	var fwd := Vector2(DIRS[facing])
 	var side := Vector2(-fwd.y, fwd.x)

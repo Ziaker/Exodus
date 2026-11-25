@@ -191,6 +191,9 @@ func _draw() -> void:
 		if age < 0.0: continue
 		var k := age / maxf(0.001, float(p.life) - float(p.delay))
 		var ink: Color = (p.ink as Color).lerp(p.ink2, k * k)
+		# Letras não podem cobrir o Battle Log / status: some antes da janela.
+		var cutoff: float = float(hud.BATTLE_LOG_RECT.position.y) - 8.0 if hud != null else 304.0
+		ink.a *= clampf((cutoff - float(p.pos.y)) / 18.0, 0.0, 1.0)
 		if ink.a <= 0.01: continue
 		draw_set_transform(p.pos, float(p.angle))
 		draw_string_outline(font, Vector2.ZERO, p.glyph, HORIZONTAL_ALIGNMENT_CENTER, -1, int(p.px), 3, Color(OUTLINE, ink.a))

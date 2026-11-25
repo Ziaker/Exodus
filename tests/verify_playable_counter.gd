@@ -13,7 +13,12 @@ class CounterBattle extends "res://scripts/battle/playable_controller.gd":
 		return BattleMath.RhythmResult.MISS
 	func _defender_reaction(_a: BattleUnit, _b: BattleUnit) -> int:
 		return BattleMath.RhythmResult.MISS
+	## When >= 0, only the counter roll with this index (0 = first) counters.
+	var counter_on_roll := -1
+	var _rolls := 0
 	func _enemy_counter_roll(_e: BattleUnit) -> bool:
+		_rolls += 1
+		if counter_on_roll >= 0: return _rolls - 1 == counter_on_roll
 		return force_enemy_counter
 
 var checks := 0
@@ -31,6 +36,7 @@ func check(ok: bool, reason: String) -> void:
 
 func fresh() -> Control:
 	var battle := CounterBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	return battle
 
@@ -53,6 +59,14 @@ func wait_seconds(seconds: float) -> void:
 	while waited < seconds:
 		await process_frame
 		waited += root.get_process_delta_time()
+
+## D-057: Z first pages the event lines still waiting beyond the two-row log, then goes on.
+func confirm(battle: Control) -> void:
+	for _i in 8:
+		var paging: bool = battle.hud.mode == "continue" and battle.hud.log_hidden()
+		battle.proceed()
+		if not paging: return
+
 
 func lost_line(battle: Control) -> String:
 	for i in range(battle.log_history.size() - 1, -1, -1):
@@ -119,9 +133,11 @@ func _run() -> void:
 	check(battle.hud.command_options.has("FIGHT"), "The attacked hero may counter-attack")
 	battle.submit_command(battle.hud.command_options.find("FIGHT"))
 	check(battle.hud.mode == "counter", "D-049: ATTACK as a reaction opens the two-rail exchange, no target choice")
-	check(battle.counter.style == "panel", "Hero counter: rails sit in the hero's status panel")
-	var panel: Rect2 = battle.hud.STATUS_RECTS[reactor_index]
-	check(panel.encloses(battle.counter.red_rect) and panel.encloses(battle.counter.white_rect), "Both rails stay inside the reacting hero's panel")
+	check(battle.counter.style == "panel", "Hero counter: rails use the panel (defense) look")
+	# D-058 (creator 2026-11-25): a hero's reaction runs inside the battle log, not over the hero.
+	var log_rect: Rect2 = battle.hud.BATTLE_LOG_RECT
+	check(log_rect.encloses(battle.counter.red_rect) and log_rect.encloses(battle.counter.white_rect), "Both rails of a hero counter sit inside the battle log")
+	check(battle.hud.rails_in_log(), "The log text gives way to the rails")
 	check(battle.counter.red_rect.end.y <= battle.counter.white_rect.position.y, "Opponent rail is on top, the hero's below")
 	check(is_equal_approx(battle.counter.red_duration, float(target.stats.agi) / float(enemy.stats.agi)), "Red pointer duration follows the AGI ratio")
 	enemy.current_hp = 999  # survive the counter so its lost combo is observable
@@ -129,14 +145,15 @@ func _run() -> void:
 	var target_hp: int = target.current_hp
 	var enemy_acts: int = enemy.acts_available
 	check(enemy_acts >= 1, "The announcing enemy still has its second combo act")
+	# D-057: the lost combo (and the act it gives) is told inside the exchange result.
+	var mid_acts: int = target.acts_available
 	battle.counter.finish(R.POINT, R.BEAM)
 	check(enemy.current_sp == maxi(0, enemy_sp - 4), "Winning interruption steals 4 SP from the enemy")
 	check(target.current_hp == target_hp, "An interrupted enemy attack deals no damage")
 	check(battle.log_history.any(func(l: String) -> bool: return l.begins_with(target.display_name + " ->")), "The winning counter strike resolves")
 	check(battle.hud.impact_left == 0.0 and battle.hud.shake_unit == null, "A normal interruption has no impact frame or shake")
 	check(battle.hud.mode == "continue", "The exchange result pauses for reading")
-	var mid_acts: int = target.acts_available
-	battle.proceed()
+	confirm(battle)
 	check(lost_line(battle).contains("loses 1 queued") and lost_line(battle).contains("gains 1"), "Interrupted enemy loses its next combo attack; the interrupter gains an act (%s)" % lost_line(battle))
 	check(target.acts_available == mini(4, mid_acts + 1), "+1 act for the lost enemy command")
 	check(enemy.acts_available == enemy_acts - 1, "The lost combo attack spends the enemy's act")
@@ -162,7 +179,7 @@ func _run() -> void:
 	check(other.current_hp < other_hp, "The losing counter-attacker takes the enemy hit")
 	check(other.current_sp == maxi(0, other_sp - 4), "The losing counter-attacker loses the stolen SP")
 	check(enemy.current_sp >= enemy_sp + 4, "The enemy gains the stolen SP")
-	battle.proceed()
+	confirm(battle)
 	check(lost_line(battle).is_empty(), "A winning enemy is not interrupted and keeps its combo")
 	battle.queue_free(); await process_frame
 
@@ -186,7 +203,7 @@ func _run() -> void:
 	check(battle.log_history.any(func(l: String) -> bool: return l.begins_with("COUNTER TIE")), "Tie is reported in the log")
 	check(not battle.log_history.any(func(l: String) -> bool: return l.contains("SP stolen")), "Tie steals no SP")
 	check(enemy.current_sp >= enemy_sp, "Tie: the enemy loses no SP")
-	battle.proceed()
+	confirm(battle)
 	check(lost_line(battle).contains("loses 1 queued") and not lost_line(battle).contains("gains"), "Tie: the enemy loses its next attack and nobody gains an act")
 	battle.queue_free(); await process_frame
 
@@ -219,24 +236,60 @@ func _run() -> void:
 	battle = fresh()
 	battle.force_enemy_counter = true
 	battle._fallen.current_hp = 999
-	battle.submit_plan(0); battle.submit_plan(0)
-	battle.exec_plan()
 	battle.hud.opponents[0].current_hp = 999
-	battle.submit_target(0)
+	# D-057: each ATTACK takes its target while planning; the full plan runs at once.
+	battle.submit_plan(0); battle.submit_target(0)
+	battle.submit_plan(0); battle.submit_target(0)
 	enemy = battle.hud.opponents[0]
 	check(battle.hud.mode == "counter" and battle.counter.style == "enemy", "An enemy counter opens the rails over the enemy")
+	# D-059 (creator 2026-11-25): a counter-attack is one arrow from each side meeting in the
+	# middle, with a spark at the clash.
+	await process_frame
+	var clash: Array = battle.hud.role_arrows().filter(func(a): return a.clash)
+	check(clash.size() == 1 and clash[0].key == "%s<>%s" % [battle._fallen.id, battle.hud.opponents[0].id], "The counter is drawn as one clash between Fallen and FOE A")
+	check(battle.hud.role_arrows().filter(func(a): return not a.clash).is_empty(), "No plain arrow between the two while they clash")
 	var column: Rect2 = battle.hud.enemy_column(0)
 	check(column.encloses(battle.counter.red_rect) and column.encloses(battle.counter.white_rect), "Enemy-counter rails stay over the enemy column")
 	check(not battle.rhythm.visible, "The single rail is hidden while the two rails run")
 	enemy_acts = enemy.acts_available
 	var fallen_sp: int = battle._fallen.current_sp
 	battle.counter.finish(R.MISS, R.POINT)
-	check(battle._fallen.current_hp < 999, "The winning enemy counter strikes the hero")
+	# Power 8 with no damage floor yet (D-033 floor not implemented) can land a 0-damage hit:
+	# the strike is proven by its event line, not by HP.
+	var struck: bool = battle.hud.events.any(func(e): return String(e.text).contains("hits FALLEN") or String(e.text).begins_with("FALLEN blocks"))
+	check(struck, "The winning enemy counter strikes the hero (%s)" % str(battle.hud.events.map(func(e): return e.text)))
 	check(battle._fallen.current_sp <= fallen_sp - 4, "The hero loses 4 SP to the enemy")
-	battle.proceed()
+	confirm(battle)
 	check(lost_line(battle).contains("FALLEN loses 1 queued") and lost_line(battle).contains("gains 1"), "The hero's next planned attack is lost; the enemy gains an act (%s)" % lost_line(battle))
 	check(enemy.acts_available == mini(4, enemy_acts + 1), "+1 act for the enemy per lost hero command")
 	check(battle._fallen.acts_available == 0, "The lost command takes its act with it")
+	battle.queue_free(); await process_frame
+
+	# ---- Creator 2026-11-25: two chained ATTACKs; the enemy counters the SECOND one. The
+	# attack rail kept between the hits must leave with the counter, not stay on screen
+	# (it used to stay through the next turns, over the spot of the dead enemy).
+	battle = fresh()
+	battle.counter_on_roll = 1
+	battle._fallen.current_hp = 999
+	battle.submit_plan(0); battle.submit_target(0)
+	battle.submit_plan(0); battle.submit_target(0)
+	battle.exec_plan()
+	check(battle.hud.mode == "timing" and battle.rhythm.visible, "The chained rail runs for the first hit")
+	battle.rhythm._finish(R.MISS)
+	for i in 240:
+		if battle.hud.mode in ["counter", "continue"]: break
+		await process_frame
+	check(not battle.rhythm.visible, "The kept attack rail leaves when the enemy counters the last hit (mode %s)" % battle.hud.mode)
+	for i in 240:
+		if battle.hud.mode == "counter": break
+		if battle.hud.mode == "continue": confirm(battle)
+		await process_frame
+	if battle.hud.mode == "counter": battle.counter.finish(R.POINT, R.MISS)
+	for i in 600:
+		if battle.hud.mode in ["plan", "react", "command", "result"]: break
+		if battle.hud.mode in ["continue", "announce"]: confirm(battle)
+		await process_frame
+	check(not battle.rhythm.visible, "No attack rail after the exchange, on the next prompt (mode %s)" % battle.hud.mode)
 	battle.queue_free(); await process_frame
 
 	# ---- Real input: Z stops the white pointer on the live rails.

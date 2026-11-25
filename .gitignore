@@ -14,5 +14,8 @@ assets/**
 !assets/
 !assets/SOURCE_ASSETS.md
 !assets/ASSET_MANIFEST.json
+# Generated overworld art (original, not third-party placeholder)
+!assets/generated/
+!assets/generated/**
 data/extracted/
 captures/

@@ -41,6 +41,7 @@ func check(ok: bool, reason: String) -> void:
 
 func fresh() -> Control:
 	var battle := ControlledBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	return battle
 
@@ -50,6 +51,13 @@ func advance(battle: Control, frames: int = 60) -> void:
 		elif battle.hud.mode == "react": battle.answer_reaction(false)
 		else: return
 		await process_frame
+
+## D-057: Z first pages the event lines still waiting beyond the two-row log, then goes on.
+func confirm(battle: Control) -> void:
+	for _i in 8:
+		var paging: bool = battle.hud.mode in ["continue", "announce"] and battle.hud.log_hidden()
+		battle.proceed()
+		if not paging: return
 
 ## Creator 2026-11-23: FOE B plays right after Fallen, before Yoch, so once Fallen reserves
 ## the enemy announces at once; a second call (Yoch's REACT) then has no own turn to use.
@@ -74,12 +82,10 @@ func _run() -> void:
 	var foe_a: BattleUnit = battle.state.units[2]
 	check(battle.state.turn_order == ([battle._fallen, foe_b, battle._ally, foe_a] as Array[BattleUnit]), "Turn order: fastest first, AGI tie to the higher SP (%s)" % [battle.state.turn_order.map(func(u: BattleUnit) -> String: return u.display_name)])
 	await advance(battle)
-	check(battle.active_actor == battle._ally and battle._fallen.acts_available == 1, "After Fallen's one-command turn the turn passes on (FOE B, then Yoch)")
-	check(foe_b.acts_available == 0 and foe_a.acts_available == 2, "FOE B played its turn before Yoch, FOE A not yet")
-	battle.submit_command(battle.hud.command_options.find("REST"))
-	await advance(battle)
-	check(foe_a.acts_available == 0, "FOE A plays after Yoch")
-	check(battle.active_actor == battle._fallen and battle.hud.mode == "plan", "The cycle comes back to Fallen for his act left")
+	# D-057 (creator 2026-11-25): the act left after the queue is planned in the same turn;
+	# the turn only ends with 0 acts or REST.
+	check(battle.active_actor == battle._fallen and battle.hud.mode == "plan" and battle._fallen.acts_available == 1, "After the first command Fallen plans his act left in the same turn")
+	check(foe_b.acts_available == 2 and foe_a.acts_available == 2, "Nobody else played during Fallen's turn")
 	battle.submit_command(0); battle.submit_target(0)
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	check(battle._fallen.acts_available == 0, "Two attacks consume the two available acts")
@@ -87,6 +93,12 @@ func _run() -> void:
 	for line in battle.log_history:
 		if line.begins_with("FALLEN ->"): attacks += 1
 	check(attacks == 2, "Two physical attacks must actually resolve in the same round")
+	await advance(battle)
+	check(battle.active_actor == battle._ally and foe_b.acts_available == 0 and foe_a.acts_available == 2, "With Fallen at 0 acts the turn passes on: FOE B, then Yoch")
+	battle.submit_command(battle.hud.command_options.find("REST"))
+	await advance(battle)
+	# FOE A played after Yoch and the round closed: round 2 opens with Fallen planning.
+	check(battle.state.round_number == 2 and battle.active_actor == battle._fallen and battle.hud.mode == "plan", "FOE A plays after Yoch, then the next round starts (round %d)" % battle.state.round_number)
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle)
@@ -104,7 +116,7 @@ func _run() -> void:
 		check(battle._fallen.acts_available == 1 - reaction, "Each reaction must spend exactly one shared act")
 		check(battle.state.round_number == 1, "Both reactions must occur in round one")
 		if reaction == 0:
-			battle.proceed()
+			confirm(battle)
 			# The counter tie cost FOE B its second attack; Yoch's turn comes before FOE A's.
 			check(battle.active_actor == battle._ally and battle.hud.mode == "plan", "After FOE B, Yoch plays before FOE A")
 			reserve(battle)
@@ -155,11 +167,13 @@ func _run() -> void:
 	battle = fresh()
 	battle.submit_command(0); battle.submit_target(1)
 	battle.rhythm._finish(BattleMath.RhythmResult.POINT)
-	check(battle._fallen.acts_available == 0, "A landed resisted hit spends one action plus the documented -1 act")
-	check(battle.hud.message.contains("-1 ACT"), "Resist penalty must be explicit in the visible battle log")
+	# D-057 (creator 2026-11-25): an affinity never takes an act; RESIST spends only the action.
+	check(battle._fallen.acts_available == 1, "A landed resisted hit spends only its own act (no -1 penalty)")
+	check(not battle.hud.events.any(func(e: Dictionary) -> bool: return String(e.text).contains("loses")), "No act loss is told for a resisted hit")
 	battle.queue_free(); await process_frame
 	# D-022: declining the reaction makes the enemy attack an automatic hit.
 	battle = AutoHitBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	reserve(battle); reserve(battle)
 	check(battle.hud.mode == "react", "D-022 case must reach an enemy announcement")
@@ -170,6 +184,7 @@ func _run() -> void:
 	battle.queue_free(); await process_frame
 	# Declaring any reaction (here REST) keeps the normal enemy timing roll (MISS).
 	battle = AutoHitBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	reserve(battle); reserve(battle)
 	var defender: BattleUnit = battle.action_defender
@@ -182,6 +197,7 @@ func _run() -> void:
 	battle.queue_free(); await process_frame
 	# D-047: o mesmo inimigo resolve dois ataques em bloco, cada um com seu número.
 	battle = AutoHitBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	# Creator 2026-11-23: Fallen's death ends the battle; he must survive both hits here.
 	battle._fallen.current_hp = 999
@@ -200,8 +216,8 @@ func _run() -> void:
 	await process_frame
 	var hits2: int = battle.fx.history.count("HIT") + battle.fx.history.count("CRITICAL")
 	check(hits2 == 2, "D-047: second combo attack draws another damage number (got %d)" % hits2)
-	# Creator 2026-11-22: hero damage numbers sit just above the hit hero's card and
-	# only appear after the hit animation has ended.
+	# Creator 2026-11-24 (HUD option 13): hero damage numbers sit over the hit hero's
+	# window and only appear after the hit animation has ended.
 	var hero_hit: Dictionary = {}
 	for effect in battle.fx.effects:
 		if effect.unit != null and effect.unit.is_player and effect.kind in ["HIT", "CRITICAL"]:
@@ -210,11 +226,7 @@ func _run() -> void:
 	check(battle.fx.numbers.is_empty(), "No damage number may show while its hit animation is playing")
 	var card: Rect2 = hero_hit.target_rect
 	var nr: Rect2 = battle.fx.number_rect(hero_hit)
-	check(is_equal_approx(nr.end.y, card.position.y), "Hero damage number band must end at the top of the hero's card")
-	check(is_equal_approx(nr.position.y, battle.hud.STAGE_RECT.end.y), "Hero damage number band must start below the stage")
-	check(nr.position.x == card.position.x and nr.size.x == card.size.x, "Hero damage number stays over the hit hero's card")
-	for panel in battle.hud.STATUS_RECTS:
-		check(not nr.intersects(panel), "Hero damage number must not cover a status panel")
+	check(nr == card and battle.hud.STATUS_RECTS.has(card), "Hero damage number sits over the hit hero's own window")
 	var waited := 0.0
 	while battle.fx.effects.has(hero_hit) and waited < 5.0:
 		await process_frame
@@ -229,23 +241,25 @@ func _run() -> void:
 	# D-046 no caminho jogável: linhas EXEC/UNDO, marcadores verdes e cadeia compartilhada.
 	battle = fresh()
 	check(battle.hud.mode == "plan", "Playable battle must open the D-046 plan")
-	check(battle.hud.plan_options.size() == 7, "Plan menu must expose five commands plus EXEC and UNDO")
-	battle.submit_plan(0)
-	check(battle._planned.size() == 1, "One ATTACK must be committed")
+	# Creator 2026-11-24: EXEC/UNDO only once something is queued (REACT here: test driver).
+	check(battle.hud.plan_options.size() == 5 and not battle.hud.plan_options.has("EXEC"), "Empty plan: commands only, no EXEC or UNDO")
+	# D-057: each ATTACK takes its target while planning.
+	battle.submit_plan(0); battle.submit_target(0)
+	check(battle._planned.size() == 1 and battle.queued_acts_for(battle.hud.opponents[0]) == 1, "One ATTACK must be committed with its target")
+	check(battle.hud.plan_options.slice(-2) == ["EXEC", "UNDO"], "A queued command brings EXEC and UNDO")
 	battle.undo_plan()
-	check(battle._planned.is_empty(), "UNDO must drop the last planned command")
-	battle.submit_plan(0)
-	battle.submit_plan(0)
-	check(battle._planned.size() == 2, "Two ATTACKs must be committed before resolving")
-	check(battle.planned_acts_for(battle._fallen) == 2, "Committed acts must light the green ACT markers")
-	battle.exec_plan()
-	check(battle.hud.mode == "target", "EXEC must start resolving the plan")
-	battle.submit_target(0)
-	check(battle.rhythm._chain_mode, "Two planned ATTACKs must share one persistent rhythm line")
+	check(battle._planned.is_empty() and battle.queued_acts_for(battle.hud.opponents[0]) == 0, "UNDO must drop the last planned command and its target mark")
+	battle.submit_plan(0); battle.submit_target(0)
+	check(battle._planned.size() == 1 and battle.planned_acts_for(battle._fallen) == 1, "Committed acts must light the green ACT markers")
+	battle.submit_plan(0); battle.submit_target(0)
+	# Two acts committed: the plan runs at once, no confirmation and no target question.
+	check(battle.hud.mode == "timing" and battle.rhythm._chain_mode, "Two planned ATTACKs on one target run at once on one persistent rhythm line")
+	check(battle.planned_acts_for(battle._fallen) == 1, "During the queue only the command still to run stays green")
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	battle.queue_free(); await process_frame
 	# Item 2 da auditoria: reação que mata o atacante ainda pausa o resultado do combo.
 	battle = AutoHitBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	reserve(battle); reserve(battle)
 	var doomed: BattleUnit = battle.action_attacker

@@ -1,24 +1,22 @@
 extends RefCounted
 ## Keeps verify_* scripts independent of the player's real D-024 save.
-## begin(): back up user://exodus_progress.json (if any) and start from no gains.
-## end(): discard what the test wrote and restore the backup byte for byte.
+## begin(): point ProgressStore at a test-only file and start from no gains.
+## end(): discard the test file and point ProgressStore back at the real save.
 ## Call end() from SceneTree._finalize() so it also runs after a failed check.
+##
+## 2026-11-25: the old sandbox backed up the real user://exodus_progress.json, cleared it
+## and restored it at the end. A test killed before end() (timeout, crash, two suites at
+## once) lost the backup and left test data in the player's save. The real file is now
+## never opened by the tests.
 
-static var _had_save := false
-static var _backup := ""
+const TEST_PATH := "user://exodus_progress_verify.json"
 
 
 static func begin() -> void:
-	_had_save = FileAccess.file_exists(ProgressStore.SAVE_PATH)
-	if _had_save:
-		_backup = FileAccess.get_file_as_string(ProgressStore.SAVE_PATH)
+	ProgressStore.save_path_override = TEST_PATH
 	ProgressStore.clear()
 
 
 static func end() -> void:
 	ProgressStore.clear()
-	if _had_save:
-		var file := FileAccess.open(ProgressStore.SAVE_PATH, FileAccess.WRITE)
-		if file != null:
-			file.store_string(_backup)
-			file.close()
+	ProgressStore.save_path_override = ""

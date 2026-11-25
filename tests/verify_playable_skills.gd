@@ -37,6 +37,7 @@ func check(ok: bool, reason: String) -> void:
 
 func fresh(skills: Array[StringName] = []) -> Control:
 	var battle := SkillBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	battle._fallen.skills.assign(skills)
 	return battle
@@ -105,6 +106,7 @@ func _run() -> void:
 	# ---- Skills survive Fallen's death (only half of the stat gains are lost).
 	ProgressStore.halve_gains()
 	battle = SkillBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	check(battle._fallen.skills == [&"bleedbuff", &"lunge"], "Learned skills are kept after Fallen's death")
 	check(int(ProgressStore.load_absorbs().get("genetic_foe_b", 0)) == 1, "Counters are loaded from the save")
@@ -115,9 +117,8 @@ func _run() -> void:
 	battle = fresh()
 	check(battle.hud.mode == "plan" and battle.hud.plan_options[0] == "FIGHT" and not battle.hud.plan_options.has("ATTACK"), "The command is FIGHT")
 	battle.submit_plan(0)
-	check(battle.hud.mode == "plan", "Without skills FIGHT is committed like the old ATTACK")
-	battle.exec_plan()
-	check(battle.hud.mode == "target", "FIGHT without skills goes to the target")
+	# D-057: the target is chosen while planning.
+	check(battle.hud.mode == "target", "FIGHT without skills goes straight to its target")
 	battle.queue_free(); await process_frame
 
 	# ---- Submenu: ATTACK + skills, dimmed rows, log text, reject, Energy Eat extra.
@@ -155,6 +156,7 @@ func _run() -> void:
 	check(battle._planned.is_empty() and battle._planned_skills.is_empty(), "UNDO removes the last command and its skill")
 	battle.submit_plan(0)
 	battle.submit_skill(0)
+	battle.submit_target(0)  # D-057: the target is chosen while planning
 	check(battle._planned_skills.size() == 1 and battle._planned_skills[0].is_empty() and battle.planned_acts_for(fallen) == 1, "ATTACK from the submenu is a plain FIGHT (1 act)")
 	battle.queue_free(); await process_frame
 

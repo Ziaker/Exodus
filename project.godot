@@ -9,6 +9,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 
 DialogueManager="*res://addons/dialogue_manager/dialogue_manager.gd"
+SceneFader="*res://scripts/core/scene_fader.gd"
 
 [display]
 
@@ -17,7 +18,7 @@ window/size/viewport_height=624
 window/size/resizable=true
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
-window/stretch/scale_mode="integer"
+window/stretch/scale_mode="fractional"
 
 [editor_plugins]
 

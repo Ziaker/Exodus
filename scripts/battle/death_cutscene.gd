@@ -11,11 +11,11 @@ extends Node2D
 
 signal finished
 
-## D-055: 816 x 624 screen. The prologue composition (figure + box, 544 x 416) keeps its
-## size and is centred; the letters still fill the whole screen.
-const W := 816.0
-const H := 624.0
-const OFFSET := Vector2((W - 544.0) * 0.5, (H - 416.0) * 0.5)
+## Creator 2026-11-24 (fixes D-055): drawn at 544 x 416 inside the battle, which shows it
+## 1.5x on the 816 x 624 screen, like the prologue.
+const W := 544.0
+const H := 416.0
+const OFFSET := Vector2.ZERO
 const ALPHABET := "אבגדהוזחטיכלמנסעפצקרשת"
 ## Creator 2026-11-23: letters and angel in #a8182a.
 const INK := Color("a8182a")
@@ -61,7 +61,15 @@ var loss_labels: Array[Dictionary] = []
 var words: Array[Dictionary] = []
 var label_font: SystemFont
 
+## Creator 2026-11-23: SMT VX's "Law" plays in the angel scenes, starting 0.8 s after the
+## death (creator 2026-11-24; was 1 s) at the file's own volume (100%), fading to silence
+## over the last second.
+const LAW_BGM := "res://assets/audio/bgm/DDS2_law.ogg"
+const MUSIC_START := 0.8
+const MUSIC_FADE := 1.0
+
 var t := 0.0
+var music: AudioStreamPlayer
 var letters: Array[Dictionary] = []
 var line := ""
 var font: SystemFont
@@ -72,6 +80,10 @@ var figure_bbox := Rect2i()
 
 
 func _ready() -> void:
+	music = AudioStreamPlayer.new()
+	music.name = "Law"
+	music.stream = load(LAW_BGM)
+	add_child(music)
 	font = SystemFont.new()
 	font.font_names = PackedStringArray(["Tahoma", "Arial", "David Libre"])
 	label_font = SystemFont.new()
@@ -192,9 +204,18 @@ func _inside_figure(px: Vector2i) -> bool:
 func _process(delta: float) -> void:
 	t += delta
 	queue_redraw()
+	music.volume_linear = music_volume(t)
+	if t >= MUSIC_START and not music.playing and not _done:
+		music.play()
 	if t >= END and not _done:
 		_done = true
+		music.stop()
 		finished.emit()
+
+
+## 1 until the last MUSIC_FADE seconds, then linearly down to 0 at END.
+static func music_volume(at: float) -> float:
+	return clampf((END - at) / MUSIC_FADE, 0.0, 1.0)
 
 
 func _ease(x: float) -> float:

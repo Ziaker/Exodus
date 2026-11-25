@@ -36,7 +36,7 @@ var red_perfect := false
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	position = Vector2.ZERO
-	size = Vector2(ProjectSettings.get_setting("display/window/size/viewport_width"), ProjectSettings.get_setting("display/window/size/viewport_height"))
+	size = preload("res://scripts/battle/playable_hud.gd").SCREEN
 	hide()
 
 

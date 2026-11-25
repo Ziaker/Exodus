@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HUD de combate: propostas</title>
+<style>
+  :root {
+    --text: #f7f3ed; --green: #81e6a8; --red: #ff9a92; --own: #36aa6d; --foe: #bb3d48;
+    --pp: #f5f58c; --wine: #2a111a; --wine2: #210d16; --line: rgba(255,255,255,.32);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d0709; color: var(--text); font-family: Tahoma, Verdana, sans-serif; }
+  header.page { max-width: 860px; margin: 0 auto; padding: 18px 16px 6px; }
+  header.page h1 { font-size: 20px; margin: 0 0 6px; }
+  header.page p { margin: 0 0 12px; color: #cdbfc3; font-size: 14px; line-height: 1.45; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  nav button { background: #23141a; color: var(--text); border: 1px solid #4a3038; padding: 7px 12px;
+    font: inherit; font-size: 13px; cursor: pointer; }
+  nav button[aria-pressed="true"] { background: #3c2029; border-color: #b08a92; }
+  .note { max-width: 860px; margin: 10px auto 0; padding: 0 16px; font-size: 14px; line-height: 1.5; color: #e4d8db; min-height: 64px; }
+  .note b { color: #fff; }
+  .wrap { max-width: 860px; margin: 8px auto 40px; padding: 0 16px; }
+  .fit { width: 100%; aspect-ratio: 816 / 624; position: relative; overflow: hidden; }
+  .screen { position: absolute; left: 0; top: 0; width: 816px; height: 624px; transform-origin: 0 0;
+    overflow: hidden; background: #000; }
+  .screen img.stage { position: absolute; left: 0; top: 0; width: 816px; height: 624px; image-rendering: pixelated; }
+  .abs { position: absolute; }
+  .enemy { position: absolute; image-rendering: pixelated; filter: brightness(0); }
+  .shadow { position: absolute; background: rgba(0,0,0,.85); border-radius: 50%; }
+  .ename { position: absolute; width: 200px; margin-left: -100px; text-align: center; font-weight: bold;
+    font-size: 19.5px; color: #fffaf5; text-shadow: 0 1.5px 0 #1f0e14; }
+  .proto { display: none; } .proto.on { display: block; }
+  .b { font-weight: bold; }
+  .log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log .star { font-weight: bold; margin-right: 6px; color: #f6e7df; }
+  .log .old { opacity: .8; }
+  .pips span { display: inline-block; width: 15px; height: 15px; margin-right: 5px; border: 1.5px solid #e8e0dc; }
+  .pips span.full { background: #e8e0dc; }
+  .pips.mini span { width: 10px; height: 10px; margin-right: 3px; }
+  .pips span.plan { background: var(--own); border-color: var(--own); }
+  .bar { position: relative; height: 7px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; }
+  img.ref { width: 100%; display: block; }
+  @font-face { font-family: "TitleMono"; src: url("../../addons/gut/fonts/AnonymousPro-Bold.ttf"); }
+  /* RPG Maker XP window, the same one as the title menu (title_screen.gd). */
+  .xp { position: absolute; background: rgba(37,37,49,.95); border: 1px solid #080b14;
+    box-shadow: inset 0 0 0 1px #b9b8c5, inset 0 0 0 2px #515163; }
+  .xpw { position: absolute; background: rgba(42,17,26,.95); border: 1px solid #080b14;
+    box-shadow: inset 0 0 0 1px #c9b3b8, inset 0 0 0 2px #5a3440; }
+  .snes { position: absolute; background: #000; border: 3px solid #e9e6dc; outline: 1px solid #000; }
+  .mono { font-family: "TitleMono", "Courier New", monospace; }
+  .sel { background: rgba(92,84,109,.6); outline: 1px solid rgba(167,160,180,.4); }
+  .selw { background: rgba(120,60,75,.55); outline: 1px solid rgba(220,180,190,.35); }
+  .shade { text-shadow: 0 1px 0 #000, 1px 0 0 #000, 0 0 3px #000; }
+  .thinbar { position: absolute; height: 6px; background: rgba(0,0,0,.6); }
+  .thinbar i { position: absolute; top: 0; bottom: 0; }
+  /* Window of proposal 1 (thin light border, dark translucent fill). */
+  .w1 { position: absolute; background: rgba(10,4,7,.62); border: 1.5px solid rgba(240,225,228,.55); }
+  .w1s { position: absolute; background: rgba(10,4,7,.45); border: 1px solid rgba(240,225,228,.45); }
+  .rule { position: absolute; height: 1px; background: rgba(255,255,255,.45); }
+  .mbar { display: inline-block; vertical-align: middle; position: relative; height: 5px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.3); }
+  .mbar i { position: absolute; left: 0; top: 0; bottom: 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>HUD de combate: propostas</h1>
+  <p>Cada proposta usa o cenário D real exportado do jogo e as silhuetas reais, em 816×624. Todas mostram a mesma informação: rodada, barra de SP, nomes dos inimigos, log de 3 linhas, HP/EN/PP/SP/ACT dos dois heróis e os sete comandos. A primeira aba é o HUD de hoje, para comparar. As abas 13 a 15 são versões mais baixas da 1 (janelas), com os heróis separados; as abas 10 a 12 misturam a 9 (fios) com a 1 (janelas); as abas 5 a 9 são a segunda rodada: antigas, simples e com o máximo de espaço para o cenário, os inimigos e o texto; as marcadas "1ª" são a rodada anterior.</p>
+  <nav id="tabs"></nav>
+</header>
+<div class="note" id="note"></div>
+<div class="wrap"><div class="fit" id="fit"><div class="screen" id="screen">
+
+<!-- 0: current HUD (real frame) -->
+<div class="proto" data-name="Atual" data-note="<b>HUD de hoje</b>, capturado do jogo agora (com os asteriscos no log).">
+  <img class="ref" src="assets/current_hud.png" alt="">
+</div>
+
+<div class="proto" data-name="5 · XP fina" data-note="<b>5 · Janela XP fina.</b> Rodada e barra de SP numa linha só no topo, sem caixa. Embaixo, uma única janela do mesmo estilo do menu do título (RPG Maker XP), só números, sem barras: os dois heróis em duas linhas e os comandos na ponta direita. O log fica logo acima, no fundo preto 50%. HUD ocupa ~25% da tela.">
+  <div class="abs shade" style="left:10px;top:6px;font-size:14px;color:#d8cdd0">ROUND 01</div>
+  <div class="abs b shade" style="left:104px;top:5px;font-size:15px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:196px;top:11px;width:424px"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="34"></div>
+  <div class="abs log" style="left:8px;top:440px;width:800px;padding:6px 12px;background:rgba(0,0,0,.5);font-size:16px;line-height:20px">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="xp" style="left:8px;top:516px;width:800px;height:100px;font-size:16px">
+    <div class="abs" style="left:14px;top:14px;width:560px;display:flex;gap:18px;align-items:baseline">
+      <span class="b sel" style="width:84px;padding:0 4px">FALLEN</span><span>HP <b>14/14</b></span><span>EN 8/8</span><span class="b" style="color:var(--green)">SP 46</span><span>ACT <b>1</b>/4</span></div>
+    <div class="abs" style="left:14px;top:56px;width:560px;display:flex;gap:18px;align-items:baseline">
+      <span class="b" style="width:84px;padding:0 4px">Yoch</span><span>HP <b>11/11</b></span><span style="color:var(--pp)">PP 0/8</span><span class="b" style="color:var(--green)">SP 29</span><span>ACT <b>2</b>/4</span></div>
+    <div class="abs" style="left:574px;top:10px;bottom:10px;width:1px;background:#515163"></div>
+    <div class="abs" style="left:586px;top:8px;width:200px;line-height:21px"><div class="cmds xpcmd" data-cols="2"></div></div>
+  </div>
+</div>
+
+<div class="proto" data-name="6 · Topo e menu" data-note="<b>6 · Topo em janela, menu que aparece.</b> Rodada e SP numa janela XP fina no topo. Embaixo, uma janela baixa com os dois heróis lado a lado (2 linhas cada). Os comandos aparecem numa janelinha XP ao lado do log só quando é a vez de escolher; no resto do tempo o cenário fica livre ali.">
+  <div class="xp" style="left:6px;top:4px;width:804px;height:30px"></div>
+  <div class="abs" style="left:16px;top:10px;font-size:14px;color:#d8cdd0">ROUND 01</div>
+  <div class="abs b" style="left:108px;top:9px;font-size:15px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:200px;top:15px;width:416px"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b" style="right:16px;top:9px;font-size:15px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="40"></div>
+  <div class="abs log" style="left:8px;top:482px;width:616px;padding:5px 12px;background:rgba(0,0,0,.5);font-size:16px;line-height:20px">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="xp" style="left:632px;top:462px;width:176px;height:86px;padding:6px 6px;font-size:15px;line-height:18.5px"><div class="cmds xpcmd" data-cols="2"></div></div>
+  <div class="xp" style="left:8px;top:552px;width:800px;height:64px;font-size:16px">
+    <div class="abs b" style="left:14px;top:9px"><span class="sel" style="padding:0 4px">FALLEN</span></div>
+    <div class="abs" style="left:300px;top:10px">ACT <b>1</b>/4</div>
+    <div class="abs" style="left:18px;top:35px">HP <b>14/14</b> &nbsp; EN 8/8 &nbsp; <b style="color:var(--green)">SP 46</b></div>
+    <div class="abs" style="left:404px;top:8px;bottom:8px;width:1px;background:#515163"></div>
+    <div class="abs b" style="left:420px;top:9px;padding:0 4px">Yoch</div>
+    <div class="abs" style="left:706px;top:10px">ACT <b>2</b>/4</div>
+    <div class="abs" style="left:424px;top:35px">HP <b>11/11</b> &nbsp; <span style="color:var(--pp)">PP 0/8</span> &nbsp; <b style="color:var(--green)">SP 29</b></div>
+  </div>
+</div>
+
+<div class="proto" data-name="7 · Caixas pretas" data-note="<b>7 · Caixas pretas de borda branca</b>, na fonte do título (Anonymous Pro). Estilo dos RPGs de 16 bits: tudo em caixas pretas simples, colunas alinhadas, só números. Topo numa caixa fina; log numa caixa; heróis e comandos em duas caixas embaixo.">
+  <div class="snes mono" style="left:6px;top:4px;width:804px;height:30px"></div>
+  <div class="abs mono" style="left:16px;top:9px;font-size:15px;color:#d8cdd0">R01</div>
+  <div class="abs b mono" style="left:66px;top:8px;font-size:16px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:176px;top:15px;width:440px;background:#222"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b mono" style="right:16px;top:8px;font-size:16px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="30"></div>
+  <div class="snes mono log" style="left:6px;top:436px;width:804px;height:74px;padding:6px 12px;font-size:16px;line-height:20px">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="snes mono" style="left:6px;top:516px;width:560px;height:102px;padding:10px 14px;font-size:17px;line-height:40px;white-space:pre"><b>&#9656;FALLEN</b>  HP <b>14/14</b>  EN  8/8  <b style="color:var(--green)">SP 46</b>  ACT 1/4
+ Yoch    HP <b>11/11</b>  <span style="color:var(--pp)">PP  0/8</span>  <b style="color:var(--green)">SP 29</b>  ACT 2/4</div>
+  <div class="snes mono" style="left:572px;top:516px;width:238px;height:102px;padding:7px 10px;font-size:17px;line-height:21px"><div class="cmds monocmd" data-cols="2"></div></div>
+</div>
+
+<div class="proto" data-name="8 · Vinho único" data-note="<b>8 · Uma janela vinho só</b>, com a borda XP e as cores do jogo: o log em cima e os dois heróis embaixo, separados por um fio. Topo sem caixa. Os comandos aparecem numa janelinha vinho logo acima, à direita, só na hora de escolher.">
+  <div class="abs shade" style="left:10px;top:6px;font-size:14px;color:#d8cdd0">ROUND 01</div>
+  <div class="abs b shade" style="left:104px;top:5px;font-size:15px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:196px;top:11px;width:424px"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="30"></div>
+  <div class="xpw" style="left:632px;top:398px;width:176px;height:84px;padding:6px 6px;font-size:15px;line-height:18px"><div class="cmds winecmd" data-cols="2"></div></div>
+  <div class="xpw log" style="left:8px;top:486px;width:800px;height:130px;font-size:16px;line-height:20px;padding:8px 14px">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+    <div style="height:1px;background:#5a3440;margin:6px 0 7px"></div>
+    <div style="display:flex;gap:16px"><span class="b selw" style="width:80px;padding:0 4px">FALLEN</span><span>HP <b>14/14</b></span><span>EN 8/8</span><b style="color:var(--green)">SP 46</b><span>ACT <b>1</b>/4</span>
+      <span style="margin-left:24px" class="b">Yoch</span><span>HP <b>11/11</b></span><span style="color:var(--pp)">PP 0/8</span><b style="color:var(--green)">SP 29</b><span>ACT <b>2</b>/4</span></div>
+  </div>
+</div>
+
+<div class="proto" data-name="9 · Só fios" data-note="<b>9 · Só fios, sem janelas</b>, na fonte do título. Nada de caixas: um fio separa o campo do rodapé, o texto tem sombra preta. Os heróis em duas linhas de texto alinhado; os comandos em duas colunas à direita; o log acima do fio. É o que mais mostra o cenário.">
+  <div class="abs mono shade" style="left:10px;top:6px;font-size:14px;color:#d8cdd0">ROUND 01</div>
+  <div class="abs b mono shade" style="left:104px;top:5px;font-size:15px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:196px;top:11px;width:424px"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b mono shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="36"></div>
+  <div class="abs" style="left:0;right:0;top:420px;bottom:0;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.72) 45%)"></div>
+  <div class="abs log mono shade" style="left:14px;top:456px;width:790px;font-size:16px;line-height:20px">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="abs" style="left:10px;right:10px;top:526px;height:1px;background:rgba(255,255,255,.45)"></div>
+  <div class="abs mono shade" style="left:14px;top:536px;font-size:17px;line-height:36px;white-space:pre"><b style="color:#fff">&#9656;FALLEN</b>  HP <b>14/14</b>  EN  8/8  <b style="color:var(--green)">SP 46</b>  ACT 1/4
+ Yoch    HP <b>11/11</b>  <span style="color:var(--pp)">PP  0/8</span>  <b style="color:var(--green)">SP 29</b>  ACT 2/4</div>
+  <div class="abs mono shade" style="left:596px;top:534px;width:210px;font-size:17px;line-height:20.5px"><div class="cmds monocmd" data-cols="2"></div></div>
+</div>
+
+<div class="proto" data-name="10 · Fios + janelas" data-note="<b>10 · Fios com janelas.</b> Base da 9 (topo numa linha, fonte do título, log solto com sombra sobre o degradê, fio separando o campo). Os heróis e os comandos ganham as janelas da 1: borda fina clara e fundo escuro translúcido, com as barrinhas de HP e EN/PP.">
+  <div class="abs mono shade" style="left:10px;top:6px;font-size:14px;color:#d8cdd0">ROUND 01</div>
+  <div class="abs b mono shade" style="left:104px;top:5px;font-size:15px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:196px;top:11px;width:424px"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b mono shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="34"></div>
+  <div class="abs" style="left:0;right:0;top:420px;bottom:0;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.6) 45%)"></div>
+  <div class="abs log mono shade" style="left:14px;top:450px;width:790px;font-size:16px;line-height:20px">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="rule" style="left:10px;right:10px;top:518px"></div>
+  <div class="w1 mono" style="left:8px;top:526px;width:580px;height:90px;padding:12px 12px;font-size:15px;line-height:33px">
+    <div class="mono" style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+        <span class="b" style="width:84px">&#9656;FALLEN</span>
+        <span>HP</span><span class="mbar" style="width:70px"><i style="width:100%;background:#d9584f"></i></span><b style="width:52px">14/14</b>
+        <span style="color:#5f8fd6">EN</span><span class="mbar" style="width:46px"><i style="width:100%;background:#5f8fd6"></i></span><span style="width:34px;color:#5f8fd6">8/8</span>
+        <b style="color:var(--green);width:52px">SP 46</b><span>ACT 1/4</span></div>
+    <div class="mono" style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+        <span class="b" style="width:84px">&nbsp;Yoch</span>
+        <span>HP</span><span class="mbar" style="width:70px"><i style="width:100%;background:#d9584f"></i></span><b style="width:52px">11/11</b>
+        <span style="color:var(--pp)">PP</span><span class="mbar" style="width:46px"><i style="width:0%;background:var(--pp)"></i></span><span style="width:34px;color:var(--pp)">0/8</span>
+        <b style="color:var(--green);width:52px">SP 29</b><span>ACT 2/4</span></div>
+  </div>
+  <div class="w1 mono" style="left:596px;top:526px;width:212px;height:90px;padding:6px 8px;font-size:16px;line-height:19.5px"><div class="cmds monocmd" data-cols="2"></div></div>
+</div>
+
+<div class="proto" data-name="11 · Janelas finas" data-note="<b>11 · Janelas finas.</b> As janelas da 1 com borda mais fina e fundo mais leve, numa faixa baixa só; dentro, o texto alinhado e a fonte da 9. O log fica sem caixa, direto sobre o cenário com sombra, como na 9; nenhum degradê.">
+  <div class="abs mono shade" style="left:10px;top:6px;font-size:14px;color:#d8cdd0">ROUND 01</div>
+  <div class="abs b mono shade" style="left:104px;top:5px;font-size:15px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:196px;top:11px;width:424px"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b mono shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="40"></div>
+  <div class="abs log mono shade" style="left:14px;top:464px;width:790px;font-size:16px;line-height:20px">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="w1s mono" style="left:8px;top:532px;width:580px;height:84px;padding:9px 12px;font-size:15px;line-height:33px">
+    <div class="mono" style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+        <span class="b" style="width:84px">&#9656;FALLEN</span>
+        <span>HP</span><span class="mbar" style="width:70px"><i style="width:100%;background:#d9584f"></i></span><b style="width:52px">14/14</b>
+        <span style="color:#5f8fd6">EN</span><span class="mbar" style="width:46px"><i style="width:100%;background:#5f8fd6"></i></span><span style="width:34px;color:#5f8fd6">8/8</span>
+        <b style="color:var(--green);width:52px">SP 46</b><span>ACT 1/4</span></div>
+    <div class="mono" style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+        <span class="b" style="width:84px">&nbsp;Yoch</span>
+        <span>HP</span><span class="mbar" style="width:70px"><i style="width:100%;background:#d9584f"></i></span><b style="width:52px">11/11</b>
+        <span style="color:var(--pp)">PP</span><span class="mbar" style="width:46px"><i style="width:0%;background:var(--pp)"></i></span><span style="width:34px;color:var(--pp)">0/8</span>
+        <b style="color:var(--green);width:52px">SP 29</b><span>ACT 2/4</span></div>
+  </div>
+  <div class="w1s mono" style="left:596px;top:532px;width:212px;height:84px;padding:4px 8px;font-size:16px;line-height:19px"><div class="cmds monocmd" data-cols="2"></div></div>
+</div>
+
+<div class="proto" data-name="12 · Molduras de fio" data-note="<b>12 · Molduras de fio.</b> Meio-termo: cada bloco é marcado só por um fio em cima e outro embaixo (sem as laterais), com um fundo escuro bem leve, como uma janela da 1 aberta nos lados. Barrinhas da 1, fonte e sombra da 9. O log tem o mesmo par de fios.">
+  <div class="abs mono shade" style="left:10px;top:6px;font-size:14px;color:#d8cdd0">ROUND 01</div>
+  <div class="abs b mono shade" style="left:104px;top:5px;font-size:15px;color:var(--green)">FALLEN 46</div>
+  <div class="thinbar" style="left:196px;top:11px;width:424px"><i style="left:0;width:56%;background:var(--own)"></i><i style="right:0;width:44%;background:var(--foe)"></i></div>
+  <div class="abs b mono shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">35 FOE A</div>
+  <div class="enemies" data-shift="34"></div>
+  <div class="abs log mono shade" style="left:8px;top:446px;width:800px;height:76px;padding:7px 8px;font-size:16px;line-height:20px;background:rgba(0,0,0,.35);border-top:1px solid rgba(255,255,255,.45);border-bottom:1px solid rgba(255,255,255,.45)">
+    <div><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="abs mono shade" style="left:8px;top:528px;width:580px;height:88px;padding:11px 8px;font-size:15px;line-height:33px;background:rgba(0,0,0,.35);border-top:1px solid rgba(255,255,255,.45);border-bottom:1px solid rgba(255,255,255,.45)">
+    <div class="mono" style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+        <span class="b" style="width:84px">&#9656;FALLEN</span>
+        <span>HP</span><span class="mbar" style="width:70px"><i style="width:100%;background:#d9584f"></i></span><b style="width:52px">14/14</b>
+        <span style="color:#5f8fd6">EN</span><span class="mbar" style="width:46px"><i style="width:100%;background:#5f8fd6"></i></span><span style="width:34px;color:#5f8fd6">8/8</span>
+        <b style="color:var(--green);width:52px">SP 46</b><span>ACT 1/4</span></div>
+    <div class="mono" style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+        <span class="b" style="width:84px">&nbsp;Yoch</span>
+        <span>HP</span><span class="mbar" style="width:70px"><i style="width:100%;background:#d9584f"></i></span><b style="width:52px">11/11</b>
+        <span style="color:var(--pp)">PP</span><span class="mbar" style="width:46px"><i style="width:0%;background:var(--pp)"></i></span><span style="width:34px;color:var(--pp)">0/8</span>
+        <b style="color:var(--green);width:52px">SP 29</b><span>ACT 2/4</span></div>
+  </div>
+  <div class="abs mono shade" style="left:596px;top:528px;width:212px;height:88px;padding:5px 4px;font-size:16px;line-height:19.5px;background:rgba(0,0,0,.35);border-top:1px solid rgba(255,255,255,.45);border-bottom:1px solid rgba(255,255,255,.45)"><div class="cmds monocmd" data-cols="2"></div></div>
+</div>
+
+<div class="proto" data-name="13 · Janelas baixas" data-note="<b>13 · Janelas baixas.</b> A 1, mais enxuta: o topo vira uma linha só; cada herói continua na sua janela, mas em 2 linhas (nome, SP e ACT em cima; HP e EN/PP com barras embaixo); os comandos em 3 colunas; o log numa janela mais baixa. HUD de baixo com ~150 px em vez de ~250.">
+  <div class="abs b shade" style="left:10px;top:6px;font-size:14px;color:#e8e0dc">ROUND 01</div>
+  <div class="abs b shade" style="left:96px;top:5px;font-size:15px;color:var(--green)">FALLEN · 46 SP</div>
+  <div class="abs" style="left:226px;top:9px;width:364px;height:10px;background:rgba(8,8,8,.5)">
+    <div style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:56%;background:var(--own)"></div>
+    <div style="position:absolute;right:1.5px;top:1.5px;bottom:1.5px;width:44%;background:var(--foe)"></div></div>
+  <div class="abs b shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">FOE A · 35 SP</div>
+  <div class="enemies" data-shift="36"></div>
+  <div class="w1 log" style="left:8px;top:468px;width:800px;height:70px;padding:6px 14px;background:rgba(10,4,7,.72);font-size:16px;line-height:19.5px">
+    <div class="old"><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div class="old"><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="w1" style="left:8px;top:546px;width:293px;height:66px;padding:7px 12px;border-color:rgba(240,225,228,.55);background:rgba(10,4,7,.78)">
+    <div style="display:flex;align-items:center;gap:8px;white-space:nowrap" class="b"><span style="font-size:18px">FALLEN</span><span style="flex:1"></span><b style="color:var(--green);font-size:14px">SP 46</b><span style="font-size:14px">ACT 1/4</span><span class="pips mini"><span class="full"></span><span></span><span></span><span></span></span></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:14px;white-space:nowrap">
+      <span>HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><b style="width:42px;text-align:right">14/14</b>
+      <span style="margin-left:6px;color:inherit">EN</span><div class="bar" style="flex:.7"><i style="width:100%;background:#5f8fd6"></i></div><span style="width:30px;text-align:right;color:inherit">8/8</span></div>
+  </div>
+  <div class="w1" style="left:309px;top:546px;width:293px;height:66px;padding:7px 12px;border-color:rgba(240,225,228,.55);background:rgba(10,4,7,.78)">
+    <div style="display:flex;align-items:center;gap:8px;white-space:nowrap" class="b"><span style="font-size:18px">Yoch</span><span style="flex:1"></span><b style="color:var(--green);font-size:14px">SP 29</b><span style="font-size:14px">ACT 2/4</span><span class="pips mini"><span class="full"></span><span class="full"></span><span></span><span></span></span></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:14px;white-space:nowrap">
+      <span>HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><b style="width:42px;text-align:right">11/11</b>
+      <span style="margin-left:6px;color:var(--pp)">PP</span><div class="bar" style="flex:.7"><i style="width:0%;background:var(--pp)"></i></div><span style="width:30px;text-align:right;color:var(--pp)">0/8</span></div>
+  </div>
+  <div class="w1" style="left:610px;top:546px;width:198px;height:66px;padding:4px 6px;background:rgba(10,4,7,.78);font-size:14px;line-height:19px"><div class="cmds" data-cols="3"></div></div>
+</div>
+
+<div class="proto" data-name="14 · Janelas + menu" data-note="<b>14 · Janelas baixas, menu ao lado do log.</b> Os dois heróis ficam em janelas separadas e largas, em 2 linhas, ocupando a faixa de baixo inteira. A janela de comandos fica ao lado do log, à direita, e só aparece na hora de escolher; no resto do tempo o log usa a largura toda.">
+  <div class="abs b shade" style="left:10px;top:6px;font-size:14px;color:#e8e0dc">ROUND 01</div>
+  <div class="abs b shade" style="left:96px;top:5px;font-size:15px;color:var(--green)">FALLEN · 46 SP</div>
+  <div class="abs" style="left:226px;top:9px;width:364px;height:10px;background:rgba(8,8,8,.5)">
+    <div style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:56%;background:var(--own)"></div>
+    <div style="position:absolute;right:1.5px;top:1.5px;bottom:1.5px;width:44%;background:var(--foe)"></div></div>
+  <div class="abs b shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">FOE A · 35 SP</div>
+  <div class="enemies" data-shift="40"></div>
+  <div class="w1 log" style="left:8px;top:474px;width:590px;height:66px;padding:5px 14px;background:rgba(10,4,7,.72);font-size:16px;line-height:19px">
+    <div class="old"><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div class="old"><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="w1" style="left:606px;top:474px;width:202px;height:66px;padding:4px 4px;background:rgba(10,4,7,.78);font-size:14px;line-height:19px"><div class="cmds" data-cols="3"></div></div>
+  <div class="w1" style="left:8px;top:548px;width:396px;height:66px;padding:7px 12px;border-color:rgba(240,225,228,.55);background:rgba(10,4,7,.78)">
+    <div style="display:flex;align-items:center;gap:8px;white-space:nowrap" class="b"><span style="font-size:18px">FALLEN</span><span style="flex:1"></span><b style="color:var(--green);font-size:14px">SP 46</b><span style="font-size:14px">ACT 1/4</span><span class="pips mini"><span class="full"></span><span></span><span></span><span></span></span></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:14px;white-space:nowrap">
+      <span>HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><b style="width:42px;text-align:right">14/14</b>
+      <span style="margin-left:6px;color:inherit">EN</span><div class="bar" style="flex:.7"><i style="width:100%;background:#5f8fd6"></i></div><span style="width:30px;text-align:right;color:inherit">8/8</span></div>
+  </div>
+  <div class="w1" style="left:412px;top:548px;width:396px;height:66px;padding:7px 12px;border-color:rgba(240,225,228,.55);background:rgba(10,4,7,.78)">
+    <div style="display:flex;align-items:center;gap:8px;white-space:nowrap" class="b"><span style="font-size:18px">Yoch</span><span style="flex:1"></span><b style="color:var(--green);font-size:14px">SP 29</b><span style="font-size:14px">ACT 2/4</span><span class="pips mini"><span class="full"></span><span class="full"></span><span></span><span></span></span></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:14px;white-space:nowrap">
+      <span>HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><b style="width:42px;text-align:right">11/11</b>
+      <span style="margin-left:6px;color:var(--pp)">PP</span><div class="bar" style="flex:.7"><i style="width:0%;background:var(--pp)"></i></div><span style="width:30px;text-align:right;color:var(--pp)">0/8</span></div>
+  </div>
+</div>
+
+<div class="proto" data-name="15 · Janelas, log solto" data-note="<b>15 · Janelas baixas, log solto.</b> Igual à 13, mas o log não tem janela: fica direto sobre o chão, com sombra no texto (como na 9). Só os heróis e os comandos ficam em janelas.">
+  <div class="abs b shade" style="left:10px;top:6px;font-size:14px;color:#e8e0dc">ROUND 01</div>
+  <div class="abs b shade" style="left:96px;top:5px;font-size:15px;color:var(--green)">FALLEN · 46 SP</div>
+  <div class="abs" style="left:226px;top:9px;width:364px;height:10px;background:rgba(8,8,8,.5)">
+    <div style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:56%;background:var(--own)"></div>
+    <div style="position:absolute;right:1.5px;top:1.5px;bottom:1.5px;width:44%;background:var(--foe)"></div></div>
+  <div class="abs b shade" style="right:10px;top:5px;font-size:15px;color:var(--red)">FOE A · 35 SP</div>
+  <div class="enemies" data-shift="40"></div>
+  <div class="abs log shade" style="left:14px;top:478px;width:790px;font-size:16px;line-height:20px">
+    <div class="old"><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div class="old"><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FOE B: "Exemplo de quote no log."</div>
+  </div>
+  <div class="w1" style="left:8px;top:546px;width:293px;height:66px;padding:7px 12px;border-color:rgba(240,225,228,.55);background:rgba(10,4,7,.78)">
+    <div style="display:flex;align-items:center;gap:8px;white-space:nowrap" class="b"><span style="font-size:18px">FALLEN</span><span style="flex:1"></span><b style="color:var(--green);font-size:14px">SP 46</b><span style="font-size:14px">ACT 1/4</span><span class="pips mini"><span class="full"></span><span></span><span></span><span></span></span></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:14px;white-space:nowrap">
+      <span>HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><b style="width:42px;text-align:right">14/14</b>
+      <span style="margin-left:6px;color:inherit">EN</span><div class="bar" style="flex:.7"><i style="width:100%;background:#5f8fd6"></i></div><span style="width:30px;text-align:right;color:inherit">8/8</span></div>
+  </div>
+  <div class="w1" style="left:309px;top:546px;width:293px;height:66px;padding:7px 12px;border-color:rgba(240,225,228,.55);background:rgba(10,4,7,.78)">
+    <div style="display:flex;align-items:center;gap:8px;white-space:nowrap" class="b"><span style="font-size:18px">Yoch</span><span style="flex:1"></span><b style="color:var(--green);font-size:14px">SP 29</b><span style="font-size:14px">ACT 2/4</span><span class="pips mini"><span class="full"></span><span class="full"></span><span></span><span></span></span></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:14px;white-space:nowrap">
+      <span>HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><b style="width:42px;text-align:right">11/11</b>
+      <span style="margin-left:6px;color:var(--pp)">PP</span><div class="bar" style="flex:.7"><i style="width:0%;background:var(--pp)"></i></div><span style="width:30px;text-align:right;color:var(--pp)">0/8</span></div>
+  </div>
+  <div class="w1" style="left:610px;top:546px;width:198px;height:66px;padding:4px 6px;background:rgba(10,4,7,.78);font-size:14px;line-height:19px"><div class="cmds" data-cols="3"></div></div>
+</div>
+
+<!-- 1: framed windows -->
+<div class="proto" data-name="1 · Janelas (1ª)" data-note="<b>1 · Janelas emolduradas.</b> Cada bloco ganha uma janela com borda fina e fundo escuro translúcido, como os RPGs clássicos. HP e EN viram barras com o número ao lado; o log vira uma janela do mesmo estilo. Cenário inteiro visível até as janelas.">
+  <div class="abs" style="left:12px;top:10px;right:12px;height:34px;border-bottom:1px solid var(--line)"></div>
+  <div class="abs b" style="right:16px;top:12px;font-size:18px">ROUND 01</div>
+  <div class="abs b" style="left:12px;top:56px;font-size:18px;color:var(--green)">FALLEN · 46 SP</div>
+  <div class="abs b" style="right:12px;top:56px;font-size:18px;color:var(--red)">FOE A · 35 SP</div>
+  <div class="abs" style="left:12px;top:84px;width:792px;height:12px;background:rgba(8,8,8,.5)">
+    <div style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:56%;background:var(--own)"></div>
+    <div style="position:absolute;right:1.5px;top:1.5px;bottom:1.5px;width:44%;background:var(--foe)"></div></div>
+  <div class="enemies"></div>
+  <div class="abs log" style="left:12px;top:380px;width:792px;height:78px;padding:9px 14px;background:rgba(10,4,7,.72);border:1.5px solid rgba(240,225,228,.55);font-size:17px;line-height:20px">
+    <div class="old"><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div class="old"><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FALLEN: 1 act available.</div>
+  </div>
+  <div class="abs" style="left:12px;top:470px;width:258px;height:142px;padding:10px 14px;background:rgba(10,4,7,.78);border:1.5px solid rgba(240,225,228,.55)">
+    <div style="display:flex;justify-content:space-between" class="b"><span style="font-size:21px">FALLEN</span><span style="font-size:16px">ACT 1/4</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:15px"><span style="width:26px">HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><span class="b" style="width:52px;text-align:right">14/14</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:7px;font-size:15px"><span style="width:26px">EN</span><div class="bar" style="flex:1"><i style="width:100%;background:#5f8fd6"></i></div><span style="width:52px;text-align:right">8/8</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><span class="b" style="color:var(--green);font-size:18px">SP 46</span><span class="pips"><span class="full"></span><span></span><span></span><span></span></span></div>
+  </div>
+  <div class="abs" style="left:279px;top:470px;width:258px;height:142px;padding:10px 14px;background:rgba(10,4,7,.78);border:1.5px solid rgba(240,225,228,.55)">
+    <div style="display:flex;justify-content:space-between" class="b"><span style="font-size:21px">Yoch</span><span style="font-size:16px">ACT 2/4</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:15px"><span style="width:26px">HP</span><div class="bar" style="flex:1"><i style="width:100%;background:#d9584f"></i></div><span class="b" style="width:52px;text-align:right">11/11</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:7px;font-size:15px;color:var(--pp)"><span style="width:26px">PP</span><div class="bar" style="flex:1"><i style="width:0%;background:var(--pp)"></i></div><span style="width:52px;text-align:right">0/8</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><span class="b" style="color:var(--green);font-size:18px">SP 29</span><span class="pips"><span class="full"></span><span class="full"></span><span></span><span></span></span></div>
+  </div>
+  <div class="abs" style="left:546px;top:470px;width:258px;height:142px;padding:8px 10px;background:rgba(10,4,7,.78);border:1.5px solid rgba(240,225,228,.55);font-size:16px;line-height:18.5px">
+    <div class="cmds" data-cols="2"></div>
+  </div>
+</div>
+
+<!-- 2: party strip -->
+<div class="proto" data-name="2 · Faixa (1ª)" data-note="<b>2 · Faixa do grupo.</b> Os dois heróis viram duas linhas numa faixa única embaixo (nome, barras de HP e EN/PP, SP, ACT), com o herói da vez destacado em verde. Os comandos ficam em duas colunas na ponta direita da faixa. O log sobe para o topo, sob a barra de SP, e o campo de batalha fica livre até a faixa.">
+  <div class="abs" style="left:12px;top:10px;right:12px;height:34px;border-bottom:1px solid var(--line)"></div>
+  <div class="abs b" style="right:16px;top:12px;font-size:18px">ROUND 01</div>
+  <div class="abs b" style="left:12px;top:56px;font-size:18px;color:var(--green)">FALLEN · 46 SP</div>
+  <div class="abs b" style="right:12px;top:56px;font-size:18px;color:var(--red)">FOE A · 35 SP</div>
+  <div class="abs" style="left:12px;top:84px;width:792px;height:12px;background:rgba(8,8,8,.5)">
+    <div style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:56%;background:var(--own)"></div>
+    <div style="position:absolute;right:1.5px;top:1.5px;bottom:1.5px;width:44%;background:var(--foe)"></div></div>
+  <div class="abs log" style="left:12px;top:104px;width:520px;padding:6px 10px;background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,0));font-size:16px;line-height:19px">
+    <div class="old"><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div class="old"><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FALLEN: 1 act available.</div>
+  </div>
+  <div class="enemies" data-shift="30"></div>
+  <div class="abs" style="left:0;top:500px;width:816px;height:124px;background:linear-gradient(var(--wine),var(--wine2));border-top:1.5px solid rgba(255,255,255,.3)"></div>
+  <div class="abs row" style="left:14px;top:512px;width:566px;height:46px;display:flex;align-items:center;gap:8px;font-size:15px;background:rgba(54,170,109,.14);border-left:3px solid var(--own);padding-left:10px">
+    <span class="b" style="width:76px;font-size:19px">FALLEN</span>
+    <span>HP</span><div class="bar" style="width:76px"><i style="width:100%;background:#d9584f"></i></div><span class="b" style="width:44px">14/14</span>
+    <span>EN</span><div class="bar" style="width:40px"><i style="width:100%;background:#5f8fd6"></i></div><span style="width:28px">8/8</span>
+    <span class="b" style="color:var(--green);width:52px">SP 46</span>
+    <span class="b" style="font-size:13px">ACT 1/4</span>
+    <span class="pips mini"><span class="full"></span><span></span><span></span><span></span></span>
+  </div>
+  <div class="abs row" style="left:14px;top:566px;width:566px;height:46px;display:flex;align-items:center;gap:8px;font-size:15px;padding-left:13px">
+    <span class="b" style="width:76px;font-size:19px">Yoch</span>
+    <span>HP</span><div class="bar" style="width:76px"><i style="width:100%;background:#d9584f"></i></div><span class="b" style="width:44px">11/11</span>
+    <span style="color:var(--pp)">PP</span><div class="bar" style="width:40px"><i style="width:0;background:var(--pp)"></i></div><span style="width:28px;color:var(--pp)">0/8</span>
+    <span class="b" style="color:var(--green);width:52px">SP 29</span>
+    <span class="b" style="font-size:13px">ACT 2/4</span>
+    <span class="pips mini"><span class="full"></span><span class="full"></span><span></span><span></span></span>
+  </div>
+  <div class="abs" style="left:592px;top:510px;width:212px;padding:6px 0;background:rgba(10,4,7,.6);border-left:3px solid var(--own);font-size:16px;line-height:19.5px">
+    <div class="cmds" data-cols="2"></div>
+  </div>
+</div>
+
+<!-- 3: hero cards -->
+<div class="proto" data-name="3 · Cartões (1ª)" data-note="<b>3 · Cartões dos heróis.</b> Cada herói tem um cartão inclinado com HP grande em destaque e EN/PP e SP menores; o herói da vez fica mais alto e com borda verde. Os comandos ficam numa pilha de abas à direita. O log flutua acima dos cartões, sem caixa, só com sombra no texto.">
+  <div class="abs" style="left:12px;top:10px;right:12px;height:34px;border-bottom:1px solid var(--line)"></div>
+  <div class="abs b" style="right:16px;top:12px;font-size:18px">ROUND 01</div>
+  <div class="abs b" style="left:12px;top:56px;font-size:18px;color:var(--green)">FALLEN · 46 SP</div>
+  <div class="abs b" style="right:12px;top:56px;font-size:18px;color:var(--red)">FOE A · 35 SP</div>
+  <div class="abs" style="left:12px;top:84px;width:792px;height:12px;background:rgba(8,8,8,.5)">
+    <div style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:56%;background:var(--own)"></div>
+    <div style="position:absolute;right:1.5px;top:1.5px;bottom:1.5px;width:44%;background:var(--foe)"></div></div>
+  <div class="enemies"></div>
+  <div class="abs log" style="left:18px;top:392px;width:520px;font-size:16px;line-height:20px;text-shadow:0 0 4px #000,0 2px 2px #000">
+    <div class="old"><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div class="old"><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FALLEN: 1 act available.</div>
+  </div>
+  <div class="abs" style="left:18px;top:462px;width:240px;height:150px;transform:skewX(-8deg);background:rgba(20,8,12,.9);border:2px solid var(--own)">
+    <div style="transform:skewX(8deg);padding:10px 16px">
+      <div class="b" style="display:flex;justify-content:space-between"><span style="font-size:20px">FALLEN</span><span style="font-size:15px">ACT 1/4</span></div>
+      <div style="margin-top:4px;font-size:13px;color:#cbbfc2">HP</div>
+      <div class="b" style="font-size:40px;line-height:40px">14<span style="font-size:20px;color:#cbbfc2">/14</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:15px"><span>EN 8/8</span><span class="b" style="color:var(--green)">SP 46</span></div>
+      <div class="pips" style="margin-top:8px"><span class="full"></span><span></span><span></span><span></span></div>
+    </div>
+  </div>
+  <div class="abs" style="left:272px;top:482px;width:240px;height:130px;transform:skewX(-8deg);background:rgba(20,8,12,.85);border:1.5px solid rgba(240,225,228,.4)">
+    <div style="transform:skewX(8deg);padding:10px 16px">
+      <div class="b" style="display:flex;justify-content:space-between"><span style="font-size:20px">Yoch</span><span style="font-size:15px">ACT 2/4</span></div>
+      <div style="margin-top:4px;font-size:13px;color:#cbbfc2">HP</div>
+      <div class="b" style="font-size:34px;line-height:34px">11<span style="font-size:18px;color:#cbbfc2">/11</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:15px"><span style="color:var(--pp)">PP 0/8</span><span class="b" style="color:var(--green)">SP 29</span></div>
+    </div>
+  </div>
+  <div class="abs" style="right:14px;top:392px;width:230px;font-size:16px">
+    <div class="cmds tabs"></div>
+  </div>
+</div>
+
+<!-- 4: minimal -->
+<div class="proto" data-name="4 · Mínimo (1ª)" data-note="<b>4 · Mínimo, sem caixas.</b> Nada de janelas: só texto com sombra forte sobre o cenário. HP vira uma linha fina sob cada nome; os comandos ficam numa linha só, centrada, embaixo; o log fica no canto inferior esquerdo. O cenário ocupa a tela toda.">
+  <div class="abs b" style="right:16px;top:12px;font-size:18px;text-shadow:0 2px 3px #000">ROUND 01</div>
+  <div class="abs b" style="left:12px;top:40px;font-size:18px;color:var(--green);text-shadow:0 2px 3px #000">FALLEN · 46 SP</div>
+  <div class="abs b" style="right:12px;top:40px;font-size:18px;color:var(--red);text-shadow:0 2px 3px #000">FOE A · 35 SP</div>
+  <div class="abs" style="left:12px;top:66px;width:792px;height:6px;background:rgba(0,0,0,.5)">
+    <div style="position:absolute;left:0;top:0;bottom:0;width:56%;background:var(--own)"></div>
+    <div style="position:absolute;right:0;top:0;bottom:0;width:44%;background:var(--foe)"></div></div>
+  <div class="enemies" data-shift="20"></div>
+  <div class="abs" style="left:0;right:0;bottom:0;height:200px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.78))"></div>
+  <div class="abs log" style="left:18px;top:446px;width:420px;font-size:15px;line-height:19px;text-shadow:0 0 4px #000,0 2px 2px #000">
+    <div class="old"><span class="star">*</span>ATTACK: FALLEN -&gt; FOE A | Z</div>
+    <div class="old"><span class="star">*</span>FALLEN -&gt; FOE A: MISS, 0 damage</div>
+    <div><span class="star">*</span>FALLEN: 1 act available.</div>
+  </div>
+  <div class="abs" style="left:470px;top:440px;width:150px;text-shadow:0 2px 3px #000">
+    <div class="b" style="font-size:20px">FALLEN <span style="font-size:14px">ACT 1/4</span></div>
+    <div style="height:3px;background:#d9584f;margin:5px 0"></div>
+    <div style="font-size:14px">HP <b>14/14</b> · EN 8/8</div>
+    <div class="b" style="font-size:15px;color:var(--green)">SP 46</div>
+  </div>
+  <div class="abs" style="left:646px;top:440px;width:150px;text-shadow:0 2px 3px #000">
+    <div class="b" style="font-size:20px">Yoch <span style="font-size:14px">ACT 2/4</span></div>
+    <div style="height:3px;background:#d9584f;margin:5px 0"></div>
+    <div style="font-size:14px">HP <b>11/11</b> · <span style="color:var(--pp)">PP 0/8</span></div>
+    <div class="b" style="font-size:15px;color:var(--green)">SP 29</div>
+  </div>
+  <div class="abs" style="left:0;right:0;top:560px;text-align:center;font-size:17px;text-shadow:0 2px 3px #000">
+    <div class="cmds inline"></div>
+  </div>
+</div>
+
+</div></div></div>
+
+<script>
+const LAYOUT = { enemies: [
+  { name: "FOE A", x: 107.3156, y: 89.5667, w: 79.3688, h: 141.1, cx: 147, nameY: 240.667 },
+  { name: "FOE B", x: 330.7, y: 106.3542, w: 132.6, h: 124.3125, cx: 397, nameY: 240.667 } ] };
+const S = 1.5;
+const COMMANDS = ["FIGHT", "ITEM", "REST", "ABSORB", "REACT", "EXEC", "UNDO"];
+
+for (const proto of document.querySelectorAll('.proto')) {
+  const stageNeeded = proto.dataset.name !== 'Atual';
+  if (stageNeeded) {
+    const img = document.createElement('img');
+    img.className = 'stage'; img.src = 'assets/stage.png'; img.alt = '';
+    proto.prepend(img);
+  }
+  for (const box of proto.querySelectorAll('.enemies')) {
+    const shift = Number(box.dataset.shift || 0);
+    for (const [i, e] of LAYOUT.enemies.entries()) {
+      const sh = document.createElement('div');
+      sh.className = 'shadow';
+      sh.style.cssText = `left:${e.cx * S - 78}px;top:${(e.y + e.h) * S + shift - 10}px;width:156px;height:20px`;
+      box.append(sh);
+      const img = document.createElement('img');
+      img.className = 'enemy'; img.src = `assets/enemy_${i}.png`; img.alt = e.name;
+      img.style.cssText = `left:${e.x * S}px;top:${e.y * S + shift}px;width:${e.w * S}px;height:${e.h * S}px`;
+      box.append(img);
+      const n = document.createElement('div');
+      n.className = 'ename'; n.textContent = e.name;
+      n.style.cssText = `left:${e.cx * S}px;top:${e.nameY * S + shift - 18}px`;
+      box.append(n);
+    }
+  }
+  for (const box of proto.querySelectorAll('.cmds')) {
+    COMMANDS.forEach((c, i) => {
+      const d = document.createElement(box.classList.contains('inline') ? 'span' : 'div');
+      const active = i === 0;
+      if (box.classList.contains('inline')) {
+        d.textContent = c;
+        d.style.cssText = `display:inline-block;margin:0 9px;${active ? 'color:#fff;font-weight:bold;border-bottom:2px solid var(--own)' : 'color:#d8cbcf'}`;
+      } else if (box.classList.contains('tabs')) {
+        d.textContent = c;
+        d.style.cssText = `padding:3px 12px;margin-bottom:3px;background:${active ? 'rgba(54,170,109,.85)' : 'rgba(20,8,12,.85)'};border-left:3px solid ${active ? '#b5efc4' : 'rgba(240,225,228,.35)'};${active ? 'font-weight:bold;margin-left:-14px' : ''}`;
+      } else if (box.classList.contains('xpcmd') || box.classList.contains('winecmd') || box.classList.contains('monocmd')) {
+        if (box.dataset.cols === '2') box.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;column-gap:6px';
+        d.textContent = (box.classList.contains('monocmd') ? (active ? '\u25b8' : '\u00a0') : '') + c;
+        d.className = active ? (box.classList.contains('winecmd') ? 'selw b' : box.classList.contains('xpcmd') ? 'sel b' : 'b') : '';
+        d.style.cssText = 'padding:0 6px';
+      } else if (box.dataset.cols === '2' || box.dataset.cols === '3') {
+        box.style.cssText = `display:grid;grid-template-columns:repeat(${box.dataset.cols},1fr);column-gap:6px`;
+        d.textContent = (active ? '› ' : '  ') + c;
+        d.style.cssText = `padding:1px 4px;${active ? 'background:rgba(255,255,255,.16);font-weight:bold' : ''}`;
+      } else {
+        d.textContent = (active ? '› ' : '  ') + c;
+        d.style.cssText = `padding:0 14px;${active ? 'background:rgba(54,170,109,.35);font-weight:bold' : ''}`;
+      }
+      box.append(d);
+    });
+  }
+}
+
+const protos = [...document.querySelectorAll('.proto')];
+const tabs = document.getElementById('tabs');
+const note = document.getElementById('note');
+function show(i) {
+  protos.forEach((p, j) => p.classList.toggle('on', i === j));
+  [...tabs.children].forEach((b, j) => b.setAttribute('aria-pressed', String(i === j)));
+  note.innerHTML = protos[i].dataset.note;
+}
+protos.forEach((p, i) => {
+  const b = document.createElement('button');
+  b.textContent = p.dataset.name;
+  b.onclick = () => show(i);
+  tabs.append(b);
+});
+document.addEventListener('keydown', e => {
+  const cur = protos.findIndex(p => p.classList.contains('on'));
+  if (e.key === 'ArrowRight') show((cur + 1) % protos.length);
+  if (e.key === 'ArrowLeft') show((cur + protos.length - 1) % protos.length);
+});
+function fit() {
+  const box = document.getElementById('fit');
+  document.getElementById('screen').style.transform = `scale(${box.clientWidth / 816})`;
+}
+addEventListener('resize', fit);
+fit();
+show(location.hash ? Number(location.hash.slice(1)) : 1);
+</script>
+</body>
+</html>

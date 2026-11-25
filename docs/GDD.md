@@ -2823,6 +2823,104 @@ Formato: ID · data · decisão · estado · impacto documental.
   `pray-vfx`, `hebrew-transition`) continuam em 544×416. Impacto: §17; `project.godot`; HUD de
   batalha; título; `prototypes/dungeon-crawler`; `docs/DECISIONS.md`.
 
+- **D-056 · 2026-11-24 (decisão do criador) — Battle Log de 2 linhas, sem texto cortado.**
+  Motivo: com o log de 3 linhas o criador via apenas uma linha e dizia que o texto estava cortado;
+  pediu ``deixa duas linhas então``. **Battle Log com 2 linhas visíveis**, a mais nova embaixo.
+  Nenhuma mensagem é cortada: frases longas quebram por palavra na fonte cheia (11 px) e as
+  continuations ficam alinhadas sob o texto; uma mensagem antiga só sai inteira, nunca pela metade;
+  o histórico é alimentado pela mensagem da batalha, então o anúncio do inimigo e a dica de reação
+  aparecem juntos em vez de um apagar o outro. A escala de stretch é aplicada em tempo de execução
+  (`scripts/core/layout_scale.gd`: canvas_items / keep / fractional), para que uma janela menor que
+  816 px não recorte a borda direita do log nem os painéis de comando.
+  A faixa do log tem 88 px de altura na tela (y 450 a 538) e as duas linhas ficam centralizadas,
+  com folga idêntica acima das maiúsculas e abaixo dos descendentes (y≈474 a 516): nenhum glifo encosta na borda.
+  Revoga a parte ``3 linhas`` da D-055. Impacto: `scripts/battle/playable_hud.gd`, `scripts/core/layout_scale.gd`,
+  `tests/verify_playable_layout.gd`, `tests/verify_log_wrap.gd`, `project.godot`.
+
+- **D-057 · 2026-11-25 (decisão do criador) — combate legível: fila, atos, log e papéis.**
+  Motivo: o criador disse que o combate estava ``péssimo``: nunca dava para saber quem ataca,
+  defende ou reage; o log era incompreensível; e a mecânica de atos falhava com várias ações num
+  turno. Respostas do criador em 2026-11-25:
+  - **Fila:** ao escolher 2 ou mais ações para um alvo, elas rodam **uma após a outra, sem
+    confirmação**; o alvo de cada ATTACK / golpe (Lunge) / ABSORB é escolhido **ao montar a fila**.
+    Só se o alvo morrer o jogo pergunta por outro alvo; **recusar devolve o ato** (não é gasto).
+    Entre os comandos da fila não há pausa de Z: a fila só espera o golpe e o número terminarem;
+    a pausa do resultado vem depois do último comando (ou de uma interrupção da D-049).
+  - **Afinidade nunca tira ato:** ``EU NUNCA DEFINI ROUBO DE ATO, SÓ GANHO DE ATO``. O -1 ato de
+    RESIST/NULL/ABSORB (Press Turn do spec inicial) deixa de existir; WEAK continua dando +1.
+  - **Turno até zerar atos:** atos que sobram depois da fila (não planejados, ganhos com WEAK ou
+    devolvidos) são planejados de novo **no mesmo turno**; o turno só acaba com 0 atos ou REST.
+    Substitui a parte ``se sobrar ato, ele planeja de novo quando o ciclo voltar`` da ordem de
+    turnos de 2026-11-23 (a ordem por AGI entre combatentes continua).
+  - **Log só com frases de evento** (inglês, como a interface): uma linha por acontecimento
+    (``FOE B attacks FALLEN.``, ``FALLEN blocks: 5 damage.``, ``FOE A is down.``), sem instruções de
+    tecla e sem números internos (ritmo, def, crit, afinidade, SP roll ficam só no histórico de
+    diagnóstico). As explicações de menu (habilidade, reza, EN, item) e o contador da absorção
+    continuam transitórios (D-055). Linhas de reza seguem em #f5f58c (D-048).
+  - **Ataque básico com poder 8** (aplica a D-031 no jogo principal; o Survival segue com 10).
+  - **Delegado ao agente pelo criador** (``sigo sua melhor recomendação`` / ``acha uma solução``),
+    **aguardando o julgamento visual do criador**: (a) **rótulos de papel** ATTACK (vermelho),
+    TARGET (escuro), DEFEND (azul), COUNTER (laranja) e REACT (verde) sobre o nome do inimigo e na
+    borda de cima da janela do herói, do anúncio até a confirmação do resultado; (b) **log que não
+    perde linha**: as linhas não lidas aparecem da mais antiga para a mais nova e cada Z mostra as
+    seguintes antes de a batalha seguir (também antes de qualquer outra entrada do jogador).
+  Impacto: `scripts/battle/playable_controller.gd`, `scripts/battle/playable_hud.gd`,
+  `scripts/battle/prayer_flow.gd`, `scripts/battle/battle_controller.gd`,
+  `scripts/core/battle_math.gd`, `scripts/survival/survival_battle.gd`, testes `verify_playable_*`,
+  `verify_log_wrap.gd`, `test_battle_math.gd`; `docs/COMBAT_SPEC.md`, `docs/DECISIONS.md`.
+- **D-058 · 2026-11-25 (decisão do criador) — de quem é o turno; reações no Battle Log.**
+  Motivo: depois da D-057 o criador disse que ``ainda não tá bom, não da pra saber de quem é o
+  turno direito`` e propôs que ``todas reações e defesas deviam acontecer na barra de log de
+  batalha ao invés de encima do jogador``. Respostas do criador em 2026-11-25:
+  - **Fila de turnos no topo:** a ordem dos turnos da rodada (a mesma ordem por AGI da
+    BattleState) aparece numa faixa sob a linha do topo, com quem está agindo agora destacado.
+    Quem caiu sai da faixa.
+  - **Só as barras no log:** a barra de tempo da defesa e os dois trilhos do contra-ataque do herói
+    rodam dentro da janela do Battle Log; o texto do log dá lugar às barras enquanto elas correm.
+    O REACT/DENY continua no menu de comandos.
+  - **Detalhes feitos pelo agente, aguardando o julgamento visual do criador:** fichas com o nome
+    (heróis em verde, inimigos em vermelho, como a linha de SP do topo), separadas por ``›``; a ficha
+    do turno atual é preenchida com a cor do lado; quem já não tem ato na rodada fica apagado.
+    A barra de defesa e os trilhos ocupam a largura do log, centralizados na altura. A barra do
+    ataque do jogador e os trilhos do contra-ataque do inimigo continuam sobre o inimigo (não ficam
+    ``em cima do jogador``).
+  Impacto: `scripts/battle/playable_hud.gd`, `scripts/battle/playable_controller.gd`, testes
+  `verify_playable_feedback.gd`, `verify_playable_counter.gd`, `verify_timing_log.gd`;
+  `docs/COMBAT_SPEC.md`, `docs/DECISIONS.md`.
+- **D-059 · 2026-11-25 (decisão do criador) — caixas de papel com setas animadas.**
+  Motivo: o criador disse que as caixas de texto ``meio que atrapalham a estetica visual do jogo``
+  e pediu ``uma proposta visual de cada`` e depois vídeo (``como QUE VOU ESCOLHER SEM VIDEO``). Foram
+  gravadas a mesma batalha em cinco estilos (caixas, ícones, texto solto, cor no nome, seta;
+  `docs/plans/role-proposals/`). Escolha do criador: ``caixas e setas mas são setas animadas por .55
+  segundos indo do atacante até o alvo, com setas se colidindo quando é um contra-ataque``; a seta
+  ``some proceduralmente, perdendo opacidade bem rapido``; no contra-ataque elas se encontram ``No
+  meio, faísca``.
+  - As caixas ATTACK / TARGET / DEFEND / COUNTER / REACT da D-057 continuam.
+  - Cada golpe: uma seta corre do atacante até o alvo em **0,55 s** e some perdendo opacidade.
+  - Contra-ataque: uma seta sai do atacante e outra de quem contra-ataca; elas se encontram no meio
+    em 0,55 s, uma faísca marca o choque e as duas somem.
+  - **Feito pelo agente, aguardando o julgamento visual do criador:** sumiço em 0,15 s; faísca de
+    0,25 s com raio 11; cores das setas (ataque vermelho, ponta na cor do papel do alvo, contra-ataque
+    laranja); as setas dos heróis param na borda de cima do log para não cruzar o texto.
+  Impacto: `scripts/battle/playable_hud.gd`, `scripts/battle/playable_controller.gd`, testes
+  `verify_playable_feedback.gd`, `verify_playable_counter.gd`; `docs/COMBAT_SPEC.md`,
+  `docs/DECISIONS.md`.
+- **D-060 · 2026-11-25 (decisão do criador) — nomes coloridos no Battle Log.**
+  Motivo: depois da D-059 o criador sugeriu ``a ideia das cores poderia estar no log`` e escolheu
+  ``Só os nomes``: em cada frase, o nome de quem tem papel na ação ganha a cor do papel naquele
+  momento — atacante vermelho, alvo amarelo, quem defende azul, quem contra-ataca laranja, quem
+  reage verde (as cores das setas da D-059); o resto da frase fica como estava (linhas de reza
+  continuam em #f5f58c, D-048). Linhas sem ação na tela (``FALLEN's turn.``, ``ROUND 02``) ficam sem
+  cor. Impacto: `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`;
+  `docs/COMBAT_SPEC.md`, `docs/DECISIONS.md`.
+- **D-061 · 2026-11-25 (decisão do criador) — blocos de papel por 0,3 s.**
+  Motivo: o criador pediu que ``esses blocos de attack defend e counter poderiam sumir .3 segundos
+  depois de aparecerem``; respostas: ``Todos somem`` (os cinco blocos) e ``Corte seco``. Cada bloco
+  aparece por 0,3 s e desaparece de uma vez. O papel continua valendo (setas da D-059, cores do log
+  da D-060); um papel novo ou um novo golpe do atacante mostra o bloco de novo. Impacto:
+  `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`; `docs/COMBAT_SPEC.md`,
+  `docs/DECISIONS.md`.
+
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
 `docs/COMBAT_SPEC.md`. Este apêndice não as duplica.

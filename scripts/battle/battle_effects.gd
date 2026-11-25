@@ -47,12 +47,14 @@ class DamageLayer extends Control:
 			if label.is_empty():
 				continue
 			var size: int = 30 if label.begins_with("-") or label.begins_with("+") else 20
+			if effect.unit != null and effect.unit.is_player and label.begins_with("-"):
+				size = fx.HERO_NUMBER_PX
 			var pos := r.get_center() + Vector2(-label.length() * (size * 0.29),
 				-minf(34, effect.age * 34) - 10)
 			pos.y = clampf(pos.y, r.position.y + 16, r.end.y - size)
 			if effect.unit != null and effect.unit.is_player:
-				# Creator 2026-11-22: just above the hero's card; its bottom touches the card.
-				pos.y = r.end.y - fx.HERO_NUMBER_GAP
+				# Creator 2026-11-24 (HUD option 13): over the hero's own window, centred.
+				pos.y = r.get_center().y + size * 0.36
 			pos += effect.get("offset", Vector2.ZERO)
 			var alpha: float = fx.number_alpha(effect.age, effect.duration)
 			if alpha <= 0.0:
@@ -87,7 +89,7 @@ class DamageLayer extends Control:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	size = Vector2(ProjectSettings.get_setting("display/window/size/viewport_width"), ProjectSettings.get_setting("display/window/size/viewport_height"))
+	size = preload("res://scripts/battle/playable_hud.gd").SCREEN
 	z_index = 3
 	damage_layer = DamageLayer.new()
 	damage_layer.fx = self
@@ -149,6 +151,10 @@ func _unit_rect(unit: BattleUnit) -> Rect2:
 ## card (status panel), in the strip between the stage and the card, never over
 ## FALLEN/ACT/HP. Baseline 2 px above the card top.
 const HERO_NUMBER_GAP := 2.0
+## Creator 2026-11-24: damage numbers on the heroes are 20 px (were 30) and last half
+## as long, so they fit under the Battle Log and clear out faster.
+const HERO_NUMBER_PX := 20
+const HERO_NUMBER_TIME := 0.5
 ## Labels without an impact animation; all others appear only after it ends
 ## (creator 2026-11-22: a number must never show before the hit effect is over).
 const IMMEDIATE_LABELS := ["MISS", "DODGE"]
@@ -194,9 +200,7 @@ static func label_for(kind: String, amount: int) -> String:
 
 func number_rect(effect: Dictionary) -> Rect2:
 	var r: Rect2 = effect.target_rect
-	if effect.unit != null and effect.unit.is_player:
-		var top: float = battle.hud.STAGE_RECT.end.y
-		return Rect2(r.position.x, top, r.size.x, r.position.y - top)
+	# Creator 2026-11-24: a hero's number sits over the hero's window itself.
 	return r
 
 
@@ -214,7 +218,9 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		# No impact cells, hurt flashes or hit sounds for a non-contact result.
 		profile = {"frames": [[], [], [], [], [], [], [], [], []], "sheets": ["", ""], "timings": []}
 	var target_rect := _unit_rect(unit)
-	var clip_rect := target_rect if unit.is_player else target_rect.grow(30).intersection(battle.hud.STAGE_RECT)
+	# Enemy effects stay above the Battle Log, which now sits over the floor.
+	var field := Rect2(0, 0, battle.hud.SCREEN.x, battle.hud.BATTLE_LOG_RECT.position.y)
+	var clip_rect := target_rect if unit.is_player else target_rect.grow(30).intersection(battle.hud.STAGE_RECT).intersection(field)
 	var container := Control.new()
 	container.position = clip_rect.position
 	container.size = clip_rect.size
@@ -261,7 +267,12 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 	queue_redraw()
 
 
-func _process(delta: float) -> void:
+## Creator 2026-11-25: the damage animation (hit effect, flashes, numbers) plays 2x faster.
+const PLAY_SPEED := 2.0
+
+
+func _process(real_delta: float) -> void:
+	var delta := real_delta * PLAY_SPEED
 	for i in range(effects.size() - 1, -1, -1):
 		var effect := effects[i]
 		effect.age += delta
@@ -272,6 +283,8 @@ func _process(delta: float) -> void:
 				var number := {"kind": effect.kind, "amount": effect.amount, "unit": effect.unit,
 					"target_rect": effect.target_rect, "age": 0.0, "duration": effect.duration,
 					"dying": effect.dying}
+				if effect.unit != null and effect.unit.is_player:
+					number.duration = float(effect.duration) * HERO_NUMBER_TIME
 				for key in ["lines", "label_rect", "ink", "offset"]:
 					if effect.has(key): number[key] = effect[key]
 				numbers.append(number)

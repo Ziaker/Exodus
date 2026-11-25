@@ -29,18 +29,19 @@ func _run() -> void:
 	var title: Control = load("res://scenes/title/Title.tscn").instantiate()
 	root.add_child(title)
 	await process_frame
-	_check(title.COMMANDS == ["New Game", "Continue", "Shutdown"], "XP command list")
+	_check(title.COMMANDS == ["New Game", "Continue", "Survival", "Shutdown"], "XP command list + Survival")
 	_check(title.index == 0, "Without a save the cursor starts on New Game")
 	_check(not title.is_enabled(1), "Continue disabled without a save")
-	_check(title.is_enabled(0) and title.is_enabled(2), "New Game and Shutdown enabled")
+	_check(title.is_enabled(0) and title.is_enabled(2) and title.is_enabled(3),
+			"New Game, Survival and Shutdown enabled")
 	var w: Rect2 = title.window_rect()
 	_check(is_equal_approx(w.position.x + w.size.x / 2.0, title.size.x / 2.0), "Window centered horizontally")
 	_check(w.end.y <= title.size.y, "Window fits the viewport (%s in %s)" % [w, title.size])
-	for i in 3:
+	for i in 4:
 		_check(w.encloses(title.row_rect(i)), "Row %d inside window" % i)
 	_key(KEY_UP)
 	await process_frame
-	_check(title.index == 2, "Up from first row wraps to Shutdown")
+	_check(title.index == 3, "Up from first row wraps to Shutdown")
 	_key(KEY_DOWN)
 	await process_frame
 	_check(title.index == 0, "Down from last row wraps to New Game")
@@ -63,5 +64,27 @@ func _run() -> void:
 	await process_frame
 	_check(current_scene != null and current_scene.scene_file_path == "res://prototypes/dungeon-crawler/DungeonProto.tscn",
 			"New Game opens the first-person dungeon test (got %s)" % (current_scene.scene_file_path if current_scene else "null"))
+	# O modo Survival entra pelo menu do título e zera a run (3 continues).
+	title.queue_free()
+	await process_frame
+	SurvivalState.clear()
+	var survival_title: Control = load("res://scenes/title/Title.tscn").instantiate()
+	root.add_child(survival_title)
+	await process_frame
+	_key(KEY_DOWN)
+	await process_frame
+	_key(KEY_DOWN)
+	await process_frame
+	_check(survival_title.index == 2, "Cursor reaches Survival")
+	_key(KEY_Z)
+	await process_frame
+	_check(survival_title.busy, "Survival starts the mode")
+	await create_timer(survival_title.FADE_TIME + 0.3).timeout
+	await process_frame
+	_check(current_scene != null and current_scene.scene_file_path == SurvivalData.WORLD_SCENE,
+			"Survival opens the big overworld (got %s)" % (current_scene.scene_file_path if current_scene else "null"))
+	_check(int(SurvivalState.data().continues) == SurvivalData.MAX_CONTINUES, "A new run starts with 3 continues")
+	_check(int(SurvivalState.data().macca) == SurvivalData.STARTING_MACCA, "A new run resets Macca")
+	SurvivalState.clear()
 	print("TITLE CHECKS PASSED: ", checks)
 	quit(0)

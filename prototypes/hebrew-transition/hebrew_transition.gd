@@ -39,7 +39,34 @@ var rng := RandomNumberGenerator.new()
 var lines: Array[String] = []
 
 
+## Creator 2026-11-23: SMT VX's "Law" plays nonstop while the prologue is open, at the
+## file's own volume (100%), starting over when the track ends; the 15.5 s loop of the
+## animation does not restart it.
+const LAW_BGM := "res://assets/audio/bgm/DDS2_law.ogg"
+var music: AudioStreamPlayer
+
+
+## Creator 2026-11-24 (fixes D-055): the 544 x 416 composition is shown 1.5x on the
+## 816 x 624 screen, as before the resolution change.
+const LAYOUT_SCALE := preload("res://scripts/core/layout_scale.gd")
+var _saved_scale := {}
+
+
+func _enter_tree() -> void:
+	_saved_scale = LAYOUT_SCALE.use(get_tree().root)
+
+
+func _exit_tree() -> void:
+	LAYOUT_SCALE.restore(get_tree().root, _saved_scale)
+
+
 func _ready() -> void:
+	music = AudioStreamPlayer.new()
+	music.name = "Law"
+	music.stream = load(LAW_BGM)
+	add_child(music)
+	music.finished.connect(music.play)
+	music.play()
 	font = SystemFont.new()
 	font.font_names = PackedStringArray(["Tahoma", "Arial", "David Libre"])
 	for arg in OS.get_cmdline_user_args():

@@ -231,11 +231,11 @@ static func critical_roll(attacker_agi: int, attacker_sp: int, defender_sp: int,
 		rng: RandomNumberGenerator) -> bool:
 	return rng.randf_range(0.0, 100.0) < crit_chance(attacker_agi, attacker_sp - defender_sp)
 
+## D-057 (creator 2026-11-25): an affinity only ever GIVES an act (WEAK +1). The old
+## RESIST / NULL / ABSORB -1 act was never defined by the creator and is gone.
 static func press_turn_acts(affinity: Affinity) -> int:
 	match affinity:
 		Affinity.WEAK:
 			return 1
-		Affinity.RESIST, Affinity.NULL, Affinity.ABSORB:
-			return -1
 		_:
 			return 0

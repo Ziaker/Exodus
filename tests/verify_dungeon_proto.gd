@@ -49,6 +49,8 @@ func _frames_until_idle(d: Control, already: int = 0) -> int:
 
 func _new() -> Control:
 	var d: Control = load(SCENE).instantiate()
+	# Este teste é de geometria/UI: os inimigos são verificados em verify_dungeon_encounters.gd.
+	d.enemies_enabled = false
 	root.add_child(d)
 	return d
 
@@ -305,11 +307,12 @@ func _run() -> void:
 func _npcs_and_dialogue(d: Control) -> void:
 	_check(d.npcs.size() == 2, "two NPCs (human, demon)")
 	_check(d.npc_at(Vector2i(3, 1)).get("id", "") == "human" and d.npc_at(Vector2i(5, 1)).get("id", "") == "demon", "both NPCs in the starting corridor, one behind the other")
-	# Como o VX: nada desenhado no corredor; a figura só aparece ao falar.
+	# Nenhum NPC desenhado no corredor; as únicas Sprite3D são as silhuetas dos inimigos.
 	var sprites := 0
 	for n in d.viewport.find_children("*", "Sprite3D", true, false):
 		sprites += 1
-	_check(sprites == 0, "no NPC sprite in the 3D corridor (VX has no visible 3D events)")
+	_check(sprites == d.enemies.entries.size(),
+			"only roaming enemy silhouettes in the 3D corridor (no NPC sprites)")
 	# Criador: parado de frente para o NPC a figura já aparece; mais longe, não.
 	_place(d, Vector2i(1, 1), 1)
 	_check(not d.npc_picture.visible, "NPC 2 tiles ahead: no picture (only the automap mark)")

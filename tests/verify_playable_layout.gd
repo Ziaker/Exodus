@@ -21,6 +21,13 @@ func _new_battle() -> Control:
 	battle.rng.seed = 913
 	return battle
 
+func _key(code: Key) -> InputEventKey:
+	var e := InputEventKey.new()
+	e.keycode = code
+	e.pressed = true
+	return e
+
+
 func _run() -> void:
 	if not ResourceLoader.exists("res://scenes/battle/BattlePlayable.tscn"):
 		push_error("Playable layout scene is missing")
@@ -36,54 +43,95 @@ func _run() -> void:
 		_check(is_equal_approx((spans[1].x + spans[1].y) / 2.0, 0.5), "Drawn POINT must stay centered")
 		_check(is_equal_approx(spans[0].x, 0.5 - BattleMath.BEAM_HALF_WIDTH) and is_equal_approx(spans[2].y, 0.5 + BattleMath.BEAM_HALF_WIDTH), "Drawn BEAM must use the real width")
 	battle.rhythm.configure(BattleMath.POINT_HALF_WIDTH)
-	# exodus_feedback_lab.html geometry, D-055 816 x 624 (sizes kept, stage drawn 1.5x).
+	# Layout 544 x 416 shown 1.5x on the 816 x 624 screen (creator 2026-11-24, fixes D-055);
+	# HUD option 13 (prototypes/combat-hud-html): its 816 x 624 pixels / 1.5.
 	var hud: Control = battle.hud
-	_check(hud.enemy_column(0) == Rect2(128, 212, 220, 206) and hud.enemy_column(1) == Rect2(468, 212, 220, 206), "Enemy columns must follow the HTML space-evenly layout")
-	_check(is_equal_approx(hud.enemy_sprite_rect(0).end.y / hud.STAGE_SCALE, 252.0) or is_equal_approx(hud.enemy_horizon / hud.STAGE_SCALE, 252.0), "D-055: enemy feet on the scaled floor line (old 252 x 1.5)")
-	_check(battle.stage.size == hud.STAGE_RECT.size and hud.STAGE_RECT.size == Vector2(544, 298) * hud.STAGE_SCALE, "D-055/D-053: stage D fills the width at 1.5x")
-	_check(hud.LOG_LINES == 3 and hud.BATTLE_LOG_RECT.end.y <= hud.STATUS_RECTS[0].position.y, "D-055: 3-line Battle Log above the status panels")
+	var shift: float = hud.STAGE_SHIFT
+	var down := 24.0
+	_check(is_equal_approx(shift * 1.5, -32.0), "Stage art raised 32 screen px (21.33 layout px)")
+	_check(root.content_scale_size == Vector2i(544, 416) and root.content_scale_stretch == Window.CONTENT_SCALE_STRETCH_FRACTIONAL, "The battle is laid out at 544 x 416 and shown 1.5x (fractional content scale)")
+	_check(hud.SCREEN == Vector2(544, 416) and ProjectSettings.get_setting("display/window/size/viewport_width") == 816, "Layout 544 x 416 on the D-055 816 x 624 screen")
+	_check(hud.enemy_column(0).is_equal_approx(Rect2(17, 86 + shift + down, 220, 206)) and hud.enemy_column(1).is_equal_approx(Rect2(247, 86 + shift + down, 220, 206)), "Enemy columns: 10 px gap, shrunk only for 3 demons (option 13)")
+	_check(is_equal_approx(hud.enemy_sprite_rect(0).end.y, 252.0 + shift + down) or is_equal_approx(hud.enemy_horizon, 252.0 + shift + down), "Enemy feet on the floor line, 36 screen px lower")
+	_check(is_equal_approx(battle.stage.position.y, shift) and is_equal_approx(battle.stage.position.y + battle.stage.size.y, hud.SCREEN.y) and hud.STAGE_RECT == Rect2(0, 0, 544, hud.BATTLE_LOG_RECT.position.y), "Stage D raised and running to the bottom of the screen; battlefield down to the log")
+	_check(battle.stage.material.get_shader_parameter("stage_size") == battle.stage.size, "The stage shader draws 1:1 (floor continues, not stretched)")
+	# Option 13 windows (prototype px / 1.5).
+	var win := func(x: float, y: float, w: float, h: float) -> Rect2: return Rect2(x / 1.5, y / 1.5, w / 1.5, h / 1.5)
+	_check(hud.BATTLE_LOG_RECT.is_equal_approx(win.call(8, 450, 800, 88)), "Log window: 8, 450, 800 x 88 on screen (two lines, D-056)")
+	_check(hud.STATUS_RECTS[0].is_equal_approx(win.call(8, 546, 293, 66)) and hud.STATUS_RECTS[1].is_equal_approx(win.call(309, 546, 293, 66)), "Hero windows: 293 x 66 at 8 and 309, y 546 on screen")
+	_check(hud.COMMAND_RECT.is_equal_approx(win.call(610, 546, 198, 66)), "Command window: 610, 546, 198 x 66 on screen")
+	_check(hud.SP_TRACK.position.y < 15 and hud.HEADER_BASELINE < 16, "Round, SP names and SP bar share one thin top line")
+	_check(hud.LOG_LINES == 2 and hud.LOG_FIRST_BASELINE + (hud.LOG_LINES - 1) * hud.LOG_STEP + 3 <= hud.BATTLE_LOG_RECT.end.y, "2 log lines inside the log window (D-056)")
+	_check(hud.BATTLE_LOG_RECT.position.y >= hud.enemy_column(0).end.y - 30 + 4, "The log stays under the enemies' name labels")
+	_check(battle.fx.HERO_NUMBER_PX == 20 and is_equal_approx(battle.fx.HERO_NUMBER_TIME, 0.5), "Heroes' damage numbers: 20 px, half the time")
 	for i in 2:
 		var art: Rect2 = hud.enemy_sprite_rect(i)
 		var box := Rect2(hud.enemy_column(i).position + Vector2(32, 0), Vector2(156, 166))
 		_check(box.grow(0.01).encloses(art) and is_equal_approx(art.end.y, box.end.y), "Silhouette %d must fit the HTML sprite box and stand on its floor" % i)
 		_check(hud.STAGE_RECT.encloses(art), "Silhouette must be on the stage")
-	_check(hud.STATUS_RECTS[0] == Rect2(8, 540, 168, 77) and hud.STATUS_RECTS[1] == Rect2(182, 540, 168, 77), "Status windows keep the HTML size (D-055 position)")
-	_check(hud.COMMAND_RECT == Rect2(628, 540, 180, 77), "Command window keeps the HTML size (D-055 position)")
 	_check(hud._round_caption() == "ROUND 01", "Header must show the HTML round label")
 	await process_frame
 	await process_frame
-	_check(hud._menu_rows().size() == 7 and hud._menu_rows()[4] == "REACT", "D-046: Fallen menu lists five commands plus EXEC and UNDO")
+	# Creator 2026-11-24: no REACT on the own turn, no EXEC/UNDO before something is queued.
+	_check(hud._menu_rows() == ["FIGHT", "ITEM", "REST", "ABSORB"], "Fallen's empty plan lists FIGHT, ITEM, REST, ABSORB only (%s)" % [hud._menu_rows()])
+	_check(hud._choosing_unit() == battle._fallen, "The arrow marks Fallen as the one choosing")
 	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-plan:0")[0].rect
-	_check(first_row.position.y == hud.COMMAND_RECT.position.y + 3, "D-046: the title is hidden and plan rows start at the top of the command window")
+	_check(hud.COMMAND_RECT.encloses(first_row) and is_equal_approx(first_row.position.y, hud.COMMAND_RECT.position.y + 2), "Plan cells start at the top of the command window")
+	var cells: Array = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key).begins_with("live-plan:"))
+	_check(cells.size() == 4 and is_equal_approx(cells[1].rect.position.y, first_row.position.y) and cells[3].rect.position.y > first_row.position.y, "3-column grid: FIGHT ITEM REST, then ABSORB")
+	for c in ["FIGHT", "ITEM", "REST", "ABSORB", "DEFEND", "PRAY", "EXEC", "UNDO", "REACT", "DENY"]:
+		_check(hud._width(c, hud.COMMAND_PX, true) + hud.MENU_TEXT_X <= cells[0].rect.size.x, "%s fits its command cell (%.1f + %.1f > %.1f)" % [c, hud._width(c, hud.COMMAND_PX, true), hud.MENU_TEXT_X, cells[0].rect.size.x])
+	battle.submit_plan(1)
+	await process_frame
+	_check(hud.mode == "plan" and hud._menu_rows() == ["FIGHT", "ITEM", "REST", "ABSORB", "EXEC", "UNDO"], "Once something is queued, EXEC and UNDO appear (%s)" % [hud._menu_rows()])
+	hud._input(_key(KEY_RIGHT)); _check(hud.plan_index == 1, "Right moves one cell in the grid")
+	# O HUD agora escolhe 3, 2 ou 1 coluna conforme o rótulo caiba (D-055).
+	var cols: int = hud.menu_columns()
+	hud._input(_key(KEY_DOWN))
+	_check(hud.plan_index == posmod(1 + cols, hud.plan_options.size()),
+			"Down moves one row (%d columns)" % cols)
+	battle.undo_plan()
+	await process_frame
+	_check(hud._menu_rows() == ["FIGHT", "ITEM", "REST", "ABSORB"], "UNDO of the only command hides EXEC/UNDO again")
 	# Silhouettes: opaque pixels plus enclosed dither holes become one solid mask.
 	var ring := Image.create_empty(5, 5, false, Image.FORMAT_RGBA8)
 	for p in [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(1, 2), Vector2i(3, 2), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]:
 		ring.set_pixelv(p, Color.RED)
 	var mask: Image = hud.make_silhouette(ring)
 	_check(mask.get_pixel(2, 2).a == 1.0 and mask.get_pixel(1, 1) == Color.WHITE, "Enclosed holes must be filled; shape pixels become the white mask")
-	# D-055: Battle Log with 3 visible lines (newest at the bottom); menu explanations
-	# are transient and never pushed into the history.
+	# D-056 (2 visible lines, newest at the bottom) + D-057 (creator 2026-11-25): the log
+	# holds only event lines pushed by the controller; unread lines show oldest first and
+	# Z pages the rest; menu explanations stay transient and never enter the history.
 	var saved_mode: String = hud.mode
 	var saved_message: String = hud.message
-	var saved_lines: Array[String] = hud.log_lines.duplicate()
+	var saved_events: Array[Dictionary] = []
+	saved_events.assign(hud.events)
+	var saved_read: int = hud.events_read
 	hud.mode = "command"
-	hud.log_lines.clear()
-	for text in ["LOG A", "LOG B", "LOG B", "LOG C", "LOG D"]:
-		hud.message = text
-		hud.visible_log_lines()
-	_check(hud.visible_log_lines() == ["LOG B", "LOG C", "LOG D"], "D-055: the log shows the last 3 distinct lines, oldest first")
+	hud.events.clear()
+	hud.events_read = 0
+	hud.message = "Choose enemy: Left / Right or click. Z: confirm. X: back."
+	_check(hud.visible_log_lines().is_empty(), "D-057: instructions never enter the log")
+	for text in ["LOG A", "LOG B", "LOG C", "LOG D"]:
+		hud.push_event(text)
+	_check(hud.visible_log_lines() == ["LOG A", "LOG B"] and hud.log_hidden(), "D-057: unread lines show oldest first; the rest waits (%s)" % [hud.visible_log_lines()])
+	hud.page_log()
+	_check(hud.visible_log_lines() == ["LOG C", "LOG D"] and not hud.log_hidden(), "D-057: Z pages to the next unread lines")
+	hud.page_log()
+	_check(hud.visible_log_lines() == ["LOG C", "LOG D"], "D-056: once read, the log shows the last 2 lines, oldest first")
 	hud.mode = "absorb"
 	var shown: Array[String] = hud.visible_log_lines()
-	_check(shown.size() == 3 and shown[0] == "LOG C" and shown[2].begins_with("ABSORB [Z]"), "D-055: a transient line (absorb mash) is the newest line while it lasts")
-	_check(hud.log_lines[-1] == "LOG D", "D-055: transient lines are not kept in the history")
+	_check(shown.size() == 2 and shown[0] == "LOG D" and shown[1].begins_with("ABSORB [Z]"), "D-055: a transient line (absorb mash) is the newest line while it lasts")
+	_check(String(hud.events[-1].text) == "LOG D", "D-055: transient lines are not kept in the history")
 	hud.mode = "command"
-	_check(hud.visible_log_lines() == ["LOG B", "LOG C", "LOG D"], "D-055: the transient line goes away with its mode")
+	_check(hud.visible_log_lines() == ["LOG C", "LOG D"], "D-055: the transient line goes away with its mode")
 	hud.mode = saved_mode
 	hud.message = saved_message
-	hud.log_lines.assign(saved_lines)
-	for i in 3:
-		var baseline: float = hud.BATTLE_LOG_RECT.position.y + 0.5 + 15.5 + i * hud.LOG_STEP
-		_check(baseline <= hud.BATTLE_LOG_RECT.end.y and baseline + 4 < hud.STATUS_RECTS[0].position.y, "D-055: log line %d inside the log rect, above the panels" % (i + 1))
+	hud.events.assign(saved_events)
+	hud.events_read = saved_read
+	for i in hud.LOG_LINES:
+		var baseline: float = hud.LOG_FIRST_BASELINE + i * hud.LOG_STEP
+		_check(baseline <= hud.BATTLE_LOG_RECT.end.y - 1.0 and baseline + 4 < hud.STATUS_RECTS[0].position.y, "D-056: log line %d inside the log rect, above the panels" % (i + 1))
 	_check(mask.get_pixel(0, 0).a == 0.0 and mask.get_pixel(4, 2).a == 0.0, "Outside transparency must stay transparent")
 	_check(hud.silhouettes.size() == 2 and hud.silhouettes[0].get_size() == hud.battler_regions[0].size, "One silhouette per SMT battler, same size as its art")
 	# Silhouette: drawn with a black modulate; the whiten ghost starts at alpha 128/255.
@@ -109,16 +157,15 @@ func _run() -> void:
 	key.pressed = true
 	key.keycode = KEY_DOWN
 	battle.hud._input(key)
-	_check(battle.hud.plan_index == 1, "Down key must navigate the D-046 plan rows")
+	_check(battle.hud.plan_index == 3, "Down key moves one row of the 3-column plan grid")
 	key.keycode = KEY_UP
 	battle.hud._input(key)
 	key.keycode = KEY_Z
 	battle.hud._input(key)
-	_check(battle._planned.size() == 1, "Z must commit the highlighted plan command")
-	battle.exec_plan()
-	_check(battle.hud.mode == "target", "Executing an ATTACK plan must ask for a real target")
+	# D-057 (creator 2026-11-25): the ATTACK asks for its real target while planning.
+	_check(battle.hud.mode == "target", "Z on ATTACK must ask for a real target while planning")
 	battle.cancel_target()
-	_check(battle.hud.mode == "plan", "Cancel target must return to the D-046 plan")
+	_check(battle.hud.mode == "plan" and battle._planned.is_empty(), "Cancel target must return to the D-046 plan without queuing the command")
 	_check(battle._fallen.acts_available == 2, "Opening/canceling a menu must not spend an act")
 	battle.submit_command(0)
 	battle.submit_target(1)
@@ -202,9 +249,10 @@ func _run() -> void:
 	# The next battle starts with the halved gains applied (no more base-attribute restart).
 	var later: Control = load("res://scenes/battle/BattlePlayable.tscn").instantiate()
 	root.add_child(later)
-	_check(later._fallen.stats.max_hp == 14 + int(kept["max_hp"]), "The next battle applies the halved gains")
+	_check(later._fallen.stats.max_hp == 14 + int(kept["max_hp"]), "The next battle applies the halved gains (max_hp %d, kept %s, now %s)" % [later._fallen.stats.max_hp, kept, ProgressStore.load_gains()])
 	later.queue_free()
-	await process_frame
+	# Let the audio thread release the death music before quitting (no leak report).
+	await create_timer(0.5).timeout
 	print("PLAYABLE_LAYOUT_OK: %d checks; live resources, keyboard, item/rest, cancel, targeting, absorption, victory, death, title" % checks)
 	quit(0)
 

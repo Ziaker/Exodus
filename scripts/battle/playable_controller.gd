@@ -41,10 +41,15 @@ var reaction_declared := false
 ## absorptions and returns to the title screen (no save points exist yet).
 const DEATH_CUTSCENE = preload("res://scripts/battle/death_cutscene.gd")
 const DEATH_SCENE := "res://scenes/title/Title.tscn"
+## Encontro no dungeon: o mapa grava a cena de volta antes de trocar de cena.
+const DUNGEON_RETURN_META := &"exodus_dungeon_return_scene"
 var death_cutscene: Node2D
 var reaction_attacker: BattleUnit
 var reaction_defender: BattleUnit
 var reaction_actor: BattleUnit
+## Creator 2026-11-24: REACT left the own-turn menu. Test drivers turn this on to reserve
+## acts and reach an enemy announcement quickly (the old D-047 flow).
+var offer_reserve := false
 var target_side := "enemy"
 var action_attacker: BattleUnit
 var action_defender: BattleUnit
@@ -59,6 +64,31 @@ const FIGHT := "FIGHT"
 const ATTACK_INFO := "ATTACK 1 ACT: normal physical attack."
 ## Gap between hits on different targets (Heat wave) so each impact reads.
 const MULTI_HIT_GAP := 0.3
+## Indicador visual: quantos atos já foram apontados para cada inimigo nesta rodada.
+var queued_acts_by_foe: Dictionary = {}
+var _indicator_round := -1
+## D-057 (creator 2026-11-25): who does what in the action on screen, by unit id:
+## "ATTACK", "TARGET", "DEFEND", "COUNTER" or "REACT". Set from the announcement (or the
+## start of the hero's command) and cleared once the result is confirmed.
+var roles: Dictionary = {}
+## D-057: the target of each planned command, chosen while planning (null = none).
+var _planned_targets: Array = []
+## D-057: index of the planned command being executed (-1 = still planning).
+var _exec_index := -1
+## D-057: true while a queued ATTACK continues a chain on the same target.
+var _chain_continues := false
+## D-057: during a D-049 tie the falls are told after both blows (_release_down).
+var _hold_down := false
+var _pending_down: Array[BattleUnit] = []
+## submit_command() keeps its "execute now" meaning for drivers and tests: when the
+## command still needs its target, the plan runs as soon as that target is chosen.
+var _auto_exec := false
+
+
+func queued_acts_for(unit: BattleUnit) -> int:
+	return int(queued_acts_by_foe.get(unit.id, 0))
+
+
 var skill_ids: Array[StringName] = []
 var skill_unit: BattleUnit
 var skill_disabled: Array[int] = []
@@ -90,10 +120,14 @@ func _build_ui() -> void:
 	# behind the HUD, and the enemies are 15% smaller with their feet on the same ground line.
 	stage = ColorRect.new()
 	stage.name = "Stage"
-	stage.size = HUD_SCRIPT.STAGE_RECT.size
+	# Creator 2026-11-24: the stage art drawn STAGE_SHIFT higher. The scene goes on behind
+	# the HUD windows down to SCENE_BOTTOM (the bottom of the screen), the floor continuing.
+	stage.position = Vector2(0, HUD_SCRIPT.STAGE_SHIFT)
+	stage.size = Vector2(HUD_SCRIPT.SCREEN.x, HUD_SCRIPT.SCENE_BOTTOM - HUD_SCRIPT.STAGE_SHIFT)
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var stage_material := ShaderMaterial.new()
 	stage_material.shader = STAGE_SHADER
+	stage_material.set_shader_parameter("stage_size", stage.size)
 	stage.material = stage_material
 	add_child(stage)
 	hud = HUD_SCRIPT.new()
@@ -131,21 +165,56 @@ func _build_ui() -> void:
 func _refresh_all() -> void:
 	if state.units.size() < 4:
 		return
+	if state.round_number != _indicator_round:
+		_indicator_round = state.round_number
+		queued_acts_by_foe.clear()
 	hud.players.assign([_fallen, _ally])
 	hud.opponents.assign([state.units[2], state.units[3]])
 	hud.actor = 0 if active_actor == null or active_actor == _fallen else 1
 	hud.queue_redraw()
 
 
+## Complete diagnostics (rhythm, defense, crit, affinity, SP roll) for tests and debugging.
+## D-057: it is no longer what the Battle Log shows; the player sees _event() lines.
 func _append_log(text: String) -> void:
 	log_history.append(text)
-	# Keep complete diagnostics in history, readable action/outcome text in the black strip.
-	hud.message = text.get_slice(" (", 0)
-	if text.contains("dmg") and not text.contains("NO CONTACT"):
-		if text.contains("affinity RESIST") or text.contains("affinity NULL") or text.contains("affinity ABSORB"):
-			hud.message += " | RESIST/NULL/ABSORB: -1 ACT"
-		elif text.contains("affinity WEAK"):
-			hud.message += " | WEAK: +1 ACT"
+	_refresh_all()
+
+
+## D-057 (creator 2026-11-25, "só frases de evento"): one plain event sentence in the
+## Battle Log, no instructions and no internal numbers.
+func _event(text: String, ink: Color = Color(0, 0, 0, 0)) -> void:
+	hud.push_event(text, ink)
+	_refresh_all()
+
+
+func _set_role(unit: BattleUnit, role: String) -> void:
+	if unit != null:
+		roles[unit.id] = role
+		# D-059: every new blow runs its arrow again from the attacker.
+		if role == "ATTACK" and hud != null: hud.restart_arrows(unit.id)
+		_refresh_all()
+
+
+func _clear_roles() -> void:
+	if not roles.is_empty():
+		roles.clear()
+		_refresh_all()
+
+
+## D-057: before the battle waits for another input, event lines that do not fit the
+## two-row log are paged with Z, so none scrolls away unread. What fits stays on screen.
+func _flush_log() -> void:
+	if not is_inside_tree():
+		return
+	while hud.log_hidden():
+		var previous: String = hud.mode
+		hud.mode = "continue"
+		_refresh_all()
+		await continue_requested
+		hud.page_log()
+		hud.mode = previous
+	hud.page_log()
 	_refresh_all()
 
 
@@ -160,6 +229,7 @@ func _input(_event: InputEvent) -> void:
 
 
 func _wait_command(options: Array[String]) -> int:
+	await _flush_log()
 	# HTML renderMenu: keep the cursor on the same command name, else the first row.
 	var previous: String = hud.command_options[hud.command_index] if hud.command_index >= 0 and hud.command_index < hud.command_options.size() else ""
 	hud.command_options = options
@@ -181,6 +251,9 @@ func submit_command(index: int) -> void:
 		submit_plan(index)
 		if hud.mode == "plan":
 			exec_plan()
+		elif hud.mode in ["target", "skill"]:
+			# D-057: the command asks for its target first; the plan runs right after.
+			_auto_exec = true
 		return
 	if hud.mode != "command" or index < 0 or index >= hud.command_options.size():
 		return
@@ -202,6 +275,11 @@ func submit_plan(index: int) -> void:
 
 ## D-046: EXEC encerra o planejamento e começa a resolução do bloco.
 func exec_plan() -> void:
+	# D-057: EXEC sent while the command being planned still picks its target (or skill)
+	# runs the plan right after that choice (drivers and tests).
+	if hud.mode in ["target", "skill"] and _exec_index < 0 and not in_reaction:
+		_auto_exec = true
+		return
 	if hud.mode != "plan" or _planned.is_empty():
 		return
 	_chosen = _plan_options.size() - 2
@@ -210,17 +288,24 @@ func exec_plan() -> void:
 
 ## D-046: UNDO retira o último comando comprometido, sem gastar ato.
 func undo_plan() -> void:
-	if hud.mode != "plan":
+	if hud.mode != "plan" or _planned.is_empty():
 		return
 	_chosen = _plan_options.size() - 1
 	command_chosen.emit()
 
 
 ## Usado pelo HUD para acender os marcadores verde dos atos comprometidos.
+## D-046 / D-057: during the execution only the commands not started yet stay green, so
+## the green pips never outnumber the acts left ("ACT 1/4" with two green was a bug).
 func planned_acts_for(unit: BattleUnit) -> int:
 	if unit == null or unit != active_actor:
 		return 0
-	return _planned_cost()
+	if _exec_index < 0:
+		return _planned_cost()
+	var total := 0
+	for i in range(_exec_index + 1, _planned.size()):
+		total += _entry_cost(_planned_skills[i] if i < _planned_skills.size() else {})
+	return total
 
 
 func _entry_cost(detail: Dictionary) -> int:
@@ -252,9 +337,12 @@ func _planned_hp() -> int:
 
 
 func _wait_plan_command(options: Array[String]) -> int:
+	await _flush_log()
 	_plan_options = options.duplicate()
-	_plan_options.append("EXEC")
-	_plan_options.append("UNDO")
+	# Creator 2026-11-24: EXEC and UNDO only show once something is queued.
+	if not _planned.is_empty():
+		_plan_options.append("EXEC")
+		_plan_options.append("UNDO")
 	hud.mode = "plan"
 	hud.plan_index = 0
 	hud.plan_options = _plan_options
@@ -284,8 +372,13 @@ func first_living_target() -> int:
 
 
 func _wait_target(side: String = "enemy") -> BattleUnit:
+	await _flush_log()
+	var same_side := target_side == side
 	target_side = side
-	hud.target = first_living_target()
+	# D-057: queuing several commands on one target keeps the cursor on the last target.
+	var units := target_units()
+	if not same_side or hud.target < 0 or hud.target >= units.size() or not units[hud.target].is_alive():
+		hud.target = first_living_target()
 	if hud.target < 0:
 		return null
 	hud.mode = "target"
@@ -317,7 +410,9 @@ func run_battle() -> void:
 	while not state.is_over():
 		waiting_players.clear()
 		state.start_round()
-		if state.round_number > 1: hud.announce("ROUND %02d" % state.round_number)
+		if state.round_number > 1:
+			hud.announce("ROUND %02d" % state.round_number)
+			_event("ROUND %02d" % state.round_number)
 		_refresh_all()
 		await _burn_tick()
 		if not is_inside_tree(): return
@@ -334,14 +429,19 @@ func run_battle() -> void:
 			_refresh_all()
 			if state.is_over(): break
 			unit = _next_live_actor()
+		# D-058: between rounds nobody owns the turn (the HUD turn strip shows no one).
+		turn_owner = null
 		if state.is_over(): break
 		_expire_stages(null)
 		prayer.expire(null)
 		state.end_round()
 		_append_log("End of round %d: +20%% EN." % state.round_number)
+		_event("End of round %d: +20%% EN." % state.round_number)
 	if state.fallen_fell():
 		await _play_death()
 	else:
+		await _flush_log()
+		if not is_inside_tree(): return
 		_show_result()
 
 
@@ -357,6 +457,7 @@ func _play_death() -> void:
 	for stat in before.keys():
 		losses[stat] = int(before[stat]) - int(after[stat])
 	_append_log("DEFEAT.")
+	_event("DEFEAT.")
 	phase_text = "DEFEAT"
 	hud.mode = "death"
 	hud.feedback = ""
@@ -401,15 +502,17 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 			return prayer.commands_for(unit, limited)
 		options.append("DEFEND")
 	else:
-		options.append("REACT")
+		# Creator 2026-11-24: REACT is only offered when an enemy action is announced (the
+		# reaction prompt), not in the own-turn menu. Tests can still reserve acts.
+		if offer_reserve: options.append("REACT")
 	return prayer.commands_for(unit, options)
 
 
-func _execute_command(unit: BattleUnit, command: String, reacting: bool = false, chain: bool = false, skill: Dictionary = {}) -> bool:
+func _execute_command(unit: BattleUnit, command: String, reacting: bool = false, chain: bool = false, skill: Dictionary = {}, planned: BattleUnit = null) -> bool:
 	if command == "PRAY":
 		return await prayer.execute(unit, skill, reacting)
 	if command == FIGHT and not skill.is_empty():
-		return await _execute_skill(unit, skill, reacting)
+		return await _execute_skill(unit, skill, reacting, planned)
 	phase_text = "SELECT " + command + " TARGET"
 	action_attacker = unit
 	action_defender = null
@@ -417,7 +520,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 	defense_result = BattleMath.RhythmResult.MISS
 	var defender: BattleUnit = null
 	if command in [FIGHT, "ABSORB"]:
-		defender = await _wait_target()
+		defender = await _planned_or_new_target(planned)
 		if defender == null: return false
 	elif command == "ITEM" and reacting:
 		defender = await _wait_target("player")
@@ -426,32 +529,60 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 	# remaining ones. Handle it before the shared spend_act() gate below.
 	if command == "REST":
 		return _execute_rest(unit, reacting)
-	if not unit.spend_act(): return false
+	if not unit.spend_act():
+		_event("%s has no act left." % short_name(unit))
+		return false
 	action_attacker = unit
 	action_defender = defender if defender != null else unit
 	phase_text = "REACTION " + command if reacting else command
 	_refresh_all()
 	match command:
-		FIGHT: await _perform_attack(unit, defender, 100, reacting, false, false, chain)
+		FIGHT:
+			_clear_roles()
+			_set_role(unit, "ATTACK")
+			_set_role(defender, "TARGET")
+			if not _chain_continues:
+				_event("%s attacks %s." % [short_name(unit), short_name(defender)])
+			await _perform_attack(unit, defender, basic_power, reacting, false, false, chain)
 		"ITEM":
 			var recipient: BattleUnit = defender if defender != null else unit
+			if reacting: _set_role(unit, "REACT")
 			var healed := recipient.heal(6)
 			fx.play("HEAL", recipient, healed)
 			if unit.is_fallen: unit.add_sp(-2)
 			_append_log("%s uses item on %s: +%d HP%s." % [unit.display_name, recipient.display_name, healed, " (-2 SP)" if unit.is_fallen else ""])
+			_event("%s uses an item on %s: +%d HP." % [short_name(unit), short_name(recipient), healed])
 			if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 		"ABSORB":
+			_clear_roles()
+			_event("%s tries to absorb %s." % [short_name(unit), short_name(defender)])
 			var was_absorbed := defender.absorbed
 			await _perform_absorption(unit, defender)
 			if reacting and not was_absorbed and defender.absorbed:
 				unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 		"DEFEND":
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+			_set_role(unit, "DEFEND")
 			_append_log("%s reacts with DEFEND (1 act spent)." % unit.display_name)
+			_event("%s defends." % short_name(unit))
 	if command == "ITEM":
 		hud.feedback = "%s: HP %d/%d | 1 ACT spent" % [action_defender.display_name, action_defender.current_hp, action_defender.stats.max_hp]
 	_refresh_all()
 	return true
+
+
+## D-057 (creator 2026-11-25): the target was chosen when the command was planned and is
+## used without asking. Only when it fell meanwhile does the game ask for another one;
+## X declines and the command's act is not spent (it goes back to the hero).
+func _planned_or_new_target(planned: BattleUnit, side: String = "enemy") -> BattleUnit:
+	if planned != null and planned.is_alive():
+		return planned
+	if planned != null:
+		# The fall and the rest of the result are read first; then the banner and the prompt.
+		await _flush_log()
+		_clear_roles()
+		hud.announce("CHOOSE ANOTHER TARGET")
+	return await _wait_target(side)
 
 
 ## D-038: REST consome zero ACT, encerra a participação na rodada, guarda os
@@ -472,6 +603,8 @@ func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
 	_append_log("%s %s: +%d EN, %d act(s) stored; round participation ended." % [
 		unit.display_name, "reacts with REST" if reacting else "rests",
 		BattleMath.REST_EN_RECOVERY, remaining])
+	if reacting: _set_role(unit, "REACT")
+	_event("%s rests: +%d EN, %d act(s) stored." % [short_name(unit), unit.current_en - before, remaining])
 	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	hud.feedback = "%s: EN %d/%d | 0 ACT spent, %d stored" % [
 		unit.display_name, unit.current_en, unit.stats.max_en, remaining]
@@ -487,14 +620,24 @@ func _player_turn(unit: BattleUnit) -> void:
 	hud.feedback = ""
 	if unit.acts_available <= 0: return
 	_append_log("%s: %d acts available." % [unit.display_name, unit.acts_available])
+	_clear_roles()
+	_event("%s's turn." % short_name(unit))
 	var options := _commands(unit)
-	# D-046: o jogador compromete até quatro atos antes da resolução. Os marcadores
-	# verdes permanecem acesos até o bloco inteiro ser resolvido. Um alvo cancelado
-	# devolve ao planejamento sem gastar o ato daquele comando.
+	# D-046: o jogador compromete até quatro atos antes da resolução; os marcadores verdes
+	# mostram os comandos que ainda vão rodar.
+	# D-057 (criador 2026-11-25): o alvo de cada comando é escolhido no plano e a fila roda
+	# inteira, um comando depois do outro, sem perguntar nada; só se o alvo cair o jogo
+	# pede outro alvo (X recusa e o ato não é gasto). Atos que sobram depois da fila (não
+	# planejados, ganhos com WEAK +1 ou devolvidos) são planejados de novo no mesmo turno:
+	# o turno só acaba com 0 atos ou com REST.
 	while unit.is_alive() and not state.is_over() and unit.acts_available > 0:
+		active_actor = unit
 		var max_acts := mini(BattleMath.MAX_AVAILABLE_ACTS, unit.acts_available)
 		_planned.clear()
 		_planned_skills.clear()
+		_planned_targets.clear()
+		_exec_index = -1
+		_auto_exec = false
 		prayer.begin_plan(unit)
 		while _planned_cost() < max_acts or prayer.can_continue(unit, _planned_skills):
 			var choice := await _wait_plan_command(options)
@@ -504,8 +647,10 @@ func _player_turn(unit: BattleUnit) -> void:
 				if prayer.undo_allocation(unit, _planned_skills):
 					continue
 				if not _planned.is_empty():
+					_mark_target(_planned_targets.back(), -1)
 					_planned.remove_at(_planned.size() - 1)
 					_planned_skills.remove_at(_planned_skills.size() - 1)
+					_planned_targets.remove_at(_planned_targets.size() - 1)
 					prayer.recharge(unit, _planned_skills)
 				continue
 			if choice < 0:
@@ -514,26 +659,40 @@ func _player_turn(unit: BattleUnit) -> void:
 			var detail: Dictionary = {}
 			# D-048: with every act committed only +1 PP on a queued spell is left.
 			if chosen != "PRAY" and _planned_cost() >= max_acts:
+				_auto_exec = false
 				continue
 			if chosen == "PRAY":
 				detail = await prayer.plan_pick(unit, _planned_skills, max_acts - _planned_cost())
 				if detail.is_empty() or detail.has("allocated"):
+					_auto_exec = false
 					continue
 			if chosen == FIGHT and not unit.skills.is_empty():
 				detail = await _wait_skill_menu(unit, max_acts - _planned_cost(),
 					unit.current_en - _planned_en(), unit.current_hp - _planned_hp())
 				if detail.is_empty():
+					_auto_exec = false
 					continue
 				if StringName(detail.skill) == &"":
 					detail = {}
+			var target: BattleUnit = null
+			if _needs_enemy_target(chosen, detail):
+				target = await _wait_target()
+				if target == null:
+					_auto_exec = false
+					continue
 			_planned.append(choice)
 			_planned_skills.append(detail)
+			_planned_targets.append(target)
+			# Indicador em tempo real: atos da fila apontados para cada inimigo.
+			_mark_target(target, 1)
 			prayer.after_append(unit, _planned_skills)
 			# REST (D-038) encerra a participação; REACT reserva os atos restantes.
 			if chosen in ["REST", "REACT"]:
 				break
+			if _auto_exec:
+				_auto_exec = false
+				break
 		if _planned.is_empty():
-			_planned.clear()
 			return
 		if options[_planned.back()] == "REACT":
 			waiting_players[unit.id] = true
@@ -541,43 +700,97 @@ func _player_turn(unit: BattleUnit) -> void:
 			prayer.release_unresolved(unit, _planned_skills)
 			_planned.clear()
 			_planned_skills.clear()
+			_planned_targets.clear()
 			return
-		var cancelled := false
-		var chain_used := false
+		# The lines on screen while planning (turn, queued spells) were read: EXEC starts a
+		# fresh page, so they never cost an extra Z before the first command.
+		hud.page_log()
+		var chain_open := false
+		var chain_target: BattleUnit = null
 		for i in _planned.size():
 			if not unit.is_alive() or state.is_over():
 				break
+			_exec_index = i
 			var command: String = options[_planned[i]]
 			var detail: Dictionary = _planned_skills[i]
-			var chain := false
-			if command == FIGHT and detail.is_empty():
-				for j in range(i + 1, _planned.size()):
-					if options[_planned[j]] == FIGHT and _planned_skills[j].is_empty():
-						chain = true
-						break
-			chain_used = chain_used or chain
+			var target: BattleUnit = _planned_targets[i]
+			# D-043: consecutive ATTACKs on the same target share one rhythm line; it closes
+			# when the next command changes target or the target fell.
+			if chain_open and (target != chain_target or target == null or not target.is_alive()):
+				rhythm.stop_chain()
+				chain_open = false
+			var chain: bool = command == FIGHT and detail.is_empty() and target != null \
+				and i + 1 < _planned.size() and options[_planned[i + 1]] == FIGHT \
+				and _planned_skills[i + 1].is_empty() and _planned_targets[i + 1] == target
 			_player_interrupted = false
 			_interrupt_gainer = null
-			if not await _execute_command(unit, command, false, chain, detail):
-				cancelled = true
+			# A chained ATTACK on the same target is not announced again ("attacks" once).
+			_chain_continues = chain_open and target == chain_target
+			var done := await _execute_command(unit, command, false, chain, detail, target)
+			_chain_continues = false
+			if not done:
+				# D-057: declined (the target fell and X was pressed): this command and the
+				# following ones do not run and spend no act; the hero plans again.
 				break
-			await _pause_result()
+			# Creator 2026-11-25: the rail leaves the screen as soon as no hit follows on it
+			# (the target died, the hero was interrupted or this was the last command); it
+			# used to stay through the result pause, over the empty spot of a dead enemy.
+			if chain and (target == null or not target.is_alive() or _player_interrupted \
+					or i == _planned.size() - 1 or not unit.is_alive() or state.is_over()):
+				rhythm.stop_chain()
+				chain = false
+			chain_open = chain
+			chain_target = target if chain else null
+			# D-057 (creator 2026-11-25): the queued commands run one after the other with
+			# no Z in between; the queue only lets the hit and its number finish. The result
+			# pause comes after the last command (or after an interruption).
+			var last := i == _planned.size() - 1 or not unit.is_alive() or state.is_over()
 			if _player_interrupted:
 				# D-049: an interrupted hero loses every following command of the plan,
 				# with its act; the interrupter gains +1 act per lost command (D-005 cap).
+				# D-057: told inside the same result, before its Z.
 				var lost_acts := 0
 				for j in range(i + 1, _planned.size()):
 					if options[_planned[j]] not in ["REST", "REACT"]:
 						lost_acts += _entry_cost(_planned_skills[j])
 				_lose_queue(unit, _planned.slice(i + 1).map(func(c: int) -> String: return options[c]), _interrupt_gainer, lost_acts)
+				await _pause_result()
 				break
+			if last:
+				await _pause_result()
+			elif not chain:
+				# Creator 2026-11-25: chained hits on the same target restart the pointer at
+				# once; only a change of command or target waits for the hit to finish.
+				await _next_hit_on_same_target()
+				if not is_inside_tree(): return
+		_exec_index = -1
 		prayer.release_unresolved(unit, _planned_skills)
 		_planned.clear()
 		_planned_skills.clear()
-		if chain_used:
+		_planned_targets.clear()
+		# Whatever path ended the queue, no chained rail outlives it.
+		if chain_open or rhythm._chain_mode:
 			rhythm.stop_chain()
-		if not cancelled:
-			return
+		_refresh_all()
+
+
+## D-057: commands whose enemy target is chosen in the plan: ATTACK, a strike skill
+## (Lunge) and ABSORB. Heat wave hits every enemy; ITEM / REST / PRAY choose their own.
+func _needs_enemy_target(command: String, detail: Dictionary) -> bool:
+	if command == "ABSORB":
+		return true
+	if command != FIGHT:
+		return false
+	if detail.is_empty():
+		return true
+	return String(SkillBook.def(StringName(detail.skill)).kind) == "strike"
+
+
+func _mark_target(target: BattleUnit, delta: int) -> void:
+	if target == null or target.is_player:
+		return
+	queued_acts_by_foe[target.id] = maxi(0, queued_acts_for(target) + delta)
+	_refresh_all()
 
 
 func _enemy_turn(unit: BattleUnit) -> void:
@@ -594,16 +807,18 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		_counter_resolved = false
 		_enemy_interrupted = false
 		_interrupt_gainer = null
+		_clear_roles()
 		var skill := _enemy_choice(unit, 2 - used)
 		if skill != &"":
 			used += int(SkillBook.def(skill).acts)
 			await _enemy_skill(unit, skill)
-			await _pause_result()
 			if _enemy_interrupted:
 				var lost: Array[String] = []
 				for _rest in mini(2 - used, unit.acts_available):
 					lost.append(FIGHT)
 				_lose_queue(unit, lost, _interrupt_gainer)
+			await _pause_result()
+			if _enemy_interrupted:
 				break
 			continue
 		used += 1
@@ -621,24 +836,26 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		fx.play("WHITEN", unit)
 		hud.feedback = ""
 		_append_log("%s announces an attack on %s." % [unit.display_name, defender.display_name])
+		_set_role(unit, "ATTACK")
+		_set_role(defender, "TARGET")
+		_event("%s attacks %s." % [short_name(unit), short_name(defender)])
 		hud.announce_attack("NO REACTION AVAILABLE" if eligible_reactors().is_empty() else "%s → %s" % [short_name(unit), short_name(defender)], unit)
 		if eligible_reactors().is_empty():
-			hud.mode = "announce"
 			hud.feedback = "No reaction acts left. Z / Enter: resolve attack"
-			await continue_requested
-			hud.mode = "busy"
+			await _await_confirm("announce")
 		reaction_declared = false
 		var defense_paid := await _maybe_player_reaction(defender, unit)
 		# A reaction can defeat the announced attacker before its action resolves.
 		# D-049: a counter-attack exchange already resolved (or interrupted) this attack.
 		if not _counter_resolved and unit.is_alive() and defender.is_alive():
-			await _perform_attack(unit, defender, 100, false, defense_paid, not reaction_declared)
-		await _pause_result()
+			await _perform_attack(unit, defender, basic_power, false, defense_paid, not reaction_declared)
 		if _enemy_interrupted:
 			var following: Array[String] = []
 			for _rest in mini(2 - used, unit.acts_available):
 				following.append(FIGHT)
 			_lose_queue(unit, following, _interrupt_gainer)
+		await _pause_result()
+		if _enemy_interrupted:
 			break
 
 
@@ -657,7 +874,9 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_
 	# D-049: an attacked enemy with a reaction act may counter-attack (33%).
 	if attacker.is_player and not is_reaction and not defender.is_player and defender.is_alive() \
 			and defender.acts_available > 0 and _enemy_counter_roll(defender):
-		if chain: rhythm.stop_chain()
+		# The two counter rails replace the attack rail, including a line still kept from the
+		# previous chained hit (that hit's own chain flag is false when it ends the queue).
+		rhythm.stop_chain()
 		await _enemy_counter(attacker, defender)
 		return
 	var hp_before := defender.current_hp
@@ -672,12 +891,29 @@ func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, ma
 	elif attack_result == BattleMath.RhythmResult.BEAM or defense_result == BattleMath.RhythmResult.BEAM: outcome = "BLOCK"
 	var source: String = log_history.back()
 	if source.contains("crit YES"): outcome += " / CRITICAL"
-	var penalty := ""
-	if not source.contains("NO CONTACT") and not magic:
-		if defender.affinity == BattleMath.Affinity.WEAK: penalty = " | WEAK +1 ACT"
-		elif defender.affinity in [BattleMath.Affinity.RESIST, BattleMath.Affinity.NULL, BattleMath.Affinity.ABSORB]: penalty = " | RESIST -1 ACT"
-	hud.message = "%s -> %s: %s, %d damage%s" % [short_name(attacker), short_name(defender), outcome, damage, penalty]
+	var contact := not source.contains("NO CONTACT")
+	hud.message = "%s -> %s: %s, %d damage" % [short_name(attacker), short_name(defender), outcome, damage]
 	hud.feedback = "%s | %s HP %d/%d%s | %s: %d ACTS left" % [outcome, short_name(defender), defender.current_hp, defender.stats.max_hp, " DOWN" if not defender.is_alive() else "", short_name(attacker), attacker.acts_available]
+	# D-057: the result as plain event sentences (who dodged, who blocked, who hit whom,
+	# who fell, who gained an act); the old rhythm/def/crit/affinity/SP numbers stay only
+	# in log_history.
+	if defense_result != BattleMath.RhythmResult.MISS and (not defender.is_player or roles.get(defender.id, "") == "DEFEND"):
+		_set_role(defender, "DEFEND")
+	if outcome.begins_with("DODGE"):
+		_event("%s dodges." % short_name(defender))
+	elif outcome.begins_with("MISS"):
+		_event("%s misses." % short_name(attacker))
+	elif defense_result == BattleMath.RhythmResult.BEAM:
+		_event("%s blocks: %d damage." % [short_name(defender), damage])
+	else:
+		_event("%s hits %s: %d damage." % [short_name(attacker), short_name(defender), damage])
+	if contact and not defender.is_alive():
+		if _hold_down:
+			_pending_down.append(defender)
+		else:
+			_event("%s is down." % short_name(defender))
+	if contact and not magic and BattleMath.press_turn_acts(defender.affinity) > 0 and attacker.is_alive():
+		_event("%s gains %d act." % [short_name(attacker), BattleMath.press_turn_acts(defender.affinity)])
 	phase_text = "RESULT: " + outcome
 	fx.stop_cues()
 	var cue := "DODGE" if outcome.begins_with("DODGE") else ("MISS" if outcome.begins_with("MISS") else ("BLOCK" if outcome.begins_with("BLOCK") else ("CRITICAL" if outcome.contains("CRITICAL") else "HIT")))
@@ -698,6 +934,7 @@ func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
 
 
 func _manual_rhythm(duration: float, point_half: float, chain: bool = false) -> int:
+	await _flush_log()
 	hud.mode = "timing"
 	if timing_role == "DEFEND":
 		rhythm.place(hud.defense_rail_rect(hud.players.find(action_defender)), "defense")
@@ -734,6 +971,7 @@ func _counter_ai_time(red_seconds: float) -> float:
 
 
 func _counter_exchange(hero: BattleUnit, enemy: BattleUnit, kind: String) -> Dictionary:
+	await _flush_log()
 	var index: int = hud.players.find(hero) if kind == "panel" else hud.opponents.find(enemy)
 	var rails: Array[Rect2] = hud.counter_rail_rects(kind, index)
 	var white_half := BattleMath.point_half_width(hero.stats.agi, enemy.stats.agi, hero.current_sp, enemy.current_sp)
@@ -764,6 +1002,8 @@ func _execute_counter(reactor: BattleUnit, enemy: BattleUnit, target: BattleUnit
 	action_defender = enemy
 	phase_text = "COUNTER"
 	_append_log("%s counter-attacks %s (1 act spent)." % [reactor.display_name, enemy.display_name])
+	_set_role(reactor, "COUNTER")
+	_event("%s counter-attacks %s." % [short_name(reactor), short_name(enemy)])
 	var o := await _counter_exchange(reactor, enemy, "panel")
 	_counter_resolved = true
 	match int(o.winner):
@@ -780,9 +1020,12 @@ func _execute_counter(reactor: BattleUnit, enemy: BattleUnit, target: BattleUnit
 			else: await _enemy_skill_lands(enemy, reactor, skill, o.enemy_timing)
 			_interrupt(enemy, reactor, o)
 		_:
+			# D-049 tie: both blows resolve at once, so a fall is told after both.
+			_hold_down = true
 			_strike(reactor, enemy, o.player_timing, true)
 			if skill == &"": _strike(enemy, target, o.enemy_timing, false)
 			else: await _enemy_skill_lands(enemy, target, skill, o.enemy_timing)
+			_release_down()
 			_enemy_interrupted = true
 			_interrupt_gainer = null
 			_tie_report(reactor, enemy)
@@ -796,6 +1039,10 @@ func _enemy_counter(hero: BattleUnit, enemy: BattleUnit, skill: StringName = &""
 	action_defender = enemy
 	phase_text = "ENEMY COUNTER"
 	_append_log("%s counter-attacks %s (1 act spent)." % [enemy.display_name, hero.display_name])
+	# D-057: the enemy's counter is announced (it used to be overwritten in the same frame).
+	_set_role(hero, "ATTACK")
+	_set_role(enemy, "COUNTER")
+	_event("%s counter-attacks!" % short_name(enemy))
 	var o := await _counter_exchange(hero, enemy, "enemy")
 	match int(o.winner):
 		BattleMath.CounterWinner.PLAYER:
@@ -808,9 +1055,12 @@ func _enemy_counter(hero: BattleUnit, enemy: BattleUnit, skill: StringName = &""
 			_player_interrupted = true
 			_interrupt_gainer = enemy
 		_:
+			# D-049 tie: both blows resolve at once, so a fall is told after both.
+			_hold_down = true
 			if skill == &"": _strike(hero, enemy, o.player_timing, false)
 			else: await _hero_skill_lands(hero, enemy, skill, o.player_timing)
 			_strike(enemy, hero, o.enemy_timing, true)
+			_release_down()
 			_player_interrupted = true
 			_interrupt_gainer = null
 			_tie_report(hero, enemy)
@@ -825,7 +1075,7 @@ func _strike(attacker: BattleUnit, defender: BattleUnit, timing: int, is_reactio
 	attack_result = timing
 	defense_result = BattleMath.RhythmResult.MISS
 	var hp_before := defender.current_hp
-	_apply_strike(attacker, defender, 100, is_reaction, timing, BattleMath.RhythmResult.MISS)
+	_apply_strike(attacker, defender, basic_power, is_reaction, timing, BattleMath.RhythmResult.MISS)
 	_present_strike(attacker, defender, hp_before - defender.current_hp)
 
 
@@ -839,11 +1089,21 @@ func _interrupt(winner: BattleUnit, loser: BattleUnit, o: Dictionary) -> void:
 		hud.shake(loser)
 	var kind := "PERFECT INTERRUPTION" if bool(o.perfect) else "INTERRUPTION"
 	_append_log("%s: %s interrupts %s (+%d SP stolen)." % [kind, winner.display_name, loser.display_name, stolen])
+	_event("%s%s interrupts %s%s." % ["Perfect! " if bool(o.perfect) else "", short_name(winner), short_name(loser),
+		" and steals %d SP" % stolen if stolen > 0 else ""])
 	hud.message = "%s: %s interrupts %s | +%d SP" % [kind, short_name(winner), short_name(loser), stolen]
+
+
+func _release_down() -> void:
+	_hold_down = false
+	for unit in _pending_down:
+		_event("%s is down." % short_name(unit))
+	_pending_down.clear()
 
 
 func _tie_report(hero: BattleUnit, enemy: BattleUnit) -> void:
 	_append_log("COUNTER TIE: %s and %s interrupt each other (no SP)." % [hero.display_name, enemy.display_name])
+	_event("%s and %s interrupt each other." % [short_name(hero), short_name(enemy)])
 	hud.message = "COUNTER TIE: %s and %s interrupt each other" % [short_name(hero), short_name(enemy)]
 
 
@@ -863,6 +1123,10 @@ func _lose_queue(unit: BattleUnit, commands: Array, gainer: BattleUnit, acts_ove
 		gainer.grant_acts(commands.size())
 	_append_log("%s loses %d queued command(s)%s." % [unit.display_name, commands.size(),
 		"; %s gains %d act(s)" % [gainer.display_name, commands.size()] if gainer != null and gainer.is_alive() else ""])
+	# D-057: a queued command never vanishes silently.
+	_event("%s loses %d queued command%s." % [short_name(unit), commands.size(), "" if commands.size() == 1 else "s"])
+	if gainer != null and gainer.is_alive():
+		_event("%s gains %d act%s." % [short_name(gainer), commands.size(), "" if commands.size() == 1 else "s"])
 	_refresh_all()
 
 
@@ -889,6 +1153,7 @@ func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 	reaction_defender = defender
 	reaction_actor = defender if candidates.has(defender) else candidates[0]
 	while true:
+		await _flush_log()
 		active_actor = reaction_actor
 		action_attacker = attacker
 		action_defender = defender
@@ -935,6 +1200,8 @@ func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 					reaction_declared = true
 					return false
 				continue
+			if command not in ["DEFEND", FIGHT]:
+				_set_role(reaction_actor, "REACT")
 			if await _execute_command(reaction_actor, command, true):
 				in_reaction = false
 				reaction_declared = true
@@ -974,7 +1241,14 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	var was_absorbed := defender.absorbed
 	# D-052: the old SMT absorb animation is replaced by absorb_vfx (letters per press,
 	# hit and break on success).
+	var skills_before := unit.skills.size()
 	await super._perform_absorption(unit, defender)
+	if not was_absorbed and defender.absorbed:
+		_event("%s absorbs %s." % [short_name(unit), short_name(defender)])
+		if unit.skills.size() > skills_before:
+			_event("%s learns %s." % [short_name(unit), SkillBook.display_name(unit.skills.back())])
+	elif defender.is_alive():
+		_event("%s resists the absorption." % short_name(defender))
 	if not was_absorbed and defender.absorbed:
 		fx.play("ABSORBED", unit)
 		# Creator 2026-11-23: the ABSORBED label stays, in green, with the gain taken,
@@ -1009,9 +1283,24 @@ func _choose_absorb_gain(options: Array[Dictionary]) -> int:
 
 
 func _pause_result() -> void:
-	hud.mode = "continue"
+	await _await_confirm("continue")
+	# D-057: the roles belong to the action whose result was just confirmed.
+	_clear_roles()
+
+
+## D-057: a Z pause that first pages the event lines still waiting beyond the two-row
+## log (each Z shows the next ones); only the Z after the last line goes on.
+func _await_confirm(mode_name: String) -> void:
+	hud.mode = mode_name
 	_refresh_all()
-	await continue_requested
+	while is_inside_tree():
+		await continue_requested
+		if hud.log_hidden():
+			hud.page_log()
+			_refresh_all()
+			continue
+		break
+	hud.page_log()
 	hud.mode = "busy"
 
 
@@ -1023,9 +1312,10 @@ func proceed() -> void:
 func _show_result() -> void:
 	prayer.battle_end(state.player_victory())
 	_append_log("VICTORY." if state.player_victory() else "DEFEAT.")
+	_event("VICTORY." if state.player_victory() else "DEFEAT.")
 	phase_text = "VICTORY" if state.player_victory() else "DEFEAT"
 	hud.announce(phase_text)
-	hud.feedback = "Battle finished. Z / Enter: play again. X: stay."
+	hud.feedback = "Battle finished. Z / Enter: return to the dungeon." if Engine.has_meta(DUNGEON_RETURN_META) else "Battle finished. Z / Enter: play again. X: stay."
 	hud.mode = "result"
 	_refresh_all()
 
@@ -1052,7 +1342,17 @@ func handle_confirm() -> void:
 				_mash_count += 1
 		"continue", "announce": proceed()
 		"result":
-			get_tree().reload_current_scene()
+			# Volta ao dungeon quando a batalha veio de um encontro no mapa.
+			var return_scene := String(Engine.get_meta(DUNGEON_RETURN_META, ""))
+			if not return_scene.is_empty():
+				Engine.remove_meta(DUNGEON_RETURN_META)
+				var fader := get_tree().root.get_node_or_null("SceneFader")
+				if fader != null:
+					fader.fade_to(return_scene)
+				else:
+					get_tree().change_scene_to_file(return_scene)
+			else:
+				get_tree().reload_current_scene()
 
 
 func handle_back() -> void:
@@ -1078,7 +1378,7 @@ func handle_back() -> void:
 			if not fx.is_busy(): proceed()
 		"timing", "absorb", "counter": hud.feedback = "Action committed. Z / Enter: finish input."
 		"announce": hud.feedback = "No acts to react. Z / Enter: resolve enemy attack."
-		"result": hud.feedback = "Battle finished. Z / Enter: play again."
+		"result": hud.feedback = "Battle finished. Z / Enter: return to the dungeon." if Engine.has_meta(DUNGEON_RETURN_META) else "Battle finished. Z / Enter: play again."
 		"turn": hud.feedback = "Z / Enter: choose command."
 	hud.queue_redraw()
 
@@ -1088,7 +1388,13 @@ func handle_back() -> void:
 ## FIGHT submenu: ATTACK + the unit's skills. Rows it cannot pay now (acts left in the
 ## plan, EN, HP) are dimmed and refuse confirmation. Returns {} when cancelled,
 ## {"skill": &""} for ATTACK, or {"skill": id, "extra": EN} for a skill.
+## Sobrescrito pelo Survival enquanto a habilidade não foi identificada.
+func skill_label(skill: StringName) -> String:
+	return SkillBook.display_name(skill)
+
+
 func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: int) -> Dictionary:
+	await _flush_log()
 	while true:
 		var labels: Array[String] = ["ATTACK"]
 		skill_ids.assign([&""])
@@ -1096,7 +1402,7 @@ func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: i
 		skill_reasons.clear()
 		skill_unit = unit
 		for skill in unit.skills:
-			labels.append(SkillBook.display_name(skill))
+			labels.append(skill_label(skill))
 			skill_ids.append(skill)
 			if not SkillBook.affordable(skill, acts_left, en_left, hp_left):
 				skill_disabled.append(labels.size() - 1)
@@ -1160,6 +1466,7 @@ func cancel_skill() -> void:
 
 ## Energy Eat: one line "EXTRA EN < n >", Left/Right adjust, Z confirms, X goes back.
 func _wait_en_extra(maximum: int) -> int:
+	await _flush_log()
 	en_extra = 0
 	en_extra_max = maxi(0, maximum)
 	_en_extra_ok = false
@@ -1196,21 +1503,37 @@ func en_extra_info() -> String:
 
 
 ## A hero uses a skill (action or reaction). Costs are paid when it resolves.
-func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
+func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planned: BattleUnit = null) -> bool:
 	var skill := StringName(detail.skill)
 	var d := SkillBook.def(skill)
 	var extra := int(detail.get("extra", 0))
 	if not SkillBook.affordable(skill, unit.acts_available, unit.current_en - extra, unit.current_hp):
 		_append_log("%s cannot pay %s any more." % [unit.display_name, d.name])
+		_event("%s cannot pay %s." % [short_name(unit), d.name])
 		return true
 	var target: BattleUnit = null
 	if d.kind == "strike":
 		phase_text = "SELECT %s TARGET" % d.name
-		target = await _wait_target()
+		# D-057: the target chosen in the plan (a reaction chooses it here).
+		target = await _planned_or_new_target(planned)
 		if target == null: return false
 	_pay_skill(unit, skill, extra)
 	phase_text = ("REACTION " if reacting else "") + String(d.name)
 	_append_log("%s uses %s." % [unit.display_name, d.name])
+	if not reacting: _clear_roles()
+	if reacting: _set_role(unit, "REACT")
+	match String(d.kind):
+		"strike":
+			if not reacting: _set_role(unit, "ATTACK")
+			_set_role(target, "TARGET")
+			_event("%s uses %s on %s." % [short_name(unit), d.name, short_name(target)])
+		"magic":
+			if not reacting: _set_role(unit, "ATTACK")
+			for foe in hud.opponents:
+				if foe.is_alive(): _set_role(foe, "TARGET")
+			_event("%s uses %s." % [short_name(unit), d.name])
+		_:
+			_event("%s uses %s." % [short_name(unit), d.name])
 	match String(d.kind):
 		"strike": await _skill_strike(unit, target, skill, reacting)
 		"magic": await _hero_magic(unit, skill, reacting)
@@ -1239,11 +1562,13 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 		letter_fx.self_skill(unit, "buff")
 		_append_log("%s: -%d HP, +1 ATK stage (%d active, ATK x%.2f)." % [unit.display_name, int(d.hp),
 			unit.atk_stages.size(), 1.0 + SkillBook.ATK_STAGE_BONUS * unit.atk_stages.size()])
+		_event("%s's ATK rises." % short_name(unit))
 	else:
 		var healed := unit.heal(int(d.heal) + extra)
 		fx.play("HEAL", unit, healed)
 		letter_fx.self_skill(unit, "heal")
 		_append_log("%s eats energy: +%d HP (%d extra EN)." % [unit.display_name, healed, extra])
+		_event("%s recovers %d HP." % [short_name(unit), healed])
 	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	hud.feedback = "%s: HP %d/%d | EN %d/%d" % [short_name(unit), unit.current_hp, unit.stats.max_hp, unit.current_en, unit.stats.max_en]
 
@@ -1265,6 +1590,7 @@ func _expire_stages(owner: BattleUnit) -> void:
 			if owner == null or StringName(stage_info.owner) == owner.id:
 				unit.atk_stages.remove_at(i)
 				_append_log("%s: ATK stage ended (%d active)." % [unit.display_name, unit.atk_stages.size()])
+				_event("%s's ATK boost ends." % short_name(unit))
 
 
 ## Burns: 3 damage per stacked burn at the start of each round, 3 rounds each.
@@ -1283,6 +1609,9 @@ func _burn_tick() -> void:
 		fx.play("BURN", unit, applied)
 		letter_fx.burn(unit)
 		_append_log("%s burns: -%d HP (%d burn(s) left)." % [unit.display_name, applied, unit.burns.size()])
+		_event("%s burns: %d damage." % [short_name(unit), applied])
+		if not unit.is_alive():
+			_event("%s is down." % short_name(unit))
 		burned = true
 	if burned:
 		_refresh_all()
@@ -1330,6 +1659,7 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 	hud.feedback = ""
 	if d.kind in ["buff", "heal"]:
 		_append_log("%s uses %s." % [unit.display_name, d.name])
+		_event("%s uses %s." % [short_name(unit), d.name])
 		_self_skill(unit, skill, extra, false)
 		hud.message = "%s USES %s" % [short_name(unit), d.name]
 		_refresh_all()
@@ -1352,12 +1682,13 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		action_attacker = unit
 		action_defender = target
 		_append_log("%s announces %s on %s." % [unit.display_name, d.name, target.display_name])
+		_set_role(unit, "ATTACK")
+		if not roles.has(target.id): _set_role(target, "TARGET")
+		_event("%s uses %s on %s." % [short_name(unit), d.name, short_name(target)])
 		hud.announce_attack("NO REACTION AVAILABLE" if eligible_reactors().is_empty() else "%s %s → %s" % [short_name(unit), d.name, short_name(target)], unit)
 		if eligible_reactors().is_empty():
-			hud.mode = "announce"
 			hud.feedback = "No reaction acts left. Z / Enter: resolve %s" % d.name
-			await continue_requested
-			hud.mode = "busy"
+			await _await_confirm("announce")
 		reaction_declared = false
 		paid[target] = await _maybe_player_reaction(target, unit)
 		declared[target] = reaction_declared
@@ -1516,6 +1847,7 @@ func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, i
 	if applied >= 0 and defender.is_alive() and _burn_roll(int(d.get("burn_chance", 0))):
 		defender.burns.append(SkillBook.BURN_ROUNDS)
 		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
+		_event("%s is burning." % short_name(defender))
 
 
 ## Attack timing per mark: the hero presses on the rail; an enemy rolls each mark (or

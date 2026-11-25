@@ -66,9 +66,11 @@ func test_physical_damage_uses_ratio_and_affinity() -> void:
 
 
 func test_press_turn_act_delta() -> void:
+	# D-057 (creator 2026-11-25): an affinity only gives an act (WEAK +1), never takes one.
 	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.WEAK), 1)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.RESIST), -1)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), -1)
+	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.RESIST), 0)
+	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), 0)
+	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.ABSORB), 0)
 	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NORMAL), 0)
 
 
@@ -146,7 +148,7 @@ func test_dominance_ratio_requires_seventy_percent_share() -> void:
 func test_press_turn_uses_contact_semantics() -> void:
 	# The formula itself is unchanged; the controller applies it only on contact.
 	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.WEAK), 1)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), -1)
+	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), 0)
 
 
 ## D-049: counter-attack exchange rules.

@@ -30,6 +30,7 @@ func _new_battle(enemy_counter: bool) -> void:
 	if battle != null:
 		battle.queue_free()
 	battle = CaptureBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	battle.force_enemy_counter = enemy_counter
 	add_child(battle)
 	for enemy in battle.state.units.slice(2):

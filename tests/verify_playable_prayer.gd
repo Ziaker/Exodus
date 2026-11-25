@@ -46,6 +46,7 @@ func fresh(pp: int) -> Control:
 	ProgressStore.clear()
 	ProgressStore.save_pp(pp)
 	var battle := PrayBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	return battle
 
@@ -61,8 +62,16 @@ func to_yoch(battle: Control, acts: int) -> void:
 	order.insert(order.find(fallen(battle)) + 1, yoch(battle))
 	yoch(battle).acts_available = acts
 	battle.submit_plan(battle.hud.plan_options.find("REST"))
-	battle.proceed()
+	confirm(battle)
 	check(battle.active_actor == yoch(battle) and battle.hud.mode == "plan", "Yoch's plan opens after Fallen rests")
+
+## D-057: Z first pages the event lines still waiting beyond the two-row log, then goes on.
+func confirm(battle: Control) -> void:
+	for _i in 8:
+		var paging: bool = battle.hud.mode in ["continue", "announce"] and battle.hud.log_hidden()
+		battle.proceed()
+		if not paging: return
+
 
 func open_pray(battle: Control) -> void:
 	battle.submit_plan(battle.hud.plan_options.find("PRAY"))
@@ -157,7 +166,9 @@ func _run() -> void:
 	check(y.current_pp == 1 and y.current_sp == 31 and y.acts_available == 0, "PRAY: 1 act, +1 PP, +2 SP")
 	check(ProgressStore.load_pp() == 1, "The new PP are saved")
 	check(battle.prayer.fx.letters.size() == 14 and battle.prayer.fx.letters.all(func(l: Dictionary) -> bool: return float(l.bottom) == battle.hud.STATUS_RECTS[1].end.y - 6), "PRAY: 14 letters rise from the bottom of Yoch's card")
-	check(battle.hud.log_ink_text == battle.hud.message and battle.hud.message.contains("+1 PP"), "Prayer log line is inked #f5f58c")
+	# D-057: the log holds event sentences; prayer lines keep the D-048 ink.
+	var pray_line: Dictionary = battle.hud.events.back()
+	check(String(pray_line.text) == "Yoch gains 1 PP." and Color(pray_line.ink) == PrayerBook.INK, "Prayer log line is an event inked #f5f58c (%s)" % pray_line)
 	battle.queue_free(); await process_frame
 
 	# ---- Queued PRAYs fund a later Refuah; PP leave when queued (paid / owed).
@@ -173,9 +184,10 @@ func _run() -> void:
 	check(battle.hud.command_options.has("Refuah  2 PP") and not battle.hud.command_options.has("Ra'am  3 PP"), "Two queued PRAYs unlock Refuah, not Ra'am")
 	pick(battle, "Refuah")
 	battle.submit_target(0)
-	# Three acts committed: the plan runs.
+	# Three acts committed: the plan runs. D-057: one command after the other, no Z in
+	# between; the result pause comes after the last one.
+	await wait_mode(battle, "continue")
 	check(battle.hud.mode == "continue", "The full plan resolves")
-	battle.proceed(); battle.proceed()
 	check(f.current_hp == 21 and y.current_pp == 0, "Refuah funded by the two PRAYs heals 20 (Fallen 1 -> 21), 0 PP left")
 	check(last_line(battle, "Refuah").contains("+20 HP"), "Refuah logged")
 	check(last_line(battle, "prays: +1 PP").contains("to the queued Refuah"), "A PRAY that pays a queued spell says so (%s)" % last_line(battle, "prays: +1 PP"))
@@ -204,8 +216,8 @@ func _run() -> void:
 	check(battle.hud.command_options == ["Refuah  2 PP"], "Acts full: only queued spells (+1 PP) are offered (%s)" % [battle.hud.command_options])
 	pick(battle, "Refuah"); battle.submit_target(1)
 	check(y.current_pp == 0 and int(battle._planned_skills[1].extra) == 1, "+1 PP on the second Refuah")
+	await wait_mode(battle, "continue")
 	check(battle.hud.mode == "continue", "No act and no PP left: the plan runs by itself")
-	battle.proceed(); battle.proceed()
 	check(f.current_hp == 31 and y.current_hp == 11, "Refuah 3 PP on Fallen heals 30; Refuah 3 PP on Yoch heals to his max")
 	battle.queue_free(); await process_frame
 
@@ -225,20 +237,20 @@ func _run() -> void:
 	var hp0 := y.current_hp
 	battle.exec_plan()
 	check(battle.hud.mode == "continue" and last_line(battle, "attacks Yoch's prayer") != "", "An enemy attacks the PRAY")
-	battle.proceed()
+	confirm(battle)
 	check(battle.hud.mode == "continue", "Every enemy that rolled attacks (second strike)")
-	battle.proceed()
+	confirm(battle)
 	check(y.current_hp < hp0, "Yoch has no defense rail: the strikes land")
 	check(last_line(battle, "interrupted by").contains(foes[0].display_name) or last_line(battle, "interrupted by").contains(foes[1].display_name), "BEAM contact interrupts the PRAY")
-	battle.proceed()
+	confirm(battle)
 	check(y.current_pp == 2, "Interrupted PRAY gives no PP; the lost Refuah's 2 PP come back (pp %d)" % y.current_pp)
 	check(last_line(battle, "queued command").contains("loses 1"), "The rest of Yoch's queue is lost")
 	var first_hitter: BattleUnit = foes[1] if battle.log_history.find(last_line(battle, "%s attacks Yoch's prayer" % foes[1].display_name)) < battle.log_history.find(last_line(battle, "%s attacks Yoch's prayer" % foes[0].display_name)) else foes[0]
 	check(last_line(battle, "queued command").contains("%s gains 1" % first_hitter.display_name), "The first enemy that hit gains the lost command's act (%s)" % last_line(battle, "queued command"))
-	# Creator 2026-11-23: Yoch's turn ends with his queue; his act left waits for the next
-	# cycle and FOE B (next by speed) has already announced its attack, spending 1 act.
-	check(y.acts_available == 1 and battle.action_attacker == foes[1] and battle.hud.mode == "react", "After the interrupted queue the turn passes to FOE B; Yoch keeps his act left")
-	check(foes[0].acts_available + foes[1].acts_available == foe_acts[0] + foe_acts[1] - 2 + 1 - 1, "Each attack spent 1 enemy act; +1 act to the first hitter (FOE B's own attack: -1)")
+	# D-057 (creator 2026-11-25): the act left after the interrupted queue is planned again
+	# in the same turn; Yoch's turn only ends with 0 acts or REST.
+	check(y.acts_available == 1 and battle.active_actor == y and battle.hud.mode == "plan", "After the interrupted queue Yoch plans the act left in the same turn (acts %d, actor %s, mode %s)" % [y.acts_available, battle.active_actor.display_name if battle.active_actor else "-", battle.hud.mode])
+	check(foes[0].acts_available + foes[1].acts_available == foe_acts[0] + foe_acts[1] - 2 + 1, "Each attack spent 1 enemy act; +1 act to the first hitter")
 	battle.queue_free(); await process_frame
 
 	# ---- Enemy MISS does not interrupt.
@@ -248,7 +260,7 @@ func _run() -> void:
 	battle.enemy_timing = BattleMath.RhythmResult.MISS
 	to_yoch(battle, 1)
 	open_pray(battle); pick(battle, "PRAY")
-	battle.proceed(); battle.proceed()
+	confirm(battle); confirm(battle)
 	check(y.current_pp == 1, "Enemy MISS: the PRAY resolves (+1 PP)")
 	battle.queue_free(); await process_frame
 
@@ -301,7 +313,7 @@ func _run() -> void:
 	battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.POINT)
 	check(foes[0].current_hp == foe_hp, "Interrupted Ra'am has no effect")
 	check(y.current_pp == 3, "Interrupted Ra'am gives its 3 PP back (pp %d)" % y.current_pp)
-	battle.proceed()
+	confirm(battle)
 	check(last_line(battle, "queued command").contains("loses 1") and last_line(battle, "queued command").contains("%s gains 1" % foes[0].display_name), "The queued PRAY is lost; the interrupter gains 1 act")
 	battle.queue_free(); await process_frame
 

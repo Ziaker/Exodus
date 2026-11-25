@@ -193,6 +193,7 @@ func _build_menu(avail: int, details: Array, acts_left: int) -> void:
 
 
 func _wait_menu(feedback: String) -> StringName:
+	await battle._flush_log()
 	var hud: Control = battle.hud
 	hud.command_options = menu_rows
 	hud.command_index = 0
@@ -256,6 +257,7 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			var healed := target.heal(PrayerBook.refuah_heal(int(d.extra)))
 			fx.cast(target)
 			_log("%s prays Refuah on %s: +%d HP (%d PP)." % [unit.display_name, target.display_name, healed, _cost(d)])
+			_event("%s prays Refuah on %s: +%d HP." % [battle.short_name(unit), battle.short_name(target), healed])
 			hud.feedback = "%s: HP %d/%d | PP %d/%d" % [battle.short_name(target), target.current_hp,
 				target.stats.max_hp, unit.current_pp, PrayerBook.MAX_PP]
 		elif id == PrayerBook.HAGANAH:
@@ -264,6 +266,7 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 				"owner": battle.turn_owner.id if battle.turn_owner != null else &""}
 			_log("%s prays Haganah on %s: shielded from status conditions for one round (%d PP)." % [
 				unit.display_name, target.display_name, _cost(d)])
+			_event("%s prays Haganah on %s." % [battle.short_name(unit), battle.short_name(target)])
 		if reacting and id in [PrayerBook.REFUAH, PrayerBook.HAGANAH]:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	save(unit)
@@ -295,6 +298,7 @@ func _reaction_pick(unit: BattleUnit) -> Dictionary:
 ## The first enemy that hit gains the lost commands' acts.
 func _pray(unit: BattleUnit, reacting: bool) -> void:
 	_log("%s prays." % unit.display_name)
+	_event("%s prays." % battle.short_name(unit))
 	var first_hitter: BattleUnit = null
 	for foe in battle.hud.opponents.duplicate():
 		if not foe.is_alive() or foe.acts_available <= 0 or not unit.is_alive():
@@ -306,8 +310,13 @@ func _pray(unit: BattleUnit, reacting: bool) -> void:
 		battle.action_defender = unit
 		battle.phase_text = "ENEMY REACTION"
 		battle._append_log("%s attacks %s's prayer (1 act spent)." % [foe.display_name, unit.display_name])
+		battle._clear_roles()
+		battle._set_role(foe, "REACT")
+		battle._set_role(unit, "TARGET")
+		battle._event("%s attacks %s's prayer." % [battle.short_name(foe), battle.short_name(unit)])
 		var timing: int = battle._ai_roll(foe, unit)
-		var applied: int = battle._skill_hit(foe, unit, 100, true, timing, BattleMath.RhythmResult.MISS, false)
+		# D-057: a basic attack uses the basic power (D-031: 8), not the old fixed 100.
+		var applied: int = battle._skill_hit(foe, unit, battle.basic_power, true, timing, BattleMath.RhythmResult.MISS, false)
 		if applied >= 0 and first_hitter == null:
 			first_hitter = foe
 		await battle._pause_result()
@@ -317,11 +326,13 @@ func _pray(unit: BattleUnit, reacting: bool) -> void:
 		battle._player_interrupted = true
 		battle._interrupt_gainer = first_hitter
 		_log("%s's prayer is interrupted by %s: no PP." % [unit.display_name, first_hitter.display_name])
+		_event("%s's prayer is interrupted." % battle.short_name(unit))
 		return
 	var gained := unit.change_pp(1)
 	fx.cast(unit)
 	var paid := _settle_owed(unit)
 	_log("%s prays: +%d PP (%d/%d%s)." % [unit.display_name, gained, unit.current_pp, PrayerBook.MAX_PP, paid])
+	_event("%s gains %d PP." % [battle.short_name(unit), gained])
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	battle.hud.feedback = "%s: PP %d/%d | SP %d" % [battle.short_name(unit), unit.current_pp, PrayerBook.MAX_PP, unit.current_sp]
@@ -347,10 +358,16 @@ func _settle_owed(unit: BattleUnit) -> String:
 ## Yoch's attack rail against the enemy's defense, like ATTACK.
 func _raam(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
 	_log("%s prays Ra'am on %s (%d PP)." % [unit.display_name, target.display_name, _cost(d)])
+	if not reacting: battle._clear_roles()
+	battle._set_role(unit, "REACT" if reacting else "ATTACK")
+	battle._set_role(target, "TARGET")
+	_event("%s prays Ra'am on %s." % [battle.short_name(unit), battle.short_name(target)])
 	var extra := int(d.extra)
 	if target.acts_available > 0 and battle._enemy_raam_counter_roll(target):
 		target.spend_act()
 		battle._append_log("%s counter-attacks %s's Ra'am (1 act spent)." % [target.display_name, unit.display_name])
+		battle._set_role(target, "COUNTER")
+		battle._event("%s counter-attacks!" % battle.short_name(target))
 		var o: Dictionary = await battle._counter_exchange(unit, target, "enemy")
 		match int(o.winner):
 			BattleMath.CounterWinner.PLAYER:
@@ -387,6 +404,12 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	if not BattleMath.has_contact(attack, defense):
 		_log("%s -> %s: 0 dmg (Ra'am, rhythm %s, def %s, NO CONTACT)" % [unit.display_name,
 			target.display_name, battle._rhythm_name(attack), battle._rhythm_name(defense)])
+		if defense != BattleMath.RhythmResult.MISS:
+			battle._set_role(target, "DEFEND")
+		if defense == BattleMath.RhythmResult.POINT:
+			_event("%s dodges." % battle.short_name(target))
+		else:
+			_event("%s misses." % battle.short_name(unit))
 		battle._present_strike(unit, target, 0)
 		return
 	# Approved thunder (2026-11-23): the damage lands at the strike.
@@ -397,6 +420,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 		unit.current_sp, target.current_sp, target.affinity, target.race, battle.rng)
 	if bool(r.angel):
 		_log("%s -> %s: 0 dmg (Ra'am has no effect on angels)" % [unit.display_name, target.display_name])
+		_event("Ra'am has no effect on %s." % battle.short_name(target))
 		battle._present_strike(unit, target, 0, true)
 		return
 	var amount := int(r.amount)
@@ -415,25 +439,31 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 		unit.display_name, target.display_name, applied, int(r.base), "BLOCK" if beam else "FULL",
 		battle._rhythm_name(attack), battle._rhythm_name(defense), "YES" if bool(r.crit) else "no",
 		battle._affinity_name(target.affinity), int(r.sp_roll)])
-	_present_raam(unit, target, hp_before - target.current_hp, beam, bool(r.crit))
-	battle.hud.log_ink_text = battle.hud.message
+	var dealt := hp_before - target.current_hp
+	if defense != BattleMath.RhythmResult.MISS:
+		battle._set_role(target, "DEFEND")
+	if defense == BattleMath.RhythmResult.BEAM:
+		_event("%s blocks: %d damage." % [battle.short_name(target), dealt])
+	else:
+		_event("Ra'am strikes %s: %d damage." % [battle.short_name(target), dealt])
+	if not target.is_alive():
+		_event("%s is down." % battle.short_name(target))
+	if BattleMath.press_turn_acts(target.affinity) > 0 and unit.is_alive():
+		_event("%s gains %d act." % [battle.short_name(unit), BattleMath.press_turn_acts(target.affinity)])
+	_present_raam(unit, target, dealt, beam, bool(r.crit))
 
 
 ## Like BattlePlayable._present_strike, but the approved thunder is the impact: the
 ## effect layer shows only the damage number (cue RAAM / RAAM_BLOCK, no claw cells).
 func _present_raam(unit: BattleUnit, target: BattleUnit, damage: int, beam: bool, crit: bool) -> void:
 	var outcome := ("BLOCK" if beam else "HIT") + (" / CRITICAL" if crit else "")
-	var penalty := ""
-	if target.affinity == BattleMath.Affinity.WEAK: penalty = " | WEAK +1 ACT"
-	elif target.affinity in [BattleMath.Affinity.RESIST, BattleMath.Affinity.NULL, BattleMath.Affinity.ABSORB]: penalty = " | RESIST -1 ACT"
 	var hud: Control = battle.hud
-	hud.message = "%s -> %s: RA'AM %s, %d damage%s" % [battle.short_name(unit), battle.short_name(target), outcome, damage, penalty]
+	hud.message = "%s -> %s: RA'AM %s, %d damage" % [battle.short_name(unit), battle.short_name(target), outcome, damage]
 	hud.feedback = "%s | %s HP %d/%d%s | %s: %d ACTS left" % [outcome, battle.short_name(target), target.current_hp,
 		target.stats.max_hp, " DOWN" if not target.is_alive() else "", battle.short_name(unit), unit.acts_available]
 	battle.phase_text = "RESULT: " + outcome
 	battle.fx.stop_cues()
 	battle.fx.play("RAAM_BLOCK" if beam else "RAAM", target, damage, unit)
-	hud.log_ink_text = hud.message
 	battle._refresh_all()
 
 
@@ -446,6 +476,7 @@ func _release(unit: BattleUnit, d: Dictionary, why: String) -> void:
 	if back > 0:
 		unit.change_pp(back)
 		_log("%s: %s, %d PP back to %s." % [PrayerBook.spell_name(StringName(d.pray)), why, back, unit.display_name])
+		_event("%s is not cast: %d PP back." % [PrayerBook.spell_name(StringName(d.pray)), back])
 
 
 ## After a plan block: queued spells that never resolved give their PP back.
@@ -473,6 +504,8 @@ func rest(unit: BattleUnit, reacting: bool) -> bool:
 	battle.phase_text = "REST"
 	battle._append_log("%s %s: %d act(s) stored; round participation ended." % [
 		unit.display_name, "reacts with REST" if reacting else "rests", remaining])
+	if reacting: battle._set_role(unit, "REACT")
+	battle._event("%s rests: %d act(s) stored." % [battle.short_name(unit), remaining])
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	battle.hud.feedback = "%s: 0 ACT spent, %d stored" % [unit.display_name, remaining]
@@ -490,27 +523,34 @@ func expire(owner: BattleUnit) -> void:
 		if owner == null or StringName(h.owner) == owner.id:
 			unit.haganah = {}
 			_log("%s: Haganah ended." % unit.display_name)
+			_event("%s's Haganah ends." % battle.short_name(unit))
 
 
 func save(unit: BattleUnit) -> void:
-	if unit != null and unit.prays:
+	if battle.persist_progress and unit != null and unit.prays:
 		ProgressStore.save_pp(unit.current_pp)
 
 
 ## Creator 2026-11-23: a defeat zeroes the PP; otherwise they persist.
 func battle_end(victory: bool) -> void:
+	if not battle.persist_progress:
+		return
 	for unit in battle.state.units:
 		if unit.prays:
 			ProgressStore.save_pp(unit.current_pp if victory else 0)
 
 
+## Diagnostics only (log_history); the Battle Log line is _event() (D-057).
 func _log(text: String) -> void:
 	battle._append_log(text)
-	# D-048: prayer lines are shown in #f5f58c.
-	battle.hud.log_ink_text = battle.hud.message
-	battle.hud.queue_redraw()
 
 
+## D-057: a prayer event sentence; D-048: prayer lines are shown in #f5f58c.
+func _event(text: String) -> void:
+	battle._event(text, PrayerBook.INK)
+
+
+## Planning feedback of the PRAY menu (queued spell, not enough PP), in the prayer ink.
 func _say(text: String) -> void:
 	battle.hud.message = text
-	battle.hud.queue_redraw()
+	_event(text)

@@ -153,6 +153,61 @@
 - Perfis ágil/equilibrado, referência neutra independente, Fallen, dados de espécies e progresso D-028 intactos.
 - Contra poder básico 8 e ATK 8, DEF 8 produz dano-base 8 e **cinco acertos nominais** em HP 40. Diferença de SP resistente 88 contra atacante 80 causa `−1d8` antes dos demais modificadores; a meta 5–7 não está validada estatisticamente.
 
+## Tela da batalha na resolução D-055 (criador, 2026-11-24; IMPLEMENTADO)
+
+- Com a tela 816x624 da D-055, a batalha e as cenas do anjo (morte e prólogo) ficaram no
+  tamanho antigo e quebradas. O criador escolheu **tudo 1,5x**: elas continuam montadas em
+  544x416 e a janela as mostra 1,5x (escala de conteúdo fracionária enquanto a cena está
+  aberta, `scripts/core/layout_scale.gd`), com o texto desenhado no tamanho real. Título e
+  dungeon seguem em 816x624.
+- **HUD opção 13 "Janelas baixas" (criador, 2026-11-24; IMPLEMENTADO)**, escolhida entre
+  os protótipos de `prototypes/combat-hud-html/index.html`:
+  - Rodada, nomes com SP e a barra de SP numa **linha fina só no topo**; anúncios logo
+    abaixo dela. O cenário vai até o fim da tela e os inimigos descem 36 px de tela.
+  - **Log** de 3 linhas (espaço para quotes) numa janela de borda fina clara e fundo
+    escuro translúcido, com asteriscos no lugar dos quadrados; linhas antigas a 80%.
+  - Cada herói na **sua janela**, em 2 linhas: seta ▸ antes do nome de quem está
+    escolhendo, SP, ACT e os 4 pips em cima; barras de HP e EN (PP no Yoch) embaixo.
+  - **Comandos** numa janela à direita, em 3 colunas (setas andam na grade); listas
+    longas (habilidades, rezas) viram uma coluna e a janela cresce para cima.
+  - **Números de dano nos aliados** aparecem **sobre a janela do herói**, 20 px, metade
+    do tempo de antes.
+- **D-061 (criador, 2026-11-25): blocos de papel por 0,3 s. IMPLEMENTADO.** Os cinco blocos
+  aparecem por 0,3 s e somem de uma vez; o papel segue valendo para setas e cores do log, e um
+  papel novo ou novo golpe mostra o bloco de novo.
+- **D-060 (criador, 2026-11-25): nomes coloridos no Battle Log. IMPLEMENTADO.** Em cada frase,
+  o nome de quem tem papel na ação ganha a cor do papel naquele momento (atacante vermelho, alvo
+  amarelo, defesa azul, contra-ataque laranja, reação verde); o resto da frase não muda.
+- **D-059 (criador, 2026-11-25): caixas de papel + setas animadas. IMPLEMENTADO.** As caixas
+  da D-057 ficam; cada golpe desenha uma seta que corre do atacante ao alvo em 0,55 s e some
+  perdendo opacidade rápido. No contra-ataque, uma seta sai de cada lado, elas se encontram no meio
+  e uma faísca marca o choque. Sumiço, faísca e cores feitos pelo agente, aguardando o julgamento
+  visual do criador.
+- **D-058 (criador, 2026-11-25): fila de turnos no topo e reações no Battle Log.
+  IMPLEMENTADO.** Sob a linha do topo, a ordem dos turnos da rodada (AGI) com quem está no turno
+  destacado; quem caiu sai e quem não tem mais ato fica apagado. A barra de tempo da defesa e os
+  dois trilhos do contra-ataque do herói rodam dentro da janela do Battle Log (o texto some
+  enquanto correm); REACT/DENY continua no menu. Ataque do jogador e contra-ataque do inimigo
+  seguem sobre o inimigo. Aparência feita pelo agente, aguardando o julgamento visual do criador.
+- **D-057 (criador, 2026-11-25): Battle Log só com frases de evento. IMPLEMENTADO.** O log
+  mostra uma linha por acontecimento, em inglês (``FALLEN attacks FOE A.``, ``FOE A
+  counter-attacks!``, ``FALLEN blocks: 5 damage.``, ``FOE A is down.``, ``FALLEN gains 1 act.``,
+  ``FALLEN loses 1 queued command.``), sem instruções de tecla nem números internos (ritmo, def,
+  crit, afinidade e SP roll ficam só em `log_history`, para diagnóstico). Explicações de menu e o
+  contador da absorção continuam transitórios. **Delegado ao agente, aguardando o julgamento
+  visual do criador:** linhas não lidas aparecem da mais antiga para a mais nova e cada Z mostra
+  as próximas antes de a batalha seguir (também antes de qualquer outra entrada), então uma
+  rajada de 3–4 frases (contra-ataque) nunca some das 2 linhas; e **rótulos de papel** ATTACK /
+  TARGET / DEFEND / COUNTER / REACT sobre o nome do inimigo e na borda de cima da janela do
+  herói, do anúncio até a confirmação do resultado (a defesa automática do inimigo também ganha
+  DEFEND). Cobertura: `verify_playable_feedback.gd`, `verify_playable_layout.gd`,
+  `verify_log_wrap.gd`.
+- **Menu (criador, 2026-11-24):** **EXEC e UNDO** só aparecem com algo na fila. **REACT**
+  saiu do menu do próprio turno: só é escolhido quando uma ação do oponente é anunciada
+  (pergunta REACT / DENY). Com isso deixa de existir a reserva de atos pelo menu do turno
+  (D-047); os testes ainda ligam essa reserva (`offer_reserve`) para chegar rápido a um
+  anúncio.
+
 ## Atos e reações
 - Cada personagem possui **2 atos por rodada**; cada ato pode ser **Ação** ou **Reação**
   (2 ações, 2 reações ou 1 de cada).
@@ -180,6 +235,11 @@
   **mais** 2 novos simultaneamente disponíveis. **IMPLEMENTADO:** o excedente é
   **adiado** ao estoque (`stored_acts`), limitado a 4, e pode reaparecer em rodada
   posterior. Atos novos e bônus entram primeiro; o que sobrar volta ao estoque.
+- **D-057 (criador, 2026-11-25): o turno vai até zerar os atos.** Depois da fila, os atos
+  que sobraram (não planejados, ganhos com WEAK ou devolvidos por recusa de novo alvo) são
+  planejados de novo **no mesmo turno**; o turno só acaba com 0 atos ou com REST. Isso substitui
+  a frase ``se sobrar ato, ele planeja de novo quando o ciclo voltar`` abaixo; a ordem por AGI
+  entre combatentes continua. **IMPLEMENTADO** em `PlayableController._player_turn()`.
 - **Ordem de turnos (criador, 2026-11-23; substitui a D-044 `A, A, B, B`):** a vez é
   sempre dos **mais rápidos primeiro** e dos mais lentos por último, **uma vez por
   combatente**, e o ciclo se repete enquanto alguém tiver atos (ex.: `Fallen > inimigo >
@@ -246,8 +306,16 @@
   UNDO) cabem na janela de comando, os ACT comprometidos acendem em verde no
   painel do personagem e REACT/REST encerram o plano sem gastar ato extra.
   Regressão em `tests/verify_playable_reactions.gd`.
-- **PENDENTES:** reação entre os passos da cadeia, alvo invalidado no meio
-  da sequência e mudança de ACT durante a cadeia. REST D-038 já encerra o
+- **D-057 (criador, 2026-11-25): fila com alvo e sem confirmação. IMPLEMENTADO.** O alvo de
+  cada ATTACK, golpe (Lunge) e ABSORB é escolhido **ao montar a fila**; EXEC roda os comandos
+  um depois do outro sem perguntar nada e sem pausa de Z entre eles (a fila só espera o golpe e
+  o número terminarem; a pausa do resultado vem depois do último comando ou de uma interrupção
+  da D-049). Ataques seguidos no mesmo alvo dividem a mesma linha de ritmo; trocar de alvo fecha
+  a linha. **Alvo que caiu:** o jogo pede outro alvo (faixa ``CHOOSE ANOTHER TARGET``); X recusa,
+  o comando e os seguintes não rodam e **nenhum ato é gasto** (o herói planeja de novo). Os
+  marcadores verdes mostram só os comandos que ainda vão rodar. A reza mantém a própria regra
+  (alvo caído = PP de volta, D-048).
+- **PENDENTES:** reação entre os passos da cadeia. REST D-038 já encerra o
   planejamento ao ser escolhido. O HTML independente permanece como
   protótipo visual, fora do repositório.
 
@@ -315,10 +383,11 @@
 
 ## Press Turn
 - Acerto em fraqueza: **+1 ato** para quem acertou.
-- Resistido / nulo / absorvido: **-1 ato** cada (independente do tipo).
+- **D-057 (criador, 2026-11-25): afinidade nunca tira ato.** O antigo ``Resistido / nulo /
+  absorvido: -1 ato`` foi removido: o criador declarou que nunca definiu roubo de ato, só ganho.
+  **IMPLEMENTADO** em `BattleMath.press_turn_acts()` (RESIST/NULL/ABSORB = 0).
 - **Consequência de D-005:** o +1 por fraqueza também respeita o teto de 4 atos
-  disponíveis; o excedente é adiado ao estoque. A penalidade de -1 não foi alterada
-  e apenas reduz atos disponíveis.
+  disponíveis; o excedente é adiado ao estoque.
 - Afinidades consideradas: Weak, Normal, Resist, Null, Absorb.
 
 ## Dano (sem magia neste protótipo)
@@ -377,7 +446,11 @@
   HP/ATK/DEF de referência; não interpretar como número
   de rodadas.
 
-### D-031 (Rodada 9, 3A) — ataque físico básico; DESIGN, NÃO IMPLEMENTADO
+### D-031 (Rodada 9, 3A) — ataque físico básico; IMPLEMENTADO pela D-057 (2026-11-25)
+
+- **D-057:** o criador autorizou em 2026-11-25: o ataque básico do jogo principal usa
+  **poder 8** (`BattleController.basic_power`), também no ataque inimigo contra a reza; o
+  Survival segue com 10. A divergência ``poder 100`` abaixo está resolvida.
 
 - O **ataque físico básico**
   possui **poder nominal 8**,
@@ -1319,6 +1392,10 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
     perderás, como punição.", com "Do que te fortaleceu, parte perderás" em **#81e6a8**;
     (4) 3 s das perdas em texto ("-1 ATK"), em #a8182a, saindo dos **quatro cantos** até o
     anjo; (5) 1 s com anjo e caixa se desfazendo em letras.
+  - **Música (criador, 2026-11-23):** "Law" do SMT VX (`assets/audio/bgm/DDS2_law.ogg`)
+    começa **0,8 s depois da morte** (criador, 2026-11-24; antes 1 s) (início da cutscene), no volume do arquivo (100%), com **fade de 1 s** até
+    o silêncio no fim. No prólogo do anjo (`prototypes/hebrew-transition`) ela toca **sem
+    parar**, recomeçando quando a faixa acaba; o loop de 15,5 s da animação não a reinicia.
   - **Provisório, para o julgamento do criador:** cada rótulo de perda voa 1,5 s, as
     saídas se distribuem nos 3 s, ordem dos cantos (sup. esq., sup. dir., inf. dir.,
     inf. esq.), tamanho 14 px em negrito e o ponto de chegada (centro da figura).

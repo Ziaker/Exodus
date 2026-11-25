@@ -97,6 +97,12 @@ var _progress_gains: Dictionary = {}
 ## Saved gains applied to Fallen. Creator 2026-11-23: Fallen's death halves the saved
 ## gains instead of the old base-attribute restart (2026-11-21), so this stays true.
 var apply_saved_gains := true
+## Survival mode sets this to false so absorptions/PP never write to ProgressStore.
+var persist_progress := true
+## Potência do ataque básico (sem habilidade). D-031 / D-057 (criador 2026-11-25): o jogo
+## principal usa poder 8 (antes 100, que matava quase tudo num golpe). O modo Survival
+## usa 10 para caber nos status do seu próprio elenco.
+var basic_power := 8
 var _fallen: BattleUnit = null
 var _ally: BattleUnit = null
 
@@ -122,6 +128,21 @@ class UnitCard extends Control:
 		name_label.text = unit.display_name + ("" if unit.is_alive() else " [DOWN]")
 		hp_label.text = "HP %d/%d" % [unit.current_hp, unit.stats.max_hp]
 		BattleWidgets.set_gauge(hp_gauge, float(unit.current_hp) / float(maxi(1, unit.stats.max_hp)))
+
+
+## Creator 2026-11-24 (fixes D-055): battles and their cutscenes are laid out at 544 x 416
+## and shown 1.5x on the 816 x 624 screen. The window's content scale switches while the
+## battle is in the tree (fractional, so 1.5x; text is rendered at the real size).
+const LAYOUT_SCALE := preload("res://scripts/core/layout_scale.gd")
+var _saved_scale := {}
+
+
+func _enter_tree() -> void:
+	_saved_scale = LAYOUT_SCALE.use(get_tree().root)
+
+
+func _exit_tree() -> void:
+	LAYOUT_SCALE.restore(get_tree().root, _saved_scale)
 
 
 func _ready() -> void:
@@ -374,7 +395,7 @@ func _execute_player_command(actor: BattleUnit, choice: int, chain: bool) -> voi
 		0:
 			if not actor.spend_act():
 				return
-			await _perform_attack(actor, target, 100, false, false, false, chain)
+			await _perform_attack(actor, target, basic_power, false, false, false, chain)
 		1:
 			if not actor.spend_act():
 				return
@@ -408,7 +429,7 @@ func _enemy_turn(actor: BattleUnit) -> void:
 		return
 	# D-022: no declared reaction means the enemy attack is guaranteed to hit,
 	# whether the player had no acts or simply chose not to react.
-	await _perform_attack(actor, target, 100, false, reaction_declared,
+	await _perform_attack(actor, target, basic_power, false, reaction_declared,
 			not reaction_declared)
 
 
@@ -646,7 +667,8 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	# D-028: persist the acquired stat deltas for the next battle.
 	_progress_gains["max_hp"] = int(_progress_gains.get("max_hp", 0)) + total
 	_progress_gains["max_en"] = int(_progress_gains.get("max_en", 0)) + total
-	ProgressStore.save_gains(_progress_gains)
+	if persist_progress:
+		ProgressStore.save_gains(_progress_gains)
 	_count_absorption(actor, target)
 	target.consume_by_absorption()
 	_flash_feedback("ABSORBED")
@@ -673,7 +695,8 @@ func _count_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 			SkillBook.display_name(skill), count, target.display_name])
 		count = 0
 	_absorb_counts[key] = count
-	ProgressStore.save_skill_progress(_absorb_counts, actor.skills)
+	if persist_progress:
+		ProgressStore.save_skill_progress(_absorb_counts, actor.skills)
 
 
 ## Overridable by tests: index of the skill learned among the learnable ones.

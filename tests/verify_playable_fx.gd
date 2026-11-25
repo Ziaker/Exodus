@@ -27,6 +27,7 @@ func check(ok: bool, reason: String) -> void:
 
 func fresh() -> Control:
 	var battle := ControlledBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	return battle
 
@@ -68,9 +69,12 @@ func _run() -> void:
 	check(fx.applied_flashes > 0, "Original RGSS flash timings must have reached the renderer")
 	check(fx.find_children("*", "AudioStreamPlayer", true, false).is_empty(), "Combat effects must never create audio players")
 	check(not fx.is_busy(), "Transient effects must finish and release input")
-	battle.handle_confirm()
-	# Creator 2026-11-23: Fallen's one-command turn is over; FOE B (next by speed) announces.
-	check(battle.action_attacker == battle.state.units[3] and battle.hud.mode == "react", "After the effect the turn passes to the next fastest")
+	# D-057: each Z first pages event lines still waiting beyond the two-row log.
+	for _page in 5:
+		if battle.hud.mode != "continue": break
+		battle.handle_confirm()
+	# D-057 (creator 2026-11-25): the act left (WEAK +1) is planned in the same turn.
+	check(battle.active_actor == battle._fallen and battle.hud.mode == "plan", "After the effect Fallen plans the act left in the same turn")
 	battle.queue_free(); await process_frame
 	battle = fresh(); fx = battle.get_node("BattleEffects")
 	battle._fallen.current_hp = 1; battle.submit_command(1)

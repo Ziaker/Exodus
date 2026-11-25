@@ -83,6 +83,12 @@ func _run() -> void:
 	check(ProgressStore.load_skills() == learned, "Skills survive the death")
 	var cut: Node2D = battle.death_cutscene
 	check(cut != null and cut.is_inside_tree() and (cut.get_parent() as CanvasLayer).layer == 50, "The cutscene is drawn above the battle")
+	# Creator 2026-11-23: SMT VX "Law" from t = 0 at 100%, 1 s fade to silence at the end.
+	var music: AudioStreamPlayer = cut.get_node("Law")
+	check(music.stream != null and music.stream.resource_path == "res://assets/audio/bgm/DDS2_law.ogg", "The cutscene plays DDS2_law.ogg")
+	check(not music.playing and is_equal_approx(CUTSCENE.MUSIC_START, 0.8), "Law waits 0.8 s after the death")
+	check(CUTSCENE.music_volume(0.0) == 1.0 and CUTSCENE.music_volume(12.99) == 1.0, "Full volume until the last second")
+	check(is_equal_approx(CUTSCENE.music_volume(13.5), 0.5) and CUTSCENE.music_volume(14.0) == 0.0, "Linear 1 s fade to silence at 14 s")
 	check(cut.line.begins_with("Levanta-te, ") and cut.line.ends_with(", que a ti não é dada a bênção da morte. Do que te fortaleceu, parte perderás, como punição."), "The angel's line (got %s)" % cut.line)
 	var figure := 0
 	for letter in cut.letters:
@@ -117,8 +123,22 @@ func _run() -> void:
 	check(battle.hud.mode == "death", "Input does nothing during the cutscene")
 	# Runs the cutscene to its end in real time.
 	var deadline := Time.get_ticks_msec() + 30000
+	var mid_fade := -1.0
+	var still_playing := true
+	var started_at := -1.0
+	var full_volume := true
 	while not battle.left and Time.get_ticks_msec() < deadline:
+		if started_at < 0.0 and music.playing:
+			started_at = cut.t
+			full_volume = is_equal_approx(music.volume_linear, 1.0)
+		if cut.t < CUTSCENE.MUSIC_START: still_playing = still_playing and not music.playing
+		elif cut.t > CUTSCENE.MUSIC_START + 0.1 and cut.t < 13.0: still_playing = still_playing and music.playing
+		if mid_fade < 0.0 and cut.t >= 13.4 and cut.t <= 13.6: mid_fade = music.volume_linear
 		await process_frame
+	check(started_at >= 0.8 and started_at < 0.9 and full_volume, "Law starts 0.8 s after the death, at the file's volume (t=%.2f)" % started_at)
+	check(still_playing, "Silent for the first 0.8 s, then Law plays through the cutscene")
+	check(mid_fade > 0.3 and mid_fade < 0.7, "Live volume is fading at 13.5 s (got %.2f)" % mid_fade)
+	check(not music.playing, "Law is silent when the cutscene ends")
 	check(battle.left and cut.t >= CUTSCENE.END, "After the cutscene the game leaves for the title (t=%.2f)" % cut.t)
 	check(is_equal_approx(CUTSCENE.ENTER_END, 3.0) and is_equal_approx(CUTSCENE.FLY_END - CUTSCENE.ENTER_END, 2.0)
 		and is_equal_approx(CUTSCENE.TEXT_END - CUTSCENE.TEXT_START, 5.0) and is_equal_approx(CUTSCENE.LOSS_END - CUTSCENE.TEXT_END, 3.0)
@@ -147,5 +167,28 @@ func _run() -> void:
 	check(title.deaths == 0, "No death yet: no numeral")
 	title.queue_free()
 	await process_frame
+
+	# ---- Prologue: Law plays nonstop, looping, and the animation loop does not restart it.
+	var prologue: Node2D = load("res://prototypes/hebrew-transition/HebrewTransition.tscn").instantiate()
+	root.add_child(prologue)
+	await process_frame
+	var law: AudioStreamPlayer = prologue.get_node("Law")
+	check(law.stream.resource_path == "res://assets/audio/bgm/DDS2_law.ogg" and law.playing and is_equal_approx(law.volume_linear, 1.0), "The prologue plays Law at 100%")
+	check(law.finished.is_connected(law.play), "Law starts over when the track ends")
+	var plays := [0]
+	law.finished.connect(func() -> void: plays[0] += 1)
+	prologue.t = 15.49
+	await process_frame
+	await process_frame
+	check(prologue.t < 1.0 and law.playing and plays[0] == 0, "The 15.5 s animation loop does not restart the music")
+	law.finished.emit()
+	check(law.playing and plays[0] == 1, "After the track ends it plays again")
+	# Stop before freeing so the audio server releases the playback before the test quits.
+	law.finished.disconnect(law.play)
+	law.stop()
+	prologue.queue_free()
+	# The audio thread releases stopped Ogg playbacks a little later; quitting at once
+	# reports them as leaked.
+	await create_timer(0.5).timeout
 	print("DEATH_OK: %d checks" % checks)
 	quit(0)

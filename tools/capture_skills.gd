@@ -41,6 +41,7 @@ func new_battle(skills: Array[StringName], pick: int = 0) -> void:
 		battle.queue_free()
 		await get_tree().process_frame
 	battle = CaptureBattle.new()
+	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	battle.enemy_pick = pick
 	battle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(battle)
