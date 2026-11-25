@@ -420,7 +420,7 @@ Com poder básico 8 e ATK/DEF 8, o dano-base nominal é 8 e **cinco acertos nomi
 
 Dois atos por personagem por rodada: 2 ações, 2 reações ou 1 de cada. Reação é
 qualquer ação fora do turno, declarada em resposta ao anúncio de uma ação inimiga,
-inclusive mirando outro aliado. Todos os comandos podem ser Reação; inimigos também
+inclusive mirando outro aliado. Todos os comandos (menos REST e PASS, D-065) podem ser Reação; inimigos também
 reagem. Atos não usados podem ser armazenados até 4 para a próxima rodada.
 
 **D-005:** teto de **4 atos disponíveis no total** por personagem, somando atos novos,
@@ -443,7 +443,15 @@ não gasta ato; ATTACK, ITEM e ABSORB consomem um ato cada ao serem escolhidos,
 enquanto REST consome zero, envia os atos restantes ao estoque e usa
 `recover_en_flat()` para conceder 2 EN; coberto por `test_battle_combat.gd`.
 O HTML jogável anterior pode permanecer com o comportamento antigo — fora
-do escopo desta implementação.
+do escopo desta implementação. **D-065 (criador, 2026-11-25):** no turno o REST
+continua exatamente assim, mas **deixou de ser reação**.
+
+**PASS — D-065 (criador, 2026-11-25; IMPLEMENTADO):** passa a vez **sem gastar
+ato** e sem ganhar EN, SP ou PP; o herói fica com os atos, volta a agir nas vezes
+seguintes da mesma rodada e o que sobrar no fim da rodada vai ao estoque (D-005). Fica
+logo antes do REST no menu do turno, pode fechar uma fila e não é reação. Se a vez
+voltar a quem passou sem ninguém ter agido desde então, a rodada acaba. Detalhes em
+`docs/COMBAT_SPEC.md`.
 
 ### 7.1 Reações — decisões da Rodada 2 (D-014) — **CONFIRMADO como design**
 
@@ -2563,7 +2571,7 @@ Formato: ID · data · decisão · estado · impacto documental.
 
 - **D-045 · 2026-11-21** · **Reação de quem não é o alvo — CONFIRMADO e IMPLEMENTADO** (registrada antes como D-043; renumerada por conflito de ID, decisão do autor):
   quando um inimigo anuncia um ataque, só o personagem **atacado** pode bloquear
-  (DEFEND) e mantém todos os comandos como reação. Um aliado que **não é o alvo** não
+  (DEFEND) e mantém todos os comandos como reação (D-065: menos REST e PASS). Um aliado que **não é o alvo** não
   pode bloquear o ataque com sua reação: ela deve ser **contra-ataque (ATTACK) ou
   item/magia (ITEM)**; REST e ABSORB deixam de ser oferecidos a ele como reação.
   Implementado em `playable_controller.gd` (`_commands()`), com teste de regressão em
@@ -2849,7 +2857,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   - **Afinidade nunca tira ato:** ``EU NUNCA DEFINI ROUBO DE ATO, SÓ GANHO DE ATO``. O -1 ato de
     RESIST/NULL/ABSORB (Press Turn do spec inicial) deixa de existir; WEAK continua dando +1.
   - **Turno até zerar atos:** atos que sobram depois da fila (não planejados, ganhos com WEAK ou
-    devolvidos) são planejados de novo **no mesmo turno**; o turno só acaba com 0 atos ou REST.
+    devolvidos) são planejados de novo **no mesmo turno**; o turno só acaba com 0 atos ou REST
+    (D-065: ou PASS).
     Substitui a parte ``se sobrar ato, ele planeja de novo quando o ciclo voltar`` da ordem de
     turnos de 2026-11-23 (a ordem por AGI entre combatentes continua).
   - **Log só com frases de evento** (inglês, como a interface): uma linha por acontecimento
@@ -2919,6 +2928,20 @@ Formato: ID · data · decisão · estado · impacto documental.
   aparece por 0,3 s e desaparece de uma vez. O papel continua valendo (setas da D-059, cores do log
   da D-060); um papel novo ou um novo golpe do atacante mostra o bloco de novo. Impacto:
   `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`; `docs/COMBAT_SPEC.md`,
+  `docs/DECISIONS.md`.
+- **D-065 · 2026-11-25 (decisão do criador) — PASS volta; REST sai das reações.**
+  Motivo: o criador escreveu ``Rest não devia fazer o jogador parar de realizar ações pelo round,
+  só devia servir como um passe``; perguntado sobre a recuperação de EN, respondeu ``traga devolta
+  o PASS pra servir pra passar vez sem gastar ações, deixe o REST como está no momento``. Respostas:
+  quando ninguém mais tem vez e o herói passa, ``A rodada acaba``; REST ``sai das reações pra ficar
+  só o pass``; PASS ``Só no turno próprio`` (não é reação); posição ``Logo antes do REST``; na fila
+  ``Pode vir depois`` de outros comandos; PASS perdido numa interrupção D-049 ``Não conta`` para o
+  +1 ato do inimigo; ``Fallen e Yoch`` têm PASS. Esclarecimento do criador: ``se vc tem 2 atos e
+  usa 1 pra attack vc fica com 1 ato só e recebe 1 ato extra no próximo round se não reagir ou agir
+  depois no mesmo round``. Regra: PASS gasta 0 ato, não dá EN/SP/PP, o herói guarda os atos para as
+  vezes seguintes da rodada; a rodada acaba quando a vez volta a quem passou sem ninguém ter agido
+  desde então. REST (D-038) fica igual no turno. Impacto: `scripts/battle/playable_controller.gd`,
+  `tests/verify_playable_pass.gd` e testes que listavam os menus; `docs/COMBAT_SPEC.md`,
   `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,

@@ -31,6 +31,18 @@
   e não foi substituída. O REST antigo de 1 ato e +20% é histórico (D-006).
   **Implementado** em `BattleController._player_turn()` e
   `BattleUnit.recover_en_flat()`, com testes em `test_battle_combat.gd`.
+  **D-065 (criador, 2026-11-25):** no turno o REST continua exatamente assim, mas ele
+  **deixou de ser reação**.
+- **PASS — D-065 (criador, 2026-11-25; IMPLEMENTADO):** passa a vez **sem gastar ato** e sem
+  ganhar EN, SP ou PP. O herói **fica com os atos**, volta a agir nas vezes seguintes da mesma
+  rodada (agindo ou reagindo) e o que sobrar no fim da rodada vai ao estoque (D-005). Ex.: com
+  2 atos, ATTACK gasta 1; o outro pode ser usado mais tarde na rodada ou vira +1 ato na
+  próxima. Fica **logo antes do REST** no menu do turno (Fallen: FIGHT, ITEM, PASS, REST,
+  ABSORB; Yoch: FIGHT, PRAY, ITEM, PASS, REST), pode fechar uma fila (``ATTACK, PASS``) e
+  **não é reação**. Se a vez voltar a quem passou sem que ninguém tenha agido desde então
+  (todos que ainda têm vez passaram), **a rodada acaba**. PASS perdido numa interrupção
+  (D-049) **não dá ato** ao inimigo. Implementado em `PlayableController._execute_pass()` e
+  `_next_live_actor()`, com `tests/verify_playable_pass.gd`.
 - Mapeamento dos `.rvdata`: `MaxHP→HP`, `MaxMP→EN`, `ATK→ATK`, `DEF→DEF`,
   `MAT→MAK`, `MDF→MEF`, `LUK→AGI`.
 
@@ -213,7 +225,7 @@
   (2 ações, 2 reações ou 1 de cada).
 - Ação = executada no próprio turno. Reação = qualquer ação fora do turno, declarada
   em resposta ao anúncio de uma ação inimiga (inclusive mirando outro aliado).
-- Todos os comandos podem ser usados como Reação pelo **personagem atacado**, que
+- Todos os comandos (menos REST e PASS, D-065) podem ser usados como Reação pelo **personagem atacado**, que
   também pode bloquear (DEFEND). **D-045:** um aliado que **não é o alvo** do ataque
   anunciado não pode bloquear; sua reação é **contra-ataque (ATTACK) ou item/magia
   (ITEM)**. Inimigos também possuem 2 atos e também podem declarar Reações.
@@ -229,6 +241,8 @@
   ATTACK, ITEM e ABSORB consomem um ato quando escolhidos, e REST consome zero.
   Os atos restantes vão ao estoque e `acts_available` zera. Não equiparar PASS
   a REST. A regeneração automática no fim de rodada permanece distinta.
+  **D-065:** REST só no turno próprio (não é reação). Para passar a vez sem gastar atos e
+  voltar a agir na mesma rodada existe o **PASS** (acima).
 - **D-005 (2026-11-21): teto de 4 atos disponíveis no total por personagem**, somando
   atos novos da rodada, atos armazenados e bônus de SP/Press Turn. Vale igualmente
   para Fallen, aliados e inimigos. Substitui a interpretação de 4 armazenados
@@ -237,7 +251,7 @@
   posterior. Atos novos e bônus entram primeiro; o que sobrar volta ao estoque.
 - **D-057 (criador, 2026-11-25): o turno vai até zerar os atos.** Depois da fila, os atos
   que sobraram (não planejados, ganhos com WEAK ou devolvidos por recusa de novo alvo) são
-  planejados de novo **no mesmo turno**; o turno só acaba com 0 atos ou com REST. Isso substitui
+  planejados de novo **no mesmo turno**; o turno só acaba com 0 atos, com REST ou com PASS (D-065). Isso substitui
   a frase ``se sobrar ato, ele planeja de novo quando o ciclo voltar`` abaixo; a ordem por AGI
   entre combatentes continua. **IMPLEMENTADO** em `PlayableController._player_turn()`.
 - **Ordem de turnos (criador, 2026-11-23; substitui a D-044 `A, A, B, B`):** a vez é
@@ -246,6 +260,8 @@
   Yoch > inimigo > Fallen`). Na sua vez, o combatente executa **a fila inteira** que
   planejou (dois ataques na fila gastam os dois atos naquela vez só) e passa a vez; se
   sobrar ato, ele planeja de novo quando o ciclo voltar. A fila da D-046 continua.
+  **D-065:** PASS passa a vez sem gastar ato e o ciclo continua; se a vez voltar a quem
+  passou sem ninguém ter agido desde então, a rodada acaba (atos que sobraram vão ao estoque).
   - **Empate de AGI:** age antes quem tem **mais SP no início da rodada**. Empate de AGI
     **e** SP: **PENDENTE**.
   - Inimigo: a quantidade de ataques por vez fica como está (combo D-047 de até 2); o
@@ -304,7 +320,7 @@
   com testes em `test_battle_combat.gd`. **Também implementado no caminho
   jogável** (`BattlePlayable.tscn`): os sete itens (cinco comandos + EXEC +
   UNDO) cabem na janela de comando, os ACT comprometidos acendem em verde no
-  painel do personagem e REACT/REST encerram o plano sem gastar ato extra.
+  painel do personagem e REACT/REST/PASS (D-065) encerram o plano sem gastar ato extra.
   Regressão em `tests/verify_playable_reactions.gd`.
 - **D-057 (criador, 2026-11-25): fila com alvo e sem confirmação. IMPLEMENTADO.** O alvo de
   cada ATTACK, golpe (Lunge) e ABSORB é escolhido **ao montar a fila**; EXEC roda os comandos
@@ -315,8 +331,8 @@
   o comando e os seguintes não rodam e **nenhum ato é gasto** (o herói planeja de novo). Os
   marcadores verdes mostram só os comandos que ainda vão rodar. A reza mantém a própria regra
   (alvo caído = PP de volta, D-048).
-- **PENDENTES:** reação entre os passos da cadeia. REST D-038 já encerra o
-  planejamento ao ser escolhido. O HTML independente permanece como
+- **PENDENTES:** reação entre os passos da cadeia. REST D-038 e PASS D-065 já encerram o
+  planejamento ao serem escolhidos. O HTML independente permanece como
   protótipo visual, fora do repositório.
 
 ### Reações da Rodada 2 — D-014 (CONFIRMADO como design; não implementado)

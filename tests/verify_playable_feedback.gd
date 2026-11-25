@@ -71,7 +71,8 @@ func _run() -> void:
 	var currents: Array = strip.filter(func(e): return e.current)
 	check(currents.size() == 1 and currents[0].unit == battle._fallen, "Fallen's chip is the one marked as the current turn")
 	# Creator 2026-11-24: nothing queued yet, so no EXEC/UNDO (REACT is on: test driver).
-	check(rows == 5 and not battle.hud.plan_options.has("EXEC"), "Fallen's empty plan: the commands only, no EXEC or UNDO (%d)" % rows)
+	# D-065: FIGHT, ITEM, PASS, REST, ABSORB + REACT = 6.
+	check(rows == 6 and not battle.hud.plan_options.has("EXEC"), "Fallen's empty plan: the commands only, no EXEC or UNDO (%d)" % rows)
 	battle.submit_command(0)
 	check(battle.hud.mark_targets().keys() == ["enemy:0"], "The enemy being chosen must carry the green brackets")
 	key(battle, KEY_X)

@@ -108,7 +108,9 @@ func _run() -> void:
 	for reaction in 2:
 		battle.select_reactor(0)
 		battle.answer_reaction(true)
-		check(battle.hud.command_options.has("FIGHT") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps every command plus DEFEND as a reaction")
+		check(battle.hud.command_options.has("FIGHT") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps his commands plus DEFEND as a reaction")
+		# D-065 (creator 2026-11-25): REST and PASS are own-turn only.
+		check(not battle.hud.command_options.has("REST") and not battle.hud.command_options.has("PASS"), "D-065: REST and PASS are not reactions (%s)" % [battle.hud.command_options])
 		battle.submit_command(0)  # counter-attack: D-038 REST no longer spends acts
 		# D-049: the counter uses the two-rail exchange; both MISS = tie, no damage.
 		check(battle.hud.mode == "counter", "D-049: a counter-attack opens the two-rail exchange")
@@ -122,16 +124,12 @@ func _run() -> void:
 			reserve(battle)
 			check(battle.hud.mode == "react", "A second enemy announcement must offer the remaining reaction")
 	battle.queue_free(); await process_frame
-	# D-038: REST como reação também consome zero ACT, guarda os atos e dá 2 EN fixos.
+	# D-065 (creator 2026-11-25): REST left the reactions (it stays on the own turn, D-038).
 	battle = fresh()
 	reserve(battle); reserve(battle)
 	battle.select_reactor(0)
 	battle.answer_reaction(true)
-	battle._fallen.current_en = 0
-	battle.submit_command(battle.hud.command_options.find("REST"))
-	check(battle._fallen.current_en == BattleMath.REST_EN_RECOVERY, "D-038: REST reaction must recover exactly 2 EN flat")
-	check(battle._fallen.acts_available == 0 and battle._fallen.stored_acts == 2, "D-038: REST reaction must store both acts and end participation")
-	check(battle.log_history.any(func(line: String) -> bool: return line.contains("+2 EN, 2 act(s) stored")), "D-038: REST log must report 2 EN and stored acts, never a spent act")
+	check(battle.hud.command_options.find("REST") == -1, "D-065: REST is no longer offered as a reaction")
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle); reserve(battle)
@@ -182,7 +180,8 @@ func _run() -> void:
 	check(battle.log_history.back().contains("rhythm POINT"), "D-022: declined reaction makes the enemy attack hit (got %s)" % battle.log_history.back())
 	check(battle.action_defender.current_hp < hp_before, "D-022: the automatic hit deals real damage")
 	battle.queue_free(); await process_frame
-	# Declaring any reaction (here REST) keeps the normal enemy timing roll (MISS).
+	# Declaring any reaction (here DEFEND; REST left the reactions, D-065) keeps the normal
+	# enemy timing roll (MISS).
 	battle = AutoHitBattle.new()
 	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
@@ -191,7 +190,11 @@ func _run() -> void:
 	hp_before = defender.current_hp
 	battle.select_reactor(battle.hud.players.find(defender))
 	battle.answer_reaction(true)
-	battle.submit_command(battle.hud.command_options.find("REST"))
+	battle.submit_command(battle.hud.command_options.find("DEFEND"))
+	# The DEFEND line comes first; wait for the enemy blow to resolve.
+	for _f in 300:
+		if battle.log_history.back().contains("rhythm"): break
+		await process_frame
 	check(battle.log_history.back().contains("rhythm MISS"), "D-022: a declared reaction uses the normal enemy timing (got %s)" % battle.log_history.back())
 	check(defender.current_hp == hp_before, "D-022: the missed enemy attack deals no damage")
 	battle.queue_free(); await process_frame
@@ -242,7 +245,8 @@ func _run() -> void:
 	battle = fresh()
 	check(battle.hud.mode == "plan", "Playable battle must open the D-046 plan")
 	# Creator 2026-11-24: EXEC/UNDO only once something is queued (REACT here: test driver).
-	check(battle.hud.plan_options.size() == 5 and not battle.hud.plan_options.has("EXEC"), "Empty plan: commands only, no EXEC or UNDO")
+	# D-065: FIGHT, ITEM, PASS, REST, ABSORB + REACT = 6.
+	check(battle.hud.plan_options.size() == 6 and not battle.hud.plan_options.has("EXEC"), "Empty plan: commands only, no EXEC or UNDO")
 	# D-057: each ATTACK takes its target while planning.
 	battle.submit_plan(0); battle.submit_target(0)
 	check(battle._planned.size() == 1 and battle.queued_acts_for(battle.hud.opponents[0]) == 1, "One ATTACK must be committed with its target")
@@ -271,7 +275,7 @@ func _run() -> void:
 	check(not doomed.is_alive(), "The counter-attack must defeat the announced attacker")
 	check(battle.hud.mode == "continue", "An interrupted combo must still pause so the player reads the reaction")
 	battle.queue_free(); await process_frame
-	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, D-022 auto-hit, D-038 REST, D-046 playable plan, D-047 enemy combo and interrupted pause" % checks)
+	print("PLAYABLE_REACTIONS_OK: %d checks; two attacks, two reactions, D-022 auto-hit, D-065 no REST reaction, D-046 playable plan, D-047 enemy combo and interrupted pause" % checks)
 	# Let queued battle nodes and their pending coroutines release before exit.
 	await process_frame
 	await process_frame
