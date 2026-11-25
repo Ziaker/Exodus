@@ -2919,8 +2919,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   aparece por 0,3 s e desaparece de uma vez. O papel continua valendo (setas da D-059, cores do log
   da D-060); um papel novo ou um novo golpe do atacante mostra o bloco de novo. Impacto:
   `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`; `docs/COMBAT_SPEC.md`,
-  `docs/DECISIONS.md`. **REVOGADA pela D-062.**
-- **D-062 · 2026-11-25 (decisão do criador) — cartões de papel visíveis enquanto o papel existe;
+  `docs/DECISIONS.md`. **REVOGADA pela D-102.**
+- **D-102 · 2026-11-25 (decisão do criador) — cartões de papel visíveis enquanto o papel existe;
   revoga a D-061.**
   Motivo: o criador pediu ``traga devolta os cartões attack defend counter, tirando a sumida de .3
   segundos (mas ainda sumindo normalmente como antes)``. Os cinco cartões (ATTACK, TARGET, DEFEND,

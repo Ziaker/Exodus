@@ -1139,7 +1139,7 @@ var drawn_role_boxes: Array[String] = []
 
 ## "box": filled box, light border, bold caps with a shadow (D-057).
 func _draw_role_boxes() -> void:
-	# D-062 (creator 2026-11-25, revokes D-061): a box stays while its role exists; it goes
+	# D-102 (creator 2026-11-25, revokes D-061): a box stays while its role exists; it goes
 	# away when the controller clears the roles (result confirmed).
 	drawn_role_boxes.clear()
 	for tag in _role_tags:
