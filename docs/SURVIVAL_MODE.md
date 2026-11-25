@@ -62,7 +62,7 @@ entrada é o 4º comando do título (`Survival`).
   `ELITE ... [AFIXO]`, status maiores e **Macca em dobro**.
 - **Risco/recompensa**: absorver com menos de 35% de HP garante **+4** nas
   opções de atributo.
-- **Mash da absorção (D-063, criador 2026-11-25)**: igual à campanha — os apertos
+- **Mash da absorção (D-103, criador 2026-11-25)**: igual à campanha — os apertos
   só contam; o resultado (2 SP por aperto, até 10 apertos, e **um único sorteio**
   com o RNG da run) é aplicado uma vez quando acabam os 2 s ou no 10º aperto, o
   que vier primeiro. Só depois de uma absorção bem-sucedida aparecem as 3 opções.

@@ -326,7 +326,7 @@ func _run() -> void:
 	battle.submit_target(0)
 	check(battle.hud.mode == "absorb", "ABSORB opens the mash")
 	for i in 3: battle.handle_confirm()
-	# D-063: under 10 presses the result waits for the 2 s window, then the break (~2.3 s).
+	# D-103: under 10 presses the result waits for the 2 s window, then the break (~2.3 s).
 	deadline = Time.get_ticks_msec() + 8000
 	while battle.hud.mode != "command" and Time.get_ticks_msec() < deadline:
 		await process_frame

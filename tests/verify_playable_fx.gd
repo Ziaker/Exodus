@@ -7,7 +7,7 @@ class ControlledBattle extends "res://scripts/battle/playable_controller.gd":
 	func _ai_roll(_a: BattleUnit, _b: BattleUnit) -> int: return BattleMath.RhythmResult.POINT
 	func _defender_reaction(_a: BattleUnit, _b: BattleUnit) -> int: return BattleMath.RhythmResult.MISS
 	# D-051 rolls always miss, so the absorption only completes by draining the SP in the
-	# D-063 result: the number of counted presses (and of D-052 letters) is deterministic.
+	# D-103 result: the number of counted presses (and of D-052 letters) is deterministic.
 	func _absorb_roll() -> float: return 100.0
 	func _enemy_counter_roll(_e: BattleUnit) -> bool:
 		return false  # D-049 counters are covered by verify_playable_counter.gd
@@ -116,7 +116,7 @@ func _run() -> void:
 	var mash_deadline := Time.get_ticks_msec() + 5000
 	while battle._mash_active and Time.get_ticks_msec() < mash_deadline:
 		await process_frame
-	# D-063: presses only count (up to 10, the 12 sent are clamped) and the result drains
+	# D-103: presses only count (up to 10, the 12 sent are clamped) and the result drains
 	# the 10 SP once; every counted press still sends its D-052 letters.
 	check(vfx.letters_sent == 10 * vfx.MASH_LETTERS, "D-052: every counted mash press sends MASH_LETTERS green letters (got %d)" % vfx.letters_sent)
 	var break_deadline := Time.get_ticks_msec() + 6000

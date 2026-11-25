@@ -46,7 +46,7 @@ const ABSORB_STATS: Array[StringName] = [&"atk", &"mak", &"defense", &"mef", &"a
 const STAT_LABELS := {&"atk": "ATK", &"mak": "MAK", &"defense": "DEF", &"mef": "MEF", &"agi": "AGI"}
 
 
-## D-063 (creator, 2026-11-25): the mash result, resolved once when the time runs out
+## D-103 (creator, 2026-11-25): the mash result, resolved once when the time runs out
 ## or at the 10th press. Each counted press is worth 2 SP (D-051), taken from the
 ## target (only what it still has) and given to Fallen. ONE roll in [0, 100) against
 ## chance = max(0, start gap) + 1% per SP taken; a target drained to 0 SP is absorbed

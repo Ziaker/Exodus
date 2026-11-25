@@ -348,7 +348,7 @@ func test_absorption_takes_sp_and_keeps_it_on_failure() -> void:
 	get_tree().create_timer(0.1).timeout.connect(func(): battle._mash_count = 3)
 	await _plan(battle, [3])
 	await get_tree().create_timer(2.4).timeout
-	# D-063: one roll at a 6% chance; the 6 SP move in the result either way.
+	# D-103: one roll at a 6% chance; the 6 SP move in the result either way.
 	if target.absorbed:
 		assert_true(battle._fallen.current_sp >= fallen_sp + 6, "the result moved 6 SP before the absorption")
 	else:
@@ -357,7 +357,7 @@ func test_absorption_takes_sp_and_keeps_it_on_failure() -> void:
 		assert_true(battle.log_history.any(func(l: String) -> bool: return l.contains("resisted")))
 
 
-## D-063 (creator, 2026-11-25): real Z key events only count; nothing moves until the
+## D-103 (creator, 2026-11-25): real Z key events only count; nothing moves until the
 ## result, which comes at the 10th press without waiting for the 2 s; later presses
 ## are ignored.
 func test_mash_presses_only_count_and_tenth_press_resolves_at_once() -> void:

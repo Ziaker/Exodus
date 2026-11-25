@@ -359,7 +359,7 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	hud.announce("ABSORB")
 	var was_absorbed := defender.absorbed
 	_append_log("ABSORPTION: mash Z / ENTER!")
-	# D-063 (criador, 2026-11-25): os apertos só contam; o resultado (SP tirado e um
+	# D-103 (criador, 2026-11-25): os apertos só contam; o resultado (SP tirado e um
 	# único sorteio) é aplicado uma vez, ao acabar o tempo ou no 10º aperto.
 	var base_chance: int = maxi(0, unit.current_sp - defender.current_sp)
 	await _run_absorb_mash(unit, defender)

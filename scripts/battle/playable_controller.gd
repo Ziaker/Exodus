@@ -1264,7 +1264,7 @@ func _on_absorb_press(_unit: BattleUnit, defender: BattleUnit) -> void:
 	_refresh_all()
 
 
-## D-063: the mash result moved the SP once; show it on the cards.
+## D-103: the mash result moved the SP once; show it on the cards.
 func _on_absorb_result(_unit: BattleUnit, _defender: BattleUnit, _result: Dictionary) -> void:
 	_refresh_all()
 

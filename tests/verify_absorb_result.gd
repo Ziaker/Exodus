@@ -1,5 +1,5 @@
 extends SceneTree
-## D-063 (creator, 2026-11-25): the absorption mash only counts presses; the result
+## D-103 (creator, 2026-11-25): the absorption mash only counts presses; the result
 ## (SP taken, the single roll, the absorption) is applied once, when the 2 s run out or
 ## at the 10th press, whichever comes first; no press is counted after that.
 ## Runs the real BattlePlayable (PlayableController) with real key events.

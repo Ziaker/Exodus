@@ -187,7 +187,7 @@ func test_counter_red_pointer_speed_follows_agi_ratio() -> void:
 	assert_false(BattleMath.pointers_aligned(0.4, 0.425))
 
 
-## D-051 SP dispute, resolved once by D-063 (creator, 2026-11-25).
+## D-051 SP dispute, resolved once by D-103 (creator, 2026-11-25).
 func test_absorb_result_takes_two_sp_per_press_and_rolls_once() -> void:
 	var r := BattleMath.absorb_result(30, 11, 3, 99.0)
 	assert_eq(r.presses, 3)

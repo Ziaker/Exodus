@@ -6,7 +6,7 @@ extends Control
 
 signal command_chosen
 signal rhythm_done
-## D-063: wakes the absorption mash loop (every frame, or at once by the 10th press).
+## D-103: wakes the absorption mash loop (every frame, or at once by the 10th press).
 signal _mash_wake
 
 const BATTLEBACK := "res://assets/graphics/parallaxes/BB01-001.png"
@@ -85,7 +85,7 @@ var _reaction_yes: bool = false
 var _reaction_active: bool = false
 var _mash_active: bool = false
 var _mash_count: int = 0
-## D-063: mash bookkeeping (letters already shown, who absorbs whom, wake-up signal).
+## D-103: mash bookkeeping (letters already shown, who absorbs whom, wake-up signal).
 var _mash_shown: int = 0
 var _mash_actor: BattleUnit
 var _mash_target: BattleUnit
@@ -619,7 +619,7 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	# D-051 (creator, 2026-11-22): the mash is an SP dispute (2 SP per press, up to 10
 	# presses, 2 s; chance = max(0, SP gap measured once at the start) + 1% per SP taken;
 	# a target drained to 0 SP is absorbed for sure; on failure the SP stays taken).
-	# D-063 (creator, 2026-11-25): presses only count; nothing is taken or rolled per
+	# D-103 (creator, 2026-11-25): presses only count; nothing is taken or rolled per
 	# press. The result is resolved and applied once, when the 2 s run out or at the
 	# 10th press, whichever comes first, with a single roll.
 	_append_log("ABSORPTION: mash Z / ENTER!")
@@ -712,7 +712,7 @@ func _absorb_roll() -> float:
 	return rng.randf_range(0.0, 100.0)
 
 
-## D-063: one counted mash press (keyboard/HUD input). Counts only while the mash is
+## D-103: one counted mash press (keyboard/HUD input). Counts only while the mash is
 ## open and plays the D-052 letters at once; the 10th press closes the mash and wakes
 ## `_run_absorb_mash` in the same call, so the result is applied with that press and no
 ## later press is counted. Nothing is absorbed per press.
@@ -738,7 +738,7 @@ func _on_mash_frame() -> void:
 	_mash_wake.emit()
 
 
-## D-063: the mash window. Returns when the 2 s run out or as soon as 10 presses are
+## D-103: the mash window. Returns when the 2 s run out or as soon as 10 presses are
 ## counted, whichever comes first: woken every frame and, by the 10th press, at once.
 ## `_mash_count` may also be written directly (tests/tools); it is clamped to 10.
 func _run_absorb_mash(actor: BattleUnit, target: BattleUnit) -> void:
@@ -763,7 +763,7 @@ func _run_absorb_mash(actor: BattleUnit, target: BattleUnit) -> void:
 	_mash_count = mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES)
 
 
-## D-063: applies the mash result once: moves the SP taken (kept on failure, D-051),
+## D-103: applies the mash result once: moves the SP taken (kept on failure, D-051),
 ## records the chance for the HUD and makes the single roll (only with presses).
 func _resolve_absorb_mash(actor: BattleUnit, target: BattleUnit, base_chance: int) -> Dictionary:
 	var presses := mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES)
@@ -782,7 +782,7 @@ func _on_absorb_result(_actor: BattleUnit, _target: BattleUnit, _result: Diction
 
 
 ## Overridable presentation hook: one counted mash press (D-052 letters only; since
-## D-063 a press moves no SP, the result does).
+## D-103 a press moves no SP, the result does).
 func _on_absorb_press(_actor: BattleUnit, _target: BattleUnit) -> void:
 	pass
 

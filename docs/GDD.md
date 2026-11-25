@@ -1448,7 +1448,7 @@ Fallen absorve adversários. **D-051 (correção do criador, 2026-11-22; IMPLEME
 combate jogável, commit `dd0813e`):**
 os ganhos vêm dos atributos do inimigo que são múltiplos de 8, até +2 em um atributo ou
 +1/+1 em dois; o mash é uma disputa de SP (10 apertos, até 20 SP) e a absorção se
-completa ao esgotar o SP do inimigo. **D-063 (criador, 2026-11-25; IMPLEMENTADO):** os
+completa ao esgotar o SP do inimigo. **D-103 (criador, 2026-11-25; IMPLEMENTADO):** os
 apertos só contam; nada é absorvido a cada tecla. O resultado (SP tirado e um único
 sorteio) é aplicado uma vez, quando acaba o tempo de 2 s ou no 10º aperto, o que vier
 primeiro; depois disso nenhum aperto conta. A regra anterior (1–3 pontos do maior atributo
@@ -2130,7 +2130,7 @@ rodada.
     `scripts/battle/absorb_vfx.gd` (2026-11-23). Pendentes: cor, tempos, trajetória
     e destino das letras da quebra, e visual da falha.
 
-33. **D-063:** absorção resolvida no resultado (fim do tempo ou 10º aperto, um único
+33. **D-103:** absorção resolvida no resultado (fim do tempo ou 10º aperto, um único
     sorteio), **IMPLEMENTADA** em `BattleController._run_absorb_mash` /
     `_resolve_absorb_mash` e `BattleMath.absorb_result` (2026-11-25).
 
@@ -2724,7 +2724,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   **Ganho:** baseado nos atributos do inimigo que são **múltiplos de 8** (o maior). Até **+2 em um atributo** ou **+1 e +1 em dois atributos diferentes** múltiplos de 8. Nem todo inimigo tem 8 em tudo: precisa ter **pelo menos 1 ou 2** atributos múltiplos de 8.
   **Mash como disputa de SP:** o inimigo resiste com o **SP restante dele** contra o SP do jogador. O mash rende **até 20 SP no total, em 10 apertos**. A absorção se completa quando o jogador **esgota por completo o SP do inimigo**.
   **SP baixo dos inimigos do prólogo é aceitável:** o combate começa com Fallen tendo **40 SP** (o criador confirmou que "40PP" era SP) mesmo com base 80; **só no prólogo**.
-  **Fórmula da disputa (criador, 2026-11-22):** cada aperto tira **2 SP fixos** do inimigo, que **vão para o Fallen** (até 20 SP em 10 apertos, dentro de **2 s**). A cada aperto há um **sorteio**; o primeiro sucesso completa a absorção. **Corrigida pela D-063:** nada é tirado nem sorteado por aperto; o SP e um único sorteio são aplicados no resultado.
+  **Fórmula da disputa (criador, 2026-11-22):** cada aperto tira **2 SP fixos** do inimigo, que **vão para o Fallen** (até 20 SP em 10 apertos, dentro de **2 s**). A cada aperto há um **sorteio**; o primeiro sucesso completa a absorção. **Corrigida pela D-103:** nada é tirado nem sorteado por aperto; o SP e um único sorteio são aplicados no resultado.
   **Chance:** base = **SP do Fallen − SP do inimigo**, em pontos percentuais, medida **uma vez no início** (diferença negativa = **0%**), mais **+1% por SP** já tirado pelo mash. Se o SP do inimigo chega a **0**, a absorção é **garantida**.
   **Falha:** se o mash acaba sem sucesso, a absorção falha, o ato é gasto e o **SP perdido pelo inimigo não volta**.
   **Atributos elegíveis:** ATK, MAK, DEF, MEF e AGI (sem HP e EN) cujo valor é múltiplo de 8. Com **dois ou mais**, **o jogador escolhe** entre +2 em um ou +1/+1 em dois; com **um**, +2 nele; com **nenhum**, o ganho vem do **maior** desses atributos.
@@ -2927,7 +2927,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   da D-060); um papel novo ou um novo golpe do atacante mostra o bloco de novo. Impacto:
   `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`; `docs/COMBAT_SPEC.md`,
   `docs/DECISIONS.md`.
-- **D-063 · 2026-11-25 (decisão do criador) — absorção resolvida no resultado.**
+- **D-103 · 2026-11-25 (decisão do criador) — absorção resolvida no resultado.**
   Motivo: o criador pediu ``mude o sistema de absorção pra não ser a cada tecla mas sim após o
   tempo passar ou o jogador dar mash 20 vezes, no resultado``. Perguntado sobre o SP por aperto
   com 20 apertos, respondeu ``deixa 10 mashes``: o limite continua **10 apertos** (2 SP cada, até

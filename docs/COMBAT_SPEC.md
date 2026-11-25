@@ -1345,9 +1345,9 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
 - **Ganho:** baseado nos atributos do inimigo que são **múltiplos de 8** (o maior). Até **+2 em um atributo** ou **+1 e +1 em dois atributos diferentes** múltiplos de 8. Nem todo inimigo tem 8 em tudo: precisa ter **pelo menos 1 ou 2** atributos múltiplos de 8.
 - **Mash como disputa de SP:** o inimigo resiste com o **SP restante dele** contra o SP do jogador. O mash rende **até 20 SP no total, em 10 apertos**. A absorção se completa quando o jogador **esgota por completo o SP do inimigo**.
 - **SP baixo dos inimigos do prólogo é aceitável:** o combate começa com Fallen tendo **40 SP** (o criador confirmou que "40PP" era SP) mesmo com base 80; **só no prólogo**.
-- **Fórmula da disputa (criador, 2026-11-22):** cada aperto vale **2 SP fixos** do inimigo, que **vão para o Fallen** (até 20 SP em 10 apertos, dentro de **2 s**). ~~A cada aperto há um sorteio; o primeiro sucesso completa a absorção.~~ **Corrigido pela D-063, abaixo.**
+- **Fórmula da disputa (criador, 2026-11-22):** cada aperto vale **2 SP fixos** do inimigo, que **vão para o Fallen** (até 20 SP em 10 apertos, dentro de **2 s**). ~~A cada aperto há um sorteio; o primeiro sucesso completa a absorção.~~ **Corrigido pela D-103, abaixo.**
 - **Chance:** base = **SP do Fallen − SP do inimigo**, em pontos percentuais, medida **uma vez no início** (diferença negativa = **0%**), mais **+1% por SP** tirado pelo mash. Se o SP do inimigo chega a **0**, a absorção é **garantida**.
-- **D-063 (criador, 2026-11-25) — resultado único; IMPLEMENTADO (`BattleMath.absorb_result`,
+- **D-103 (criador, 2026-11-25) — resultado único; IMPLEMENTADO (`BattleMath.absorb_result`,
   `BattleController._run_absorb_mash` / `_resolve_absorb_mash`).** Os apertos **só contam**:
   nada é tirado, dado ou sorteado a cada tecla. O resultado é resolvido e aplicado **uma vez**,
   quando os **2 s** acabam ou **assim que o 10º aperto é contado**, o que vier primeiro; depois
