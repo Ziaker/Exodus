@@ -6,6 +6,8 @@ extends Control
 
 signal command_chosen
 signal rhythm_done
+## D-103: wakes the absorption mash loop (every frame, or at once by the 10th press).
+signal _mash_wake
 
 const BATTLEBACK := "res://assets/graphics/parallaxes/BB01-001.png"
 const ENEMY_SPRITES := [
@@ -83,6 +85,10 @@ var _reaction_yes: bool = false
 var _reaction_active: bool = false
 var _mash_active: bool = false
 var _mash_count: int = 0
+## D-103: mash bookkeeping (letters already shown, who absorbs whom, wake-up signal).
+var _mash_shown: int = 0
+var _mash_actor: BattleUnit
+var _mash_target: BattleUnit
 ## D-051: chance of the latest absorption roll, in percent (HUD feedback).
 var absorb_chance: int = 0
 ## Label of the gain taken by the last successful absorption (e.g. "+2 ATK").
@@ -610,39 +616,27 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	if not target.is_alive():
 		_append_log("ABSORB failed: %s is already defeated." % target.display_name)
 		return
-	# D-051 (creator, 2026-11-22): the mash is an SP dispute. Each press (up to 10,
-	# within 2 s) takes 2 SP from the target and gives it to Fallen, then rolls:
-	# chance = max(0, SP gap measured once at the start) + 1% per SP taken so far.
-	# A target drained to 0 SP is absorbed for sure. On failure the SP stays taken.
+	# D-051 (creator, 2026-11-22): the mash is an SP dispute (2 SP per press, up to 10
+	# presses, 2 s; chance = max(0, SP gap measured once at the start) + 1% per SP taken;
+	# a target drained to 0 SP is absorbed for sure; on failure the SP stays taken).
+	# D-103 (creator, 2026-11-25): presses only count; nothing is taken or rolled per
+	# press. The result is resolved and applied once, when the 2 s run out or at the
+	# 10th press, whichever comes first, with a single roll.
 	_append_log("ABSORPTION: mash Z / ENTER!")
 	var base_chance: int = maxi(0, actor.current_sp - target.current_sp)
-	var taken := 0
-	var presses := 0
-	var absorbed := false
-	_mash_active = true
-	_mash_count = 0
-	for _i in BattleMath.ABSORB_TICKS:
-		await get_tree().create_timer(BattleMath.ABSORB_SECONDS / BattleMath.ABSORB_TICKS).timeout
-		# Scene timers outlive this node: stop if the battle was freed meanwhile.
-		if not is_inside_tree(): return
-		while presses < mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES) and not absorbed:
-			presses += 1
-			var step := BattleMath.absorb_press(target.current_sp, base_chance, taken, _absorb_roll())
-			target.add_sp(-int(step.steal))
-			actor.add_sp(int(step.steal))
-			taken = int(step.taken)
-			absorb_chance = int(step.chance)
-			absorbed = bool(step.absorbed)
-			_on_absorb_press(actor, target)
-		if absorbed or presses >= BattleMath.ABSORB_MAX_PRESSES:
-			break
-	_mash_active = false
+	await _run_absorb_mash(actor, target)
+	# Stop if the battle left the tree during the mash.
+	if not is_inside_tree(): return
+	var result := _resolve_absorb_mash(actor, target, base_chance)
+	var presses := int(result.presses)
+	var taken := int(result.steal)
+	var absorbed := bool(result.absorbed)
 	if presses <= 0:
 		_append_log("ABSORB failed: no input.")
 		_flash_feedback("ABSORB FAILED")
 		return
 	if not absorbed:
-		_append_log("ABSORB failed: %s resisted (%d SP taken, last chance %d%%)." % [target.display_name, taken, absorb_chance])
+		_append_log("ABSORB failed: %s resisted (%d SP taken, chance %d%%)." % [target.display_name, taken, absorb_chance])
 		_flash_feedback("ABSORB FAILED")
 		return
 	await _on_absorb_break(actor, target)
@@ -718,7 +712,77 @@ func _absorb_roll() -> float:
 	return rng.randf_range(0.0, 100.0)
 
 
-## Overridable presentation hook: one counted mash press moved SP (D-052 letters).
+## D-103: one counted mash press (keyboard/HUD input). Counts only while the mash is
+## open and plays the D-052 letters at once; the 10th press closes the mash and wakes
+## `_run_absorb_mash` in the same call, so the result is applied with that press and no
+## later press is counted. Nothing is absorbed per press.
+func register_mash_press() -> void:
+	if not _mash_active or _mash_count >= BattleMath.ABSORB_MAX_PRESSES:
+		return
+	_mash_count += 1
+	_emit_mash_letters()
+	if _mash_count >= BattleMath.ABSORB_MAX_PRESSES:
+		_mash_active = false
+		_mash_wake.emit()
+
+
+## D-052 letters for every press counted and not shown yet (also covers `_mash_count`
+## written directly by tests/tools).
+func _emit_mash_letters() -> void:
+	while _mash_shown < mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES):
+		_mash_shown += 1
+		_on_absorb_press(_mash_actor, _mash_target)
+
+
+func _on_mash_frame() -> void:
+	_mash_wake.emit()
+
+
+## D-103: the mash window. Returns when the 2 s run out or as soon as 10 presses are
+## counted, whichever comes first: woken every frame and, by the 10th press, at once.
+## `_mash_count` may also be written directly (tests/tools); it is clamped to 10.
+func _run_absorb_mash(actor: BattleUnit, target: BattleUnit) -> void:
+	_mash_actor = actor
+	_mash_target = target
+	_mash_count = 0
+	_mash_shown = 0
+	_mash_active = true
+	var tree := get_tree()
+	var timer := tree.create_timer(BattleMath.ABSORB_SECONDS)
+	tree.process_frame.connect(_on_mash_frame)
+	while true:
+		_emit_mash_letters()
+		if _mash_count >= BattleMath.ABSORB_MAX_PRESSES or timer.time_left <= 0.0:
+			break
+		await _mash_wake
+		if not is_inside_tree():
+			break
+	if tree.process_frame.is_connected(_on_mash_frame):
+		tree.process_frame.disconnect(_on_mash_frame)
+	_mash_active = false
+	_mash_count = mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES)
+
+
+## D-103: applies the mash result once: moves the SP taken (kept on failure, D-051),
+## records the chance for the HUD and makes the single roll (only with presses).
+func _resolve_absorb_mash(actor: BattleUnit, target: BattleUnit, base_chance: int) -> Dictionary:
+	var presses := mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES)
+	var roll: float = _absorb_roll() if presses > 0 else 100.0
+	var result := BattleMath.absorb_result(target.current_sp, base_chance, presses, roll)
+	target.add_sp(-int(result.steal))
+	actor.add_sp(int(result.steal))
+	absorb_chance = int(result.chance)
+	_on_absorb_result(actor, target, result)
+	return result
+
+
+## Overridable presentation hook: the mash result was just applied (SP moved).
+func _on_absorb_result(_actor: BattleUnit, _target: BattleUnit, _result: Dictionary) -> void:
+	pass
+
+
+## Overridable presentation hook: one counted mash press (D-052 letters only; since
+## D-103 a press moves no SP, the result does).
 func _on_absorb_press(_actor: BattleUnit, _target: BattleUnit) -> void:
 	pass
 
@@ -862,7 +926,7 @@ func _input(event: InputEvent) -> void:
 			accept_event()
 			return
 		if _mash_active and confirm:
-			_mash_count += 1
+			register_mash_press()
 			accept_event()
 		elif _reaction_active and confirm:
 			_reaction_yes = true

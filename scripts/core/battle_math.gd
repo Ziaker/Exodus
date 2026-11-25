@@ -41,21 +41,22 @@ enum CounterWinner { ENEMY = -1, TIE = 0, PLAYER = 1 }
 const ABSORB_MAX_PRESSES: int = 10
 const ABSORB_SP_PER_PRESS: int = 2
 const ABSORB_SECONDS: float = 2.0
-const ABSORB_TICKS: int = 20
 const ABSORB_GAIN_POINTS: int = 2
 const ABSORB_STATS: Array[StringName] = [&"atk", &"mak", &"defense", &"mef", &"agi"]
 const STAT_LABELS := {&"atk": "ATK", &"mak": "MAK", &"defense": "DEF", &"mef": "MEF", &"agi": "AGI"}
 
 
-## D-051: one mash press. Takes up to 2 SP from the target (given to Fallen) and
-## decides success with `roll` in [0, 100): chance = max(0, start gap) + SP taken.
-## A target drained to 0 SP is absorbed for sure.
-static func absorb_press(target_sp: int, base_chance: int, taken: int, roll: float) -> Dictionary:
-	var steal := mini(ABSORB_SP_PER_PRESS, maxi(0, target_sp))
-	var total := taken + steal
-	var chance := maxi(0, base_chance) + total
-	return {"steal": steal, "taken": total, "chance": chance,
-		"absorbed": target_sp - steal <= 0 or roll < float(chance)}
+## D-103 (creator, 2026-11-25): the mash result, resolved once when the time runs out
+## or at the 10th press. Each counted press is worth 2 SP (D-051), taken from the
+## target (only what it still has) and given to Fallen. ONE roll in [0, 100) against
+## chance = max(0, start gap) + 1% per SP taken; a target drained to 0 SP is absorbed
+## for sure. Zero presses never absorb (and take nothing).
+static func absorb_result(target_sp: int, base_chance: int, presses: int, roll: float) -> Dictionary:
+	var counted := clampi(presses, 0, ABSORB_MAX_PRESSES)
+	var steal := mini(counted * ABSORB_SP_PER_PRESS, maxi(0, target_sp))
+	var chance := maxi(0, base_chance) + steal
+	return {"presses": counted, "steal": steal, "chance": chance,
+		"absorbed": counted > 0 and (target_sp - steal <= 0 or roll < float(chance))}
 
 
 ## D-051: ATK/MAK/DEF/MEF/AGI whose value is a positive multiple of 8, highest first.

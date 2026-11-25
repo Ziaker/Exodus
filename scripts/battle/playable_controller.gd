@@ -1264,6 +1264,11 @@ func _on_absorb_press(_unit: BattleUnit, defender: BattleUnit) -> void:
 	_refresh_all()
 
 
+## D-103: the mash result moved the SP once; show it on the cards.
+func _on_absorb_result(_unit: BattleUnit, _defender: BattleUnit, _result: Dictionary) -> void:
+	_refresh_all()
+
+
 func _on_absorb_break(_unit: BattleUnit, defender: BattleUnit) -> void:
 	await absorb_fx.play_break(defender)
 
@@ -1338,8 +1343,7 @@ func handle_confirm() -> void:
 		"counter": counter.press_player()
 		"react": answer_reaction(hud.react_index == 0)
 		"absorb":
-			if _mash_active:
-				_mash_count += 1
+			register_mash_press()
 		"continue", "announce": proceed()
 		"result":
 			# Volta ao dungeon quando a batalha veio de um encontro no mapa.

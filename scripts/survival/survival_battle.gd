@@ -359,28 +359,16 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	hud.announce("ABSORB")
 	var was_absorbed := defender.absorbed
 	_append_log("ABSORPTION: mash Z / ENTER!")
+	# D-103 (criador, 2026-11-25): os apertos só contam; o resultado (SP tirado e um
+	# único sorteio) é aplicado uma vez, ao acabar o tempo ou no 10º aperto.
 	var base_chance: int = maxi(0, unit.current_sp - defender.current_sp)
-	var taken := 0
-	var presses := 0
-	var absorbed := false
-	_mash_active = true
-	_mash_count = 0
-	for _i in BattleMath.ABSORB_TICKS:
-		await get_tree().create_timer(BattleMath.ABSORB_SECONDS / BattleMath.ABSORB_TICKS).timeout
-		if not is_inside_tree():
-			return
-		while presses < mini(_mash_count, BattleMath.ABSORB_MAX_PRESSES) and not absorbed:
-			presses += 1
-			var step := BattleMath.absorb_press(defender.current_sp, base_chance, taken, _absorb_roll())
-			defender.add_sp(-int(step.steal))
-			unit.add_sp(int(step.steal))
-			taken = int(step.taken)
-			absorb_chance = int(step.chance)
-			absorbed = bool(step.absorbed)
-			_on_absorb_press(unit, defender)
-		if absorbed or presses >= BattleMath.ABSORB_MAX_PRESSES:
-			break
-	_mash_active = false
+	await _run_absorb_mash(unit, defender)
+	if not is_inside_tree():
+		return
+	var result := _resolve_absorb_mash(unit, defender, base_chance)
+	var presses := int(result.presses)
+	var taken := int(result.steal)
+	var absorbed := bool(result.absorbed)
 	if presses <= 0:
 		_append_log("ABSORB failed: no input.")
 		_event("%s resists the absorption." % short_name(defender))
@@ -388,7 +376,7 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 		hud.mode = "busy"
 		return
 	if not absorbed:
-		_append_log("ABSORB failed: %s resisted (%d SP taken, last chance %d%%)." % [
+		_append_log("ABSORB failed: %s resisted (%d SP taken, chance %d%%)." % [
 			defender.display_name, taken, absorb_chance])
 		_event("%s resists the absorption." % short_name(defender))
 		_flash_feedback("ABSORB FAILED")
