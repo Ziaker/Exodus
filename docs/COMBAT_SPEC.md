@@ -221,7 +221,8 @@
 - Ação = executada no próprio turno. Reação = qualquer ação fora do turno, declarada
   em resposta ao anúncio de uma ação inimiga (inclusive mirando outro aliado).
 - Todos os comandos podem ser usados como Reação pelo **personagem atacado**, que
-  também pode bloquear (DEFEND). **D-045:** um aliado que **não é o alvo** do ataque
+  também pode bloquear (DEFEND), **exceto ABSORB (D-104)**, que só existe na ação do
+  próprio turno. **D-045:** um aliado que **não é o alvo** do ataque
   anunciado não pode bloquear; sua reação é **contra-ataque (ATTACK) ou item/magia
   (ITEM)**. Inimigos também possuem 2 atos e também podem declarar Reações.
 - Atos não usados podem ser **armazenados até 4** para a próxima rodada
@@ -233,7 +234,8 @@
   recupera exatamente **2 EN** (até o máximo), **não** recupera EN por percentual
   e não pode ser repetido na mesma rodada pelo mesmo combatente após encerrar
   sua participação. **IMPLEMENTADO:** nenhum ato é gasto ao abrir o menu;
-  ATTACK, ITEM e ABSORB consomem um ato quando escolhidos, e REST consome zero.
+  ATTACK e ITEM consomem um ato quando escolhidos, e REST consome zero; ABSORB custa
+  2 atos e resolve na hora (D-104).
   Os atos restantes vão ao estoque e `acts_available` zera. Não equiparar PASS
   a REST. A regeneração automática no fim de rodada permanece distinta.
 - **D-005 (2026-11-21): teto de 4 atos disponíveis no total por personagem**, somando
@@ -314,7 +316,8 @@
   painel do personagem e REACT/REST encerram o plano sem gastar ato extra.
   Regressão em `tests/verify_playable_reactions.gd`.
 - **D-057 (criador, 2026-11-25): fila com alvo e sem confirmação. IMPLEMENTADO.** O alvo de
-  cada ATTACK, golpe (Lunge) e ABSORB é escolhido **ao montar a fila**; EXEC roda os comandos
+  cada ATTACK e golpe (Lunge) é escolhido **ao montar a fila** (ABSORB também era; desde a
+  D-104 não entra na fila); EXEC roda os comandos
   um depois do outro sem perguntar nada e sem pausa de Z entre eles (a fila só espera o golpe e
   o número terminarem; a pausa do resultado vem depois do último comando ou de uma interrupção
   da D-049). Ataques seguidos no mesmo alvo dividem a mesma linha de ritmo; trocar de alvo fecha
@@ -322,6 +325,15 @@
   o comando e os seguintes não rodam e **nenhum ato é gasto** (o herói planeja de novo). Os
   marcadores verdes mostram só os comandos que ainda vão rodar. A reza mantém a própria regra
   (alvo caído = PP de volta, D-048).
+- **D-104 (criador, 2026-11-25): ABSORB imediato, 2 ACT, só na ação. IMPLEMENTADO.** No plano do
+  próprio turno, ABSORB pede o alvo e resolve **na hora**, gastando **exatamente 2 atos** antes do
+  minigame (`ABSORB_ACTS`, `_execute_absorb()`); nada entra na fila e os comandos já enfileirados,
+  com alvos e marcadores, ficam iguais até o EXEC. Depois do resultado (Z) o plano continua com os
+  atos que sobraram (0 atos encerra o turno). ABSORB não aparece no menu de REACT e
+  `_execute_command(..., reacting=true)` o recusa. Com menos de 2 atos livres da fila (atos
+  disponíveis, teto D-005, menos os já comprometidos) a linha fica **apagada e recusa**, a mesma
+  regra das habilidades que o herói não pode pagar (`plan_row_disabled()`). Resolução da absorção
+  (D-051) inalterada. Regressão: `tests/verify_playable_absorb.gd`.
 - **PENDENTES:** reação entre os passos da cadeia. REST D-038 já encerra o
   planejamento ao ser escolhido. O HTML independente permanece como
   protótipo visual, fora do repositório.

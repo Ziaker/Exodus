@@ -74,5 +74,6 @@ qualquer alteração em documentos ou código.
 | D-100 | 2026-11-25 (pedido do criador) | Toda mudança de SP faz uma letra hebraica aleatória (nunca o valor) flutuar de quem ganhou ou perdeu até o rótulo de SP do seu lado no topo: verde no ganho, vermelha na perda, para heróis e inimigos (roubo: vermelha em quem perde e verde em quem ganha). | `docs/GDD.md` Apêndice A |
 | D-102 | 2026-11-25 (decisão do criador) | Os cartões de papel (ATTACK, TARGET, DEFEND, COUNTER, REACT) voltam a ficar visíveis enquanto o papel existe e somem como antes, quando os papéis são limpos (resultado confirmado); revoga a D-061. Setas da D-059 e cores do log da D-060 não mudam. | `docs/GDD.md` Apêndice A |
 | D-103 | 2026-11-25 (decisão do criador) | Absorção resolvida no resultado: os apertos do mash só contam (nada é tirado nem sorteado por aperto); o resultado é aplicado uma vez quando acaba o tempo (2 s) ou no 10º aperto, o que vier primeiro, com 2 SP por aperto (até 20 SP) e um único sorteio; apertos depois disso não contam; as letras verdes da D-052 continuam saindo a cada aperto. | `docs/GDD.md` Apêndice A |
+| D-104 | 2026-11-25 (decisão do criador) | ABSORB vira ação imediata de custo 2 ACT: não entra na fila, resolve na hora em que é escolhido (a fila já montada não muda) e só existe na ação do próprio turno, nunca como reação. Sem 2 atos livres da fila a linha fica apagada e recusa, como uma habilidade que o herói não pode pagar. | `docs/GDD.md` Apêndice A |
 
-Total: 64 decisões indexadas.
+Total: 65 decisões indexadas.

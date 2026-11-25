@@ -439,7 +439,8 @@ rodada pelo mesmo personagem. O REST **substitui apenas** a regra anterior de
 custo de 1 ato e recuperação de 20% pela escolha de descanso (histórico D-006);
 **não altera** a regeneração automática no fim da rodada, as regras gerais
 de armazenamento ou outros comandos. **Implementação no motor Godot:** o menu
-não gasta ato; ATTACK, ITEM e ABSORB consomem um ato cada ao serem escolhidos,
+não gasta ato; ATTACK e ITEM consomem um ato cada ao serem escolhidos (ABSORB custa
+2 atos e resolve na hora, D-104),
 enquanto REST consome zero, envia os atos restantes ao estoque e usa
 `recover_en_flat()` para conceder 2 EN; coberto por `test_battle_combat.gd`.
 O HTML jogável anterior pode permanecer com o comportamento antigo — fora
@@ -2894,7 +2895,8 @@ Formato: ID · data · decisão · estado · impacto documental.
   defende ou reage; o log era incompreensível; e a mecânica de atos falhava com várias ações num
   turno. Respostas do criador em 2026-11-25:
   - **Fila:** ao escolher 2 ou mais ações para um alvo, elas rodam **uma após a outra, sem
-    confirmação**; o alvo de cada ATTACK / golpe (Lunge) / ABSORB é escolhido **ao montar a fila**.
+    confirmação**; o alvo de cada ATTACK / golpe (Lunge) / ABSORB é escolhido **ao montar a fila**
+    (D-104: ABSORB saiu da fila; resolve na hora).
     Só se o alvo morrer o jogo pergunta por outro alvo; **recusar devolve o ato** (não é gasto).
     Entre os comandos da fila não há pausa de Z: a fila só espera o golpe e o número terminarem;
     a pausa do resultado vem depois do último comando (ou de uma interrupção da D-049).
@@ -3026,6 +3028,19 @@ Formato: ID · data · decisão · estado · impacto documental.
   `scripts/battle/battle_controller.gd`, `scripts/battle/playable_controller.gd`,
   `scripts/survival/survival_battle.gd`; testes `tests/verify_absorb_result.gd`,
   `tests/test_battle_math.gd`, `tests/test_battle_combat.gd`, `tests/verify_playable_fx.gd`;
+- **D-104 · 2026-11-25 (decisão do criador) — ABSORB imediato, 2 ACT, só na ação.**
+  Pedido do criador: ``faça com que o absorb seja uma ação imediata de custo 2ACT, sem colocar
+  nada na fila, ocorrer na mesma hora. Além de só poder ser realizada em ação não em reação``.
+  No plano do próprio turno, escolher ABSORB pede o alvo e a absorção começa na hora, gastando
+  **exatamente 2 atos** antes do minigame; nada entra na fila, e os comandos já enfileirados
+  (com seus alvos e marcadores) ficam como estavam e só rodam no EXEC. Depois do resultado (Z)
+  o plano continua com os atos que sobraram. ABSORB **não aparece no menu de REACT** (nem para o
+  atacado; a D-045 continua valendo para os outros comandos). **Menos de 2 atos livres da fila:**
+  segue a regra já existente para o que custa mais do que o herói tem (habilidades do submenu
+  FIGHT, criador 2026-11-23): a linha fica apagada e recusa a confirmação, sem gastar nada. Como a
+  absorção resolve (fim do minigame, ganhos) não muda aqui. Substitui, para ABSORB, o custo de 1
+  ato da D-038/§7 e o alvo escolhido na fila da D-057. Impacto: `scripts/battle/playable_controller.gd`,
+  `scripts/battle/playable_hud.gd`; testes `verify_playable_absorb.gd`, `verify_playable_reactions.gd`;
   `docs/COMBAT_SPEC.md`, `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
