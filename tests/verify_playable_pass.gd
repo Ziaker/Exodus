@@ -1,5 +1,5 @@
 extends SceneTree
-## D-065 (creator 2026-11-25): PASS hands the turn over without spending acts; the hero acts
+## D-105 (creator 2026-11-25): PASS hands the turn over without spending acts; the hero acts
 ## again later in the same round; the round ends when the turn comes back to someone who
 ## passed with nobody acting since; REST stays as it was on the own turn and is no reaction.
 const SANDBOX := preload("res://tests/progress_sandbox.gd")
@@ -149,7 +149,7 @@ func _run() -> void:
 	check(foe.acts_available == foe_acts + 1, "Lost FIGHT + PASS: the enemy gains 1 act, not 2 (%d -> %d)" % [foe_acts, foe.acts_available])
 	battle.queue_free(); await process_frame
 
-	print("PLAYABLE_PASS_OK: %d checks; D-065 PASS keeps acts, hero acts again in the same round, all-passed ends the round, REST unchanged and no reaction" % checks)
+	print("PLAYABLE_PASS_OK: %d checks; D-105 PASS keeps acts, hero acts again in the same round, all-passed ends the round, REST unchanged and no reaction" % checks)
 	quit(0)
 
 func _finalize() -> void:

@@ -1,5 +1,5 @@
 extends SceneTree
-## D-065: windowed capture of PASS in the playable battle. Run WITHOUT --headless:
+## D-105: windowed capture of PASS in the playable battle. Run WITHOUT --headless:
 ##   Godot --fixed-fps 60 --path . -s tools/capture_pass.gd
 ## Frames: 1 Fallen's menu with PASS; 2 the pass result; 3 Yoch's menu; 4 Fallen back in
 ## round 01 after both passed; 5 the round ending once everyone left passed (round 02).

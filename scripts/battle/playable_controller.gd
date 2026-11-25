@@ -33,11 +33,11 @@ var active_actor: BattleUnit
 var _selected_target := -1
 var _reaction_decision := false
 var waiting_players: Dictionary = {}
-## D-065 (creator 2026-11-25): PASS hands the turn over without spending acts. Units that
+## D-105 (creator 2026-11-25): PASS hands the turn over without spending acts. Units that
 ## passed with no real turn taken since, by id; coming back to one of them means everyone
 ## left with a turn passed, so the round ends (leftover acts go to the stock).
 var _pass_streak: Dictionary = {}
-## D-065: set when the turn being played ended with PASS.
+## D-105: set when the turn being played ended with PASS.
 var _turn_passed := false
 var in_reaction := false
 ## D-022: set when the player actually executes any reaction command to an
@@ -315,7 +315,7 @@ func planned_acts_for(unit: BattleUnit) -> int:
 
 
 func _entry_cost(detail: Dictionary) -> int:
-	# D-065: PASS spends no act.
+	# D-105: PASS spends no act.
 	if detail.get("pass", false): return 0
 	if detail.is_empty() or not detail.has("skill"): return 1
 	return int(SkillBook.def(StringName(detail.skill)).get("acts", 1))
@@ -489,7 +489,7 @@ func _leave_after_death() -> void:
 
 
 func _next_live_actor() -> BattleUnit:
-	# D-065: a turn ended with PASS joins the streak; any other turn breaks it. Between
+	# D-105: a turn ended with PASS joins the streak; any other turn breaks it. Between
 	# rounds nobody owns the turn, so the streak starts empty each round.
 	if turn_owner == null:
 		_pass_streak.clear()
@@ -505,7 +505,7 @@ func _next_live_actor() -> BattleUnit:
 		# D-047: REACT reserves acts without spending them; skip that player's turns
 		# so the enemy still gets its turn instead of skipping to the next round.
 		if waiting_players.has(unit.id): continue
-		# D-065: back to someone who passed with no real turn since: everyone left with a
+		# D-105: back to someone who passed with no real turn since: everyone left with a
 		# turn passed too, so the round ends.
 		if _pass_streak.has(unit.id): return null
 		return unit
@@ -513,7 +513,7 @@ func _next_live_actor() -> BattleUnit:
 
 
 func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
-	# D-065 (creator 2026-11-25): PASS sits right before REST on the own turn; neither
+	# D-105 (creator 2026-11-25): PASS sits right before REST on the own turn; neither
 	# REST nor PASS is a reaction.
 	var options: Array[String] = [FIGHT, "ITEM"]
 	if not reacting: options.append_array(["PASS", "REST"])
@@ -638,7 +638,7 @@ func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
 	return true
 
 
-## D-065 (creator 2026-11-25): PASS spends no act and hands the turn over; the hero keeps
+## D-105 (creator 2026-11-25): PASS spends no act and hands the turn over; the hero keeps
 ## the acts left, takes later turns of the same round normally (acting or reacting) and
 ## whatever is still unused at the end of the round goes to the stock (D-005). No EN, no SP.
 func _execute_pass(unit: BattleUnit) -> bool:
@@ -698,7 +698,7 @@ func _player_turn(unit: BattleUnit) -> void:
 			if choice < 0:
 				break
 			var chosen: String = options[choice]
-			# D-065: the PASS entry costs no act (see _entry_cost).
+			# D-105: the PASS entry costs no act (see _entry_cost).
 			var detail: Dictionary = {"pass": true} if chosen == "PASS" else {}
 			# D-048: with every act committed only +1 PP on a queued spell is left.
 			if chosen != "PRAY" and _planned_cost() >= max_acts:
@@ -730,7 +730,7 @@ func _player_turn(unit: BattleUnit) -> void:
 			_mark_target(target, 1)
 			prayer.after_append(unit, _planned_skills)
 			# REST (D-038) encerra a participação; REACT reserva os atos restantes; PASS
-			# (D-065) fecha a fila e passa a vez com os atos que sobrarem.
+			# (D-105) fecha a fila e passa a vez com os atos que sobrarem.
 			if chosen in ["REST", "REACT", "PASS"]:
 				break
 			if _auto_exec:
@@ -816,7 +816,7 @@ func _player_turn(unit: BattleUnit) -> void:
 		if chain_open or rhythm._chain_mode:
 			rhythm.stop_chain()
 		_refresh_all()
-		# D-065: PASS ends this turn with the acts left; they wait for a later turn.
+		# D-105: PASS ends this turn with the acts left; they wait for a later turn.
 		if _turn_passed:
 			return
 
@@ -1160,7 +1160,7 @@ func _lose_queue(unit: BattleUnit, commands: Array, gainer: BattleUnit, acts_ove
 	if commands.is_empty():
 		return
 	var acts := 0
-	# D-065 (creator 2026-11-25): a lost PASS gives the interrupter no act.
+	# D-105 (creator 2026-11-25): a lost PASS gives the interrupter no act.
 	var gained := 0
 	for command in commands:
 		if String(command) not in ["REST", "REACT", "PASS"]:

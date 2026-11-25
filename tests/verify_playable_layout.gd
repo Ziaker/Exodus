@@ -73,7 +73,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	# Creator 2026-11-24: no REACT on the own turn, no EXEC/UNDO before something is queued.
-	# D-065 (creator 2026-11-25): PASS right before REST.
+	# D-105 (creator 2026-11-25): PASS right before REST.
 	_check(hud._menu_rows() == ["FIGHT", "ITEM", "PASS", "REST", "ABSORB"], "Fallen's empty plan lists FIGHT, ITEM, PASS, REST, ABSORB only (%s)" % [hud._menu_rows()])
 	_check(hud._choosing_unit() == battle._fallen, "The arrow marks Fallen as the one choosing")
 	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-plan:0")[0].rect
@@ -148,7 +148,7 @@ func _run() -> void:
 	await process_frame
 	battle = _new_battle()
 	battle._fallen.current_en = 0
-	battle.submit_command(battle.hud.command_options.find("REST"))  # D-065: PASS sits before REST
+	battle.submit_command(battle.hud.command_options.find("REST"))  # D-105: PASS sits before REST
 	_check(battle._fallen.current_en == BattleMath.REST_EN_RECOVERY, "D-038: REST must recover exactly 2 EN flat")
 	_check(battle._fallen.acts_available == 0 and battle._fallen.stored_acts == 2, "D-038: REST spends no act, stores the remaining two and ends participation")
 	battle.queue_free()
@@ -184,7 +184,7 @@ func _run() -> void:
 	await process_frame
 	battle = _new_battle()
 	battle.state.units[2].current_sp = 10  # D-051: drained by the presses, absorption guaranteed
-	battle.submit_command(battle.hud.command_options.find("ABSORB"))  # D-065: PASS shifted ABSORB
+	battle.submit_command(battle.hud.command_options.find("ABSORB"))  # D-105: PASS shifted ABSORB
 	battle.submit_target(0)
 	_check(battle._mash_active, "Absorption must accept real presses")
 	for i in 12:

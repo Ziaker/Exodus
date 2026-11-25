@@ -105,7 +105,7 @@ func _run() -> void:
 	battle.queue_free(); await process_frame
 	battle = fresh(); fx = battle.get_node("BattleEffects")
 	battle.hud.opponents[0].current_sp = 10  # D-051: drained by the presses, absorption guaranteed
-	battle.submit_command(battle.hud.command_options.find("ABSORB")); battle.submit_target(0)  # D-065: PASS shifted ABSORB
+	battle.submit_command(battle.hud.command_options.find("ABSORB")); battle.submit_target(0)  # D-105: PASS shifted ABSORB
 	# D-052: the old SMT absorb animation is replaced by AbsorbVFX.
 	check(fx.count_kind("ABSORB") == 0, "D-052: the old SMT absorb animation must not play")
 	var vfx: Node2D = battle.get_node("AbsorbVFX")
