@@ -119,13 +119,19 @@ func _run() -> void:
 		await process_frame
 		waited += 1
 	check(battle.hud.arrow_alpha(battle.hud.arrow_age(arrow_key)) == 0.0, "After the run and the fade the arrow is gone")
-	# D-061 (creator 2026-11-25): the role boxes show for 0.3 s and are cut at once; the roles
-	# themselves stay until the result is confirmed.
-	check(is_equal_approx(battle.hud.ROLE_BOX_TIME, 0.3), "Role boxes show for 0.3 s")
-	check(not battle.hud.role_box_visible(battle._fallen) and not battle.hud.role_box_visible(battle.hud.opponents[0]), "After 0.3 s the ATTACK and TARGET boxes are gone")
-	check(battle.roles.get(battle._fallen.id, "") == "ATTACK", "The role stays after its box is gone")
-	battle._set_role(battle._fallen, "ATTACK")
-	check(battle.hud.role_box_visible(battle._fallen), "A new blow shows the box again")
+	# D-102 (creator 2026-11-25, revokes D-061): the role boxes stay while the role exists,
+	# well past 0.3 s and past the arrow's fade; they go only when the roles are cleared.
+	check(not ("ROLE_BOX_TIME" in battle.hud) and not battle.hud.has_method("role_box_visible"), "D-102: no timed cut of the role boxes is left")
+	# drawn_role_boxes is what the role layer actually painted on its last draw.
+	var box_roles := func() -> Array: return battle.hud.drawn_role_boxes.duplicate()
+	var expected_boxes := ["ATTACK", "TARGET"]
+	await process_frame
+	var boxes_now: Array = box_roles.call()
+	check(expected_boxes.all(func(b): return boxes_now.has(b)), "D-102: after the arrow fades the ATTACK and TARGET boxes are still drawn (%s)" % str(boxes_now))
+	for i in 60: await process_frame
+	boxes_now = box_roles.call()
+	check(expected_boxes.all(func(b): return boxes_now.has(b)), "D-102: a second later the boxes are still drawn (%s)" % str(boxes_now))
+	check(battle.roles.get(battle._fallen.id, "") == "ATTACK", "The role stays while its box is drawn")
 	for i in 120:
 		if not battle.fx.is_busy(): break
 		await process_frame
@@ -135,6 +141,8 @@ func _run() -> void:
 	# turn; the turn only ends with 0 acts or REST.
 	check(battle.hud.mode == "plan" and battle.active_actor == battle._fallen and battle._fallen.acts_available == 1, "X must dismiss feedback and let Fallen plan the act left in the same turn")
 	check(battle.roles.is_empty(), "D-057: the role tags go away once the result is confirmed")
+	await process_frame
+	check(box_roles.call().is_empty(), "D-102: the role boxes go away when the roles are cleared (%s)" % str(box_roles.call()))
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle); reserve(battle)

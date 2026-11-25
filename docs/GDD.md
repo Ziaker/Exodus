@@ -2964,7 +2964,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   aparece por 0,3 s e desaparece de uma vez. O papel continua valendo (setas da D-059, cores do log
   da D-060); um papel novo ou um novo golpe do atacante mostra o bloco de novo. Impacto:
   `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`; `docs/COMBAT_SPEC.md`,
-  `docs/DECISIONS.md`.
+  `docs/DECISIONS.md`. **REVOGADA pela D-102.**
 - **D-100 · 2026-11-25 (pedido do criador) — letras hebraicas de SP flutuantes.**
   Motivo: o criador pediu ``faca flutuar letras ate o SP toda vez que um inimigo ganha ou jogador
   ganha SP tambem, de quem perdeu, verde e vermelho``; esclareceu ``com letras eu quero dizer letras
@@ -2993,6 +2993,15 @@ Formato: ID · data · decisão · estado · impacto documental.
   aprovou o GIF da areia que desce, levanta uma nuvem baixa e se assenta
   (“ok perfeito”). Fontes editáveis e prévias filtradas em [Cratera de areia
   branca da abertura](#cratera-de-areia-branca-da-abertura).
+
+- **D-102 · 2026-11-25 (decisão do criador) — cartões de papel visíveis enquanto o papel existe;
+  revoga a D-061.**
+  Motivo: o criador pediu ``traga devolta os cartões attack defend counter, tirando a sumida de .3
+  segundos (mas ainda sumindo normalmente como antes)``. Os cinco cartões (ATTACK, TARGET, DEFEND,
+  COUNTER, REACT) ficam na tela enquanto o papel existe e somem como antes da D-061: quando o
+  controlador limpa os papéis (resultado confirmado). As setas da D-059 e as cores do log da D-060
+  não mudam. Impacto: `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`;
+  `docs/COMBAT_SPEC.md`, `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

@@ -175,7 +175,11 @@
 - **D-100 (criador, 2026-11-25): letras hebraicas de SP flutuantes. IMPLEMENTADO.** Toda mudança
   de SP (ganho, perda, roubo) faz uma letra hebraica aleatória (nunca o valor), verde no ganho e
   vermelha na perda, subir de quem mudou até o rótulo de SP do seu lado; heróis e inimigos. Duração e tamanho aguardam o julgamento do criador.
-- **D-061 (criador, 2026-11-25): blocos de papel por 0,3 s. IMPLEMENTADO.** Os cinco blocos
+- **D-102 (criador, 2026-11-25): cartões de papel visíveis enquanto o papel existe; revoga a
+  D-061. IMPLEMENTADO.** Os cinco cartões ficam na tela enquanto o papel existe e somem quando os
+  papéis são limpos (resultado confirmado), como antes da D-061; setas (D-059) e cores do log (D-060)
+  não mudam.
+- **D-061 (criador, 2026-11-25): blocos de papel por 0,3 s. REVOGADA pela D-102.** Os cinco blocos
   aparecem por 0,3 s e somem de uma vez; o papel segue valendo para setas e cores do log, e um
   papel novo ou novo golpe mostra o bloco de novo.
 - **D-060 (criador, 2026-11-25): nomes coloridos no Battle Log. IMPLEMENTADO.** Em cada frase,
