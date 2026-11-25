@@ -1068,8 +1068,6 @@ func _age_arrows(arrows: Array[Dictionary]) -> void:
 
 ## A new blow by `unit_id` runs its arrows again from the start.
 func restart_arrows(unit_id: StringName) -> void:
-	# D-061: a new blow shows the role boxes again for their 0.3 s.
-	_box_started.clear()
 	for key in _arrow_started.keys():
 		if String(key).begins_with(String(unit_id) + ">") or String(key).begins_with(String(unit_id) + "<>"):
 			_arrow_started.erase(key)
@@ -1135,45 +1133,25 @@ func _role_arrow(from: Vector2, tip: Vector2, ink: Color, head_ink: Color) -> vo
 	role_layer.draw_colored_polygon(PackedVector2Array([tip, base + side, base - side]), head_ink)
 
 
+## Roles of the boxes painted by the last role-layer draw (tests read it).
+var drawn_role_boxes: Array[String] = []
+
+
 ## "box": filled box, light border, bold caps with a shadow (D-057).
 func _draw_role_boxes() -> void:
-	_age_boxes()
+	# D-062 (creator 2026-11-25, revokes D-061): a box stays while its role exists; it goes
+	# away when the controller clears the roles (result confirmed).
+	drawn_role_boxes.clear()
 	for tag in _role_tags:
-		if tag.has("unit") and not role_box_visible(tag.unit): continue
 		var role: String = tag.role
 		var r: Rect2 = tag.rect
+		drawn_role_boxes.append(role)
 		role_layer.draw_rect(r, ROLE_FILLS.get(role, ROLE_FILLS.TARGET))
 		role_layer.draw_rect(Rect2(r.position + Vector2(0.5, 0.5), r.size - Vector2.ONE), Color(1, 1, 1, 0.85), false, 1)
 		var w := _width(role, ROLE_PX, true)
 		var at := Vector2(r.get_center().x - w * 0.5, r.position.y + 9.5)
 		role_layer.draw_string(ui_bold, at + Vector2(0, 1), role, HORIZONTAL_ALIGNMENT_LEFT, -1, ROLE_PX, Color(0, 0, 0, 0.6))
 		role_layer.draw_string(ui_bold, at, role, HORIZONTAL_ALIGNMENT_LEFT, -1, ROLE_PX, Color.WHITE)
-
-
-## D-061 (creator 2026-11-25): every role box shows for ROLE_BOX_TIME seconds after it
-## appears and then disappears at once (hard cut). The role itself stays (arrows, log
-## colours); a new role, or a new blow, shows the box again.
-const ROLE_BOX_TIME := 0.3
-## "unit_id:ROLE" -> time the box appeared.
-var _box_started := {}
-
-
-func role_box_visible(unit: BattleUnit) -> bool:
-	var role := role_of(unit)
-	if role.is_empty(): return false
-	var key := "%s:%s" % [unit.id, role]
-	return not _box_started.has(key) or time - float(_box_started[key]) < ROLE_BOX_TIME
-
-
-func _age_boxes() -> void:
-	var seen := {}
-	for tag in _role_tags:
-		if not tag.has("unit"): continue
-		var key := "%s:%s" % [tag.unit.id, tag.role]
-		seen[key] = true
-		if not _box_started.has(key): _box_started[key] = time
-	for key in _box_started.keys():
-		if not seen.has(key): _box_started.erase(key)
 
 
 ## SP comparison arrow: top-centre anchor, ARROW_HEIGHT tall, head ARROW_HEAD, shaft ARROW_SHAFT.

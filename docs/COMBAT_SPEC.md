@@ -172,7 +172,11 @@
     longas (habilidades, rezas) viram uma coluna e a janela cresce para cima.
   - **Números de dano nos aliados** aparecem **sobre a janela do herói**, 20 px, metade
     do tempo de antes.
-- **D-061 (criador, 2026-11-25): blocos de papel por 0,3 s. IMPLEMENTADO.** Os cinco blocos
+- **D-062 (criador, 2026-11-25): cartões de papel visíveis enquanto o papel existe; revoga a
+  D-061. IMPLEMENTADO.** Os cinco cartões ficam na tela enquanto o papel existe e somem quando os
+  papéis são limpos (resultado confirmado), como antes da D-061; setas (D-059) e cores do log (D-060)
+  não mudam.
+- **D-061 (criador, 2026-11-25): blocos de papel por 0,3 s. REVOGADA pela D-062.** Os cinco blocos
   aparecem por 0,3 s e somem de uma vez; o papel segue valendo para setas e cores do log, e um
   papel novo ou novo golpe mostra o bloco de novo.
 - **D-060 (criador, 2026-11-25): nomes coloridos no Battle Log. IMPLEMENTADO.** Em cada frase,
