@@ -62,7 +62,7 @@ var defense_result := BattleMath.RhythmResult.MISS
 ## explains the highlighted entry.
 const FIGHT := "FIGHT"
 const ATTACK_INFO := "ATTACK 1 ACT: normal physical attack."
-## D-064 (creator 2026-11-25): ABSORB is an immediate action of the hero's own turn. It
+## D-104 (creator 2026-11-25): ABSORB is an immediate action of the hero's own turn. It
 ## costs 2 ACT, puts nothing in the queue and resolves the moment it is chosen; it is
 ## never offered as a reaction.
 const ABSORB_ACTS := 2
@@ -252,7 +252,7 @@ func submit_command(index: int) -> void:
 	# No modo de planejamento, manter a API "execute já" permite que drivers e
 	# testes continuem usando submit_command(); a interface usa submit_plan().
 	if hud.mode == "plan":
-		# D-064: a refused (dimmed) row must not run the commands already queued.
+		# D-104: a refused (dimmed) row must not run the commands already queued.
 		if plan_row_disabled(index):
 			submit_plan(index)
 			return
@@ -275,7 +275,7 @@ func submit_command(index: int) -> void:
 func submit_plan(index: int) -> void:
 	if hud.mode != "plan" or index < 0 or index >= _plan_options.size():
 		return
-	# D-064: like a skill the hero cannot pay (creator 2026-11-23), a dimmed row refuses.
+	# D-104: like a skill the hero cannot pay (creator 2026-11-23), a dimmed row refuses.
 	if plan_row_disabled(index):
 		hud.press_command(index, "reject")
 		return
@@ -320,18 +320,18 @@ func planned_acts_for(unit: BattleUnit) -> int:
 	return total
 
 
-## D-064: acts of the plan not committed to a queued command (the queue keeps its own).
+## D-104: acts of the plan not committed to a queued command (the queue keeps its own).
 func _free_plan_acts(unit: BattleUnit) -> int:
 	return mini(BattleMath.MAX_AVAILABLE_ACTS, unit.acts_available) - _planned_cost()
 
 
-## D-064: ABSORB can be paid now: Fallen, own turn (never a reaction), 2 free acts.
+## D-104: ABSORB can be paid now: Fallen, own turn (never a reaction), 2 free acts.
 func absorb_affordable(unit: BattleUnit) -> bool:
 	return unit != null and unit.is_fallen and not in_reaction and _exec_index < 0 \
 		and _free_plan_acts(unit) >= ABSORB_ACTS
 
 
-## D-064: the HUD dims the plan rows that refuse confirmation (ABSORB without 2 free acts),
+## D-104: the HUD dims the plan rows that refuse confirmation (ABSORB without 2 free acts),
 ## the same treatment as the FIGHT submenu rows the hero cannot pay.
 func plan_row_disabled(index: int) -> bool:
 	if hud == null or hud.mode != "plan" or index < 0 or index >= _plan_options.size():
@@ -524,7 +524,7 @@ func _next_live_actor() -> BattleUnit:
 
 func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 	var options: Array[String] = [FIGHT, "ITEM", "REST"]
-	# D-064: ABSORB is an action of the hero's own turn, never a reaction.
+	# D-104: ABSORB is an action of the hero's own turn, never a reaction.
 	if unit.is_fallen and not reacting: options.append("ABSORB")
 	if reacting:
 		# D-045: only the attacked character may block (DEFEND) or use any command;
@@ -598,7 +598,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 	return true
 
 
-## D-064 (creator 2026-11-25): ABSORB spends exactly 2 ACT and resolves at once on the
+## D-104 (creator 2026-11-25): ABSORB spends exactly 2 ACT and resolves at once on the
 ## target just chosen. Refused (false, nothing spent) as a reaction, for anyone but Fallen
 ## or without 2 acts free of the queue.
 func _execute_absorb(unit: BattleUnit, target: BattleUnit, reacting: bool) -> bool:
@@ -704,7 +704,7 @@ func _player_turn(unit: BattleUnit) -> void:
 				break
 			var chosen: String = options[choice]
 			var detail: Dictionary = {}
-			# D-064 (creator 2026-11-25): ABSORB is not queued. Its target is chosen and it
+			# D-104 (creator 2026-11-25): ABSORB is not queued. Its target is chosen and it
 			# resolves now for 2 ACT; the queue stays as it was and the plan goes on.
 			if chosen == "ABSORB":
 				_auto_exec = false
@@ -841,7 +841,7 @@ func _player_turn(unit: BattleUnit) -> void:
 
 
 ## D-057: commands whose enemy target is chosen in the plan: ATTACK and a strike skill
-## (Lunge). Heat wave hits every enemy; ITEM / REST / PRAY choose their own. D-064: ABSORB
+## (Lunge). Heat wave hits every enemy; ITEM / REST / PRAY choose their own. D-104: ABSORB
 ## is not queued; it picks its target and resolves on its own branch of the plan loop.
 func _needs_enemy_target(command: String, detail: Dictionary) -> bool:
 	if command != FIGHT:

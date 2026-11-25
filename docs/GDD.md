@@ -440,7 +440,7 @@ custo de 1 ato e recuperação de 20% pela escolha de descanso (histórico D-006
 **não altera** a regeneração automática no fim da rodada, as regras gerais
 de armazenamento ou outros comandos. **Implementação no motor Godot:** o menu
 não gasta ato; ATTACK e ITEM consomem um ato cada ao serem escolhidos (ABSORB custa
-2 atos e resolve na hora, D-064),
+2 atos e resolve na hora, D-104),
 enquanto REST consome zero, envia os atos restantes ao estoque e usa
 `recover_en_flat()` para conceder 2 EN; coberto por `test_battle_combat.gd`.
 O HTML jogável anterior pode permanecer com o comportamento antigo — fora
@@ -2844,7 +2844,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   turno. Respostas do criador em 2026-11-25:
   - **Fila:** ao escolher 2 ou mais ações para um alvo, elas rodam **uma após a outra, sem
     confirmação**; o alvo de cada ATTACK / golpe (Lunge) / ABSORB é escolhido **ao montar a fila**
-    (D-064: ABSORB saiu da fila; resolve na hora).
+    (D-104: ABSORB saiu da fila; resolve na hora).
     Só se o alvo morrer o jogo pergunta por outro alvo; **recusar devolve o ato** (não é gasto).
     Entre os comandos da fila não há pausa de Z: a fila só espera o golpe e o número terminarem;
     a pausa do resultado vem depois do último comando (ou de uma interrupção da D-049).
@@ -2922,7 +2922,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   da D-060); um papel novo ou um novo golpe do atacante mostra o bloco de novo. Impacto:
   `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`; `docs/COMBAT_SPEC.md`,
   `docs/DECISIONS.md`.
-- **D-064 · 2026-11-25 (decisão do criador) — ABSORB imediato, 2 ACT, só na ação.**
+- **D-104 · 2026-11-25 (decisão do criador) — ABSORB imediato, 2 ACT, só na ação.**
   Pedido do criador: ``faça com que o absorb seja uma ação imediata de custo 2ACT, sem colocar
   nada na fila, ocorrer na mesma hora. Além de só poder ser realizada em ação não em reação``.
   No plano do próprio turno, escolher ABSORB pede o alvo e a absorção começa na hora, gastando

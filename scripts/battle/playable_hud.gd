@@ -1536,7 +1536,7 @@ func _menu() -> void:
 		if selected:
 			_str("›", cell.position.x + 0.5 + shift, baseline, Color.WHITE, COMMAND_PX, true)
 		# Creator 2026-11-23: skills the unit cannot pay now are dimmed.
-		# D-064: so is ABSORB in the plan without 2 free acts.
+		# D-104: so is ABSORB in the plan without 2 free acts.
 		var ink := Color(1, 1, 1, 0.35) if (mode == "skill" and battle.skill_disabled.has(i)) \
 			or (mode == "plan" and battle.plan_row_disabled(i)) else Color.WHITE
 		var label := rows[i]

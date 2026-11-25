@@ -1,5 +1,5 @@
 extends SceneTree
-## D-064 capture: ABSORB as an immediate 2-ACT action in the real BattlePlayable.
+## D-104 capture: ABSORB as an immediate 2-ACT action in the real BattlePlayable.
 ## Frames: plan with a queued FIGHT and ABSORB enabled; the mash opening at once (queue
 ## still pending); the absorption result; back in the plan with the queue unchanged; ABSORB
 ## dimmed with 1 free act; the REACT menu without ABSORB.

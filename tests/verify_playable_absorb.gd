@@ -1,5 +1,5 @@
 extends SceneTree
-## D-064 (creator 2026-11-25): ABSORB is an immediate action of the hero's own turn. It costs
+## D-104 (creator 2026-11-25): ABSORB is an immediate action of the hero's own turn. It costs
 ## exactly 2 ACT, puts nothing in the queue, resolves the moment it is chosen and is never a
 ## reaction. Without 2 acts free of the queue the row is dimmed and refuses (like a skill the
 ## hero cannot pay). How the absorption itself resolves (mash, gains) is not tested here.
@@ -209,7 +209,7 @@ func _run() -> void:
 	check(fallen.acts_available == 2 and foe_b.is_alive(), "Real run: 2 acts left; the queued FIGHT has not run")
 	battle.queue_free(); await process_frame
 
-	print("PLAYABLE_ABSORB_OK: %d checks; D-064 cost 2 ACT, immediate, queue unchanged, refused under 2 free acts, never a reaction" % checks)
+	print("PLAYABLE_ABSORB_OK: %d checks; D-104 cost 2 ACT, immediate, queue unchanged, refused under 2 free acts, never a reaction" % checks)
 	await process_frame
 	await process_frame
 	quit(0)
