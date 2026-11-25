@@ -33,6 +33,12 @@ var active_actor: BattleUnit
 var _selected_target := -1
 var _reaction_decision := false
 var waiting_players: Dictionary = {}
+## D-105 (creator 2026-11-25): PASS hands the turn over without spending acts. Units that
+## passed with no real turn taken since, by id; coming back to one of them means everyone
+## left with a turn passed, so the round ends (leftover acts go to the stock).
+var _pass_streak: Dictionary = {}
+## D-105: set when the turn being played ended with PASS.
+var _turn_passed := false
 var in_reaction := false
 ## D-022: set when the player actually executes any reaction command to an
 ## announced enemy attack; without it the enemy attack is an automatic hit.
@@ -340,6 +346,8 @@ func plan_row_disabled(index: int) -> bool:
 
 
 func _entry_cost(detail: Dictionary) -> int:
+	# D-105: PASS spends no act.
+	if detail.get("pass", false): return 0
 	if detail.is_empty() or not detail.has("skill"): return 1
 	return int(SkillBook.def(StringName(detail.skill)).get("acts", 1))
 
@@ -512,19 +520,34 @@ func _leave_after_death() -> void:
 
 
 func _next_live_actor() -> BattleUnit:
+	# D-105: a turn ended with PASS joins the streak; any other turn breaks it. Between
+	# rounds nobody owns the turn, so the streak starts empty each round.
+	if turn_owner == null:
+		_pass_streak.clear()
+	elif _turn_passed:
+		_pass_streak[turn_owner.id] = true
+	else:
+		_pass_streak.clear()
+	_turn_passed = false
 	# Reserving acts changes presentation scheduling, not the shared resource pool.
 	for i in state.turn_order.size():
 		var unit := state.next_actor()
 		if unit == null: return null
 		# D-047: REACT reserves acts without spending them; skip that player's turns
 		# so the enemy still gets its turn instead of skipping to the next round.
-		if not waiting_players.has(unit.id): return unit
+		if waiting_players.has(unit.id): continue
+		# D-105: back to someone who passed with no real turn since: everyone left with a
+		# turn passed too, so the round ends.
+		if _pass_streak.has(unit.id): return null
+		return unit
 	return null
 
 
 func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
-	var options: Array[String] = [FIGHT, "ITEM", "REST"]
-	# D-104: ABSORB is an action of the hero's own turn, never a reaction.
+	# D-105 (creator 2026-11-25): PASS sits right before REST on the own turn; neither
+	# REST nor PASS is a reaction. D-104: ABSORB is an action of the hero's own turn, never a reaction.
+	var options: Array[String] = [FIGHT, "ITEM"]
+	if not reacting: options.append_array(["PASS", "REST"])
 	if unit.is_fallen and not reacting: options.append("ABSORB")
 	if reacting:
 		# D-045: only the attacked character may block (DEFEND) or use any command;
@@ -563,6 +586,8 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 	# remaining ones. Handle it before the shared spend_act() gate below.
 	if command == "REST":
 		return _execute_rest(unit, reacting)
+	if command == "PASS":
+		return _execute_pass(unit)
 	if not unit.spend_act():
 		_event("%s has no act left." % short_name(unit))
 		return false
@@ -659,7 +684,23 @@ func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
 	return true
 
 
+## D-105 (creator 2026-11-25): PASS spends no act and hands the turn over; the hero keeps
+## the acts left, takes later turns of the same round normally (acting or reacting) and
+## whatever is still unused at the end of the round goes to the stock (D-005). No EN, no SP.
+func _execute_pass(unit: BattleUnit) -> bool:
+	_turn_passed = true
+	action_attacker = unit
+	action_defender = null
+	phase_text = "PASS"
+	_append_log("%s passes the turn: %d act(s) kept." % [unit.display_name, unit.acts_available])
+	_event("%s passes." % short_name(unit))
+	hud.feedback = "%s: 0 ACT spent, %d kept" % [unit.display_name, unit.acts_available]
+	_refresh_all()
+	return true
+
+
 func _player_turn(unit: BattleUnit) -> void:
+	_turn_passed = false
 	active_actor = unit
 	action_attacker = unit
 	action_defender = null
@@ -703,7 +744,6 @@ func _player_turn(unit: BattleUnit) -> void:
 			if choice < 0:
 				break
 			var chosen: String = options[choice]
-			var detail: Dictionary = {}
 			# D-104 (creator 2026-11-25): ABSORB is not queued. Its target is chosen and it
 			# resolves now for 2 ACT; the queue stays as it was and the plan goes on.
 			if chosen == "ABSORB":
@@ -723,6 +763,8 @@ func _player_turn(unit: BattleUnit) -> void:
 					break
 				max_acts = mini(BattleMath.MAX_AVAILABLE_ACTS, unit.acts_available)
 				continue
+			# D-105: the PASS entry costs no act (see _entry_cost).
+			var detail: Dictionary = {"pass": true} if chosen == "PASS" else {}
 			# D-048: with every act committed only +1 PP on a queued spell is left.
 			if chosen != "PRAY" and _planned_cost() >= max_acts:
 				_auto_exec = false
@@ -752,8 +794,9 @@ func _player_turn(unit: BattleUnit) -> void:
 			# Indicador em tempo real: atos da fila apontados para cada inimigo.
 			_mark_target(target, 1)
 			prayer.after_append(unit, _planned_skills)
-			# REST (D-038) encerra a participação; REACT reserva os atos restantes.
-			if chosen in ["REST", "REACT"]:
+			# REST (D-038) encerra a participação; REACT reserva os atos restantes; PASS
+			# (D-105) fecha a fila e passa a vez com os atos que sobrarem.
+			if chosen in ["REST", "REACT", "PASS"]:
 				break
 			if _auto_exec:
 				_auto_exec = false
@@ -817,7 +860,7 @@ func _player_turn(unit: BattleUnit) -> void:
 				# D-057: told inside the same result, before its Z.
 				var lost_acts := 0
 				for j in range(i + 1, _planned.size()):
-					if options[_planned[j]] not in ["REST", "REACT"]:
+					if options[_planned[j]] not in ["REST", "REACT", "PASS"]:
 						lost_acts += _entry_cost(_planned_skills[j])
 				_lose_queue(unit, _planned.slice(i + 1).map(func(c: int) -> String: return options[c]), _interrupt_gainer, lost_acts)
 				await _pause_result()
@@ -838,6 +881,9 @@ func _player_turn(unit: BattleUnit) -> void:
 		if chain_open or rhythm._chain_mode:
 			rhythm.stop_chain()
 		_refresh_all()
+		# D-105: PASS ends this turn with the acts left; they wait for a later turn.
+		if _turn_passed:
+			return
 
 
 ## D-057: commands whose enemy target is chosen in the plan: ATTACK and a strike skill
@@ -1178,20 +1224,24 @@ func _lose_queue(unit: BattleUnit, commands: Array, gainer: BattleUnit, acts_ove
 	if commands.is_empty():
 		return
 	var acts := 0
+	# D-105 (creator 2026-11-25): a lost PASS gives the interrupter no act.
+	var gained := 0
 	for command in commands:
-		if String(command) not in ["REST", "REACT"]:
+		if String(command) not in ["REST", "REACT", "PASS"]:
 			acts += 1
+		if String(command) != "PASS":
+			gained += 1
 	if acts_override >= 0:
 		acts = acts_override
 	unit.acts_available = maxi(0, unit.acts_available - acts)
 	if gainer != null and gainer.is_alive():
-		gainer.grant_acts(commands.size())
+		gainer.grant_acts(gained)
 	_append_log("%s loses %d queued command(s)%s." % [unit.display_name, commands.size(),
-		"; %s gains %d act(s)" % [gainer.display_name, commands.size()] if gainer != null and gainer.is_alive() else ""])
+		"; %s gains %d act(s)" % [gainer.display_name, gained] if gainer != null and gainer.is_alive() and gained > 0 else ""])
 	# D-057: a queued command never vanishes silently.
 	_event("%s loses %d queued command%s." % [short_name(unit), commands.size(), "" if commands.size() == 1 else "s"])
-	if gainer != null and gainer.is_alive():
-		_event("%s gains %d act%s." % [short_name(gainer), commands.size(), "" if commands.size() == 1 else "s"])
+	if gainer != null and gainer.is_alive() and gained > 0:
+		_event("%s gains %d act%s." % [short_name(gainer), gained, "" if gained == 1 else "s"])
 	_refresh_all()
 
 

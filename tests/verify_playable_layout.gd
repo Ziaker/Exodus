@@ -73,17 +73,18 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	# Creator 2026-11-24: no REACT on the own turn, no EXEC/UNDO before something is queued.
-	_check(hud._menu_rows() == ["FIGHT", "ITEM", "REST", "ABSORB"], "Fallen's empty plan lists FIGHT, ITEM, REST, ABSORB only (%s)" % [hud._menu_rows()])
+	# D-105 (creator 2026-11-25): PASS right before REST.
+	_check(hud._menu_rows() == ["FIGHT", "ITEM", "PASS", "REST", "ABSORB"], "Fallen's empty plan lists FIGHT, ITEM, PASS, REST, ABSORB only (%s)" % [hud._menu_rows()])
 	_check(hud._choosing_unit() == battle._fallen, "The arrow marks Fallen as the one choosing")
 	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-plan:0")[0].rect
 	_check(hud.COMMAND_RECT.encloses(first_row) and is_equal_approx(first_row.position.y, hud.COMMAND_RECT.position.y + 2), "Plan cells start at the top of the command window")
 	var cells: Array = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key).begins_with("live-plan:"))
-	_check(cells.size() == 4 and is_equal_approx(cells[1].rect.position.y, first_row.position.y) and cells[3].rect.position.y > first_row.position.y, "3-column grid: FIGHT ITEM REST, then ABSORB")
-	for c in ["FIGHT", "ITEM", "REST", "ABSORB", "DEFEND", "PRAY", "EXEC", "UNDO", "REACT", "DENY"]:
+	_check(cells.size() == 5 and is_equal_approx(cells[2].rect.position.y, first_row.position.y) and cells[3].rect.position.y > first_row.position.y, "3-column grid: FIGHT ITEM PASS, then REST ABSORB")
+	for c in ["FIGHT", "ITEM", "PASS", "REST", "ABSORB", "DEFEND", "PRAY", "EXEC", "UNDO", "REACT", "DENY"]:
 		_check(hud._width(c, hud.COMMAND_PX, true) + hud.MENU_TEXT_X <= cells[0].rect.size.x, "%s fits its command cell (%.1f + %.1f > %.1f)" % [c, hud._width(c, hud.COMMAND_PX, true), hud.MENU_TEXT_X, cells[0].rect.size.x])
 	battle.submit_plan(1)
 	await process_frame
-	_check(hud.mode == "plan" and hud._menu_rows() == ["FIGHT", "ITEM", "REST", "ABSORB", "EXEC", "UNDO"], "Once something is queued, EXEC and UNDO appear (%s)" % [hud._menu_rows()])
+	_check(hud.mode == "plan" and hud._menu_rows() == ["FIGHT", "ITEM", "PASS", "REST", "ABSORB", "EXEC", "UNDO"], "Once something is queued, EXEC and UNDO appear (%s)" % [hud._menu_rows()])
 	hud._input(_key(KEY_RIGHT)); _check(hud.plan_index == 1, "Right moves one cell in the grid")
 	# O HUD agora escolhe 3, 2 ou 1 coluna conforme o rótulo caiba (D-055).
 	var cols: int = hud.menu_columns()
@@ -92,7 +93,7 @@ func _run() -> void:
 			"Down moves one row (%d columns)" % cols)
 	battle.undo_plan()
 	await process_frame
-	_check(hud._menu_rows() == ["FIGHT", "ITEM", "REST", "ABSORB"], "UNDO of the only command hides EXEC/UNDO again")
+	_check(hud._menu_rows() == ["FIGHT", "ITEM", "PASS", "REST", "ABSORB"], "UNDO of the only command hides EXEC/UNDO again")
 	# Silhouettes: opaque pixels plus enclosed dither holes become one solid mask.
 	var ring := Image.create_empty(5, 5, false, Image.FORMAT_RGBA8)
 	for p in [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(1, 2), Vector2i(3, 2), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]:
@@ -147,7 +148,7 @@ func _run() -> void:
 	await process_frame
 	battle = _new_battle()
 	battle._fallen.current_en = 0
-	battle.submit_command(2)
+	battle.submit_command(battle.hud.command_options.find("REST"))  # D-105: PASS sits before REST
 	_check(battle._fallen.current_en == BattleMath.REST_EN_RECOVERY, "D-038: REST must recover exactly 2 EN flat")
 	_check(battle._fallen.acts_available == 0 and battle._fallen.stored_acts == 2, "D-038: REST spends no act, stores the remaining two and ends participation")
 	battle.queue_free()
@@ -183,7 +184,7 @@ func _run() -> void:
 	await process_frame
 	battle = _new_battle()
 	battle.state.units[2].current_sp = 10  # D-051: drained by the presses, absorption guaranteed
-	battle.submit_command(3)
+	battle.submit_command(battle.hud.command_options.find("ABSORB"))  # D-105: PASS shifted ABSORB
 	battle.submit_target(0)
 	_check(battle._mash_active, "Absorption must accept real presses")
 	for i in 12:
