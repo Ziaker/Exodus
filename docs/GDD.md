@@ -3065,6 +3065,93 @@ Formato: ID · data · decisão · estado · impacto documental.
   desde então. REST (D-038) fica igual no turno. Impacto: `scripts/battle/playable_controller.gd`,
   `tests/verify_playable_pass.gd` e testes que listavam os menus; `docs/COMBAT_SPEC.md`,
   `docs/DECISIONS.md`.
+- **D-066 · 2026-11-25 (liberdade criativa dada pelo criador ao Survival) — estratos e guardiões.**
+  Motivo: o criador pediu ``grandes melhorias no modo survival pra ser um roguelike bom de verdade``
+  e deu ``completa liberdade criativa``; plano e referências em
+  `docs/plans/2026-11-25-survival-roguelike.md`. A run do Survival passa a ter **5 estratos**; os 35
+  demônios são ordenados por (tier, SP) e divididos em grupos de 7. O mais forte de cada grupo é o
+  **GUARDIÃO** (HP ×1,5, +2 ATK/MAK/DEF/MEF, sempre com até 2 escoltas vivas do mesmo estrato, nunca
+  elite, não persegue, espera na célula mais funda a pé e ganha moldura dourada no automapa).
+  Derrotá-lo abre `DESCEND` no santuário (com confirmação); vencer o guardião do estrato 5 encerra a
+  run com `SURVIVAL CLEARED`. Reforços de qualquer luta vêm do mesmo estrato e nunca são
+  derrotados. Só vale no Survival. Impacto: `scripts/survival/survival_strata.gd` (novo),
+  `survival_data.gd`, `survival_state.gd`, `survival_world.gd`, `survival_battle.gd`; testes
+  `verify_survival_strata.gd`, `verify_survival_run.gd`.
+- **D-067 · 2026-11-25 (liberdade criativa, Survival) — labirintos por estrato.** O estrato 1
+  mantém o labirinto feito à mão; os estratos 2–5 usam um labirinto 25×21 gerado pela semente
+  (backtracker + 35% dos becos abertos em laço), com o mesmo santuário 5×3 e a mesma célula
+  inicial. Conexão total verificada por BFS em 800 labirintos. Impacto: `survival_strata.gd`,
+  `survival_state.gd` (validação usa o labirinto do estrato salvo).
+- **D-068 · 2026-11-25 (liberdade criativa, Survival) — cura com custo.** `HEAL` do santuário é
+  grátis uma vez por estrato; depois custa 15 × estrato Macca (antes era grátis e infinito, o que
+  tirava todo o atrito da run). Impacto: `survival_state.gd`, `survival_world.gd`.
+- **D-069 · 2026-11-25 (liberdade criativa, Survival) — temperamentos e intenções.** Cada demônio
+  tem um temperamento (BRUTE, CASTER, SUPPORT, HUNTER, TRICKSTER) que pesa a escolha entre ATAQUE e
+  skills (cura só ferido; buff só sem buff ativo) e, no HUNTER, escolhe o herói com menor % de HP.
+  No começo de cada rodada a 1ª ação de cada inimigo é sorteada, **mostrada acima dele** (temperamento
+  e ``AÇÃO ▸ ALVO``) e executada de fato se ainda puder ser paga. Reação, defesa, contra-ataque,
+  atos e REST seguem a COMBAT_SPEC sem mudança. Impacto: `survival_battle.gd` (overrides de
+  `_enemy_choice`, `_player_with_most_sp`, `_enemy_turn`; camada `IntentLayer`).
+- **D-070 · 2026-11-25 (liberdade criativa, Survival) — elites com efeito e saque.** Afixos com
+  efeito real: BRUTAL +4 ATK, SWIFT +5 AGI, STONE afinidade RESIST e +4 DEF, BURNING ganha
+  EMBER TOUCH, VAMPIRIC ganha LIFE DRAIN (somados ao +12 HP/+3 ATK/+2 MAK/+2 DEF antigos). Elite
+  derrotado dá 1 relíquia; guardião dá Macca ×2 e a escolha de 1 entre 3 relíquias ao voltar ao
+  mapa. Impacto: `survival_data.gd`, `survival_battle.gd`, `survival_world.gd`.
+- **D-071 · 2026-11-25 (liberdade criativa, Survival) — absorção com raridade e herança.** Ofertas
+  de atributo têm raridade COMMON (+1/+2), RARE (+3/+4) e EPIC (+6 ou +3/+3 em dois atributos), com
+  peso que sobe por estrato; HP < 35% sobe um nível (substitui o ``+4 garantido``). A 1ª oferta de
+  atributo é um dos 2 atributos mais fortes do demônio (herança). HP máximo (+6/+10/+16) e EN máximo
+  (+3/+5/+8) entram no sorteio. 25% das ofertas trazem uma opção ``YOCH +n`` (ganhos próprios da
+  Yoch, salvos na run). Os 30% de skill continuam. Impacto: `survival_absorb.gd`,
+  `survival_battle.gd`, `survival_state.gd`.
+- **D-072 · 2026-11-25 (liberdade criativa, Survival) — itens e loja.** Novos consumíveis:
+  MEDICINE (+50 HP), SOMA (HP e EN/PP cheios), BLAST STONE (18 de dano fixo num inimigo). A loja
+  vira o painel `SHOP` com BEAD e CHAKRA sempre, 2 dos 3 novos itens por estrato e 1 relíquia à
+  venda; preços sobem 15% por estrato. Item em alvo cheio continua recusado sem gasto. Impacto:
+  `survival_data.gd`, `survival_state.gd`, `survival_world.gd`, `survival_battle.gd`.
+- **D-073 · 2026-11-25 (liberdade criativa, Survival) — relíquias com efeito e pactos.** A run
+  começa com **1** relíquia inicial sorteada pela semente (antes 6). Entram 11 relíquias de efeito
+  (Macca +50%, 4 opções de absorção, +25% de chance de skill, cura de 15 pós-vitória, +1 estágio de
+  ATK na abertura, +2 PP da Yoch, itens +50%, imunidade a queimadura, skills identificadas, loja −25%,
+  +4 ATK/MAK contra elite/guardião) e 7 **pactos**: pares no mesmo aliado que liberam um terceiro
+  efeito (WRATH, PROPHECY, BASTION, EXODUS, BLOOD PACT, MAMMON, REVELATION). Continua o limite de 2
+  relíquias por aliado. Corrige o validador do save, que recusava a run quando a relíquia de HP
+  deixava o HP atual acima do máximo base. Impacto: `survival_relics.gd`, `survival_state.gd`,
+  `survival_world.gd`, `survival_battle.gd`.
+- **D-074 · 2026-11-25 (liberdade criativa, Survival) — eventos.** 3 eventos por estrato em células
+  da semente, mostrados como figuras SMT no corredor e marcados no automapa como NPC (só no teste,
+  como o atendente, D-018): BLOOD ALTAR (−25% do HP máximo → relíquia; recusa se mataria),
+  WANDERING SPIRIT (descanso +50% HP ou −15 HP por +2 num atributo), HOODED ORACLE (skill por Macca ou
+  aposta +3 atributo / −30 HP) e FROST MERCHANT (relíquia com 20% de desconto). Evento usado some;
+  LEAVE mantém. Impacto: `survival_data.gd`, `survival_strata.gd`, `survival_world.gd`.
+- **D-075 · 2026-11-25 (liberdade criativa, Survival) — OMEN, CODEX e score.** OMEN 0–5
+  (dificuldade empilhada, escolhida no santuário só antes da 1ª luta; vencer no nível n libera o
+  n+1): (1) inimigos +15% HP, (2) HEAL nunca grátis, (3) elites 35%, (4) 2 continues, (5) guardiões
+  +3 ATK/MAK. CODEX guarda os demônios derrotados em qualquer run. Score novo: derrotados×100 +
+  estrato×300 + guardiões×250 + Macca/2 + continues×100, ×(1 + 0,2×OMEN). Impacto:
+  `survival_meta.gd`, `survival_world.gd`, `survival_state.gd`.
+- **D-076 · 2026-11-25 (liberdade criativa, Survival) — save da run v2.** Versão 2 com migração da
+  v1 (campos novos com padrão; run v1 mantém as 6 relíquias que já tinha e continua no estrato 1);
+  validação de relíquias, itens, ganhos da Yoch, estrato, OMEN e célula no labirinto do estrato.
+  Impacto: `survival_state.gd`, `verify_survival_strata.gd`.
+- **D-101 · 2026-11-25 (decisão do criador) — SP parecido no Survival.**
+  Motivo: o criador disse que o protagonista era ``mil vezes mais forte do que deveria`` e que os
+  stats dos personagens não tinham sido corrigidos. Medição com a fórmula real: o dano soma um
+  sorteio de até a diferença de SP, e o SP é a soma dos sete atributos; a ficha antiga (HP 140, EN
+  32: SP 205) contra inimigos de SP 59 a 139 fazia o Fallen matar os tiers 1 a 4 em menos de 1
+  golpe e ignorar 65 a 72% dos golpes inimigos. Escolha do criador: ``SP parecido, estilo D-032``
+  e ``Inimigos acompanham o herói``. Regra: ficha inicial do Fallen = média dos 7 inimigos do
+  estrato 1 (HP 26, EN 12, ATK 7, MAK 7, DEF 6, MEF 6, AGI 9; SP 73 contra 72) e da Yoch na
+  proporção que tem no jogo base (HP 17, EN 0, ATK 8, MAK 3, DEF 6, MEF 3, AGI 8). Ao começar cada
+  batalha o inimigo recebe (ou perde) a diferença entre o SP atual do Fallen e o SP esperado no
+  estrato (média dos inimigos dele), repartida pelos sete atributos na proporção que ele já tem
+  (nunca abaixo de metade do próprio SP; EN 0 continua 0); guardião, elite e OMEN somam depois.
+  **Escolhas do agente, aguardando o criador:** a ficha derivada da média do estrato 1, a
+  repartição proporcional e valer nos dois sentidos (herói abaixo do esperado enfraquece os
+  inimigos). **Não alterado, pendente:** BEAD +20 HP, MEDICINE +50 HP e CHAKRA +10 EN continuam
+  nos valores da ficha antiga (BEAD cura 77% do HP inicial). Impacto: `survival_data.gd`,
+  `survival_strata.gd`, `survival_battle.gd`, `tests/verify_survival_balance.gd`;
+  `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

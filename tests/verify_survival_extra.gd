@@ -147,14 +147,14 @@ func _run() -> void:
 	await process_frame
 
 	# Save inconsistente (lista de inimigos vazia): derrotados não renascem.
-	SurvivalState.patch({"defeated": ["pixie", "hel"], "enemies": []})
+	SurvivalState.patch({"defeated": ["pixie", "jack_frost"], "enemies": []})
 	Engine.remove_meta(SurvivalState.META_KEY)
 	_check(SurvivalState.load_from_file(), "Inconsistent saved run reloads")
 	var restored: Control = load(SurvivalData.WORLD_SCENE).instantiate()
 	restored.battle_scene = ""
 	root.add_child(restored)
 	await process_frame
-	_check(restored.enemies.entries.size() == SurvivalData.DEMONS.size() - 2,
+	_check(restored.enemies.entries.size() == SurvivalStrata.PER_STRATUM - 2,
 			"Defeated demons stay off the map after reload (got %d)" % restored.enemies.entries.size())
 	restored.queue_free()
 	await process_frame
@@ -167,16 +167,16 @@ func _run() -> void:
 	await process_frame
 	SurvivalState.patch({"macca": 0})
 	nr.talk()
-	nr.service_index = 5
+	nr.service_index = nr.service_index_of("new_run")
 	_check(nr.confirm_service_option() == "new_run", "NEW RUN is in the service bar")
 	_check(nr.service_pending == "new_run", "NEW RUN asks for confirmation")
 	_check(int(SurvivalState.data().macca) == 0, "First Z does not erase the run")
 	_check(nr.confirm_service_option() == "new_run", "Second Z confirms NEW RUN")
 	_check(int(SurvivalState.data().macca) == SurvivalData.STARTING_MACCA, "NEW RUN restores starting Macca")
 	_check(int(SurvivalState.data().continues) == SurvivalData.MAX_CONTINUES, "NEW RUN restores 3 continues")
-	_check(nr.SERVICE_OPTIONS[6].id == "title", "TITLE is available in the same bar")
+	_check(nr.service_index_of("title") >= 0, "TITLE is available in the same bar")
 	nr.talk() # NEW RUN fechou a barra
-	nr.service_index = 6
+	nr.service_index = nr.service_index_of("title")
 	_check(nr.confirm_service_option() == "title", "TITLE option executes")
 	for _i in 180:
 		if current_scene != null and current_scene.scene_file_path == "res://scenes/title/Title.tscn":
