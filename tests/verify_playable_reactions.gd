@@ -186,7 +186,7 @@ func _run() -> void:
 	battle.rhythm._finish(BattleMath.RhythmResult.POINT)
 	# D-057 (creator 2026-11-25): an affinity never takes an act; RESIST spends only the action.
 	check(battle._fallen.acts_available == 1, "A landed resisted hit spends only its own act (no -1 penalty)")
-	check(not battle.hud.events.any(func(e: Dictionary) -> bool: return String(e.text).contains("loses")), "No act loss is told for a resisted hit")
+	check(not battle.hud.events.any(func(e: Dictionary) -> bool: return String(e.text).contains("loses") or String(e.text).contains("COMMAND")), "No act loss is told for a resisted hit")
 	battle.queue_free(); await process_frame
 	# D-022: declining the reaction makes the enemy attack an automatic hit.
 	battle = AutoHitBattle.new()

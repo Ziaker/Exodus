@@ -67,7 +67,7 @@ func _draw() -> void:
 		var card: Rect2 = hud.STATUS_RECTS[i]
 		var pulse := 0.55 + 0.45 * absf(sin(time * PULSE_HZ))
 		draw_rect(Rect2(card.position + Vector2(0.5, 0.5), card.size - Vector2.ONE), Color(PrayerBook.INK, pulse), false, 1.5)
-		var x: float = card.position.x + 7 + hud._width(unit.display_name, 13, true) + 8
+		var x: float = card.position.x + 7 + hud._width(NameCase.of(unit.display_name), 13, true) + 8
 		draw_string(font, Vector2(x, card.position.y + 18), MARK_GLYPH, HORIZONTAL_ALIGNMENT_LEFT, -1, MARK_PX, PrayerBook.INK)
 	for letter in letters:
 		var k := (time - float(letter.born)) / RISE_TIME

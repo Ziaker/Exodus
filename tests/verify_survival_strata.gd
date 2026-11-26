@@ -307,7 +307,7 @@ func _relics() -> void:
 	_check(st.atk == 5 + 9 and st.agi == 7, "apply_all applies relics + covenant")
 	_check(SurvivalRelics.covenants(["shard_of_urim"]).is_empty(), "Half a pair gives nothing")
 	_check(SurvivalRelics.has_perk(["golden_calf", "merchant_seal"], "mammon"), "MAMMON perk from the pair")
-	_check(SurvivalRelics.party_has({"fallen_relics": [], "yoch_relics": ["raziel_book"]}, "identified"), "party_has sees Yoch's relics")
+	_check(SurvivalRelics.party_has({"fallen_relics": [], "yoch_relics": ["raziel_book"]}, "skill_chance_2"), "party_has sees Yoch's relics")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	var drops := SurvivalRelics.roll(rng, SurvivalRelics.all_ids(), [], 3)
@@ -367,10 +367,10 @@ func _economy() -> void:
 	# Identificação por relíquia.
 	SurvivalState.patch({"yoch_relics": ["raziel_book"]})
 	SurvivalState.learn_skill(&"hellfire")
-	_check(not (SurvivalState.data().unidentified as Array).has("hellfire"), "BOOK OF RAZIEL: skill arrives identified")
+	_check(not (SurvivalState.data().unidentified as Array).has("hellfire"), "D-113: skill arrives identified")
 	SurvivalState.patch({"yoch_relics": []})
 	SurvivalState.learn_skill(&"mend")
-	_check((SurvivalState.data().unidentified as Array).has("mend"), "Without it the skill is unidentified")
+	_check(not (SurvivalState.data().unidentified as Array).has("mend"), "D-113: no skill is ever unidentified, relic or not")
 	# OMEN 4 = 2 continues.
 	SurvivalState.patch({"omen": 4})
 	_check(SurvivalState.max_continues() == 2, "OMEN 4 caps continues at 2")

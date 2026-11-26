@@ -57,11 +57,12 @@ func _run() -> void:
 	_check(battle.stage.material.get_shader_parameter("stage_size") == battle.stage.size, "The stage shader draws 1:1 (floor continues, not stretched)")
 	# Option 13 windows (prototype px / 1.5).
 	var win := func(x: float, y: float, w: float, h: float) -> Rect2: return Rect2(x / 1.5, y / 1.5, w / 1.5, h / 1.5)
-	_check(hud.BATTLE_LOG_RECT.is_equal_approx(win.call(8, 450, 800, 88)), "Log window: 8, 450, 800 x 88 on screen (two lines, D-056)")
+	_check(hud.BATTLE_LOG_RECT.is_equal_approx(win.call(8, 450, 800, 88)), "Log window: 8, 450, 800 x 88 on screen (three lines, D-110)")
 	_check(hud.STATUS_RECTS[0].is_equal_approx(win.call(8, 546, 293, 66)) and hud.STATUS_RECTS[1].is_equal_approx(win.call(309, 546, 293, 66)), "Hero windows: 293 x 66 at 8 and 309, y 546 on screen")
 	_check(hud.COMMAND_RECT.is_equal_approx(win.call(610, 546, 198, 66)), "Command window: 610, 546, 198 x 66 on screen")
 	_check(hud.SP_TRACK.position.y < 15 and hud.HEADER_BASELINE < 16, "Round, SP names and SP bar share one thin top line")
-	_check(hud.LOG_LINES == 2 and hud.LOG_FIRST_BASELINE + (hud.LOG_LINES - 1) * hud.LOG_STEP + 3 <= hud.BATTLE_LOG_RECT.end.y, "2 log lines inside the log window (D-056)")
+	_check(hud.LOG_LINES == 3 and hud.LOG_FIRST_BASELINE + (hud.LOG_LINES - 1) * hud.LOG_STEP + 3 <= hud.BATTLE_LOG_RECT.end.y - 4, "3 log lines inside the log window (D-110)")
+	_check(hud.LOG_FIRST_BASELINE - hud.LOG_PX >= hud.BATTLE_LOG_RECT.position.y + 2 and hud.LOG_FIRST_BASELINE <= hud.BATTLE_LOG_RECT.position.y + 18, "D-110: the first log line starts at the top of the window")
 	_check(hud.BATTLE_LOG_RECT.position.y >= hud.enemy_column(0).end.y - 30 + 4, "The log stays under the enemies' name labels")
 	_check(battle.fx.HERO_NUMBER_PX == 20 and is_equal_approx(battle.fx.HERO_NUMBER_TIME, 0.5), "Heroes' damage numbers: 20 px, half the time")
 	for i in 2:
@@ -102,7 +103,7 @@ func _run() -> void:
 	_check(mask.get_pixel(2, 2).a == 1.0 and mask.get_pixel(1, 1) == Color.WHITE, "Enclosed holes must be filled; shape pixels become the white mask")
 	# D-056 (2 visible lines, newest at the bottom) + D-057 (creator 2026-11-25): the log
 	# holds only event lines pushed by the controller; unread lines show oldest first and
-	# Z pages the rest; menu explanations stay transient and never enter the history.
+	# D-110: no paging; the newest lines show. Menu explanations stay transient.
 	var saved_mode: String = hud.mode
 	var saved_message: String = hud.message
 	var saved_events: Array[Dictionary] = []
@@ -115,17 +116,28 @@ func _run() -> void:
 	_check(hud.visible_log_lines().is_empty(), "D-057: instructions never enter the log")
 	for text in ["LOG A", "LOG B", "LOG C", "LOG D"]:
 		hud.push_event(text)
-	_check(hud.visible_log_lines() == ["LOG A", "LOG B"] and hud.log_hidden(), "D-057: unread lines show oldest first; the rest waits (%s)" % [hud.visible_log_lines()])
-	hud.page_log()
-	_check(hud.visible_log_lines() == ["LOG C", "LOG D"] and not hud.log_hidden(), "D-057: Z pages to the next unread lines")
-	hud.page_log()
-	_check(hud.visible_log_lines() == ["LOG C", "LOG D"], "D-056: once read, the log shows the last 2 lines, oldest first")
+	_check(hud.visible_log_lines() == ["LOG B", "LOG C", "LOG D"] and not hud.log_hidden(), "D-110: the log scrolls by itself: the last 3 lines, oldest first, nothing waits (%s)" % [hud.visible_log_lines()])
 	hud.mode = "absorb"
 	var shown: Array[String] = hud.visible_log_lines()
-	_check(shown.size() == 2 and shown[0] == "LOG D" and shown[1].begins_with("ABSORB [Z]"), "D-055: a transient line (absorb mash) is the newest line while it lasts")
+	_check(shown.size() == 3 and shown[0] == "LOG C" and shown[1] == "LOG D" and shown[2].begins_with("ABSORB [Z]"), "D-055: a transient line (absorb mash) is the newest line while it lasts")
 	_check(String(hud.events[-1].text) == "LOG D", "D-055: transient lines are not kept in the history")
 	hud.mode = "command"
-	_check(hud.visible_log_lines() == ["LOG C", "LOG D"], "D-055: the transient line goes away with its mode")
+	_check(hud.visible_log_lines() == ["LOG B", "LOG C", "LOG D"], "D-055: the transient line goes away with its mode")
+	# D-111: while a hero chooses, the other hero's card is at 50%; the active border pulses
+	# in the turn queue's green, 1.5 s there and back.
+	var saved_actor = battle.active_actor
+	battle.active_actor = battle._fallen
+	_check(hud.card_dimmed(battle._ally) and not hud.card_dimmed(battle._fallen), "D-111: the other hero's card is darkened while Fallen chooses")
+	battle.active_actor = battle._ally
+	_check(hud.card_dimmed(battle._fallen) and not hud.card_dimmed(battle._ally), "D-111: Fallen's card is darkened while Yoch chooses")
+	battle.active_actor = saved_actor
+	_check(is_equal_approx(hud.INACTIVE_CARD_DIM, 0.5), "D-111: 50% darkening")
+	var b0: Color = hud.active_border(0.0)
+	var b_mid: Color = hud.active_border(0.75)
+	var b_end: Color = hud.active_border(1.5)
+	_check(Color(b0, 1.0).is_equal_approx(Color(hud.GREEN_TEXT, 1.0)) and is_equal_approx(b0.a, 1.0) and is_equal_approx(b_mid.a, 0.3) and is_equal_approx(b_end.a, 1.0), "D-111: the active border pulses in green, 1.5 s there and back (%s %s %s)" % [b0, b_mid, b_end])
+	hud.mode = "timing"
+	_check(not hud.card_dimmed(battle._ally) and not hud.card_dimmed(battle._fallen), "D-111: no card is darkened outside the choosing menus")
 	hud.mode = saved_mode
 	hud.message = saved_message
 	hud.events.assign(saved_events)

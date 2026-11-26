@@ -685,7 +685,8 @@ static func battle_label(id: String, seed: int, omen: int) -> String:
 	if SurvivalStrata.is_warden(id):
 		return "WARDEN " + base
 	if is_elite(seed, id, omen):
-		return "ELITE %s [%s]" % [base, elite_affix(seed, id)]
+		# D-112 (criador 2026-11-26): "apenas remove, deixe so os nomes deles normais".
+		return base
 	return base
 
 

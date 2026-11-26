@@ -14,9 +14,9 @@ Balatro, Risk of Rain, FTL): `docs/plans/2026-11-25-survival-roguelike.md`.
   (o mais forte do grupo) espera na célula mais funda, não persegue, tem moldura dourada no
   automapa, HP ×1,5 e 2 escoltas. Derrotá-lo libera `DESCEND`; o 5º encerra a run.
   Guardiões: SUCCUBUS, INCUBUS, LAKSHMI, PAZUZU, BEELZEBUB.
-- **Intenções**: cada inimigo mostra, acima da arte, seu temperamento (BRUTE, CASTER,
-  SUPPORT, HUNTER, TRICKSTER) e a 1ª ação da rodada (`ATTACK ▸ YOCH`, `HELLFIRE ▸ ALL`,
-  `MEND`), que é a ação executada.
+- **Intenções**: cada inimigo rola o temperamento (BRUTE, CASTER, SUPPORT, HUNTER,
+  TRICKSTER) e a 1ª ação da rodada, que é a ação executada. D-112: o cartão sob a arte e o texto
+  do temperamento não são mais desenhados.
 - **Elites** com afixo real (BRUTAL, SWIFT, STONE, BURNING, VAMPIRIC) e 1 relíquia de saque;
   guardião: Macca ×2 e escolha de 1 entre 3 relíquias.
 - **Absorção** com raridade COMMON/RARE/EPIC (sobe por estrato e com HP < 35%), herança do
@@ -88,9 +88,8 @@ As seções abaixo descrevem a base anterior; onde divergem, vale o bloco acima.
   santuário abre o painel: ←/→ escolhe, Z equipa no Fallen, X equipa na Yoch,
   Esc fecha. A relíquia é única e muda de aliado. A run começa com 1 inicial
   (D-073); 6 de atributo desbloqueiam por score e 11 de efeito caem na run.
-- **Identificação**: habilidade absorvida entra como **nome hebraico** no
-  submenu FIGHT (`גל רוח`, `אש גיהנום`...); ao usá-la uma vez ela é identificada
-  e passa a mostrar o nome/emfeite reais.
+- **Identificação** (removida, D-113): toda habilidade aparece com o nome e a
+  descrição reais desde que é aprendida; não é preciso usá-la antes.
 - **Seed diário / posições**: `DAILY SEED` reinicia a run com a semente
   `AAAAMMDD`; as posições dos 35 demônios são embaralhadas pela semente
   (células válidas, conectadas, fora do santuário). O seed aparece no HUD.

@@ -102,12 +102,12 @@ func _run() -> void:
 		battle._count_absorption(fallen, foe_a)
 		check(battle.absorb_count_label == "%d/4" % n and battle.absorb_skill_label == "", "Absorption %d of FOE A: %d/4" % [n, n])
 	battle._count_absorption(fallen, foe_a)
-	check(battle.absorb_count_label == "4/4" and battle.absorb_skill_label == "NEW SKILL: BLEEDBUFF", "4th absorption teaches the drawn skill (got %s / %s)" % [battle.absorb_count_label, battle.absorb_skill_label])
+	check(battle.absorb_count_label == "4/4" and battle.absorb_skill_label == "NEW SKILL: Bleedbuff", "4th absorption teaches the drawn skill (got %s / %s)" % [battle.absorb_count_label, battle.absorb_skill_label])
 	check(fallen.skills == [&"bleedbuff"] and ProgressStore.load_skills() == [&"bleedbuff"], "The skill is learned and saved")
 	check(int(ProgressStore.load_absorbs().get("genetic_foe_a", -1)) == 0, "The counter restarts after a skill")
 	for n in range(1, 5):
 		battle._count_absorption(fallen, foe_a)
-	check(battle.absorb_skill_label == "NEW SKILL: LUNGE" and fallen.skills.has(&"lunge"), "Next 4 absorptions teach the remaining skill")
+	check(battle.absorb_skill_label == "NEW SKILL: Lunge" and fallen.skills.has(&"lunge"), "Next 4 absorptions teach the remaining skill")
 	battle._count_absorption(fallen, foe_a)
 	check(battle.absorb_count_label == "MAX" and battle.absorb_skill_label == "", "All FOE A skills known: MAX")
 	var foe_b: BattleUnit = battle.hud.opponents[1]
@@ -139,7 +139,7 @@ func _run() -> void:
 	fallen.current_en = 6
 	fallen.current_hp = 4
 	battle.submit_plan(0)
-	check(battle.hud.mode == "skill" and battle.hud.command_options == ["ATTACK", "LUNGE", "HEAT WAVE", "ENERGY EAT", "BLEEDBUFF"], "FIGHT opens ATTACK + skills (got %s)" % [battle.hud.command_options])
+	check(battle.hud.mode == "skill" and battle.hud.command_options == ["ATTACK", "Lunge", "Heat Wave", "Energy Eat", "Bleedbuff"], "FIGHT opens ATTACK + skills (got %s)" % [battle.hud.command_options])
 	check(battle.skill_disabled == [4], "Only Bleedbuff (4 HP) is dimmed with 2 acts / 6 EN (got %s)" % [battle.skill_disabled])
 	battle.hud.command_index = 1
 	check(battle.hud._log_text().begins_with("LUNGE 1 ACT / 4 EN"), "The log explains the highlighted skill")
@@ -286,7 +286,7 @@ func _run() -> void:
 	battle.submit_command(battle.hud.command_options.find("REACT"))
 	await wait_mode(battle, "react")
 	check(battle.log_history.any(func(l: String) -> bool: return l.contains("announces LUNGE on")), "The enemy announces LUNGE")
-	check(battle.hud.message.contains("USES LUNGE ON"), "The reaction prompt names the skill")
+	check(battle.hud.message.contains("USES Lunge ON"), "The reaction prompt names the skill")
 	var hero: BattleUnit = battle.action_defender
 	var lunger: BattleUnit = battle.action_attacker
 	battle.answer_reaction(false)
@@ -476,7 +476,7 @@ func _run() -> void:
 		await process_frame
 	await wait_seconds(0.1)
 	var label_fx: Array = battle.fx.effects.filter(func(e: Dictionary) -> bool: return e.kind == "ABSORBED")
-	check(label_fx.size() == 1 and label_fx[0].lines == ["ABSORBED", "+2 ATK", "4/4", "NEW SKILL: LUNGE"], "ABSORBED / gain / 4/4 / NEW SKILL (got %s)" % [label_fx[0].lines if label_fx.size() > 0 else []])
+	check(label_fx.size() == 1 and label_fx[0].lines == ["ABSORBED", "+2 ATK", "4/4", "NEW SKILL: Lunge"], "ABSORBED / gain / 4/4 / NEW SKILL (got %s)" % [label_fx[0].lines if label_fx.size() > 0 else []])
 	check(battle._fallen.skills == [&"lunge"], "Fallen learned Lunge in the battle")
 	battle.queue_free(); await process_frame
 

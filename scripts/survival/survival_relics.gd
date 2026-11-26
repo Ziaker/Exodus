@@ -54,7 +54,7 @@ const EFFECT_RELICS := [
 	{"id": "leviathan_scale", "name": "LEVIATHAN SCALE", "hebrew": "קשקש לויתן",
 		"effect": {}, "perk": "burn_immune", "info": "Holder is immune to burns"},
 	{"id": "raziel_book", "name": "BOOK OF RAZIEL", "hebrew": "ספר רזיאל",
-		"effect": {}, "perk": "identified", "info": "Absorbed skills arrive identified"},
+		"effect": {}, "perk": "skill_chance_2", "info": "+25% new-skill chance"},
 	{"id": "merchant_seal", "name": "MERCHANT SEAL", "hebrew": "חותם סוחר",
 		"effect": {}, "perk": "shop_discount", "info": "Shop prices -25%"},
 	{"id": "sling_of_david", "name": "SLING OF DAVID", "hebrew": "קלע דוד",

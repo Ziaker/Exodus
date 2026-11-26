@@ -168,7 +168,7 @@ func _run() -> void:
 	check(battle.prayer.fx.letters.size() == 14 and battle.prayer.fx.letters.all(func(l: Dictionary) -> bool: return float(l.bottom) == battle.hud.STATUS_RECTS[1].end.y - 6), "PRAY: 14 letters rise from the bottom of Yoch's card")
 	# D-057: the log holds event sentences; prayer lines keep the D-048 ink.
 	var pray_line: Dictionary = battle.hud.events.back()
-	check(String(pray_line.text) == "Yoch gains 1 PP." and Color(pray_line.ink) == PrayerBook.INK, "Prayer log line is an event inked #f5f58c (%s)" % pray_line)
+	check(String(pray_line.text) == "Yoch  +1 PP" and Color(pray_line.ink) == PrayerBook.INK, "Prayer log line is an event inked #f5f58c (%s)" % pray_line)
 	battle.queue_free(); await process_frame
 
 	# ---- Queued PRAYs fund a later Refuah; PP leave when queued (paid / owed).

@@ -97,19 +97,36 @@ func _run() -> void:
 	check(battle.hud.enemy_column(0).encloses(battle.rhythm.get_rect()), "Attack rail must sit inside the targeted enemy column")
 	check(not battle.rhythm.get_rect().intersects(battle.hud.BATTLE_LOG_RECT), "Rhythm must not cover the log")
 	check(battle.rhythm._label.text.contains("ATTACK"), "Attack timing must be labeled ATTACK")
-	check(battle.rhythm._label.text.contains("FALLEN") and battle.rhythm._label.text.contains("FOE A"), "Timing must identify attacker and target")
+	check(battle.rhythm._label.text.contains("Fallen") and battle.rhythm._label.text.contains("Foe A"), "Timing must identify attacker and target")
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	# D-057: the log shows event sentences, not instructions or rhythm internals.
 	var shown: Array = battle.hud.visible_log_lines()
-	check(shown.size() == 2 and shown[0] == "FALLEN attacks FOE A." and String(shown[1]).begins_with("FALLEN hits FOE A: ") and not String(shown[1]).ends_with(" 0 damage."), "D-109: the white mark still hits, told as events in the drawn log (%s)" % [shown])
+	check(not shown.is_empty() and String(shown.back()).begins_with("Fallen → Foe A  ") and not String(shown.back()).ends_with("  0"), "D-109: the white mark still hits, told as events in the drawn log (%s)" % [shown])
+	check(not battle.hud.events.any(func(e): return String(e.text).contains(" attacks ")), "D-110: the blow's announcement no longer enters the log")
 	check(battle.log_history.back().contains("HIT 50%") and battle.hud.opponents[0].current_hp < 999, "D-109: the white mark deals 50%% (%s)" % battle.log_history.back())
 	check(battle.roles.get(battle._fallen.id, "") == "ATTACK" and battle.roles.get(battle.hud.opponents[0].id, "") == "TARGET", "D-057: attacker and target carry their role tags until the result is confirmed")
 	# D-060 (creator 2026-11-25): the names in the log take the colour of their role.
-	var attack_line: Dictionary = battle.hud.events.filter(func(e): return e.text == "FALLEN attacks FOE A.").back()
-	check(attack_line.names.get("FALLEN") == battle.hud.ROLE_ARROW_INKS.ATTACK and attack_line.names.get("FOE A") == battle.hud.ROLE_ARROW_INKS.TARGET, "Log names: the attacker in red, the target in yellow (%s)" % str(attack_line.names))
-	var turn_line: Dictionary = battle.hud.events.filter(func(e): return e.text == "FALLEN's turn.").back()
+	var attack_line: Dictionary = battle.hud.events.filter(func(e): return String(e.text).begins_with("Fallen → Foe A  ")).back()
+	check(attack_line.names.get("Fallen") == battle.hud.ROLE_ARROW_INKS.ATTACK and attack_line.names.get("Foe A") == battle.hud.ROLE_ARROW_INKS.TARGET, "Log names: the attacker in red, the target in yellow (%s)" % str(attack_line.names))
+	var turn_line: Dictionary = battle.hud.events.filter(func(e): return e.text == "Fallen  TURN").back()
 	check(turn_line.names.is_empty(), "A line with no action on screen keeps plain names")
-	check(battle.hud.message.contains("FALLEN") and battle.hud.message.contains("FOE A"), "Result must preserve both combatants")
+	# D-110: the fall and the act gained join the blow's own result line.
+	var foe_a: BattleUnit = battle.hud.opponents[0]
+	check(battle.result_suffix(foe_a, battle._fallen, true, 1) == "  DOWN  +1 ACT" and battle.result_suffix(foe_a, battle._fallen, false, 0) == "", "D-110: result line suffix (%s)" % battle.result_suffix(foe_a, battle._fallen, true, 1))
+	var hp_keep := foe_a.current_hp
+	var saved_defense: int = battle.defense_result
+	var saved_message: String = battle.hud.message
+	var saved_feedback: String = battle.hud.feedback
+	foe_a.current_hp = 0
+	battle.defense_result = BattleMath.RhythmResult.MISS
+	battle._present_strike(battle._fallen, foe_a, 5)
+	check(String(battle.hud.events.back().text) == "Fallen → Foe A  5  DOWN" and not battle.hud.events.any(func(e): return String(e.text).ends_with("is down.") or String(e.text).ends_with("Foe A  DOWN")), "D-110: one line per blow, the fall inside it (%s)" % battle.hud.events.back().text)
+	foe_a.current_hp = hp_keep
+	battle.defense_result = saved_defense
+	battle.hud.events.pop_back()
+	battle.hud.message = saved_message
+	battle.hud.feedback = saved_feedback
+	check(battle.hud.message.contains("Fallen") and battle.hud.message.contains("Foe A"), "Result must preserve both combatants")
 	# D-059 (creator 2026-11-25): an arrow runs from the attacker to the target in 0.55 s,
 	# then fades out fast.
 	await process_frame
@@ -132,13 +149,14 @@ func _run() -> void:
 	check(not ("ROLE_BOX_TIME" in battle.hud) and not battle.hud.has_method("role_box_visible"), "D-102: no timed cut of the role boxes is left")
 	# drawn_role_boxes is what the role layer actually painted on its last draw.
 	var box_roles := func() -> Array: return battle.hud.drawn_role_boxes.duplicate()
-	var expected_boxes := ["ATTACK", "TARGET"]
+	# D-113: only the enemy's role is drawn (plain text); the hero's role tag is removed.
+	var expected_boxes := ["TARGET"]
 	await process_frame
 	var boxes_now: Array = box_roles.call()
-	check(expected_boxes.all(func(b): return boxes_now.has(b)), "D-102: after the arrow fades the ATTACK and TARGET boxes are still drawn (%s)" % str(boxes_now))
+	check(boxes_now == expected_boxes, "D-102/D-113: after the arrow fades only the enemy's TARGET text is drawn (%s)" % str(boxes_now))
 	for i in 60: await process_frame
 	boxes_now = box_roles.call()
-	check(expected_boxes.all(func(b): return boxes_now.has(b)), "D-102: a second later the boxes are still drawn (%s)" % str(boxes_now))
+	check(boxes_now == expected_boxes, "D-102/D-113: a second later the text is still drawn (%s)" % str(boxes_now))
 	check(battle.roles.get(battle._fallen.id, "") == "ATTACK", "The role stays while its box is drawn")
 	for i in 120:
 		if not battle.fx.is_busy(): break
@@ -154,7 +172,7 @@ func _run() -> void:
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	reserve(battle); reserve(battle)
-	check(battle.hud.announcement_text.contains("→ ") and battle.hud.announcement_text.begins_with("FOE "), "Enemy announcement must name attacker and defender on the field")
+	check(battle.hud.announcement_text.contains("→ ") and battle.hud.announcement_text.begins_with("Foe "), "Enemy announcement must name attacker and defender on the field")
 	check(battle.hud.announcement_age < 0.75, "Enemy announcement must be animating")
 	check(battle.fx.count_kind("WHITEN") == 1, "Attacking enemy must flash (RMXP whiten) at its announcement")
 	check(battle.hud.alert_visible() and battle.hud.alert_unit == battle.action_attacker, "Announcing enemy must show the red alert")
@@ -180,9 +198,9 @@ func _run() -> void:
 	check(battle.hud.BATTLE_LOG_RECT.encloses(battle.rhythm.get_rect()), "Defense rail must sit inside the battle log")
 	check(battle.hud.rails_in_log(), "The log text gives way to the defense rail")
 	check(battle.rhythm._label.text.contains("DEFEND"), "Defensive rhythm must not look like an attack")
-	check(battle.rhythm._label.text.contains("FALLEN"), "Defensive rhythm must identify the defender")
+	check(battle.rhythm._label.text.contains("Fallen"), "Defensive rhythm must identify the defender")
 	battle.rhythm._finish(BattleMath.RhythmResult.POINT)
-	check(battle.hud.visible_log_lines().back() == "FALLEN dodges.", "Perfect defense must be told in the log (%s)" % [battle.hud.visible_log_lines()])
+	check(String(battle.hud.visible_log_lines().back()).ends_with("→ Fallen  DODGE"), "Perfect defense must be told in the log (%s)" % [battle.hud.visible_log_lines()])
 	check(battle.roles.get(battle._fallen.id, "") == "DEFEND", "D-057: the defending hero carries the DEFEND tag")
 	battle.queue_free(); await process_frame
 	battle = fresh()
