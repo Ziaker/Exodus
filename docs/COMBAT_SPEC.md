@@ -1555,15 +1555,15 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 | **Gevurah** *(D-112)* | גְּבוּרָה | Força / Might | 1 PP / 1 ACT | Próximo ataque do aliado escolhido causa **+15% + 5% por PP extra** de dano. |
 | **Mishpat** *(D-112)* | מִשְׁפָּט | Julgamento / Judgment | 2 PP / 2 ACT | Causa dano a **um inimigo** igual ao **dano que ele causou em sua última ação + 15**. |
 | **Zohar** *(D-112)* | זֹהַר | Esplendor / Radiance | 3 PP / 1 ACT | Alarga a zona **POINT** da barra de ritmo de **um aliado** até o fim do próximo round (`×1,5`, contraponto ao Sanverim). |
+| **Sanverim** *(D-107 / D-115)* | סַנְוֵרִים | Ofuscamento / Blinding Light | 2 PP / 1 ACT | Cegueira de luz em **um inimigo** até o fim do próximo round (zona **POINT** reduzida à metade). |
+| **Nechamah** *(D-107 / D-115)* | נֶחָמָה | Consolo / Comfort | 1 PP / 1 ACT | Cura **5 HP** no início de cada um dos próximos **3 rounds** em **um aliado**; acúmulos somam. |
+| **Cherev** *(D-107 / D-115)* | חֶרֶב | Espada / Sword | 3 PP / 1 ACT | Corte de luz em **todos os inimigos**, dano **10 + MAK − MEF** em cada alvo (id interno `cherav`). |
+
+- **Canonicidade (D-115):** todas as **11 rezas** da tabela acima pertencem ao **jogo canônico** (unificadas em `PrayerBook`, todas com VFX hebraico obrigatório pela D-113). As 3 iniciais do Yoch na campanha continuam `Refuah`, `Haganah` e `Ra'am`; como e quando as demais são aprendidas ou distribuídas na campanha é **PENDENTE**.
 
 - Exemplos com os números do criador: Refuah 3 PP = 30 HP; Ra'am 4 PP = base 20.
-- **Efeito visual do Ra'am (placeholder):** animação **Zio** (ジオ) do SMT VX The Genesis,
-  animação 27 de `Data/Animations.rvdata`, 7 quadros a 15 fps, imagem `Thunder1.png`
-  (RTP oficial do RPG Maker VX 1.02e; não vem na pasta do SMT). Placeholder como os
-  demais assets do SMT; o asset do RTP segue a mesma regra de não publicação da D-018.
-  Destino do arquivo em `assets/` e implementação: **PENDENTES**.
-- **Reação inimiga:** inimigos podem reagir ao **PRAY** e ao **Ra'am**, mas **não** à
-  **Refuah** nem à **Haganah**. **Todos** os inimigos com atos de reação disponíveis
+- **Efeito visual das rezas (D-113):** todas as rezas usam obrigatoriamente VFX compostos 100% por letras hebraicas em `scripts/battle/pray_fx.gd` (substituindo o antigo placeholder `Zio / Thunder1.png` do Ra'am; ver `docs/PRAYER_VFX_RULE.md`).
+- **Reação inimiga:** inimigos podem reagir **apenas** ao **PRAY** e ao **Ra'am** (`reactable: true` em `PrayerBook`), **não** às demais rezas (`Refuah`, `Haganah`, `Tahorah`, `Magen`, `Gevurah`, `Mishpat`, `Zohar`, `Sanverim`, `Nechamah` e `Cherev` permanecem `reactable: false`). **Todos** os inimigos com atos de reação disponíveis
   podem reagir (exceção à D-045 para o PRAY, que não mira ninguém). Se o ataque de
   reação **acertar**, a reza é **interrompida**:
   - **PRAY interrompido:** o ato se perde e Yoch **não recebe o PP**.

@@ -1423,12 +1423,14 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 | **Haganah** | הֲגָנָה | Proteção / Protection | 2 PP | Escudo anti-condição de status em **um aliado** (inclusive Yoch) por **1 round inteiro** (da conjuração até o mesmo ponto do round seguinte); desfaz-se quando o personagem receberia uma condição de status. |
 | **Ra'am** | רַעַם | Trovão / Thunder | 3 PP | **10 + 10 por PP extra** de dano em um alvo, como base da fórmula mágica. **Não tem efeito contra anjos.** |
 
+- **Catálogo canônico ampliado (D-115):** além das 3 magias iniciais acima, todas as demais rezas criadas até o momento — **Sanverim**, **Nechamah**, **Cherev** (D-107) e **Tahorah**, **Magen**, **Gevurah**, **Mishpat**, **Zohar** (D-112) — fazem parte do **jogo canônico** (11 rezas no total em `PrayerBook`, tabela completa em `docs/COMBAT_SPEC.md` §Reza; todas sujeitas à regra de VFX hebraico D-113). Como e quando são obtidas/distribuídas na campanha: **PENDENTE**.
+
 - **Log:** descrições simples em **inglês**, com texto do log também em `#f5f58c`.
-- **Efeito visual do Ra'am:** animação **Zio** do SMT como placeholder (detalhes
-  técnicos em `docs/COMBAT_SPEC.md` §Reza). `Thunder1.png` (RTP do VX) segue a mesma
-  regra de não publicação da D-018. Destino do asset e implementação: **PENDENTES**.
-- **Reação inimiga:** inimigos podem reagir ao **PRAY** e ao **Ra'am**, mas não à
-  Refuah nem à Haganah; todos os inimigos com atos de reação podem reagir. Um ataque
+- **Efeito visual das rezas (D-113):** todas as rezas usam obrigatoriamente VFX compostos
+  100% por letras hebraicas em `scripts/battle/pray_fx.gd` (o antigo placeholder `Zio /
+  Thunder1.png` do Ra'am foi substituído; detalhes em `docs/PRAYER_VFX_RULE.md`).
+- **Reação inimiga:** inimigos podem reagir **apenas** ao **PRAY** e ao **Ra'am** (as
+  demais rezas — `Refuah`, `Haganah`, D-107 e D-112 — permanecem sem reação inimiga); todos os inimigos com atos de reação podem reagir. Um ataque
   de reação que **acerta** interrompe a reza: no PRAY o ato se perde e não há PP; no
   Ra'am o ato se perde, não há efeito e os PP alocados (inclusive os extras) voltam ao Yoch. Na interrupção,
   **todos os comandos seguintes da fila de Yoch se perdem** com seus atos; PP alocados
@@ -3256,3 +3258,6 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
 
 - **D-113 · 2026-11-26 (decisão do criador) — regra obrigatória de VFX de letras hebraicas para todas as rezas.**
   Todos os efeitos de reza do jogo (atuais e futuros, campanha e Survival, heróis e inimigos humanos) devem **obrigatoriamente** possuir efeitos visuais compostos por letras hebraicas (`scripts/battle/pray_fx.gd`), sem geometria estrangeira substituindo os glifos, e com marca hebraica persistente sempre que a reza mantiver estado ativo por rodadas ou até a próxima ação. Documento dedicado com princípios, tabela de cobertura das 11 rezas atuais e critério de aceitação: `docs/PRAYER_VFX_RULE.md`. Impacto: `docs/PRAYER_VFX_RULE.md`, `docs/DECISIONS.md`, `docs/GDD.md`, `scripts/battle/pray_fx.gd`.
+
+- **D-115 · 2026-11-26 (decisão do criador) — todas as 11 rezas criadas são canônicas.**
+  O criador confirmou que todas as rezas criadas até o momento (`Refuah`, `Haganah`, `Ra'am` da D-048; `Sanverim`, `Nechamah`, `Cherev` da D-107; e `Tahorah`, `Magen`, `Gevurah`, `Mishpat`, `Zohar` da D-112) vão para o **jogo canônico**, deixando de existir qualquer reza exclusiva do modo Survival. Todas seguem unificadas em `scripts/core/prayer_book.gd` e sujeitas à regra de VFX hebraico (D-113). **PENDENTE:** como/quando essas rezas entram ou são distribuídas ao longo da campanha (as 3 rezas iniciais do Yoch permanecem `Refuah`, `Haganah` e `Ra'am`). Impacto: `docs/DECISIONS.md`, `docs/GDD.md` (§9.1 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).
