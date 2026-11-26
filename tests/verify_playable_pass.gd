@@ -58,6 +58,11 @@ func _run() -> void:
 	var yoch: BattleUnit = battle._ally
 	var foe_a: BattleUnit = battle.state.units[2]
 	var foe_b: BattleUnit = battle.state.units[3]
+	# D-109: the enemy's white-mark blow now lands for 50%; this test checks the act economy
+	# only, so the heroes get enough HP to survive every pass.
+	for hero in [fallen, yoch]:
+		hero.stats.max_hp = 999
+		hero.current_hp = 999
 	check(battle.state.turn_order == ([fallen, foe_b, yoch, foe_a] as Array[BattleUnit]), "Turn order Fallen, FOE B, Yoch, FOE A (%s)" % [names(battle.state.turn_order)])
 	# Menu: PASS right before REST, on Fallen's own turn.
 	check(battle.active_actor == fallen and battle.hud.mode == "plan", "Round 1 opens on Fallen's plan")
@@ -85,7 +90,8 @@ func _run() -> void:
 
 	# ---- 3. A queue may end with PASS: ATTACK, PASS spends one act and keeps the other.
 	battle.submit_plan(battle.hud.plan_options.find("FIGHT"))
-	battle.submit_target(0)
+	# D-109: the white mark now lands; FOE B (RESIST) gives no WEAK +1 act, so the count stays exact.
+	battle.submit_target(1)
 	check(battle.hud.mode == "plan", "Back to planning after choosing the ATTACK target")
 	battle.submit_plan(battle.hud.plan_options.find("PASS"))
 	check(battle.hud.mode == "timing", "PASS closed the queue and the ATTACK runs (mode %s)" % battle.hud.mode)
