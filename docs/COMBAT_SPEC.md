@@ -596,7 +596,18 @@
 - **D-015 (2026-11-21):** quando atacante e defensor acertam **POINT** simultaneamente,
   a **defesa prevalece**: não há contato, o dano é 0 e não há crítico, Press Turn nem
   ganho de SP. **IMPLEMENTADO** em `BattleMath.has_contact()`.
-- Zonas: **Ponto = 10% central**, **Trave = 20% ao redor**, resto = falha.
+- Zonas: **Ponto = 10% central**, **Trave = 20% ao redor**, resto = trilha.
+- **D-107 (criador 2026-11-25; IMPLEMENTADO): todo golpe com barra acerta.** Na barra de
+  ataque, o marco **amarelo** (centro, verde na tela) dá **100%** do dano, o **cinza** (faixa
+  lateral, bege na tela) dá **80%** e o **branco** (trilha das pontas) dá **50%**; a falha deixou
+  de existir no ataque. Desvio de verdade só quando o alvo **DEFENDE** pagando **1 ACT** e para no
+  centro da barra de defesa (0 de dano, D-015); defesa na faixa lateral = **50%**, qualquer que
+  seja o marco do ataque; defesa nas pontas não reduz. Vale para ATTACK, habilidades físicas,
+  magias, Ra'am e os golpes da troca de contra-ataque (empate na trilha branca: os dois acertam
+  50%), do jogador e dos inimigos. O golpe na trilha branca conta como acerto para crítico, +1 ACT
+  em fraqueza e SP. O inimigo paga 1 ACT **sempre** que defende, dê certo ou não. As cores da barra
+  não mudaram. `BattleMath.strike_multiplier()` / `scaled_damage()` (arredonda, golpe de 1 não vira
+  0).
 - Tecla: **Z / Enter**.
 - **D-034 (2026-11-21): a barra tem velocidade própria e fixa de 1,0 segundo.**
   AGI e SP **não** alteram mais a duração. A diferença de AGI passa a alterar
@@ -1534,7 +1545,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     (a parte não coberta fica devida e é paga quando esse PRAY resolve); PP reservados saem do
     disponível.
   - **Ra'am:** dano = **10 + MAK + 10 por PP extra − MEF do alvo**, com barra de ritmo como o
-    ATTACK (MISS/desvio = 0, BEAM = metade), crítico, rolagem de SP, variação, multiplicador de
+    ATTACK (D-107: marco 50/80/100%, desvio só com defesa no centro, defesa na lateral = metade), crítico, rolagem de SP, variação, multiplicador de
     afinidade e ±1 ato como o ATTACK. Anjo: sem efeito (nenhum anjo existe ainda).
   - **IA:** cada inimigo com ato de reação ataca o PRAY com **33%**; o inimigo atingido pelo
     Ra'am contra-ataca com **33%** (barra dupla da D-049). Vários inimigos: **todos atacam**;

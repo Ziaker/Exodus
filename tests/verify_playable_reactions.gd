@@ -43,6 +43,16 @@ func fresh() -> Control:
 	var battle := ControlledBattle.new()
 	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
+	# D-107 (criador 2026-11-25): a trilha branca agora acerta com 50%. Estes checks isolam a
+	# economia de atos, entao nenhum golpe pode matar nem dar +1 ACT por fraqueza.
+	for hero in battle.hud.players:
+		hero.stats.max_hp = 999
+		hero.current_hp = 999
+	for foe in battle.hud.opponents:
+		foe.stats.max_hp = 999
+		foe.current_hp = 999
+		if foe.affinity == BattleMath.Affinity.WEAK:
+			foe.affinity = BattleMath.Affinity.NORMAL
 	return battle
 
 func advance(battle: Control, frames: int = 60) -> void:
@@ -66,6 +76,14 @@ func reserve(battle: Control) -> void:
 	var index: int = battle.hud.command_options.find("REACT")
 	check(index >= 0, "Own-turn menu must expose REACT to reserve acts")
 	battle.submit_command(index)
+
+## D-107: dano que o golpe do inimigo (trilha branca, 50%) causou em FALLEN depois da acao.
+func hit_on_fallen(battle: Control) -> int:
+	var total := 0
+	for line in battle.log_history:
+		if String(line).contains("-> FALLEN: ") and String(line).contains(" dmg"):
+			total = String(line).get_slice("-> FALLEN: ", 1).get_slice(" dmg", 0).to_int()
+	return total
 
 func _run() -> void:
 	var battle := fresh()
@@ -110,7 +128,7 @@ func _run() -> void:
 		battle.answer_reaction(true)
 		check(battle.hud.command_options.has("FIGHT") and battle.hud.command_options.has("ITEM") and battle.hud.command_options.has("REST") and battle.hud.command_options.has("ABSORB") and battle.hud.command_options.has("DEFEND"), "D-045: the attacked Fallen keeps every command plus DEFEND as a reaction")
 		battle.submit_command(0)  # counter-attack: D-038 REST no longer spends acts
-		# D-049: the counter uses the two-rail exchange; both MISS = tie, no damage.
+		# D-049: the counter uses the two-rail exchange; both MISS = tie (D-107: both hit for 50%).
 		check(battle.hud.mode == "counter", "D-049: a counter-attack opens the two-rail exchange")
 		battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.MISS)
 		check(battle._fallen.acts_available == 1 - reaction, "Each reaction must spend exactly one shared act")
@@ -140,7 +158,7 @@ func _run() -> void:
 	check(not battle.hud.command_options.has("ABSORB"), "Ally must not receive Fallen-only absorption")
 	check(battle.reaction_defender == battle._fallen and battle.hud.command_options == ["FIGHT", "PRAY", "ITEM"], "D-045: a reactor who is not the target may only counter-attack or use an item; D-048 (creator 2026-11-23): Yoch may also PRAY (got %s)" % [battle.hud.command_options])
 	battle.submit_command(0)
-	# Both MISS: a tie, so the ally's strike resolves (no contact) and no affinity penalty applies.
+	# Both MISS: a tie, so both strikes resolve (D-107: 50% each) and no affinity penalty applies.
 	battle.counter.finish(BattleMath.RhythmResult.MISS, BattleMath.RhythmResult.MISS)
 	check(battle._ally.acts_available == 1 and battle._fallen.acts_available == 2, "Ally may react when Fallen is attacked, spending only Ally's act")
 	check(battle.log_history.any(func(line: String) -> bool: return line.begins_with("Yoch ->")), "Off-turn attack must use the real attack resolver")
@@ -152,7 +170,7 @@ func _run() -> void:
 	battle.submit_command(battle.hud.command_options.find("ITEM"))
 	check(battle.target_side == "player" and battle.hud.mode == "target", "Reaction item must allow choosing an ally")
 	battle.submit_target(0)
-	check(battle._fallen.current_hp == 7, "Ally reaction must heal Fallen, not the reactor")
+	check(hit_on_fallen(battle) > 0 and battle._fallen.current_hp == 7 - hit_on_fallen(battle), "Ally reaction must heal Fallen (+6), not the reactor; D-107: the white-mark attack then hits (hp %d)" % battle._fallen.current_hp)
 	check(battle._ally.acts_available == 1 and battle._fallen.acts_available == 2, "Reaction item spends only the reactor's act")
 	battle.queue_free(); await process_frame
 	battle = fresh()
@@ -162,7 +180,7 @@ func _run() -> void:
 	check(battle.hud.mode == "timing" and battle.rhythm._running, "DEFEND reaction must open real defensive rhythm")
 	check(battle._fallen.acts_available == 1, "Defensive timing must cost exactly one reaction act")
 	battle.rhythm._finish(BattleMath.RhythmResult.POINT)
-	check(battle._fallen.current_hp == 14, "Perfect defensive reaction prevents damage")
+	check(battle._fallen.current_hp == 999, "Perfect defensive reaction prevents damage")
 	battle.queue_free(); await process_frame
 	battle = fresh()
 	battle.submit_command(0); battle.submit_target(1)
@@ -182,7 +200,7 @@ func _run() -> void:
 	check(battle.log_history.back().contains("rhythm POINT"), "D-022: declined reaction makes the enemy attack hit (got %s)" % battle.log_history.back())
 	check(battle.action_defender.current_hp < hp_before, "D-022: the automatic hit deals real damage")
 	battle.queue_free(); await process_frame
-	# Declaring any reaction (here REST) keeps the normal enemy timing roll (MISS).
+	# Declaring any reaction (here REST) keeps the normal enemy timing roll (MISS = white mark).
 	battle = AutoHitBattle.new()
 	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
@@ -193,7 +211,7 @@ func _run() -> void:
 	battle.answer_reaction(true)
 	battle.submit_command(battle.hud.command_options.find("REST"))
 	check(battle.log_history.back().contains("rhythm MISS"), "D-022: a declared reaction uses the normal enemy timing (got %s)" % battle.log_history.back())
-	check(defender.current_hp == hp_before, "D-022: the missed enemy attack deals no damage")
+	check(defender.current_hp < hp_before and battle.log_history.back().contains("HIT 50%"), "D-107: the enemy white mark still hits for 50%% (got %s)" % battle.log_history.back())
 	battle.queue_free(); await process_frame
 	# D-047: o mesmo inimigo resolve dois ataques em bloco, cada um com seu número.
 	battle = AutoHitBattle.new()

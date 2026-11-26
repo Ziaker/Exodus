@@ -62,6 +62,14 @@ func press_at(battle: Control, fractions: Array) -> void:
 		battle.rhythm._elapsed = float(f) * battle.rhythm.duration
 		battle.handle_confirm()
 
+## D-107: dano que o golpe do inimigo (trilha branca, 50%) causou em FALLEN depois da acao.
+func hit_on_fallen(battle: Control) -> int:
+	var total := 0
+	for line in battle.log_history:
+		if String(line).contains("-> FALLEN: ") and String(line).contains(" dmg"):
+			total = String(line).get_slice("-> FALLEN: ", 1).get_slice(" dmg", 0).to_int()
+	return total
+
 func _run() -> void:
 	# ---- Pure rules.
 	check(SkillBook.learnable(&"genetic_foe_a", []) == [&"lunge", &"bleedbuff"], "FOE A teaches Lunge and Bleedbuff")
@@ -226,7 +234,7 @@ func _run() -> void:
 	check(battle.rhythm.marks == [0.5], "A plain ATTACK after Lunge is back to one centre mark")
 	battle.queue_free(); await process_frame
 
-	# ---- Each bar is judged on its own: a missed first bar, a POINT on the second.
+	# ---- Each bar is judged on its own: white first bar (D-107: 50%), a POINT on the second.
 	battle = fresh([&"lunge"])
 	battle.hud.opponents[0].current_hp = 999
 	from = battle.log_history.size()
@@ -236,7 +244,7 @@ func _run() -> void:
 	press_at(battle, [0.5])
 	await wait_mode(battle, "continue")
 	var lunge_lines: Array = battle.log_history.slice(from).filter(func(l: String) -> bool: return l.begins_with("FALLEN -> GENETIC FOE A"))
-	check(lunge_lines.size() == 2 and lunge_lines[0].contains("NO CONTACT") and not lunge_lines[1].contains("NO CONTACT"), "First bar MISS, second bar POINT (got %s)" % [lunge_lines])
+	check(lunge_lines.size() == 2 and lunge_lines[0].contains("HIT 50%") and lunge_lines[0].contains("rhythm MISS") and lunge_lines[1].contains("rhythm POINT") and not lunge_lines[1].contains("HIT 50%"), "First bar white (50%%), second bar POINT (got %s)" % [lunge_lines])
 	battle.queue_free(); await process_frame
 
 	# ---- Heat wave by Fallen: MAK vs MEF on every enemy, burn, burn ticks next round.
@@ -373,7 +381,7 @@ func _run() -> void:
 	var sp0: int = battle._fallen.current_sp
 	battle.submit_skill(1)
 	battle.confirm_en_extra()
-	check(battle._fallen.current_hp == 8 and battle._fallen.current_sp == sp0 + 1, "Reaction Energy Eat heals and gives the reaction SP")
+	check(battle.log_history.any(func(l: String) -> bool: return l.contains("+5 HP")) and hit_on_fallen(battle) > 0 and battle._fallen.current_hp == 8 - hit_on_fallen(battle) and battle._fallen.current_sp == sp0 + 1, "Reaction Energy Eat heals (+5), the announced white-mark attack still hits (D-107), and gives the reaction SP and gives the reaction SP (HP %d SP %d->%d, log %s)" % [battle._fallen.current_hp, sp0, battle._fallen.current_sp, battle.log_history.slice(-4)])
 	battle.queue_free(); await process_frame
 
 	# ---- Enemy counter against Fallen's Lunge: winning hero lands both hits.

@@ -3025,6 +3025,24 @@ Formato: ID · data · decisão · estado · impacto documental.
   efeito. Impacto: `scripts/core/battle_math.gd`, `scripts/core/prayer_book.gd`,
   `tests/test_battle_math.gd`, `tests/verify_survival_balance.gd`, `tools/measure_zero_damage.gd`;
   `docs/COMBAT_SPEC.md`, `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
+- **D-107 · 2026-11-25 (decisão do criador) — Todo golpe com barra acerta; marcos 50/80/100%.**
+  Pedido: ``para com ataques normais, só ocorrer desvio de verdade se o alvo reagir defendendo ao
+  custo de 1ACT, não mais sempre, no caso, sempre causa dano, com marco branco 50%, marco cinza 80%
+  e marco amarelo 100%``. Respostas do criador, uma por pergunta: marcos = ``Pontas, laterais,
+  centro``; cores da barra = ``Não, só a regra``; defesa = ``Manter como hoje``; inimigos = ``Sim,
+  para todos``; alcance = ``Todo golpe com barra``; ataque cinza + defesa lateral = ``Só a defesa:
+  50%``; ACT da IA = ``Paga sempre que defende``; golpe branco = ``Sim, conta tudo``.
+  Regra: `BattleMath.has_contact` só é falso com defesa no centro; `strike_multiplier` dá 1,0 / 0,8
+  / 0,5 pelo marco do ataque, ou 0,5 se a defesa parou na lateral; `scaled_damage` arredonda (o
+  arredondamento é escolha do agente, para um golpe de 1 não virar 0). `_defender_reaction` e
+  `_skill_defense_timing` gastam 1 ACT do inimigo antes de rolar a defesa. Consequências
+  diretas, aguardando o criador: o golpe do inimigo no PRAY sempre interrompe a reza (antes só
+  quando não errava); o empate de contra-ataque na trilha branca faz os dois acertarem 50%; o
+  inimigo com ACT sempre defende e por isso sempre perde 1 ACT ao ser atacado. Cues `MISS` e a frase
+  "X misses." deixam de aparecer em golpes. Impacto: `battle_math.gd`, `battle_controller.gd`,
+  `playable_controller.gd`, `prayer_flow.gd`; testes `test_battle_math`, `test_battle_combat`,
+  `verify_playable_feedback/fx/prayer/reactions/skills`; `docs/COMBAT_SPEC.md`,
+  `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

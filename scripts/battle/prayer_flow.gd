@@ -434,7 +434,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	_log("%s -> %s: %d dmg (Ra'am base %d, %s, rhythm %s, def %s, crit %s, affinity %s, SP roll %+d)" % [
-		unit.display_name, target.display_name, applied, int(r.base), "BLOCK" if beam else "FULL",
+		unit.display_name, target.display_name, applied, int(r.base), "BLOCK" if beam else ("FULL" if attack == BattleMath.RhythmResult.POINT else "HIT %d%%" % int(round(BattleMath.strike_multiplier(attack, defense) * 100.0))),
 		battle._rhythm_name(attack), battle._rhythm_name(defense), "YES" if bool(r.crit) else "no",
 		battle._affinity_name(target.affinity), int(r.sp_roll)])
 	var dealt := hp_before - target.current_hp
