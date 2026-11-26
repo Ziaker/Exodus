@@ -181,7 +181,49 @@ func _run() -> void:
 	b._magic_hit(foe, fallen, &"cherav", false, R.POINT, R.MISS)
 	check(b.letter_fx.parts.is_empty(), "Enemy Cherev via _magic_hit uses PrayFX, never skill_letters.heat_hit")
 
-	print("VERIFY_NEW_PRAYERS_OK: %d checks; D-112 Tahorah, Magen, Gevurah, Mishpat, Zohar + D-107 unified" % checks)
+	# D-113 guard: EVERY prayer in PrayerBook.SPELLS must have dedicated Hebrew-letter VFX in PrayFX
+	var fx_node: Node2D = b.prayer.fx
+	var is_hebrew := func(s: String) -> bool:
+		if s.is_empty():
+			return false
+		for i in s.length():
+			var cp := s.unicode_at(i)
+			if cp < 0x0590 or cp > 0x05FF:
+				return false
+		return true
+	check(is_hebrew.call(fx_node.ALPHABET) and fx_node.ALPHABET.length() == 22, "D-113: PrayFX.ALPHABET contains the 22 Hebrew letters")
+	for mark in [fx_node.MARK_GLYPH, fx_node.MARK_MAGEN, fx_node.MARK_GEVURAH, fx_node.MARK_ZOHAR, fx_node.MARK_SANVERIM, fx_node.MARK_NECHAMAH]:
+		check(is_hebrew.call(mark), "D-113: Persistent prayer mark '%s' is a valid Hebrew glyph" % mark)
+	var d113_methods := {
+		PrayerBook.REFUAH: &"play_refuah",
+		PrayerBook.HAGANAH: &"_draw",
+		PrayerBook.RAAM: &"play_raam",
+		PrayerBook.SANVERIM: &"play_sanverim",
+		PrayerBook.NECHAMAH: &"play_nechamah",
+		PrayerBook.CHEREV: &"play_cherev",
+		PrayerBook.TAHORAH: &"play_tahorah",
+		PrayerBook.MAGEN: &"play_magen",
+		PrayerBook.GEVURAH: &"play_gevurah",
+		PrayerBook.MISHPAT: &"play_mishpat",
+		PrayerBook.ZOHAR: &"play_zohar",
+	}
+	for spell_id in PrayerBook.SPELLS.keys():
+		check(d113_methods.has(spell_id), "D-113: Prayer '%s' must be registered in the Hebrew VFX coverage map" % spell_id)
+		if d113_methods.has(spell_id):
+			var m: StringName = d113_methods[spell_id]
+			check(fx_node.has_method(m), "D-113: PrayFX implements '%s' for prayer '%s'" % [m, spell_id])
+	# Smoke-verify Refuah, Nechamah tick, and Ra'am also populate Hebrew VFX state cleanly
+	fx_node.card_fx.clear()
+	fx_node.play_refuah(fallen, 2)
+	fx_node.play_nechamah_tick(fallen, 2)
+	fx_node.play_raam(foe)
+	var extra_kinds: Array = fx_node.card_fx.map(func(e: Dictionary) -> StringName: return StringName(e.kind))
+	check(extra_kinds.has(&"refuah") and extra_kinds.has(&"nechamah_tick"), "D-113: Refuah and Nechamah tick register Hebrew VFX in PrayFX.card_fx")
+	check(fx_node.raam_busy(), "D-113: Ra'am activates Hebrew lightning VFX in PrayFX")
+	fx_node.queue_redraw()
+	await process_frame
+
+	print("VERIFY_NEW_PRAYERS_OK: %d checks; D-112 Tahorah, Magen, Gevurah, Mishpat, Zohar + D-107 unified + D-113 Hebrew VFX guard" % checks)
 	ProgressStore.clear()
 	b.queue_free()
 	await process_frame

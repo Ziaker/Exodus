@@ -1,10 +1,8 @@
 extends Node2D
-## D-048 prayer visuals chosen by the creator (2026-11-23), drawn over the HUD:
-## - cast (PRAY, Refuah, Haganah): option A of prototypes/pray-vfx, Hebrew letters in
-##   #f5f58c rising from the bottom of the card of the one who receives the prayer;
-## - Haganah mark: the mix of idea C (the letter he, ה, next to the name) and idea B (the
-##   card border lit and pulsing in #f5f58c) while the shield is up.
-## Sizes and timings are the prototype's.
+## Prayer visuals drawn over the HUD (D-048 / D-107 / D-112 / D-113):
+## D-113 mandatory rule: EVERY prayer effect in EXODUS must have Hebrew-letter VFX here
+## (100% typographic, no geometric circles/arcs/borders replacing letters), with persistent
+## Hebrew marks for multi-round / pending-action states (ה, מ, ג, ז, ס, נ).
 
 const ALPHABET := "אבגדהוזחטיכלמנסעפצקרשת"
 const RISE_LETTERS := 14
