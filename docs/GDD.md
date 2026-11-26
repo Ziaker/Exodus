@@ -1396,6 +1396,8 @@ definida pelo criador em D-048 (§9.1). **A forma como Fallen obtém magias ser�
 discutida depois**; envolve a mecânica de absorção e a presença dos elementos do
 jogo. **PENDENTE.**
 
+> **Banco de referência para uso eventual (D-116):** um catálogo de candidatos de vocabulário mágico hebraico — incluindo **Hineni** (teleporte), exploração (`Zakhar`/`Ot`/`Hineni`), elementais, suporte/oração, maldições, magias metafísicas (`Ayin`, `Hayah`, `Berit`, `Kavod`, `Tehom`, `Tohu`, etc.), qualificadores e a divisão em 3 linguagens (Elemental / Oração / Metafísica) — está registrado em `docs/MAGIC_VOCABULARY_BACKLOG.md` (sem custos, fórmulas ou implementação nesta etapa).
+
 ### 9.1 D-048 — sistema de Reza (Pray Points) — **CONFIRMADO; IMPLEMENTADO no BattlePlayable (2026-11-23)**
 
 Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
@@ -3263,3 +3265,6 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
 
 - **D-115 · 2026-11-26 (decisão do criador) — todas as 11 rezas criadas são canônicas.**
   O criador confirmou que todas as rezas criadas até o momento (`Refuah`, `Haganah`, `Ra'am` da D-048; `Sanverim`, `Nechamah`, `Cherev` da D-107; e `Tahorah`, `Magen`, `Gevurah`, `Mishpat`, `Zohar` da D-112) vão para o **jogo canônico**, deixando de existir qualquer reza exclusiva do modo Survival. Todas seguem unificadas em `scripts/core/prayer_book.gd` e sujeitas à regra de VFX hebraico (D-113). **PENDENTE:** como/quando essas rezas entram ou são distribuídas ao longo da campanha (as 3 rezas iniciais do Yoch permanecem `Refuah`, `Haganah` e `Ra'am`). Impacto: `docs/DECISIONS.md`, `docs/GDD.md` (§9.1 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).
+
+- **D-116 · 2026-11-26 (registro do criador) — banco de vocabulário mágico hebraico para uso eventual.**
+  Registrado em `docs/MAGIC_VOCABULARY_BACKLOG.md` o catálogo completo de candidatos de magias hebraicas para consulta e uso futuro no EXODUS: conceito **Hineni** (teleporte/manifestação espacial), 12 magias de exploração/overworld (com destaque para a tríade `Zakhar`/`Ot`/`Hineni`), 16 elementais, 16 de suporte/oração, 12 de maldição/enfraquecimento, 10 metafísicas (`Hayah`, `Ayin`, `Shem`, `Berit`, `Nefesh`, `Davak`, `Bala`, `Tehom`, `Tohu`, `Kavod`), top 20 favoritos, qualificadores de evolução (com alerta de concordância de gênero em hebraico) e a divisão conceitual em 3 linguagens (Elemental / Oração / Metafísica). **Estado:** apenas banco de referência (candidatos não implementados, sem fórmulas, custos ou usuários definidos; colisões com as 11 rezas já canônicas explicitamente sinalizadas). Impacto: `docs/MAGIC_VOCABULARY_BACKLOG.md`, `docs/DECISIONS.md`, `docs/GDD.md` (§9 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).

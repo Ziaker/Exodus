@@ -1560,6 +1560,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 | **Cherev** *(D-107 / D-115)* | חֶרֶב | Espada / Sword | 3 PP / 1 ACT | Corte de luz em **todos os inimigos**, dano **10 + MAK − MEF** em cada alvo (id interno `cherav`). |
 
 - **Canonicidade (D-115):** todas as **11 rezas** da tabela acima pertencem ao **jogo canônico** (unificadas em `PrayerBook`, todas com VFX hebraico obrigatório pela D-113). As 3 iniciais do Yoch na campanha continuam `Refuah`, `Haganah` e `Ra'am`; como e quando as demais são aprendidas ou distribuídas na campanha é **PENDENTE**.
+- **Banco de ideias futuras (D-116):** candidatos de vocabulário mágico hebraico para uso eventual (exploração/`Hineni`, elementais, suporte/oração, maldições, metafísicas e qualificadores) estão catalogados em `docs/MAGIC_VOCABULARY_BACKLOG.md` (referência futura; sem regras mecânicas fechadas).
 
 - Exemplos com os números do criador: Refuah 3 PP = 30 HP; Ra'am 4 PP = base 20.
 - **Efeito visual das rezas (D-113):** todas as rezas usam obrigatoriamente VFX compostos 100% por letras hebraicas em `scripts/battle/pray_fx.gd` (substituindo o antigo placeholder `Zio / Thunder1.png` do Ra'am; ver `docs/PRAYER_VFX_RULE.md`).
