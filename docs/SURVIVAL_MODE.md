@@ -2,7 +2,22 @@
 
 Não faz parte da lore nem da campanha. Sandbox de combate e exploração para
 testar os **35 demônios**, 27 habilidades placeholder, itens e continues. A
-entrada é o 4º comando do título (`Survival`).
+entrada é o comando `Survival` do menu do título.
+
+## Primeira dungeon · Necrópole Saturnina (D-114)
+
+O primeiro estrato começa no Pórtico dos Que Desistiram, junto ao santuário.
+A dungeon reúne cinco zonas de 11 salas cada. A Ruptura é obrigatória para
+chegar ao Sepulcro do Sétimo Peso, onde espera o guardião do Survival.
+O santuário oferece `DESCEND` após a vitória. Os estratos 2 a 5 usam os
+labirintos gerados pela semente.
+
+O cenário usa pedra azul de chumbo, luz pendular e céu vermelho animado.
+A câmera e o filtro Cartucho ocre + Fita de horror são os da exploração do
+jogo. A maquete editável, a planta e os vídeos ficam na
+[pasta de arte da Necrópole](../assets/generated/ambiente-e-interacoes/saturnina/percurso/refinamento_55/LEIA-ME.md).
+Ao retomar um save compatível da planta antiga do estrato 1, a partida abre
+no Pórtico com a economia e os inimigos já derrotados preservados.
 
 ## Roguelike (2026-11-25, D-066 a D-076)
 
@@ -10,12 +25,12 @@ Plano e referências (Slay the Spire, Hades, Darkest Dungeon, SMT/Persona, Inscr
 Balatro, Risk of Rain, FTL): `docs/plans/2026-11-25-survival-roguelike.md`.
 
 - **5 estratos** (`survival_strata.gd`): os 35 demônios ordenados por tier/SP em grupos de 7.
-  Estrato 1 = labirinto feito à mão; 2–5 = labirinto gerado pela semente. O **GUARDIÃO**
+  Estrato 1 = Necrópole Saturnina; 2–5 = labirinto gerado pela semente. O **GUARDIÃO**
   (o mais forte do grupo) espera na célula mais funda, não persegue, tem moldura dourada no
   automapa, HP ×1,5 e 2 escoltas. Derrotá-lo libera `DESCEND`; o 5º encerra a run.
   Guardiões: SUCCUBUS, INCUBUS, LAKSHMI, PAZUZU, BEELZEBUB.
 - **Intenções**: cada inimigo rola o temperamento (BRUTE, CASTER, SUPPORT, HUNTER,
-  TRICKSTER) e a 1ª ação da rodada, que é a ação executada. D-112: o cartão sob a arte e o texto
+  TRICKSTER) e a 1ª ação da rodada, que é a ação executada. D-119: o cartão sob a arte e o texto
   do temperamento não são mais desenhados.
 - **Elites** com afixo real (BRUTAL, SWIFT, STONE, BURNING, VAMPIRIC) e 1 relíquia de saque;
   guardião: Macca ×2 e escolha de 1 entre 3 relíquias.
@@ -88,7 +103,7 @@ As seções abaixo descrevem a base anterior; onde divergem, vale o bloco acima.
   santuário abre o painel: ←/→ escolhe, Z equipa no Fallen, X equipa na Yoch,
   Esc fecha. A relíquia é única e muda de aliado. A run começa com 1 inicial
   (D-073); 6 de atributo desbloqueiam por score e 11 de efeito caem na run.
-- **Identificação** (removida, D-113): toda habilidade aparece com o nome e a
+- **Identificação** (removida, D-120): toda habilidade aparece com o nome e a
   descrição reais desde que é aprendida; não é preciso usá-la antes.
 - **Seed diário / posições**: `DAILY SEED` reinicia a run com a semente
   `AAAAMMDD`; as posições dos 35 demônios são embaralhadas pela semente
@@ -139,7 +154,7 @@ variação é sempre ±10%. Mesma simulação: quem pega a maior oferta mata em 
 guardião, elite e OMEN 0 e 5 (`verify_survival_balance.gd`; medição por inimigo em
 `tools/measure_zero_damage.gd`).
 `BEAD`, `MEDICINE` e `CHAKRA` seguem nos valores antigos (pendente). O ataque básico usa
-`basic_power = 10` neste modo (100 na campanha), na mesma ordem das habilidades placeholder (4–13).
+`basic_power = 10` neste modo (8 na campanha, D-057), na mesma ordem das habilidades placeholder (4–13).
 
 ## Habilidades (D-106)
 
@@ -152,7 +167,7 @@ HEAT WAVE, ENERGY EAT e as rezas da Yoch não mudaram. `tests/verify_skill_fx.gd
 
 Cada estrato tem 1 grupo só de humanos (3), que aparece no mapa e na batalha com a própria arte colorida e sem
 sombra no chão (só mazikim são silhuetas), usando modelos de NPC humano do jogo (P15, P10 e P19), e luta sem demônios. Humanos rezam com PP (sem EN): PRAY (+1 PP), SANVERIM (2 PP, cegueira),
-NECHAMAH (1 PP, 5 HP por round por 3 rounds) e CHERAV (3 PP, 10 + MAK − MEF em todos os heróis).
+NECHAMAH (1 PP, 5 HP por round por 3 rounds) e CHEREV (3 PP, 10 + MAK − MEF em todos os heróis).
 Não podem ser absorvidos e não entram no CODEX. Regras em `SkillBook.DEFS`, `SkillFx` e
 `SurvivalData.human_defs`; prova em `tests/verify_human_groups.gd`.
 

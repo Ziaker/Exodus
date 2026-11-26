@@ -1396,6 +1396,8 @@ definida pelo criador em D-048 (§9.1). **A forma como Fallen obtém magias ser�
 discutida depois**; envolve a mecânica de absorção e a presença dos elementos do
 jogo. **PENDENTE.**
 
+> **Banco de referência para uso eventual (D-116):** um catálogo de candidatos de vocabulário mágico hebraico — incluindo **Hineni** (teleporte), exploração (`Zakhar`/`Ot`/`Hineni`), elementais, suporte/oração, maldições, magias metafísicas (`Ayin`, `Hayah`, `Berit`, `Kavod`, `Tehom`, `Tohu`, etc.), qualificadores e a divisão em 3 linguagens (Elemental / Oração / Metafísica) — está registrado em `docs/MAGIC_VOCABULARY_BACKLOG.md` (sem custos, fórmulas ou implementação nesta etapa).
+
 ### 9.1 D-048 — sistema de Reza (Pray Points) — **CONFIRMADO; IMPLEMENTADO no BattlePlayable (2026-11-23)**
 
 Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
@@ -1423,12 +1425,13 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 | **Haganah** | הֲגָנָה | Proteção / Protection | 2 PP | Escudo anti-condição de status em **um aliado** (inclusive Yoch) por **1 round inteiro** (da conjuração até o mesmo ponto do round seguinte); desfaz-se quando o personagem receberia uma condição de status. |
 | **Ra'am** | רַעַם | Trovão / Thunder | 3 PP | **10 + 10 por PP extra** de dano em um alvo, como base da fórmula mágica. **Não tem efeito contra anjos.** |
 
+- **Catálogo canônico ampliado (D-115):** além das 3 magias iniciais acima, todas as demais rezas criadas até o momento — **Sanverim**, **Nechamah**, **Cherev** (D-107) e **Tahorah**, **Magen**, **Gevurah**, **Mishpat**, **Zohar** (D-112) — fazem parte do **jogo canônico** (11 rezas no total em `PrayerBook`, tabela completa em `docs/COMBAT_SPEC.md` §Reza; todas sujeitas à regra de VFX hebraico D-113). Como e quando são obtidas/distribuídas na campanha: **PENDENTE**.
+
 - **Log:** descrições simples em **inglês**, com texto do log também em `#f5f58c`.
-- **Efeito visual do Ra'am:** animação **Zio** do SMT como placeholder (detalhes
-  técnicos em `docs/COMBAT_SPEC.md` §Reza). `Thunder1.png` (RTP do VX) segue a mesma
-  regra de não publicação da D-018. Destino do asset e implementação: **PENDENTES**.
-- **Reação inimiga:** inimigos podem reagir ao **PRAY** e ao **Ra'am**, mas não à
-  Refuah nem à Haganah; todos os inimigos com atos de reação podem reagir. Um ataque
+- **Efeito visual das rezas (D-113):** todas as rezas usam obrigatoriamente VFX compostos
+  100% por letras hebraicas em `scripts/battle/pray_fx.gd` (detalhes em `docs/PRAYER_VFX_RULE.md`).
+- **Reação inimiga:** inimigos podem reagir **apenas** ao **PRAY** e ao **Ra'am** (as
+  demais rezas — `Refuah`, `Haganah`, D-107 e D-112 — permanecem sem reação inimiga); todos os inimigos com atos de reação podem reagir. Um ataque
   de reação que **acerta** interrompe a reza: no PRAY o ato se perde e não há PP; no
   Ra'am o ato se perde, não há efeito e os PP alocados (inclusive os extras) voltam ao Yoch. Na interrupção,
   **todos os comandos seguintes da fila de Yoch se perdem** com seus atos; PP alocados
@@ -1445,8 +1448,10 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
   ATTACK; IA 33% contra PRAY e Ra'am; todos os inimigos atacam o PRAY, qualquer contato
   interrompe, o primeiro que acertou ganha os atos; Yoch sem barra contra ataque ao PRAY;
   Haganah como marca de 1 round (renova); Refuah só aliados; derrota zera os PP. Visual
-  escolhido e implementado: letras subindo do cartão ao conjurar (PRAY/Refuah/Haganah); Haganah
-  = letra ה ao lado do nome + borda pulsando. Efeito do Ra'am: versão 2 de letras **aprovada e
+  implementado (atualizado pela D-112/D-113 em `pray_fx.gd`, 100% letras hebraicas): PRAY faz
+  letras subirem do cartão; Refuah sobe em dupla hélice com `רפואה`; Haganah exibe a letra **ה**
+  ao lado do nome e uma barreira composta inteiramente por letras hebraicas (substituindo a antiga
+  borda geométrica pulsando). Efeito do Ra'am: versão 2 de letras **aprovada e
   implementada** (raio de letras hebraicas com carga da palavra רעם, impacto e letras no chão).
 
 ---
@@ -1631,7 +1636,7 @@ Demais localizações, geografia, hubs, dungeons e regras de exploração: **PEN
 ### 17.1 Tactical Altar — decisões de HUD das Rodadas Visuais 1 a 3 — **CONFIRMADO como design; NÃO IMPLEMENTADO**
 
 A nova direção visual deve preservar o aspecto de **RPG clássico próximo de RPG
-Maker XP**, a visão frontal e a escala nativa 544×416. **Tactical Altar** é a
+Maker XP**, a visão frontal e a resolução base **816×624** (D-055). **Tactical Altar** é a
 direção aprovada: janelas e painéis legíveis, geometria contida, estética sombria e
 atenção prioritária às artes dos inimigos. Não reproduzir integralmente interfaces
 de jogos terceiros. A referência histórica a VX Ace acima descreve uma implementação
@@ -2773,7 +2778,7 @@ Formato: ID · data · decisão · estado · impacto documental.
 - **D-050 · 2026-11-22 (roteiro do criador) — prólogo.** Roteiro integral em
   `docs/PROLOGUE_SCRIPT.md` (texto do criador sem edição + leitura estruturada +
   pendências). Define cutscenes de abertura, primeiro combate contra 2 inimigos com
-  fichas 20/10/6/3/2/8/3 (Lunge, Bleedbuff) e 8/16/1/8/2/2/3 (Heat wave, Energy Eat),
+  fichas 20/10/6/3/2/8/3 (Lunge, Bleedbuff) e 8/16/1/8/2/2/3 (Heat wave, Energeat),
   resgate pelo humano controlado pela IA (cura total, SP atual pela metade, combate
   reiniciado), absorção tutorial (+2 MEF; depois +2 MAK com mash; permanentes), fala de
   despedida e escolha oeste/leste. **CONFIRMADO como roteiro; NÃO IMPLEMENTADO.**
@@ -3243,7 +3248,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   itens, intenções do Survival, rótulo NEW SKILL da absorção, faixa de fase. Termos de jogo (ROUND,
   ATTACK, BLOCK, DOWN, TURN…) seguem em maiúsculas. Fora do alcance (não é a tela de batalha): o
   mapa do Survival ("FALLEN"/"YOCH" no painel do grupo), a loja e o diagnóstico em `log_history`.
-- **D-111 · 2026-11-26 (decisão do criador) — Herói ativo em destaque.**
+- **D-118 · 2026-11-26 (decisão do criador) — Herói ativo em destaque.**
   Pedido: ``quero que quando um personagem esta ativo, no caso, eu estou escolhendo as opcoes de1
   personagem, o outro fique escurecido, tenha mais destaque pra saber quem esta jogando e quem nao
   esta``. Respostas do criador, uma por pergunta: o que escurece = ``Só o cartão``; intensidade =
@@ -3254,7 +3259,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   volta em 1,5 s (`ACTIVE_PULSE_PERIOD`). A curva do pulso e o mínimo de 0,3 seguem o pulso de
   defesa que já existia (escolha do agente). Fora desses menus nenhum cartão escurece. Impacto:
   `playable_hud.gd`; teste `verify_playable_layout`; `docs/DECISIONS.md`.
-- **D-112 · 2026-11-26 (decisão do criador) — Sem cartões sob a arte dos inimigos.**
+- **D-119 · 2026-11-26 (decisão do criador) — Sem cartões sob a arte dos inimigos.**
   Pedido: ``quero que remova estes cartoes de inimigos elite embaixo da arte deles, eles
   atrapalham, deixe so os nomes deles com um parenteses normal, sem cartoes sem alteracao de
   cor``. Respostas do criador, uma por pergunta: o que sai = ``Os dois, de todos`` (cartão de
@@ -3265,7 +3270,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   ``parênteses normal`` + ``apenas remove`` como nome sem decoração nenhuma. Consequência: o
   jogador deixa de ver a ação anunciada e quem é elite. Impacto: `survival_battle.gd`,
   `survival_data.gd`; teste `verify_survival_run`; `docs/SURVIVAL_MODE.md`.
-- **D-114 · 2026-11-26 (decisão do criador) — Sem nome sobre a arte; papéis em texto.**
+- **D-121 · 2026-11-26 (decisão do criador) — Sem nome sobre a arte; papéis em texto.**
   Pedido: ``eu acho que nao precisa ter o nome deles encima no geral, troque os cartoes que aparece
   acima deles por textos maiusculos ao inves de blocos tambem``. Respostas do criador, uma por
   pergunta: nomes saem = ``De todos (batalha toda)``; cor do texto = ``A cor do papel``; cartões de
@@ -3278,7 +3283,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   D-057 e da D-102 (a regra de duração da D-102 continua: o texto fica enquanto o papel existe).
   Consequência: com o nome fora, dois inimigos iguais só se distinguem pela posição (Foe A à
   esquerda). Impacto: `playable_hud.gd`; teste `verify_playable_feedback`; `docs/DECISIONS.md`.
-- **D-113 · 2026-11-26 (decisão do criador) — Sem identificação de habilidades.**
+- **D-120 · 2026-11-26 (decisão do criador) — Sem identificação de habilidades.**
   Pedido: ``remova essa regra de magia ter que ser usada uma vez pra saber oq ela faz``. Regra:
   `learn_skill` e a absorção não marcam mais a skill como não identificada; o submenu FIGHT mostra
   sempre o nome real e a descrição (some o nome hebraico, o "UNKNOWN EFFECT" e a linha "X
@@ -3310,7 +3315,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   EMBER BURST, MIND BLAST -> MIND DRAIN, CRUSHING BLOW -> FINISHING BLOW, DARK SIPHON -> DARK BOON.
   **Escolhas do agente, aguardando o criador:** os valores dos efeitos (25%, 2 rodadas, 3 EN etc.) e
   a queimadura removida de PIXIE DUST, VENOM CLOUD, CURSE RAY e THUNDER CALL. Não alterado: LUNGE,
-  BLEEDBUFF, HEAT WAVE, ENERGY EAT e as rezas da Yoch. Impacto: `skill_book.gd`, `skill_fx.gd`,
+  BLEEDBUFF, HEAT WAVE, ENERGEAT e as rezas da Yoch. Impacto: `skill_book.gd`, `skill_fx.gd`,
   `battle_unit.gd`, `battle_state.gd`, `battle_controller.gd`, `playable_controller.gd`,
   `survival_battle.gd`, `survival_data.gd`, `tests/verify_skill_fx.gd`; `docs/SURVIVAL_MODE.md`,
   `docs/DECISIONS.md`.
@@ -3323,7 +3328,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   absorvíveis``, as rezas da Yoch ``não mudam``, arte = ``modelo de NPC humano`` do jogo (P15, depois P10 e P19 para variar) e, por correção do criador, ``só maziks são silhuetas``: humanos usam a arte colorida e não têm sombra no chão. As 3
   rezas foram desenhadas pelo criador: **SANVERIM** (2 PP) cegueira de luz até o fim do próximo round,
   o alvo erra mais (zona de acerto menor); **NECHAMAH** (1 PP) cura 5 HP por round durante 3 rounds,
-  como o oposto da queimadura (acumula); **CHERAV** (3 PP) dano em área, um corte de luz, 10 + MAK −
+  como o oposto da queimadura (acumula); **CHEREV** (3 PP; grafado inicialmente CHERAV, corrigido para a transliteração de חֶרֶב, id interno `cherav`) dano em área, um corte de luz, 10 + MAK −
   MEF (a fórmula do Ra'am) em todos os heróis. Nomes aprovados pelo criador. Os humanos usam também
   PRAY (+1 PP, +2 SP, 1 ato). **Escolhas do agente, aguardando o criador:** 3 humanos por grupo, todos
   com as 3 rezas, atributos = SP esperado do estrato repartido (HP 38%, MAK 16%, ATK/DEF/AGI 12%, MEF
@@ -3334,3 +3339,25 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   `battle_unit.gd`, `battle_math.gd`, `battle_controller.gd`, `playable_controller.gd`,
   `survival_battle.gd`, `survival_data.gd`, `survival_strata.gd`, `survival_state.gd`,
   `survival_meta.gd`, `tests/verify_human_groups.gd`; `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
+
+- **D-112 · 2026-11-26 (decisão do criador) — cinco novas rezas em hebraico.**
+  O criador aprovou e especificou 5 novas rezas para o sistema de Reza (D-048 / D-107 / D-111):
+  - **Tahorah** (`טָהֳרָה`, 2 PP / 1 ACT): limpa condições negativas (queimaduras, sangramentos e debuffs) de um aliado.
+  - **Magen** (`מָגֵן`, 2 PP / 2 ACT): aumenta a defesa física de todos os aliados em +1 estágio (+25% DEF física) até o fim do próximo round.
+  - **Gevurah** (`גְּבוּרָה`, 1 PP / 1 ACT): aumenta o dano do próximo ataque do aliado escolhido em 15% + 5% por PP extra alocado.
+  - **Mishpat** (`מִשְׁפָּט`, 2 PP / 2 ACT): causa dano em um inimigo igual ao dano que ele causou em sua última ação + 15.
+  - **Zohar** (`זֹהַר`, 3 PP / 1 ACT): alarga a zona POINT da barra de ritmo de um aliado até o fim do próximo round (contraponto ao Sanverim).
+  **Implementado** no catálogo canônico `PrayerBook`, `prayer_flow.gd`, `pray_fx.gd`, `battle_unit.gd`, `skill_fx.gd`, `battle_math.gd`, `battle_controller.gd`, `playable_controller.gd` e no pool humano de `survival_allies.gd` (as 3 rezas iniciais do Yoch na campanha continuam `Refuah`, `Haganah` e `Ra'am`). **VFX 100% letras aprovados pelo criador (2026-11-26) e implementados em `pray_fx.gd`** (removidos círculos, arcos, polylines e bordas geométricas de todos os efeitos de reza, inclusive Ra'am e Haganah): Tahorah (fileira horizontal de letras + `טהרה` subindo e convertendo glifos vermelhos em `#f5f58c`), Magen (grade descendente com `מגן` + marca persistente `מ` pulsando), Gevurah (colapso espiral + anel formado puramente por 16 letras + marca `ג` vibrando), Mishpat (letras vermelhas de retribuição em arco até o alvo + paredes de letras fechando com `משפט`, impact frame, shake e queda até o chão) e Zohar (`זוהר` abrindo em dois feixes horizontais + marca `ז`). Cobertura: `tests/verify_new_prayers.gd`.
+  **Escolhas do agente, aguardando o criador:** multiplicador da zona POINT do Zohar (`×1,5`, limitado a 90% de `BEAM_HALF_WIDTH`), estágio de DEF física do Magen igual ao estágio de ATK (`+25%`), Tahorah focado em limpar condições negativas de 1 aliado (não dissipa buffs inimigos ainda), Mishpat como dano direto sem barra de ritmo/reação inimiga/exceção contra anjos.
+
+- **D-113 · 2026-11-26 (decisão do criador) — regra obrigatória de VFX de letras hebraicas para todas as rezas.**
+  Todos os efeitos de reza do jogo (atuais e futuros, campanha e Survival, heróis e inimigos humanos) devem **obrigatoriamente** possuir efeitos visuais compostos por letras hebraicas (`scripts/battle/pray_fx.gd`), sem geometria estrangeira substituindo os glifos, e com marca hebraica persistente sempre que a reza mantiver estado ativo por rodadas ou até a próxima ação. Documento dedicado com princípios, tabela de cobertura das 11 rezas atuais e critério de aceitação: `docs/PRAYER_VFX_RULE.md`. Impacto: `docs/PRAYER_VFX_RULE.md`, `docs/DECISIONS.md`, `docs/GDD.md`, `scripts/battle/pray_fx.gd`.
+
+- **D-115 · 2026-11-26 (decisão do criador) — todas as 11 rezas criadas são canônicas.**
+  O criador confirmou que todas as rezas criadas até o momento (`Refuah`, `Haganah`, `Ra'am` da D-048; `Sanverim`, `Nechamah`, `Cherev` da D-107; e `Tahorah`, `Magen`, `Gevurah`, `Mishpat`, `Zohar` da D-112) vão para o **jogo canônico**, deixando de existir qualquer reza exclusiva do modo Survival. Todas seguem unificadas em `scripts/core/prayer_book.gd` e sujeitas à regra de VFX hebraico (D-113). **PENDENTE:** como/quando essas rezas entram ou são distribuídas ao longo da campanha (as 3 rezas iniciais do Yoch permanecem `Refuah`, `Haganah` e `Ra'am`). Impacto: `docs/DECISIONS.md`, `docs/GDD.md` (§9.1 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).
+
+- **D-116 · 2026-11-26 (registro do criador) — banco de vocabulário mágico hebraico para uso eventual.**
+  Registrado em `docs/MAGIC_VOCABULARY_BACKLOG.md` o catálogo completo de candidatos de magias hebraicas para consulta e uso futuro no EXODUS: conceito **Hineni** (teleporte/manifestação espacial), 12 magias de exploração/overworld (com destaque para a tríade `Zakhar`/`Ot`/`Hineni`), 15 elementais candidatas, 13 de suporte/oração candidatas, 12 de maldição/enfraquecimento, 10 metafísicas (`Hayah`, `Ayin`, `Shem`, `Berit`, `Nefesh`, `Davak`, `Bala`, `Tehom`, `Tohu`, `Kavod`), top 20 favoritos, qualificadores de evolução (com alerta de concordância de gênero em hebraico) e a divisão conceitual em 3 linguagens (Elemental / Oração / Metafísica). **Estado:** apenas banco de referência (candidatos não implementados, sem fórmulas, custos ou usuários definidos; colisões com as 11 rezas já canônicas explicitamente sinalizadas). Impacto: `docs/MAGIC_VOCABULARY_BACKLOG.md`, `docs/DECISIONS.md`, `docs/GDD.md` (§9 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).
+
+- **D-117 · 2026-11-26 (decisão do criador) — fronteira canônica, renome de Energeat e limpeza documental.**
+  Formalizada em `docs/CANON_BOUNDARY.md` a separação explícita entre conteúdo **canônico** (combate base, 11 rezas com VFX D-113, 4 skills do Prólogo, personagens/lore/locais principais) e **não-canônico** (modo Survival, 27 skills D-106, relíquias, 35 demônios SMT, backlog D-116, placeholders e cenas legadas). A skill **Energy Eat** foi renomeada para **Energeat** (`ENERGEAT`, mantendo o id interno `energy_eat` para compatibilidade). Trechos ultrapassados nos documentos (`Log de 3 linhas`, bloco revogado da D-061, referências antigas a `Zio / Thunder1.png`, escala antiga `544×416` em §17.1 e duplicação de rezas já canônicas no backlog D-116) foram removidos. Impacto: `docs/CANON_BOUNDARY.md`, `docs/DECISIONS.md`, `docs/GDD.md`, `docs/COMBAT_SPEC.md`, `docs/PROLOGUE_SCRIPT.md`, `docs/ROTEIRO_PROLOGO.md`, `docs/MAGIC_VOCABULARY_BACKLOG.md`, `scripts/core/skill_book.gd`, `scripts/battle/skill_letters.gd`, `tests/verify_playable_skills.gd`.

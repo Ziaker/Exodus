@@ -411,8 +411,13 @@ func _draw_hud() -> void:
 		if not threat.is_empty():
 			_str("! HOSTILE AHEAD", 250, LOCATION_LINE_Y + 15.5, ENEMY_INK, 12, true)
 	for i in party.size():
-		_draw_status(party[i], STATUS_RECTS[i])
+		_draw_status(party[i], _status_rect(i))
 	_draw_extra_hud()
+
+
+## Janela de status do membro `i` (os modos podem ter mais de 2 membros: Survival, D-111).
+func _status_rect(i: int) -> Rect2:
+	return STATUS_RECTS[clampi(i, 0, STATUS_RECTS.size() - 1)]
 
 
 func _draw_status(unit: BattleUnit, r: Rect2) -> void:
@@ -470,16 +475,7 @@ func _build_world() -> void:
 	floor_mi.position = Vector3(center_x, 0.0, center_z)
 	world.add_child(floor_mi)
 
-	pivot = Node3D.new()
-	world.add_child(pivot)
-	camera = Camera3D.new()
-	camera.position = Vector3(0, EYE_HEIGHT, 0.5) # borda de trás da célula
-	camera.keep_aspect = Camera3D.KEEP_HEIGHT
-	camera.fov = rad_to_deg(2.0 * atan((VIEW_SIZE.y / 2.0) / PX_PER_TILE))
-	camera.near = 0.01
-	camera.far = FAR_TILES
-	camera.current = true
-	pivot.add_child(camera)
+	_build_camera(world)
 	# As silhuetas usam material padrão iluminado; sem luz elas ficam pretas.
 	var lamp := OmniLight3D.new()
 	lamp.light_color = Color("ffd2c4")
@@ -500,6 +496,19 @@ func _build_world() -> void:
 	camera.add_child(backdrop)
 
 	_build_enemy_sprites(world)
+
+
+func _build_camera(world: Node3D) -> void:
+	pivot = Node3D.new()
+	world.add_child(pivot)
+	camera = Camera3D.new()
+	camera.position = Vector3(0, EYE_HEIGHT, 0.5) # borda de trás da célula
+	camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	camera.fov = rad_to_deg(2.0 * atan((VIEW_SIZE.y / 2.0) / PX_PER_TILE))
+	camera.near = 0.01
+	camera.far = FAR_TILES
+	camera.current = true
+	pivot.add_child(camera)
 
 
 ## Altura da silhueta no mundo. As células têm centro em coordenadas inteiras e as
@@ -567,6 +576,10 @@ func is_wall(c: Vector2i) -> bool:
 	if c.y < 0 or c.y >= grid.size() or c.x < 0 or c.x >= grid[c.y].length():
 		return true
 	return grid[c.y][c.x] == "#"
+
+
+func _can_step(_from: Vector2i, to: Vector2i) -> bool:
+	return not is_wall(to)
 
 
 func npc_at(c: Vector2i) -> Dictionary:
@@ -855,7 +868,7 @@ func request(act: int) -> void:
 
 func _step_forward() -> void:
 	var target: Vector2i = cell + DIRS[facing]
-	if is_wall(target):
+	if not _can_step(cell, target):
 		_clash()
 		return
 	busy = true

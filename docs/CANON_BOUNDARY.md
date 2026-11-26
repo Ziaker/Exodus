@@ -1,0 +1,55 @@
+# Fronteira Canônica — EXODUS (D-117)
+
+**Decisão:** D-117 · 2026-11-26 (decisão do criador)  
+**Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A)
+
+Este documento separa de forma explícita o que pertence ao **jogo principal (canônico)** daquilo que é **exclusivo do modo Survival**, **backlog de referência** ou **placeholder/legado**.
+
+---
+
+## 1. CANÔNICO — Vai para o jogo principal (autoria/aprovação do criador)
+
+### 1.1 Sistema de combate e interface
+* **Economia de combate e ritmo** (`D-005`–`D-049`, `D-104`, `D-105`, `D-108`, `D-109`): teto de 4 atos, `REST`, `PASS`, `ABSORB` imediato (2 ACT, disputa de SP no mash em 2 s / 10 apertos / sorteio único, ganhos persistentes), fila em bloco contínuo, contra-ataque em barra dupla (`D-049`), barra de ritmo (50/80/100%, desvio só defendendo no centro), dano com vantagem de SP + variação ±10%.
+* **UI e feedback** (`D-053`, `D-055`–`D-060`, `D-100`, `D-102`): resolução base `816×624`, fundo D (plasma animado), Battle Log de 2 linhas (`D-056`), ordem de turno por AGI no topo, setas + cartões de papel persistentes (`ATTACK`/`TARGET`/`DEFEND`/`COUNTER`/`REACT`), nomes coloridos por papel no log, letras hebraicas flutuantes em toda mudança de SP (`D-100`).
+* **Cena principal de combate:** `scenes/battle/BattlePlayable.tscn`.
+
+### 1.2 Sistema de Reza e todas as 11 rezas (`D-048`, `D-107`, `D-112`, `D-113`, `D-115`)
+* **Mecânica de PP:** humanos rezam com PP no lugar da EN (teto 8, +2 SP por PP, persiste entre lutas); inimigos reagem apenas a `PRAY` e `Ra'am` (`reactable: true`).
+* **Catálogo canônico completo (11 rezas em `scripts/core/prayer_book.gd`):**
+  * Iniciais do Yoch (`D-048`): **Refuah**, **Haganah**, **Ra'am**.
+  * Criadas em `D-107` e confirmadas canônicas (`D-115`): **Sanverim**, **Nechamah**, **Cherev**.
+  * Criadas em `D-112` e confirmadas canônicas (`D-115`): **Tahorah**, **Magen**, **Gevurah**, **Mishpat**, **Zohar**.
+  * *(Forma e momento de desbloqueio das 8 rezas além das 3 iniciais na campanha: **PENDENTE**.)*
+* **VFX canônicos (`D-052`, `D-113`):** absorção em letras hebraicas (`absorb_vfx.gd`) e **regra obrigatória de VFX 100% letras hebraicas** para todas as rezas ([`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md), `pray_fx.gd`).
+
+### 1.3 Skills canônicas do Prólogo (`D-050`, `D-117`)
+* **4 skills** (`SkillBook.KIND_SKILLS`): **LUNGE**, **BLEEDBUFF**, **HEAT WAVE**, **ENERGEAT** *(renomeada de Energy Eat em D-117; id interno `energy_eat`)* + aprendizado permanente a cada 4 absorções.
+
+### 1.4 Personagens, raças, lore e mundo
+* **Personagens e raças (`D-048`, `D-050`):** **Fallen / Deviron** (demônio), **Yoch** (humano), **Maziks** (inimigos de silhueta com simetria perfeita), **Anjos** (imunes a Ra'am; classificação pendente).
+* **Locais e exploração (`D-050`, `D-054`, `D-062`, `D-063`):** Prólogo ([`docs/PROLOGUE_SCRIPT.md`](PROLOGUE_SCRIPT.md)), abertura na **cratera de areia branca** (`D-063`), **Cafarnaum** em vista superior com saída para mapa-múndi (`D-062`), overworld em dungeon crawler 1ª pessoa (`D-054`).
+
+---
+
+## 2. NÃO-CANÔNICO — Exclusivos do Survival Mode (`for fun` / sandbox, fora da lore)
+
+* **Estrutura roguelike (`D-066`–`D-076`, `D-101`, `D-114`):** 5 estratos de 7 demônios, Guardiões (`SUCCUBUS`, `INCUBUS`, `LAKSHMI`, `PAZUZU`, `BEELZEBUB`), `DESCEND`, labirintos 25×21 procedurais (estratos 2–5), **Necrópole Saturnina** como 1ª dungeon do Survival (`D-114`, [`docs/NECROPOLE_SATURNINA.md`](NECROPOLE_SATURNINA.md)), `OMEN` 0–5, `CODEX`, `DAILY`, score, 3 continues, `follow_hero` (`D-101`).
+* **Santuário, relíquias e eventos:** `HEAL` pago por estrato, `SHOP` com inflação, `HIRE`, `RESERVE`, **23 Relíquias + 7 Pactos (`Covenants`)** (`scripts/survival/survival_relics.gd`), 4 eventos de corredor (`BLOOD ALTAR`, `WANDERING SPIRIT`, `HOODED ORACLE`, `FROST MERCHANT`).
+* **IA/combate exclusivo do Survival:** temperamentos/intenções (`BRUTE`, `CASTER`, `SUPPORT`, `HUNTER`, `TRICKSTER`), 5 afixos de elite (`BRUTAL`, `SWIFT`, `STONE`, `BURNING`, `VAMPIRIC`) e absorção roguelike com raridades `COMMON`/`RARE`/`EPIC`.
+* **Sistema de aliados do Survival (`D-111`, `scripts/survival/survival_allies.gd`):** run começa só com Fallen; recrutamento de demônios/humanos, Yoch raro (15%/estrato), reserva até 8, crescimento a cada 2 lutas, `MANUAL`/`AUTO`, 3 painéis estreitos.
+* **Inimigos exclusivos do Survival:** 35 demônios SMT (`PIXIE` até `IZANAMI`) e 5 grupos genéricos de humanos sem lore (`HUMAN A/B/C`).
+* **27 skills exclusivas do Survival (`D-106`, `SurvivalData.SURVIVAL_SKILLS`, valores ainda marcados como proposta):**
+  * *10 físicas:* `SHADOW BITE`, `FANG FLURRY`, `HEAVY CRUSH`, `SOUL PIERCE`, `TWIN FANG`, `FROST LANCE`, `LIFE DRAIN`, `FINISHING BLOW` (`crushing_blow`), `BLADE DANCE`, `STONE GRASP`.
+  * *11 mágicas (all foes):* `PIXIE DUST`, `FROST BREATH`, `HELLFIRE`, `SPIRIT BRAND` (`spirit_bolt`), `CURSE RAY`, `VENOM CLOUD`, `MIND DRAIN` (`mind_blast`), `THUNDER CALL`, `SOUL LEECH` (`spirit_wave`), `EMBER BURST` (`ember_touch`), `VOID GAZE`.
+  * *6 suportes/curas:* `HOWL`, `PRIMAL ROAR`, `WAR CRY`, `MEND`, `DARK BOON` (`dark_siphon`), `RENEW`.
+* **5 itens de loja do Survival (`D-072`):** `BEAD`, `CHAKRA`, `MEDICINE`, `SOMA`, `BLAST STONE`.
+* **Cenas e scripts:** `scenes/survival/SurvivalWorld.tscn`, `scenes/survival/SurvivalBattle.tscn`, `scripts/survival/*`, `prototypes/necropole-battle/`.
+
+---
+
+## 3. NÃO-CANÔNICO — Backlog, placeholders e legado
+
+* **Banco de vocabulário mágico hebraico (`D-116`, [`docs/MAGIC_VOCABULARY_BACKLOG.md`](MAGIC_VOCABULARY_BACKLOG.md)):** candidatos de referência para uso eventual (nenhum implementado nem canônico ainda).
+* **Assets temporários / placeholders (`D-003`, `D-018`):** sprites, retratos, battlers e texturas de `Shin Megami Tensei VX The Genesis` e RTP do RPG Maker VX — nunca publicar no jogo final.
+* **Cenas legadas e protótipos:** `scenes/battle/Battle.tscn` (substituída por `BattlePlayable.tscn`), pasta `prototypes/` e capturas em `captures/`.

@@ -2,7 +2,7 @@ class_name SurvivalStrata
 extends RefCounted
 ## D-066/D-067/D-069/D-074: estrutura roguelike do Survival.
 ## 5 estratos de 7 demônios (ordenados por tier e SP), um GUARDIÃO por estrato,
-## labirinto do estrato (1 = feito à mão, 2..5 = gerado pela semente), posições
+## labirinto do estrato (1 = Necrópole Saturnina, 2..5 = gerado pela semente), posições
 ## dos demônios e eventos, e o temperamento de cada demônio. Tudo puro e
 ## determinístico pela semente da run: testável headless.
 
@@ -14,6 +14,7 @@ const START := Vector2i(12, 10)
 const MIN_START_DISTANCE := 5
 ## Fração dos becos sem saída abertos em laço nos labirintos gerados.
 const BRAID := 0.35
+const NECROPOLE := preload("res://scripts/survival/necropole_map.gd")
 
 const EVENT_KINDS := ["altar", "spirit", "oracle", "merchant"]
 
@@ -110,9 +111,19 @@ static func _rng(seed: int, stratum: int, salt: int) -> RandomNumberGenerator:
 # ------------------------------------------------------------------ labirintos
 
 static func maze(seed: int, stratum: int) -> Array[String]:
-	if stratum <= 1:
-		return SurvivalData.MAZE.duplicate()
+	if stratum == 1:
+		return NECROPOLE.rows()
 	return generate_maze(seed, stratum)
+
+
+static func entrance(stratum: int) -> Vector2i:
+	return NECROPOLE.entrance() if stratum == 1 else START
+
+
+static func sanctuary_zone(stratum: int) -> Rect2i:
+	var safe := SurvivalData.SAFE_ZONE
+	safe.position += entrance(stratum) - START
+	return safe
 
 
 ## 25x21, backtracker nas células ímpares + laços; santuário 5x3 e início fixos.
@@ -177,7 +188,7 @@ static func is_floor(rows: Array, c: Vector2i) -> bool:
 
 
 ## Distância a pé (BFS) do início a cada célula de chão.
-static func distances(rows: Array, from: Vector2i = START) -> Dictionary:
+static func distances(rows: Array, from: Vector2i = START, stratum: int = 0) -> Dictionary:
 	var dist := {from: 0}
 	var queue: Array[Vector2i] = [from]
 	var head := 0
@@ -186,10 +197,14 @@ static func distances(rows: Array, from: Vector2i = START) -> Dictionary:
 		head += 1
 		for d in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
 			var n: Vector2i = c + d
-			if is_floor(rows, n) and not dist.has(n):
+			if is_floor(rows, n) and not dist.has(n) and edge_is_open(c, n, stratum):
 				dist[n] = int(dist[c]) + 1
 				queue.append(n)
 	return dist
+
+
+static func edge_is_open(a: Vector2i, b: Vector2i, stratum: int) -> bool:
+	return stratum != 1 or NECROPOLE.edge_is_open(a, b)
 
 
 # ------------------------------------------------------------------ posições
@@ -198,14 +213,15 @@ static func distances(rows: Array, from: Vector2i = START) -> Dictionary:
 ## os demais demônios e os eventos espalhados pela semente.
 static func layout(seed: int, stratum: int) -> Dictionary:
 	var rows := maze(seed, stratum)
-	var dist := distances(rows)
-	var keeper: Vector2i = SurvivalData.NPCS[0].cell
+	var start := entrance(stratum)
+	var safe := sanctuary_zone(stratum)
+	var dist := distances(rows, start, stratum)
 	var candidates: Array[Vector2i] = []
 	for key in dist.keys():
 		var c: Vector2i = key
-		if SurvivalData.SAFE_ZONE.has_point(c) or c == keeper:
+		if safe.has_point(c):
 			continue
-		if absi(c.x - START.x) + absi(c.y - START.y) < MIN_START_DISTANCE:
+		if absi(c.x - start.x) + absi(c.y - start.y) < MIN_START_DISTANCE:
 			continue
 		candidates.append(c)
 	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
@@ -213,9 +229,12 @@ static func layout(seed: int, stratum: int) -> Dictionary:
 	var ids := ids_for(stratum)
 	var warden := ids[ids.size() - 1]
 	var deepest := candidates[0]
-	for c in candidates:
-		if int(dist[c]) > int(dist[deepest]):
-			deepest = c
+	if stratum == 1:
+		deepest = NECROPOLE.sepulchre()
+	else:
+		for c in candidates:
+			if int(dist[c]) > int(dist[deepest]):
+				deepest = c
 	candidates.erase(deepest)
 	var rng := _rng(seed, stratum, 2)
 	for i in range(candidates.size() - 1, 0, -1):
@@ -245,4 +264,8 @@ static func layout(seed: int, stratum: int) -> Dictionary:
 		events.append({"id": "s%d_e%d" % [stratum, e], "kind": String(kinds[e % kinds.size()]),
 			"cell": candidates[k]})
 		k += 1
-	return {"maze": rows, "demons": demons, "events": events, "warden": warden}
+	# D-111: células que sobram (embaralhadas) para os recrutáveis do mapa e o Yoch.
+	var spare: Array = []
+	for i in range(k, candidates.size()):
+		spare.append(candidates[i])
+	return {"maze": rows, "demons": demons, "events": events, "warden": warden, "spare": spare}

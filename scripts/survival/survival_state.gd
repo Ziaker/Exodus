@@ -3,12 +3,15 @@ extends RefCounted
 
 ## Estado da run de Survival Mode mantido em Engine meta entre trocas de cena
 ## (Overworld <-> Batalha). Nunca lê nem escreve no ProgressStore do jogo principal.
-## D-076: versão 2 (estratos, eventos, ganhos da Yoch, itens novos, OMEN). Saves v1
-## são migrados: campos novos entram com o padrão e a run continua no estrato 1.
+## D-076: versão 2 (estratos, eventos, itens novos, OMEN). D-111 (criador 2026-11-26): versão 3,
+## com grupo de aliados e reserva; a run começa só com o Fallen. Saves antigos (v1/v2, com o Yoch
+## fixo no grupo) são descartados e a run recomeça.
 
 const META_KEY := &"exodus_survival_state"
 const SAVE_PATH := "user://exodus_survival_run.json"
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
+## D-111: saves abaixo desta versão são descartados (não migram).
+const MIN_SAVE_VERSION := 3
 const ITEM_KEYS := ["bead", "chakra", "medicine", "soma", "blast"]
 
 
@@ -21,20 +24,32 @@ static func _zero_gains() -> Dictionary:
 
 static func _default_state() -> Dictionary:
 	var seed := absi(int(Time.get_unix_time_from_system())) % 2147483647
+	var entrance := SurvivalStrata.entrance(1)
 	return {
 		"fallen_hp": int(SurvivalData.FALLEN_BASE.max_hp),
 		"fallen_en": int(SurvivalData.FALLEN_BASE.max_en),
-		"yoch_hp": int(SurvivalData.YOCH_BASE.max_hp),
-		"yoch_pp": int(SurvivalData.YOCH_BASE.pp),
 		"gains": _zero_gains(),
-		## D-071: ganhos próprios da Yoch na run.
-		"yoch_gains": _zero_gains(),
 		"skills": [],
 		"unidentified": [],
 		## D-073: começa com 1 relíquia inicial sorteada pela semente.
 		"relics": [SurvivalRelics.starting_relic(seed)],
 		"fallen_relics": [],
-		"yoch_relics": [],
+		## D-111: aliados no grupo (até 2) e na reserva do santuário (até 8). Ver SurvivalAllies.
+		"party": [],
+		"reserve": [],
+		"next_uid": 1,
+		## O Yoch já entrou nesta run (não aparece de novo).
+		"yoch_joined": false,
+		## Encontros de recrutamento do mapa já resolvidos (ids "sN_rM").
+		"recruits_done": [],
+		## Contratados no santuário ("N:id": estrato e demônio), que saem do estoque.
+		"hired": [],
+		## Avisos de crescimento a mostrar no mapa ("PIXIE +1 AGI").
+		"growth_toast": [],
+		## Estrato cujo aviso do Yoch já apareceu.
+		"yoch_notice": 0,
+		## Luta-teste em andamento: o que volta ao fim (HP/EN/PP/continues; itens não).
+		"duel": {},
 		"absorbs": {},
 		## Semente da run: reproduz recompensas, labirintos e posições.
 		"seed": seed,
@@ -47,7 +62,8 @@ static func _default_state() -> Dictionary:
 		"continues": SurvivalData.MAX_CONTINUES,
 		"defeated": [],
 		"encounter_id": "",
-		"cell": [12, 10],
+		"cell": [entrance.x, entrance.y],
+		"necropole": true,
 		"facing": 0,
 		"visited": [],
 		"seen": [],
@@ -107,7 +123,7 @@ static func has_save() -> bool:
 	if not (parsed is Dictionary):
 		return false
 	var v := int((parsed as Dictionary).get("version", 0))
-	return v >= 1 and v <= SAVE_VERSION
+	return v >= MIN_SAVE_VERSION and v <= SAVE_VERSION
 
 
 static func _in_range(value: Variant, lo: int, hi: int) -> bool:
@@ -129,44 +145,46 @@ static func _valid_state(s: Dictionary) -> bool:
 		if not s.has(key):
 			return false
 	for key in ["visited", "seen", "enemies", "defeated", "skills", "unidentified",
-			"relics", "fallen_relics", "yoch_relics", "events_done", "pending_relic_choice"]:
+			"relics", "fallen_relics", "events_done", "pending_relic_choice",
+			"party", "reserve", "recruits_done", "growth_toast", "hired"]:
 		if not (s.get(key) is Array):
 			return false
-	if (s.get("fallen_relics") as Array).size() > SurvivalRelics.MAX_PER_ALLY:
-		return false
-	if (s.get("yoch_relics") as Array).size() > SurvivalRelics.MAX_PER_ALLY:
+	if (s.get("fallen_relics") as Array).size() > SurvivalRelics.MAX_PER_UNIT:
 		return false
 	var known_relics := SurvivalRelics.all_ids()
-	for key in ["relics", "fallen_relics", "yoch_relics", "pending_relic_choice"]:
+	for key in ["relics", "fallen_relics", "pending_relic_choice"]:
 		for id in (s.get(key) as Array):
 			if not (id is String) or not known_relics.has(id):
 				return false
-	for key in ["gains", "yoch_gains", "absorbs"]:
+	for key in ["gains", "absorbs", "duel"]:
 		if not (s.get(key) is Dictionary):
 			return false
-	for key in ["gains", "yoch_gains"]:
-		var g: Dictionary = s.get(key)
-		for stat in ProgressStore.STAT_KEYS:
-			if not _in_range(g.get(stat, 0), 0, 999):
+	var g: Dictionary = s.get("gains")
+	for stat in ProgressStore.STAT_KEYS:
+		if not _in_range(g.get(stat, 0), 0, 999):
+			return false
+	if (s.get("party") as Array).size() > SurvivalAllies.PARTY_MAX \
+			or (s.get("reserve") as Array).size() > SurvivalAllies.RESERVE_MAX:
+		return false
+	var uids := {}
+	for list_key in ["party", "reserve"]:
+		for m in (s.get(list_key) as Array):
+			if not _valid_member(m, known_relics) or uids.has(String(m.uid)):
 				return false
+			uids[String(m.uid)] = true
+	if not _in_range(s.get("next_uid"), 1, 1000000) or not (s.get("yoch_joined") is bool):
+		return false
 	if not _in_range(s.get("stratum"), 1, SurvivalStrata.COUNT):
 		return false
 	if not _in_range(s.get("omen"), 0, SurvivalMeta.MAX_OMEN):
 		return false
 	# HP máximo com ganhos E relíquias/pactos (antes a relíquia de HP invalidava o save).
 	var gains: Dictionary = s.get("gains")
-	var ygains: Dictionary = s.get("yoch_gains")
 	var max_hp := int(SurvivalData.FALLEN_BASE.max_hp) + int(gains.get("max_hp", 0)) \
 			+ SurvivalRelics.bonus(s.get("fallen_relics"), "max_hp")
 	var max_en := int(SurvivalData.FALLEN_BASE.max_en) + int(gains.get("max_en", 0)) \
 			+ SurvivalRelics.bonus(s.get("fallen_relics"), "max_en")
-	var ymax := int(SurvivalData.YOCH_BASE.max_hp) + int(ygains.get("max_hp", 0)) \
-			+ SurvivalRelics.bonus(s.get("yoch_relics"), "max_hp")
 	if not _in_range(s.get("fallen_hp"), 1, max_hp) or not _in_range(s.get("fallen_en"), 0, max_en):
-		return false
-	if not _in_range(s.get("yoch_hp"), 1, ymax):
-		return false
-	if not _in_range(s.get("yoch_pp"), 0, PrayerBook.MAX_PP):
 		return false
 	if not _in_range(s.get("macca"), 0, 1000000) or not _in_range(s.get("continues"), 0, SurvivalData.MAX_CONTINUES):
 		return false
@@ -197,6 +215,38 @@ static func _valid_state(s: Dictionary) -> bool:
 	return true
 
 
+## Um aliado salvo (SurvivalAllies): tipos, ficha, relíquias dentro do teto, HP/EN/PP no intervalo.
+static func _valid_member(m: Variant, known_relics: Array) -> bool:
+	if not (m is Dictionary):
+		return false
+	var d := m as Dictionary
+	for key in ["uid", "kind", "id", "name", "picture"]:
+		if not (d.get(key) is String):
+			return false
+	if not (String(d.kind) in ["demon", "human", "yoch"]):
+		return false
+	for key in ["skills", "spells", "relics"]:
+		if not (d.get(key) is Array):
+			return false
+	if not (d.get("stats") is Dictionary) or not (d.get("down") is bool) or not (d.get("auto") is bool):
+		return false
+	if (d.relics as Array).size() > SurvivalRelics.cap_of(d):
+		return false
+	for id in (d.relics as Array):
+		if not (id is String) or not known_relics.has(id):
+			return false
+	if String(d.kind) != "yoch":
+		if SurvivalData.demon_by_id(String(d.id)).is_empty():
+			return false
+		for k in SurvivalAllies.STAT_KEYS:
+			if not _in_range((d.stats as Dictionary).get(k, -1), 0, 9999):
+				return false
+	if not _in_range(d.get("hp"), -1, 99999) or not _in_range(d.get("en"), 0, 9999) \
+			or not _in_range(d.get("pp"), 0, PrayerBook.MAX_PP) or not _in_range(d.get("fights"), 0, 100000):
+		return false
+	return true
+
+
 static func load_from_file() -> bool:
 	if not has_save():
 		return false
@@ -208,19 +258,21 @@ static func load_from_file() -> bool:
 	if not (parsed is Dictionary):
 		return false
 	var version := int((parsed as Dictionary).get("version", 0))
-	if version <= 0 or version > SAVE_VERSION:
+	if version < MIN_SAVE_VERSION or version > SAVE_VERSION:
 		return false
 	var loaded: Variant = (parsed as Dictionary).get("state", null)
 	if not (loaded is Dictionary):
 		return false
 	# Migração: campos que faltam entram com o padrão em vez de descartar a run.
 	var restored := _default_state()
-	if version < 2:
-		# v1 começava com as 6 iniciais: mantém o que a run já tinha.
-		restored["relics"] = SurvivalRelics.STARTER_IDS.duplicate()
 	for key in (loaded as Dictionary).keys():
 		if restored.has(key):
 			restored[key] = loaded[key]
+	if int(restored.get("stratum", 1)) == 1 and loaded.get("necropole", false) != true:
+		# A grade antiga só perde a posição e a memória espacial.
+		var entrance := SurvivalStrata.entrance(1)
+		restored.merge({"cell": [entrance.x, entrance.y], "facing": 0,
+			"visited": [], "seen": [], "enemies": [], "necropole": true}, true)
 	if not _valid_state(restored):
 		return false
 	Engine.set_meta(META_KEY, restored)
@@ -276,12 +328,6 @@ static func fallen_max_en() -> int:
 			+ SurvivalRelics.bonus(s.get("fallen_relics", []), "max_en")
 
 
-static func yoch_max_hp() -> int:
-	var s := data()
-	return int(SurvivalData.YOCH_BASE.max_hp) + int((s.get("yoch_gains", {}) as Dictionary).get("max_hp", 0)) \
-			+ SurvivalRelics.bonus(s.get("yoch_relics", []), "max_hp")
-
-
 ## Status completos do Fallen na run (base + absorções + relíquias + pactos).
 static func fallen_stats() -> UnitStats:
 	var s := data()
@@ -298,28 +344,140 @@ static func fallen_stats() -> UnitStats:
 	return fs
 
 
-## Status completos da Yoch (base + ganhos próprios + relíquias + pactos).
-static func yoch_stats() -> UnitStats:
+# ------------------------------------------------------------ D-111: aliados
+
+static func fallen_sp() -> int:
+	return fallen_stats().sp_value()
+
+
+static func party() -> Array:
+	return data().get("party", [])
+
+
+static func reserve() -> Array:
+	return data().get("reserve", [])
+
+
+static func member_stats(m: Dictionary) -> UnitStats:
+	return SurvivalAllies.member_stats(m, fallen_sp())
+
+
+static func member_max_hp(m: Dictionary) -> int:
+	return member_stats(m).max_hp
+
+
+## HP atual do aliado (o Yoch começa com -1 = cheio; o máximo dele muda com o Fallen).
+static func member_hp(m: Dictionary) -> int:
+	var top := member_max_hp(m)
+	if bool(m.get("down", false)):
+		return 0
+	var hp := int(m.get("hp", -1))
+	return top if hp < 0 else clampi(hp, 1, top)
+
+
+static func new_uid() -> String:
 	var s := data()
-	var g: Dictionary = s.get("yoch_gains", {})
-	var ys := UnitStats.new()
-	ys.max_hp = int(SurvivalData.YOCH_BASE.max_hp) + int(g.get("max_hp", 0))
-	ys.max_en = 0
-	ys.atk = int(SurvivalData.YOCH_BASE.atk) + int(g.get("atk", 0))
-	ys.mak = int(SurvivalData.YOCH_BASE.mak) + int(g.get("mak", 0))
-	ys.defense = int(SurvivalData.YOCH_BASE.defense) + int(g.get("defense", 0))
-	ys.mef = int(SurvivalData.YOCH_BASE.mef) + int(g.get("mef", 0))
-	ys.agi = int(SurvivalData.YOCH_BASE.agi) + int(g.get("agi", 0))
-	SurvivalRelics.apply_all(ys, s.get("yoch_relics", []))
-	ys.max_en = 0
-	return ys
+	var n := int(s.get("next_uid", 1))
+	patch({"next_uid": n + 1})
+	return "m%d" % n
 
 
+## Põe o aliado no grupo (se couber) ou na reserva. Devolve "party", "reserve" ou "" (sem lugar).
+static func add_member(m: Dictionary) -> String:
+	var s := data()
+	var p: Array = (s.get("party", []) as Array).duplicate(true)
+	var r: Array = (s.get("reserve", []) as Array).duplicate(true)
+	var where := ""
+	if p.size() < SurvivalAllies.PARTY_MAX:
+		p.append(m)
+		where = "party"
+	elif r.size() < SurvivalAllies.RESERVE_MAX:
+		r.append(m)
+		where = "reserve"
+	else:
+		return ""
+	var changes := {"party": p, "reserve": r}
+	if String(m.get("kind", "")) == "yoch":
+		changes["yoch_joined"] = true
+	patch(changes)
+	return where
+
+
+static func has_room() -> bool:
+	return party().size() < SurvivalAllies.PARTY_MAX or reserve().size() < SurvivalAllies.RESERVE_MAX
+
+
+static func find_member(uid: String) -> Dictionary:
+	for list in [party(), reserve()]:
+		for m in list:
+			if String(m.get("uid", "")) == uid:
+				return m
+	return {}
+
+
+## Troca no santuário: grupo -> reserva; reserva -> grupo (se couber) ou troca de lugar com o
+## aliado do grupo indicado em `with_uid`.
+static func move_member(uid: String, with_uid: String = "") -> bool:
+	var p: Array = party().duplicate(true)
+	var r: Array = reserve().duplicate(true)
+	var pi := -1
+	var ri := -1
+	for i in p.size():
+		if String(p[i].uid) == uid: pi = i
+	for i in r.size():
+		if String(r[i].uid) == uid: ri = i
+	if pi >= 0:
+		if r.size() >= SurvivalAllies.RESERVE_MAX:
+			return false
+		r.append(p[pi])
+		p.remove_at(pi)
+	elif ri >= 0:
+		if p.size() < SurvivalAllies.PARTY_MAX:
+			p.append(r[ri])
+			r.remove_at(ri)
+		else:
+			var wi := -1
+			for i in p.size():
+				if String(p[i].uid) == with_uid: wi = i
+			if wi < 0:
+				return false
+			var t: Dictionary = p[wi]
+			p[wi] = r[ri]
+			r[ri] = t
+	else:
+		return false
+	patch({"party": p, "reserve": r})
+	return true
+
+
+## Troca chaves de um aliado (grupo ou reserva) e salva.
+static func update_member(uid: String, changes: Dictionary) -> void:
+	var p: Array = party().duplicate(true)
+	var r: Array = reserve().duplicate(true)
+	for list in [p, r]:
+		for m in list:
+			if String(m.uid) == uid:
+				for k in changes.keys():
+					m[k] = changes[k]
+	patch({"party": p, "reserve": r})
+
+
+## HEAL do santuário: Fallen e todos os aliados (grupo e reserva) cheios; D-111: revive os caídos.
 static func heal_party_full() -> void:
+	var lists := {}
+	for key in ["party", "reserve"]:
+		var out: Array = (data().get(key, []) as Array).duplicate(true)
+		for m in out:
+			var st := member_stats(m)
+			m["down"] = false
+			m["hp"] = st.max_hp
+			m["en"] = st.max_en
+		lists[key] = out
 	patch({
 		"fallen_hp": fallen_max_hp(),
 		"fallen_en": fallen_max_en(),
-		"yoch_hp": yoch_max_hp(),
+		"party": lists.party,
+		"reserve": lists.reserve,
 	})
 
 
@@ -413,11 +571,21 @@ static func descend() -> bool:
 
 static func toggle_relic(who: String, id: String) -> Dictionary:
 	var changes := SurvivalRelics.toggle(data(), who, id)
+	if changes.is_empty():
+		return data()
 	var out := patch(changes)
 	# Tirar uma relíquia de HP não pode deixar o HP atual acima do máximo novo.
+	var lists := {}
+	for key in ["party", "reserve"]:
+		var ms: Array = (out.get(key, []) as Array).duplicate(true)
+		for m in ms:
+			if not bool(m.get("down", false)) and int(m.get("hp", -1)) >= 0:
+				m["hp"] = clampi(int(m.hp), 1, member_max_hp(m))
+			m["en"] = clampi(int(m.get("en", 0)), 0, member_stats(m).max_en)
+		lists[key] = ms
 	patch({"fallen_hp": clampi(int(out.fallen_hp), 1, fallen_max_hp()),
 		"fallen_en": clampi(int(out.fallen_en), 0, fallen_max_en()),
-		"yoch_hp": clampi(int(out.yoch_hp), 1, yoch_max_hp())})
+		"party": lists.party, "reserve": lists.reserve})
 	return data()
 
 
@@ -436,7 +604,7 @@ static func learn_skill(skill: StringName) -> void:
 	var skills: Array = s.get("skills", [])
 	if not skills.has(String(skill)):
 		skills.append(String(skill))
-	# D-113: skills are never unidentified (the list stays empty, also for old saves).
+	# D-120: skills are never unidentified (the list stays empty, also for old saves).
 	patch({"skills": skills, "unidentified": []})
 
 
@@ -455,6 +623,9 @@ static func use_continue() -> int:
 		return -1
 	left -= 1
 	s["continues"] = left
+	# Só o Fallen: os aliados da luta são revividos pela própria batalha (D-111: aliado caído
+	# fora da luta só volta pelo HEAL do santuário).
+	s["fallen_hp"] = fallen_max_hp()
+	s["fallen_en"] = fallen_max_en()
 	_commit(s)
-	heal_party_full()
 	return left

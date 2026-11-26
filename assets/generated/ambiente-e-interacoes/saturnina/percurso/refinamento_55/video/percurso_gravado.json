@@ -1,0 +1,21 @@
+{
+  "corte_da_camera": 5.5,
+  "faixas_por_zona": {
+    "I  Pórtico dos Que Desistiram": 0,
+    "II  Avenida Sepulcral": 518,
+    "III  Claustro da Melancolia": 1426,
+    "IV  Ossuário dos Astrônomos": 2084,
+    "V  Sepulcro do Sétimo Peso": 3107
+  },
+  "filtro_ativo": true,
+  "giros": 103,
+  "passos": 376,
+  "passos_correndo": 115,
+  "ponto_final": [
+    9,
+    165
+  ],
+  "quadros_desde_inicio": 3961,
+  "renderer": "gl_compatibility",
+  "zonas": 5
+}

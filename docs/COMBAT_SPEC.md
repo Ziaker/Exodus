@@ -176,7 +176,7 @@
   os protótipos de `prototypes/combat-hud-html/index.html`:
   - Rodada, nomes com SP e a barra de SP numa **linha fina só no topo**; anúncios logo
     abaixo dela. O cenário vai até o fim da tela e os inimigos descem 36 px de tela.
-  - **Log** de 3 linhas (espaço para quotes) numa janela de borda fina clara e fundo
+  - **Log** de **2 linhas** (D-056, substituiu o antigo formato de 3 linhas) numa janela de borda fina clara e fundo
     escuro translúcido, com asteriscos no lugar dos quadrados; linhas antigas a 80%.
   - Cada herói na **sua janela**, em 2 linhas: seta ▸ antes do nome de quem está
     escolhendo, SP, ACT e os 4 pips em cima; barras de HP e EN (PP no Yoch) embaixo.
@@ -189,11 +189,7 @@
   vermelha na perda, subir de quem mudou até o rótulo de SP do seu lado; heróis e inimigos. Duração e tamanho aguardam o julgamento do criador.
 - **D-102 (criador, 2026-11-25): cartões de papel visíveis enquanto o papel existe; revoga a
   D-061. IMPLEMENTADO.** Os cinco cartões ficam na tela enquanto o papel existe e somem quando os
-  papéis são limpos (resultado confirmado), como antes da D-061; setas (D-059) e cores do log (D-060)
-  não mudam.
-- **D-061 (criador, 2026-11-25): blocos de papel por 0,3 s. REVOGADA pela D-102.** Os cinco blocos
-  aparecem por 0,3 s e somem de uma vez; o papel segue valendo para setas e cores do log, e um
-  papel novo ou novo golpe mostra o bloco de novo.
+  papéis são limpos (resultado confirmado); setas (D-059) e cores do log (D-060) não mudam.
 - **D-060 (criador, 2026-11-25): nomes coloridos no Battle Log. IMPLEMENTADO.** Em cada frase,
   o nome de quem tem papel na ação ganha a cor do papel naquele momento (atacante vermelho, alvo
   amarelo, defesa azul, contra-ataque laranja, reação verde); o resto da frase não muda.
@@ -1368,7 +1364,7 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
     estágio de ATK por 1 round).
   - **8 HP / 16 EN / 1 ATK / 8 MAK / 2 DEF / 2 MEF / 3 AGI** — Heat wave (2 ACT, 6 EN: 5
     de dano mágico IGNI em todos; 25% de burn, 3 de dano por round por 3 rounds);
-    Energy Eat (1 ACT, 6 EN: recupera 5 HP + 1 por EN extra alocado).
+    Energeat (1 ACT, 6 EN: recupera 5 HP + 1 por EN extra alocado).
 - Resgate: diante de dano mortal ao protagonista, o humano entra (IA), cura tudo, corta
   o SP atual do protagonista pela metade e o combate reinicia. **D-051:** o humano é
   **Yoch** (0 PP no início da batalha) e reiniciar significa Fallen completamente
@@ -1477,7 +1473,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
   contador mostra **"MAX"**. As habilidades valem **sempre**, inclusive no reinício após
   derrota (os ganhos de atributo, não).
 - **Inimigos:** GENETIC FOE A/B **mantêm os atributos atuais** e recebem as habilidades
-  do roteiro: **FOE A = Lunge + Bleedbuff**, **FOE B = Heat wave + Energy Eat**.
+  do roteiro: **FOE A = Lunge + Bleedbuff**, **FOE B = Heat wave + Energeat**.
 - **Menu:** o comando ATTACK passou a se chamar **FIGHT**. Com habilidades aprendidas,
   FIGHT abre um submenu com **ATTACK** (ataque normal) e as habilidades, só pelo nome. A
   linha do battle log explica a linha destacada (atos, custo, efeito) e, quando falta
@@ -1496,7 +1492,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
   `scripts/battle/skill_letters.gd`), no jogador e no inimigo:** Heat wave = onda de letras
   laranja atravessando a fileira e chamas de letras em cada alvo atingido; cada queimadura
   solta brasas; Bleedbuff = letras vermelhas escorrendo e puxadas de volta, anel vermelho;
-  Energy Eat = letras ciano em espiral para dentro, anel. No herói o efeito fica dentro do
+  Energeat = letras ciano em espiral para dentro, anel. No herói o efeito fica dentro do
   cartão. Magia mostra só o número (cues `MAGIC`/`MAGIC_BLOCK`, sem a garra). Ataques físicos
   (ATTACK, Lunge) **não** têm letras. O golpe normal não pisca mais o fundo; o clarão de
   fundo ficou só no Ra'am e em cura/REST/buff (criador 2026-11-23).
@@ -1507,7 +1503,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
   os oponentes. O **IGNI vale ×1 para todos** até existirem afinidades elementais. O atacante
   faz **uma barra**, e cada alvo defende por conta própria. Cada acerto tem **25% de burn**:
   3 de dano **no início de cada round**, por 3 rounds. Burns **acumulam**.
-- **Energy Eat** (1 ACT, 6 EN): cura **5 HP + 1 por EN extra**. O jogador escolhe o extra
+- **Energeat** *(antes Energy Eat; D-117)* (1 ACT, 6 EN): cura **5 HP + 1 por EN extra**. O jogador escolhe o extra
   numa linha **"EXTRA EN < n >"** (esquerda/direita, Z confirma, X volta). A IA sorteia o
   extra entre 0 e o EN que sobrar.
 - **IA:** em cada escolha do bloco de dois atos, o inimigo **sorteia com chance igual**
@@ -1550,15 +1546,21 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 | **Refuah** | רְפוּאָה | Cura / Healing | 2 PP | Cura um alvo: **20 HP + 10 por PP extra**, valor **fixo**. |
 | **Haganah** | הֲגָנָה | Proteção / Protection | 2 PP | Escudo anti-condição de status em **um aliado** (inclusive Yoch) por **1 round inteiro** (do momento da conjuração até o mesmo ponto do round seguinte); desfaz-se quando o personagem receberia uma condição. |
 | **Ra'am** | רַעַם | Trovão / Thunder | 3 PP | **10 + 10 por PP extra** de dano em um alvo, como **base da fórmula mágica**. **Sem efeito contra anjos.** |
+| **Tahorah** *(D-112)* | טָהֳרָה | Pureza / Purity | 2 PP / 1 ACT | Limpa queimaduras, sangramentos e condições negativas de **um aliado**. |
+| **Magen** *(D-112)* | מָגֵן | Escudo / Shield | 2 PP / 2 ACT | **+1 estágio de DEF física** (+25%) para **todos os aliados** até o fim do próximo round. |
+| **Gevurah** *(D-112)* | גְּבוּרָה | Força / Might | 1 PP / 1 ACT | Próximo ataque do aliado escolhido causa **+15% + 5% por PP extra** de dano. |
+| **Mishpat** *(D-112)* | מִשְׁפָּט | Julgamento / Judgment | 2 PP / 2 ACT | Causa dano a **um inimigo** igual ao **dano que ele causou em sua última ação + 15**. |
+| **Zohar** *(D-112)* | זֹהַר | Esplendor / Radiance | 3 PP / 1 ACT | Alarga a zona **POINT** da barra de ritmo de **um aliado** até o fim do próximo round (`×1,5`, contraponto ao Sanverim). |
+| **Sanverim** *(D-107 / D-115)* | סַנְוֵרִים | Ofuscamento / Blinding Light | 2 PP / 1 ACT | Cegueira de luz em **um inimigo** até o fim do próximo round (zona **POINT** reduzida à metade). |
+| **Nechamah** *(D-107 / D-115)* | נֶחָמָה | Consolo / Comfort | 1 PP / 1 ACT | Cura **5 HP** no início de cada um dos próximos **3 rounds** em **um aliado**; acúmulos somam. |
+| **Cherev** *(D-107 / D-115)* | חֶרֶב | Espada / Sword | 3 PP / 1 ACT | Corte de luz em **todos os inimigos**, dano **10 + MAK − MEF** em cada alvo (id interno `cherav`). |
+
+- **Canonicidade (D-115):** todas as **11 rezas** da tabela acima pertencem ao **jogo canônico** (unificadas em `PrayerBook`, todas com VFX hebraico obrigatório pela D-113). As 3 iniciais do Yoch na campanha continuam `Refuah`, `Haganah` e `Ra'am`; como e quando as demais são aprendidas ou distribuídas na campanha é **PENDENTE**.
+- **Banco de ideias futuras (D-116):** candidatos de vocabulário mágico hebraico para uso eventual (exploração/`Hineni`, elementais, suporte/oração, maldições, metafísicas e qualificadores) estão catalogados em `docs/MAGIC_VOCABULARY_BACKLOG.md` (referência futura; sem regras mecânicas fechadas).
 
 - Exemplos com os números do criador: Refuah 3 PP = 30 HP; Ra'am 4 PP = base 20.
-- **Efeito visual do Ra'am (placeholder):** animação **Zio** (ジオ) do SMT VX The Genesis,
-  animação 27 de `Data/Animations.rvdata`, 7 quadros a 15 fps, imagem `Thunder1.png`
-  (RTP oficial do RPG Maker VX 1.02e; não vem na pasta do SMT). Placeholder como os
-  demais assets do SMT; o asset do RTP segue a mesma regra de não publicação da D-018.
-  Destino do arquivo em `assets/` e implementação: **PENDENTES**.
-- **Reação inimiga:** inimigos podem reagir ao **PRAY** e ao **Ra'am**, mas **não** à
-  **Refuah** nem à **Haganah**. **Todos** os inimigos com atos de reação disponíveis
+- **Efeito visual das rezas (D-113):** todas as rezas usam obrigatoriamente VFX compostos 100% por letras hebraicas em `scripts/battle/pray_fx.gd` (ver `docs/PRAYER_VFX_RULE.md`).
+- **Reação inimiga:** inimigos podem reagir **apenas** ao **PRAY** e ao **Ra'am** (`reactable: true` em `PrayerBook`), **não** às demais rezas (`Refuah`, `Haganah`, `Tahorah`, `Magen`, `Gevurah`, `Mishpat`, `Zohar`, `Sanverim`, `Nechamah` e `Cherev` permanecem `reactable: false`). **Todos** os inimigos com atos de reação disponíveis
   podem reagir (exceção à D-045 para o PRAY, que não mira ninguém). Se o ataque de
   reação **acertar**, a reza é **interrompida**:
   - **PRAY interrompido:** o ato se perde e Yoch **não recebe o PP**.
@@ -1578,7 +1580,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 - **PENDENTES:** lista, efeitos e PP dos itens abençoados (não implementados); sistema de
   condições de status bloqueadas pelo Haganah; efeitos de raça e classificação dos anjos.
   A fórmula do Ra'am foi definida pelo criador em 2026-11-23 (abaixo).
-- **Implementação (2026-11-23):** IMPLEMENTADO no `BattlePlayable` (só nele; a cena antiga
+- **Implementação (D-048 / D-112 / D-113 / D-115):** IMPLEMENTADO no `BattlePlayable` (só nele; a cena antiga
   `Battle.tscn` não conta, por decisão do criador). Regras em `scripts/core/prayer_book.gd`,
   fluxo em `scripts/battle/prayer_flow.gd` (ganchos em `playable_controller.gd`), PP em
   `BattleUnit` (`prays`, `current_pp`, `change_pp`) e no save (`ProgressStore.load_pp/save_pp`),
@@ -1606,10 +1608,13 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     sem efeito prático até existir sistema de condições; reconjurar **renova**.
   - **Refuah** só em aliados. **Derrota zera os PP**; vitória os mantém no save.
   - REST do Yoch: só guarda atos (log sem EN).
-  - **Visual escolhido pelo criador (2026-11-23), IMPLEMENTADO em `scripts/battle/pray_fx.gd`:**
-    ao conjurar PRAY, Refuah e Haganah, letras hebraicas em `#f5f58c` sobem do pé do cartão de
-    quem recebe a reza (opção A, "rise"); a Haganah ativa mostra a letra **ה** ao lado do nome
-    **e** a borda do cartão acesa e pulsando em `#f5f58c` (mistura das ideias C e B).
+  - **Visual das rezas (D-048, atualizado pela D-112/D-113 em `scripts/battle/pray_fx.gd`):**
+    todos os efeitos de reza são 100% compostos por letras hebraicas (sem bordas ou primitivas
+    geométricas; ver `docs/PRAYER_VFX_RULE.md`). Ao conjurar PRAY, letras hebraicas em `#f5f58c`
+    sobem do pé do cartão; **Refuah** projeta dupla hélice ascendente com `רפואה`; **Haganah**
+    ativa mostra a letra **ה** ao lado do nome e uma **barreira composta inteiramente por letras
+    hebraicas** ao redor do cartão do protegido (a antiga borda geométrica pulsando foi removida
+    na D-112/D-113).
   - **Efeito do Ra'am APROVADO pelo criador (2026-11-23) e IMPLEMENTADO** (`pray_fx.gd`
     `play_raam`): versão 2 de letras do protótipo `prototypes/pray-vfx` — carga de 0,7 s
     (cenário escurece, letras em espiral formam a palavra רעם no céu), quadro branco, raio duplo

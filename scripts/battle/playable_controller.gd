@@ -341,6 +341,8 @@ func plan_row_disabled(index: int) -> bool:
 func _entry_cost(detail: Dictionary) -> int:
 	# D-105: PASS spends no act.
 	if detail.get("pass", false): return 0
+	if detail.has("pray"):
+		return PrayerBook.act_cost(StringName(detail.pray))
 	if detail.is_empty() or not detail.has("skill"): return 1
 	return int(SkillBook.def(StringName(detail.skill)).get("acts", 1))
 
@@ -765,6 +767,12 @@ func _player_turn(unit: BattleUnit) -> void:
 					break
 				max_acts = mini(BattleMath.MAX_AVAILABLE_ACTS, unit.acts_available)
 				continue
+			# D-111: commands a mode resolves at once without queueing or spending an act
+			# (Survival PARTY). The base battle has none.
+			if await _immediate_command(unit, chosen):
+				_auto_exec = false
+				if not is_inside_tree(): return
+				continue
 			# D-105: the PASS entry costs no act (see _entry_cost).
 			var detail: Dictionary = {"pass": true} if chosen == "PASS" else {}
 			# D-048: with every act committed only +1 PP on a queued spell is left.
@@ -886,6 +894,11 @@ func _player_turn(unit: BattleUnit) -> void:
 		# D-105: PASS ends this turn with the acts left; they wait for a later turn.
 		if _turn_passed:
 			return
+
+
+## D-111: a plan command handled at once by a mode (true = handled, nothing queued). Base: none.
+func _immediate_command(_unit: BattleUnit, _command: String) -> bool:
+	return false
 
 
 ## D-057: commands whose enemy target is chosen in the plan: ATTACK and a strike skill
@@ -1537,7 +1550,8 @@ func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: i
 		for skill in unit.skills:
 			labels.append(skill_label(skill))
 			skill_ids.append(skill)
-			if not SkillBook.affordable(skill, acts_left, en_left, hp_left):
+			# D-111: a hero who prays pays prayer skills with PP (Survival human allies).
+			if not SkillBook.affordable(skill, acts_left, en_left, hp_left, unit.current_pp if unit.prays else 99):
 				skill_disabled.append(labels.size() - 1)
 				skill_reasons[labels.size() - 1] = _short_reason(skill, acts_left, en_left, hp_left)
 		hud.command_options = labels
@@ -1566,6 +1580,7 @@ func _short_reason(skill: StringName, acts_left: int, en_left: int, _hp_left: in
 	var d := SkillBook.def(skill)
 	if int(d.acts) > acts_left: return "NO ACT"
 	if int(d.en) > en_left: return "NO EN"
+	if skill_unit != null and skill_unit.prays and int(d.get("pp", 0)) > skill_unit.current_pp: return "NO PP"
 	return "NO HP"
 
 
@@ -1640,7 +1655,7 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 	var skill := StringName(detail.skill)
 	var d := SkillBook.def(skill)
 	var extra := int(detail.get("extra", 0))
-	if not SkillBook.affordable(skill, unit.acts_available, unit.current_en - extra, unit.current_hp):
+	if not SkillBook.affordable(skill, unit.acts_available, unit.current_en - extra, unit.current_hp, unit.current_pp if unit.prays else 99):
 		_append_log("%s cannot pay %s any more." % [unit.display_name, d.name])
 		_event("%s  CAN'T PAY %s" % [short_name(unit), NameCase.of(String(d.name))])
 		return true
@@ -1815,6 +1830,8 @@ func _status_tick() -> void:
 			changed = true
 		if int(res.mend) > 0:
 			fx.play("HEAL", unit, int(res.mend))
+			if prayer != null:
+				prayer.fx.play_nechamah_tick(unit, maxi(1, unit.mends.size() + 1))
 			_append_log("%s is mended: +%d HP." % [unit.display_name, int(res.mend)])
 			_event("%s  MEND +%d HP" % [short_name(unit), int(res.mend)])
 			changed = true
@@ -1844,11 +1861,15 @@ func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
 			seen = _player_with_most_sp()
 		if seen != null:
 			SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
+			if prayer != null:
+				prayer.fx.play_sanverim(seen)
 			_append_log("%s is blinded by %s (smaller POINT zone until the end of the next round)." % [seen.display_name, unit.display_name])
 			_event("%s  BLIND" % short_name(seen))
 	elif bool(fxd.get("mend", false)):
 		var patient := _weakest_ally(unit)
 		patient.mends.append(SkillFx.MEND_ROUNDS)
+		if prayer != null:
+			prayer.fx.play_nechamah(patient, patient.mends.size())
 		_append_log("%s mends %s (%d mend(s))." % [unit.display_name, patient.display_name, patient.mends.size()])
 		_event("%s  MEND" % short_name(patient))
 	hud.message = "%s USES %s" % [short_name(unit), NameCase.of(SkillBook.display_name(skill))]
@@ -2020,6 +2041,9 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 			await _skill_strike(unit, target, skill, false, bool(paid.get(target, false)), not bool(declared.get(target, false)))
 		return
 	var roll := _ai_roll(unit, targets[0])
+	if skill == PrayerBook.CHEREV and prayer != null:
+		await prayer.fx.play_cherev(false)
+		if not is_inside_tree(): return
 	var first := true
 	for target in targets:
 		if not target.is_alive(): continue
@@ -2072,6 +2096,9 @@ func _hero_magic(attacker: BattleUnit, skill: StringName, reacting: bool) -> voi
 	action_attacker = attacker
 	action_defender = targets[0]
 	var attack := await _skill_attack_timing(attacker, targets[0], [0.5], false)
+	if skill == PrayerBook.CHEREV and prayer != null:
+		await prayer.fx.play_cherev(true)
+		if not is_inside_tree(): return
 	var first := true
 	for foe in targets:
 		if not foe.is_alive(): continue
@@ -2165,7 +2192,11 @@ func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, i
 	var d := SkillBook.def(skill)
 	var applied := _skill_hit_fx(attacker, defender, skill, 0, is_reaction, attack, defense, true)
 	if applied >= 0:
-		letter_fx.heat_hit(attacker, defender)
+		if PrayerBook.is_prayer(skill):
+			if prayer != null and not prayer.fx.cherev_busy():
+				prayer.fx.play_cherev(not defender.is_player)
+		else:
+			letter_fx.heat_hit(attacker, defender)
 		# D-106 STORM: a second bolt on the same foe, 50% of the time, with the same timing.
 		if bool(SkillFx.fx_of(skill).get("storm", false)) and defender.is_alive() and _fx_roll(50):
 			_skill_hit_fx(attacker, defender, skill, 1, is_reaction, attack, defense, true)

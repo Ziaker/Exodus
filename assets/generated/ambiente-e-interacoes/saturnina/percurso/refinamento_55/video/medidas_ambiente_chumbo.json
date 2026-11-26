@@ -1,0 +1,22 @@
+{
+  "Pórtico": {
+    "luma_piso_antes": 22.82,
+    "luma_piso_depois": 51.44,
+    "azul_medio_do_piso_antes": 16.99,
+    "azul_medio_do_piso_depois": 83.87,
+    "ceu_recorte_identico": true,
+    "pixels_no_recorte_do_ceu": 5676
+  },
+  "Avenida": {
+    "luma_piso_antes": 12.46,
+    "luma_piso_depois": 24.12,
+    "azul_medio_do_piso_antes": 8.89,
+    "azul_medio_do_piso_depois": 46.08
+  },
+  "Ossuário": {
+    "luma_piso_antes": 12.19,
+    "luma_piso_depois": 23.18,
+    "azul_medio_do_piso_antes": 9.23,
+    "azul_medio_do_piso_depois": 44.89
+  }
+}

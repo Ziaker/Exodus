@@ -147,13 +147,17 @@ static func point_half_width(own_agi: int, rival_agi: int,
 
 ## D-107 BLIND (SANVERIM): a blinded unit's POINT zone is smaller, so it misses more often.
 const BLIND_POINT_MULT := 0.5
+## D-112 ZOHAR: widens the unit's POINT zone (light counterpart to Sanverim).
+const ZOHAR_POINT_MULT := 1.5
 
 
-## POINT half-width of `own` against `rival`, with BLIND applied.
+## POINT half-width of `own` against `rival`, with BLIND and ZOHAR applied.
 static func unit_point_half(own: BattleUnit, rival: BattleUnit) -> float:
 	var half := point_half_width(own.stats.agi, rival.stats.agi, own.current_sp, rival.current_sp)
 	if own.has_status(&"blind"):
 		half = maxf(POINT_MIN_HALF_WIDTH * 0.5, half * BLIND_POINT_MULT)
+	if own.has_status(&"zohar"):
+		half = minf(BEAM_HALF_WIDTH * 0.9, half * ZOHAR_POINT_MULT)
 	return half
 
 

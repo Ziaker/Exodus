@@ -142,7 +142,10 @@ func _mazes() -> void:
 				different += 1
 			prev = joined
 	_check(different > 700, "Generated mazes vary with seed/stratum (%d distinct of 800)" % different)
-	_check(SurvivalStrata.maze(1, 1) == SurvivalData.MAZE, "Stratum 1 keeps the hand-made maze")
+	var first := SurvivalStrata.maze(1, 1)
+	var entrance := SurvivalStrata.entrance(1)
+	_check(first[entrance.y][entrance.x] == "S" and first == SurvivalStrata.maze(42, 1),
+		"Stratum 1 keeps the authored Necropolis across seeds")
 	_check(SurvivalStrata.maze(42, 3) == SurvivalStrata.maze(42, 3), "Maze is deterministic per seed")
 	_check(str(SurvivalStrata.layout(42, 1)) == str(SurvivalStrata.layout(42, 1)), "Layout is deterministic per seed")
 
@@ -367,10 +370,10 @@ func _economy() -> void:
 	# Identificação por relíquia.
 	SurvivalState.patch({"yoch_relics": ["raziel_book"]})
 	SurvivalState.learn_skill(&"hellfire")
-	_check(not (SurvivalState.data().unidentified as Array).has("hellfire"), "D-113: skill arrives identified")
+	_check(not (SurvivalState.data().unidentified as Array).has("hellfire"), "D-120: skill arrives identified")
 	SurvivalState.patch({"yoch_relics": []})
 	SurvivalState.learn_skill(&"mend")
-	_check(not (SurvivalState.data().unidentified as Array).has("mend"), "D-113: no skill is ever unidentified, relic or not")
+	_check(not (SurvivalState.data().unidentified as Array).has("mend"), "D-120: no skill is ever unidentified, relic or not")
 	# OMEN 4 = 2 continues.
 	SurvivalState.patch({"omen": 4})
 	_check(SurvivalState.max_continues() == 2, "OMEN 4 caps continues at 2")

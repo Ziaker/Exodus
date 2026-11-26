@@ -1,6 +1,6 @@
 extends "res://prototypes/dungeon-crawler/dungeon_proto.gd"
-## Overworld do Survival Mode (25x21). D-066: a run tem 5 estratos; cada um tem um
-## labirinto (o 1 é feito à mão, os outros vêm da semente), 7 demônios e um GUARDIÃO
+## Overworld do Survival Mode. D-066: a run tem 5 estratos; cada um tem um
+## labirinto, 7 demônios e um GUARDIÃO
 ## no ponto mais fundo. Santuário central com o atendente (cura, loja, relíquias,
 ## descida) e, D-074, 3 eventos por estrato como figuras SMT no corredor.
 ## Totalmente isolado da lore e do ProgressStore do jogo principal.
@@ -13,6 +13,7 @@ const BLUE_INK := Color("7fd4ff")
 const PANEL_RECT := Rect2(108, 56, 600, 400)
 
 const TITLE_SCENE := "res://scenes/title/Title.tscn"
+const NECROPOLE_VISUAL := preload("res://scripts/survival/necropole_visual.gd")
 
 var service_open := false
 var service_index := 0
@@ -46,9 +47,29 @@ func _maze_rows() -> Array:
 	return SurvivalState.maze_rows()
 
 
+func _build_world() -> void:
+	if SurvivalState.stratum() != 1:
+		super._build_world()
+		return
+	parallax.hide()
+	viewport.transparent_bg = false
+	var world := Node3D.new()
+	viewport.add_child(world)
+	_build_camera(world)
+	var necropole := NECROPOLE_VISUAL.new()
+	world.add_child(necropole)
+	necropole.install(pivot, camera)
+	_build_enemy_sprites(world)
+
+
+func _can_step(from: Vector2i, to: Vector2i) -> bool:
+	return super._can_step(from, to) and SurvivalStrata.edge_is_open(from, to, SurvivalState.stratum())
+
+
 ## Atendente + eventos ainda não resolvidos do estrato.
 func _npc_defs() -> Array:
 	var out: Array = SurvivalData.NPCS.duplicate(true)
+	out[0].cell = SurvivalStrata.entrance(SurvivalState.stratum()) + Vector2i.UP
 	var s := SurvivalState.data()
 	var done: Array = s.get("events_done", [])
 	for ev in SurvivalStrata.layout(int(s.get("seed", 1)), SurvivalState.stratum()).events:
@@ -72,7 +93,9 @@ func _enemy_defs() -> Array:
 
 
 func _location_title() -> String:
-	return "%s — STRATUM %d/%d" % [SurvivalData.LOCATION_NAME, SurvivalState.stratum(), SurvivalStrata.COUNT]
+	var stratum := SurvivalState.stratum()
+	var name := "NECRÓPOLE SATURNINA" if stratum == 1 else SurvivalData.LOCATION_NAME
+	return "%s — STRATUM %d/%d" % [name, stratum, SurvivalStrata.COUNT]
 
 
 func _default_facing() -> int:
@@ -129,11 +152,26 @@ func _build_party() -> void:
 	var fallen := BattleUnit.new(&"fallen", "FALLEN", SurvivalState.fallen_stats(), true, true)
 	fallen.current_hp = clampi(int(s.get("fallen_hp", fallen.stats.max_hp)), 1, fallen.stats.max_hp)
 	fallen.current_en = clampi(int(s.get("fallen_en", fallen.stats.max_en)), 0, fallen.stats.max_en)
-	var yoch := BattleUnit.new(&"ally", "Yoch", SurvivalState.yoch_stats(), true)
-	yoch.race = &"human"
-	yoch.start_praying(int(s.get("yoch_pp", SurvivalData.YOCH_BASE.pp)))
-	yoch.current_hp = clampi(int(s.get("yoch_hp", yoch.stats.max_hp)), 1, yoch.stats.max_hp)
-	party = [fallen, yoch]
+	party = [fallen]
+	for member: Dictionary in SurvivalState.party():
+		var stats := SurvivalState.member_stats(member)
+		var ally := BattleUnit.new(StringName(member.uid), String(member.name), stats, true)
+		ally.current_hp = SurvivalState.member_hp(member)
+		if SurvivalAllies.prays(member):
+			ally.start_praying(int(member.get("pp", 0)))
+		else:
+			ally.current_en = clampi(int(member.get("en", stats.max_en)), 0, stats.max_en)
+		party.append(ally)
+
+
+func _status_rect(i: int) -> Rect2:
+	if party.size() <= STATUS_RECTS.size():
+		return super._status_rect(i)
+	var first: Rect2 = STATUS_RECTS[0]
+	var last: Rect2 = STATUS_RECTS[1]
+	var gap := last.position.x - first.end.x
+	var width := floorf((last.end.x - first.position.x - 2.0 * gap) / 3.0)
+	return Rect2(first.position.x + i * (width + gap), first.position.y, width, first.size.y)
 
 
 func _sync_party_from_state() -> void:
@@ -488,9 +526,15 @@ func confirm_event() -> String:
 					event_feedback = "No relic left to give: +100M instead."
 				done = true
 		"rest":
+			var members := SurvivalState.party().duplicate(true)
+			for member: Dictionary in members:
+				if bool(member.get("down", false)):
+					continue
+				var top := SurvivalState.member_max_hp(member)
+				member.hp = mini(top, SurvivalState.member_hp(member) + top / 2)
 			SurvivalState.patch({
 				"fallen_hp": mini(SurvivalState.fallen_max_hp(), int(s.fallen_hp) + SurvivalState.fallen_max_hp() / 2),
-				"yoch_hp": mini(SurvivalState.yoch_max_hp(), int(s.yoch_hp) + SurvivalState.yoch_max_hp() / 2)})
+				"party": members})
 			event_feedback = "The spirit's rest mends the party."
 			done = true
 		"commune":
@@ -1019,6 +1063,7 @@ func _after_player_step() -> void:
 ## Demônios próximos (<= CHASE_RADIUS) perseguem o jogador, mas nunca invadem o santuário
 ## seguro. D-066: o GUARDIÃO não persegue — espera no ponto mais fundo do estrato.
 func _step_nearby_demons() -> Dictionary:
+	var safe := SurvivalStrata.sanctuary_zone(SurvivalState.stratum())
 	for enemy in enemies.entries:
 		var delta: Vector2i = cell - enemy.cell
 		if delta == Vector2i.ZERO:
@@ -1039,11 +1084,12 @@ func _step_nearby_demons() -> Dictionary:
 			if direction == Vector2i.ZERO:
 				continue
 			var target: Vector2i = enemy.cell + direction
-			if target == cell and not SurvivalData.SAFE_ZONE.has_point(target):
+			if not _can_step(enemy.cell, target) or safe.has_point(target):
+				continue
+			if target == cell:
 				enemy.cell = target
 				return enemy
-			if is_wall(target) or SurvivalData.SAFE_ZONE.has_point(target) \
-					or not enemies.at(target).is_empty() or not npc_at(target).is_empty():
+			if not enemies.at(target).is_empty() or not npc_at(target).is_empty():
 				continue
 			enemy.cell = target
 			break

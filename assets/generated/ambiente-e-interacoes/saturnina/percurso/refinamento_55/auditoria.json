@@ -1,0 +1,19 @@
+{
+  "salas": 55,
+  "salas_por_zona": [
+    11,
+    11,
+    11,
+    11,
+    11
+  ],
+  "ligacoes": 67,
+  "circuitos_independentes": 13,
+  "celulas": 2676,
+  "menor_trajeto_celulas": 314,
+  "ruptura_obrigatoria": true,
+  "cameras": 11,
+  "salas_alcancadas_por_raios": 55,
+  "menor_trajeto_na_malha": 314,
+  "passagens_com_dobras": 61
+}

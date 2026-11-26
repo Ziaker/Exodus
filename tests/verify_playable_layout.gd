@@ -59,7 +59,7 @@ func _run() -> void:
 	var win := func(x: float, y: float, w: float, h: float) -> Rect2: return Rect2(x / 1.5, y / 1.5, w / 1.5, h / 1.5)
 	_check(hud.BATTLE_LOG_RECT.is_equal_approx(win.call(8, 450, 800, 88)), "Log window: 8, 450, 800 x 88 on screen (three lines, D-110)")
 	_check(hud.STATUS_RECTS[0].is_equal_approx(win.call(8, 546, 293, 66)) and hud.STATUS_RECTS[1].is_equal_approx(win.call(309, 546, 293, 66)), "Hero windows: 293 x 66 at 8 and 309, y 546 on screen")
-	_check(hud.COMMAND_RECT.is_equal_approx(win.call(610, 546, 198, 66)), "Command window: 610, 546, 198 x 66 on screen")
+	_check(is_equal_approx(hud.COMMAND_RECT.end.y, hud.BATTLE_LOG_RECT.position.y - 3.0) and is_equal_approx(hud.COMMAND_RECT.position.x, hud.BATTLE_LOG_RECT.position.x), "Choice menu: vertical column anchored right above the log (creator 2026-11-26)")
 	_check(hud.SP_TRACK.position.y < 15 and hud.HEADER_BASELINE < 16, "Round, SP names and SP bar share one thin top line")
 	_check(hud.LOG_LINES == 3 and hud.LOG_FIRST_BASELINE + (hud.LOG_LINES - 1) * hud.LOG_STEP + 3 <= hud.BATTLE_LOG_RECT.end.y - 4, "3 log lines inside the log window (D-110)")
 	_check(hud.LOG_FIRST_BASELINE - hud.LOG_PX >= hud.BATTLE_LOG_RECT.position.y + 2 and hud.LOG_FIRST_BASELINE <= hud.BATTLE_LOG_RECT.position.y + 18, "D-110: the first log line starts at the top of the window")
@@ -78,9 +78,10 @@ func _run() -> void:
 	_check(hud._menu_rows() == ["FIGHT", "ITEM", "PASS", "REST", "ABSORB"], "Fallen's empty plan lists FIGHT, ITEM, PASS, REST, ABSORB only (%s)" % [hud._menu_rows()])
 	_check(hud._choosing_unit() == battle._fallen, "The arrow marks Fallen as the one choosing")
 	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-plan:0")[0].rect
-	_check(hud.COMMAND_RECT.encloses(first_row) and is_equal_approx(first_row.position.y, hud.COMMAND_RECT.position.y + 2), "Plan cells start at the top of the command window")
+	var menu_win: Rect2 = hud.menu_rect(5)
+	_check(menu_win.encloses(first_row) and is_equal_approx(first_row.position.y, menu_win.position.y + 2) and is_equal_approx(menu_win.end.y, hud.COMMAND_RECT.end.y) and menu_win.end.y < hud.BATTLE_LOG_RECT.position.y, "Plan cells start at the top of the menu, which ends above the log")
 	var cells: Array = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key).begins_with("live-plan:"))
-	_check(cells.size() == 5 and is_equal_approx(cells[2].rect.position.y, first_row.position.y) and cells[3].rect.position.y > first_row.position.y, "3-column grid: FIGHT ITEM PASS, then REST ABSORB")
+	_check(cells.size() == 5 and is_equal_approx(cells[2].rect.position.x, first_row.position.x) and cells[1].rect.position.y > first_row.position.y and cells[4].rect.position.y > cells[3].rect.position.y, "One vertical column: FIGHT, ITEM, PASS, REST, ABSORB top to bottom")
 	for c in ["FIGHT", "ITEM", "PASS", "REST", "ABSORB", "DEFEND", "PRAY", "EXEC", "UNDO", "REACT", "DENY"]:
 		_check(hud._width(c, hud.COMMAND_PX, true) + hud.MENU_TEXT_X <= cells[0].rect.size.x, "%s fits its command cell (%.1f + %.1f > %.1f)" % [c, hud._width(c, hud.COMMAND_PX, true), hud.MENU_TEXT_X, cells[0].rect.size.x])
 	battle.submit_plan(1)
@@ -123,21 +124,21 @@ func _run() -> void:
 	_check(String(hud.events[-1].text) == "LOG D", "D-055: transient lines are not kept in the history")
 	hud.mode = "command"
 	_check(hud.visible_log_lines() == ["LOG B", "LOG C", "LOG D"], "D-055: the transient line goes away with its mode")
-	# D-111: while a hero chooses, the other hero's card is at 50%; the active border pulses
+	# D-118: while a hero chooses, the other hero's card is at 50%; the active border pulses
 	# in the turn queue's green, 1.5 s there and back.
 	var saved_actor = battle.active_actor
 	battle.active_actor = battle._fallen
-	_check(hud.card_dimmed(battle._ally) and not hud.card_dimmed(battle._fallen), "D-111: the other hero's card is darkened while Fallen chooses")
+	_check(hud.card_dimmed(battle._ally) and not hud.card_dimmed(battle._fallen), "D-118: the other hero's card is darkened while Fallen chooses")
 	battle.active_actor = battle._ally
-	_check(hud.card_dimmed(battle._fallen) and not hud.card_dimmed(battle._ally), "D-111: Fallen's card is darkened while Yoch chooses")
+	_check(hud.card_dimmed(battle._fallen) and not hud.card_dimmed(battle._ally), "D-118: Fallen's card is darkened while Yoch chooses")
 	battle.active_actor = saved_actor
-	_check(is_equal_approx(hud.INACTIVE_CARD_DIM, 0.5), "D-111: 50% darkening")
+	_check(is_equal_approx(hud.INACTIVE_CARD_DIM, 0.5), "D-118: 50% darkening")
 	var b0: Color = hud.active_border(0.0)
 	var b_mid: Color = hud.active_border(0.75)
 	var b_end: Color = hud.active_border(1.5)
-	_check(Color(b0, 1.0).is_equal_approx(Color(hud.GREEN_TEXT, 1.0)) and is_equal_approx(b0.a, 1.0) and is_equal_approx(b_mid.a, 0.3) and is_equal_approx(b_end.a, 1.0), "D-111: the active border pulses in green, 1.5 s there and back (%s %s %s)" % [b0, b_mid, b_end])
+	_check(Color(b0, 1.0).is_equal_approx(Color(hud.GREEN_TEXT, 1.0)) and is_equal_approx(b0.a, 1.0) and is_equal_approx(b_mid.a, 0.3) and is_equal_approx(b_end.a, 1.0), "D-118: the active border pulses in green, 1.5 s there and back (%s %s %s)" % [b0, b_mid, b_end])
 	hud.mode = "timing"
-	_check(not hud.card_dimmed(battle._ally) and not hud.card_dimmed(battle._fallen), "D-111: no card is darkened outside the choosing menus")
+	_check(not hud.card_dimmed(battle._ally) and not hud.card_dimmed(battle._fallen), "D-118: no card is darkened outside the choosing menus")
 	hud.mode = saved_mode
 	hud.message = saved_message
 	hud.events.assign(saved_events)
@@ -170,7 +171,7 @@ func _run() -> void:
 	key.pressed = true
 	key.keycode = KEY_DOWN
 	battle.hud._input(key)
-	_check(battle.hud.plan_index == 3, "Down key moves one row of the 3-column plan grid")
+	_check(battle.hud.plan_index == 1, "Down key moves one row of the vertical plan column")
 	key.keycode = KEY_UP
 	battle.hud._input(key)
 	key.keycode = KEY_Z

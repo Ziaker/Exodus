@@ -83,7 +83,7 @@ As fichas e habilidades abaixo registram exatamente os valores apresentados para
 **Habilidades especiais:**
 
 - **Heat wave — 2 ACT / 6 EN:** causa **5 de dano mágico do elemento IGNI** a todos os inimigos, com **25% de chance** de aplicar **Burn**; Burn causa **3 de dano por round durante 3 rounds**.
-- **Energy Eat — 1 ACT / 6 EN:** recupera **5 HP +1 HP por ponto de EN extra alocado** à habilidade.
+- **Energeat — 1 ACT / 6 EN:** recupera **5 HP +1 HP por ponto de EN extra alocado** à habilidade.
 
 **Parâmetros do encontro indicados posteriormente pelo diretor:**
 

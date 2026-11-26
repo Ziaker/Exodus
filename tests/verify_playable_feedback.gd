@@ -52,7 +52,7 @@ func _run() -> void:
 		if not (String(hit.key).begins_with("live-command:") or String(hit.key).begins_with("live-plan:")): continue
 		rows += 1
 		check(not hit.rect.intersects(battle.hud.BATTLE_LOG_RECT), "Battle log must not cover any command cell")
-		check(battle.hud.COMMAND_RECT.encloses(hit.rect), "Every command cell must stay inside the command window")
+		check(battle.hud.menu_rect(battle.hud._menu_rows().size()).encloses(hit.rect), "Every command cell must stay inside the command window")
 		check(hit.rect.end.y <= battle.hud.SCREEN.y, "Every command must fit inside the screen")
 		for who in battle.hud.STATUS_RECTS:
 			check(not hit.rect.intersects(who), "Commands must not cover either character's status")
@@ -149,14 +149,14 @@ func _run() -> void:
 	check(not ("ROLE_BOX_TIME" in battle.hud) and not battle.hud.has_method("role_box_visible"), "D-102: no timed cut of the role boxes is left")
 	# drawn_role_boxes is what the role layer actually painted on its last draw.
 	var box_roles := func() -> Array: return battle.hud.drawn_role_boxes.duplicate()
-	# D-113: only the enemy's role is drawn (plain text); the hero's role tag is removed.
+	# D-120: only the enemy's role is drawn (plain text); the hero's role tag is removed.
 	var expected_boxes := ["TARGET"]
 	await process_frame
 	var boxes_now: Array = box_roles.call()
-	check(boxes_now == expected_boxes, "D-102/D-113: after the arrow fades only the enemy's TARGET text is drawn (%s)" % str(boxes_now))
+	check(boxes_now == expected_boxes, "D-102/D-120: after the arrow fades only the enemy's TARGET text is drawn (%s)" % str(boxes_now))
 	for i in 60: await process_frame
 	boxes_now = box_roles.call()
-	check(boxes_now == expected_boxes, "D-102/D-113: a second later the text is still drawn (%s)" % str(boxes_now))
+	check(boxes_now == expected_boxes, "D-102/D-120: a second later the text is still drawn (%s)" % str(boxes_now))
 	check(battle.roles.get(battle._fallen.id, "") == "ATTACK", "The role stays while its box is drawn")
 	for i in 120:
 		if not battle.fx.is_busy(): break

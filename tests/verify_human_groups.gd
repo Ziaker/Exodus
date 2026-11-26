@@ -67,11 +67,17 @@ func _run() -> void:
 	for demon in SurvivalData.DEMONS:
 		check(not bool(demon.get("human", false)), "%s is not a human" % demon.id)
 
-	# ---- the three prayers exist with PP costs and Hebrew names
-	check(int(SkillBook.def(&"sanverim").pp) == 2 and int(SkillBook.def(&"nechamah").pp) == 1 and int(SkillBook.def(&"cherav").pp) == 3, "Costs: SANVERIM 2 PP, NECHAMAH 1 PP, CHERAV 3 PP")
+	# ---- the three prayers exist with PP costs and Hebrew names, synced with PrayerBook
+	check(int(SkillBook.def(&"sanverim").pp) == 2 and int(SkillBook.def(&"nechamah").pp) == 1 and int(SkillBook.def(&"cherav").pp) == 3, "Costs: SANVERIM 2 PP, NECHAMAH 1 PP, CHEREV 3 PP")
+	check(SkillBook.display_name(&"cherav") == "CHEREV", "חֶרֶב is displayed as CHEREV")
 	for id in [&"sanverim", &"nechamah", &"cherav"]:
-		check(String(SkillBook.def(id).hebrew).length() > 0, "%s has a Hebrew name" % id)
-	check(not SkillBook.affordable(&"cherav", 2, 0, 10, 2) and SkillBook.affordable(&"cherav", 2, 0, 10, 3), "CHERAV needs 3 PP")
+		var sd := SkillBook.def(id)
+		var pd := PrayerBook.entry(id)
+		check(String(sd.hebrew).length() > 0, "%s has a Hebrew name" % id)
+		check(PrayerBook.is_prayer(id) and PrayerBook.is_human_spell(id), "%s is catalogued in PrayerBook" % id)
+		check(String(pd.get("name", "")) == String(sd.get("name", "")) and String(pd.get("hebrew", "")) == String(sd.get("hebrew", "")) and int(pd.get("cost", -1)) == int(sd.get("pp", -2)), "%s metadata matches between PrayerBook and SkillBook" % id)
+	check(SurvivalAllies.HUMAN_PRAYER_POOL == PrayerBook.human_pool_ids(), "SurvivalAllies pool matches PrayerBook.human_pool_ids()")
+	check(not SkillBook.affordable(&"cherav", 2, 0, 10, 2) and SkillBook.affordable(&"cherav", 2, 0, 10, 3), "CHEREV needs 3 PP")
 
 	# ---- a battle against the stratum 1 group
 	var b := await _battle(SurvivalData.human_group_id(1))
@@ -163,7 +169,8 @@ func _run() -> void:
 	h2.current_hp = 1
 	check(b._prayer_weight(h1, &"nechamah") > 0.0, "NECHAMAH is drawn when an ally is hurt")
 	hero.add_status(&"blind", 2)
-	yoch.add_status(&"blind", 2)
+	if yoch != null:
+		yoch.add_status(&"blind", 2)
 	check(b._prayer_weight(h1, &"sanverim") == 0.0, "SANVERIM is not drawn when every hero is blind")
 
 	print("verify_human_groups: %d checks OK" % checks)
