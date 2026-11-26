@@ -30,9 +30,9 @@ const DEFS := {
 	&"heat_wave": {"name": "HEAT WAVE", "acts": 2, "en": 6, "hp": 0, "pp": 0, "kind": "magic",
 		"power": 5, "burn_chance": 25,
 		"info": "HEAT WAVE 2 ACT / 6 EN: power 5 IGNI magic, all foes, 25% burn (3/round x3)."},
-	&"energy_eat": {"name": "ENERGY EAT", "acts": 1, "en": 6, "hp": 0, "pp": 0, "kind": "heal",
+	&"energy_eat": {"name": "ENERGEAT", "acts": 1, "en": 6, "hp": 0, "pp": 0, "kind": "heal",
 		"heal": 5,
-		"info": "ENERGY EAT 1 ACT / 6 EN: heals 5 HP, +1 HP per extra EN spent."},
+		"info": "ENERGEAT 1 ACT / 6 EN: heals 5 HP, +1 HP per extra EN spent."},
 	# D-106 (creator 2026-11-25): rework of the 27 Survival skills, one signature effect each
 	# ("fx"). Main-game skills above are untouched. Hit-effect values live in SkillFx.
 	&"pixie_dust": {"name": "PIXIE DUST", "acts": 1, "en": 3, "hp": 0, "pp": 0, "kind": "magic",

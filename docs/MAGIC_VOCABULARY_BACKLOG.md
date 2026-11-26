@@ -52,7 +52,9 @@ Voltadas a dar identidade própria ao dungeon crawler além do combate.
 
 ---
 
-## 3. Magias ofensivas elementais (16 entradas)
+## 3. Magias ofensivas elementais (15 candidatos)
+
+*(Exclui `Ra'am`, já canônica na §0.1.)*
 
 | Nome | Hebraico | Significado | Efeito proposto | Status / Observação |
 |---|---|---|---|---|
@@ -60,7 +62,6 @@ Voltadas a dar identidade própria ao dungeon crawler além do combate.
 | **Lahav** | לַהַב | Chama, lâmina | Chama cortante. | Candidato |
 | **Lehavah** | לֶהָבָה | Labareda | Explosão de fogo. | Candidato |
 | **Barak** | בָּרָק | Relâmpago | Descarga elétrica. | Candidato |
-| **Ra'am** | רַעַם | Trovão | Dano elétrico em alvo único. | **Já existe (D-048)** |
 | **Sheleg** | שֶׁלֶג | Neve | Congelamento. | Candidato |
 | **Kerach** | קֶרַח | Gelo | Formação de cristais de gelo. | Candidato |
 | **Barad** | בָּרָד | Granizo | Bombardeio de fragmentos congelados. | Candidato |
@@ -75,16 +76,15 @@ Voltadas a dar identidade própria ao dungeon crawler além do combate.
 
 ---
 
-## 4. Magias de suporte e oração (16 entradas)
+## 4. Magias de suporte e oração (13 candidatos)
+
+*(Exclui `Refuah`, `Haganah` e `Magen`, já canônicas na §0.1.)*
 
 | Nome | Hebraico | Significado | Efeito proposto | Status / Observação |
 |---|---|---|---|---|
-| **Refuah** | רְפוּאָה | Cura | Cura fixa (20 + 10/PP extra). | **Já existe (D-048)** |
-| **Haganah** | הֲגָנָה | Proteção | Escudo anti-condição de status. | **Já existe (D-048)** |
 | **Berakhah** | בְּרָכָה | Bênção | Fortalecimento de atributos. | Candidato |
 | **Chazak** | חָזַק | Fortalecer-se | Aumento de ATK. | Candidato *(sobrepõe parcialmente `Gevurah` D-112)* |
 | **Oz** | עֹז | Força, poder | Fortalecimento ofensivo. | Candidato *(sobrepõe parcialmente `Gevurah` D-112)* |
-| **Magen** | מָגֵן | Escudo | Barreira / +1 estágio DEF física coletiva. | **Já existe (D-112)** |
 | **Machseh** | מַחְסֶה | Refúgio | Proteção coletiva. | Candidato |
 | **Chesed** | חֶסֶד | Misericórdia, bondade | Recuperação coletiva. | Candidato |
 | **Shalom** | שָׁלוֹם | Paz, integridade | Restauração de condições adversas. | Candidato |

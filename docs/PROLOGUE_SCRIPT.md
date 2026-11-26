@@ -47,7 +47,7 @@ diz fica na lista de pendências e **não** deve ser inventado em código, arte 
 >
 > Heat wave (2ACT/6EN): causa 5 dano mágico de elemento IGNI a todos inimigos, 25% chance de aplicar burn (recebe 3 de dano por round durante 3 rounds)
 >
-> Energy Eat (1ACT/6EN): Recupera 5HP+1 para cada ponto do de EN extra alocado nesta habilidade.
+> Energeat (1ACT/6EN): Recupera 5HP+1 para cada ponto do de EN extra alocado nesta habilidade.
 >
 > Durante a batalha, se O protagonista ficar prestes a receber um dano mortal, o homem que lhe pediu ajuda entra no combate, com o nome censurado em hebraico, curando o protagonista completamente, a troco de reduzir sua SP atual pela metade, reiniciando o combate. Durante esta batalha, o aliado é completamente controlado pela IA do jogo.
 >
@@ -90,7 +90,7 @@ diz fica na lista de pendências e **não** deve ser inventado em código, arte 
    - **Inimigo 2:** 8 HP / 16 EN / 1 ATK / 8 MAK / 2 DEF / 2 MEF / 3 AGI.
      - **Heat wave** (2 ACT, 6 EN): 5 de dano mágico IGNI a todos os inimigos; 25% de
        chance de **burn** (3 de dano por round durante 3 rounds).
-     - **Energy Eat** (1 ACT, 6 EN): recupera 5 HP + 1 por ponto de EN extra alocado.
+     - **Energeat** (1 ACT, 6 EN): recupera 5 HP + 1 por ponto de EN extra alocado.
 8. **Resgate:** se o protagonista estiver prestes a receber dano mortal, o homem entra no
    combate (nome **censurado em hebraico**), cura o protagonista por completo em troca
    de **reduzir pela metade o SP atual** do protagonista, **reiniciando o combate**.

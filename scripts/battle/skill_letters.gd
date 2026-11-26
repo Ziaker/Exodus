@@ -7,7 +7,7 @@ extends Node2D
 ##   Heat wave  - a wave of orange letters rolls across the targets' row, and flames of letters
 ##                rise from every target hit; each burn tick sends embers up;
 ##   Bleedbuff  - red letters drip from the user and are pulled back into it, then a red ring;
-##   Energy Eat - cyan letters spiral into the user, then a soft ring.
+##   Energeat   - cyan letters spiral into the user, then a soft ring.
 ## On a hero the effect plays on the status card; on an enemy, on its art. Colours, sizes and
 ## timings are proposals for the creator to judge.
 
@@ -140,7 +140,7 @@ func burn(target: BattleUnit) -> void:
 
 
 ## Bleedbuff: blood letters drip from the user and are pulled back in; a red ring.
-## Energy Eat: energy letters spiral into the user; a soft ring.
+## Energeat: energy letters spiral into the user; a soft ring.
 func self_skill(unit: BattleUnit, kind: String) -> void:
 	var r := _rect(unit)
 	if r.size == Vector2.ZERO: return

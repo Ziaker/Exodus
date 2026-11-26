@@ -139,7 +139,7 @@ func _run() -> void:
 	fallen.current_en = 6
 	fallen.current_hp = 4
 	battle.submit_plan(0)
-	check(battle.hud.mode == "skill" and battle.hud.command_options == ["ATTACK", "LUNGE", "HEAT WAVE", "ENERGY EAT", "BLEEDBUFF"], "FIGHT opens ATTACK + skills (got %s)" % [battle.hud.command_options])
+	check(battle.hud.mode == "skill" and battle.hud.command_options == ["ATTACK", "LUNGE", "HEAT WAVE", "ENERGEAT", "BLEEDBUFF"], "FIGHT opens ATTACK + skills (got %s)" % [battle.hud.command_options])
 	check(battle.skill_disabled == [4], "Only Bleedbuff (4 HP) is dimmed with 2 acts / 6 EN (got %s)" % [battle.skill_disabled])
 	battle.hud.command_index = 1
 	check(battle.hud._log_text().begins_with("LUNGE 1 ACT / 4 EN"), "The log explains the highlighted skill")

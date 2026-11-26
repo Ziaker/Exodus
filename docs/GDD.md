@@ -1429,8 +1429,7 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 
 - **Log:** descrições simples em **inglês**, com texto do log também em `#f5f58c`.
 - **Efeito visual das rezas (D-113):** todas as rezas usam obrigatoriamente VFX compostos
-  100% por letras hebraicas em `scripts/battle/pray_fx.gd` (o antigo placeholder `Zio /
-  Thunder1.png` do Ra'am foi substituído; detalhes em `docs/PRAYER_VFX_RULE.md`).
+  100% por letras hebraicas em `scripts/battle/pray_fx.gd` (detalhes em `docs/PRAYER_VFX_RULE.md`).
 - **Reação inimiga:** inimigos podem reagir **apenas** ao **PRAY** e ao **Ra'am** (as
   demais rezas — `Refuah`, `Haganah`, D-107 e D-112 — permanecem sem reação inimiga); todos os inimigos com atos de reação podem reagir. Um ataque
   de reação que **acerta** interrompe a reza: no PRAY o ato se perde e não há PP; no
@@ -1637,7 +1636,7 @@ Demais localizações, geografia, hubs, dungeons e regras de exploração: **PEN
 ### 17.1 Tactical Altar — decisões de HUD das Rodadas Visuais 1 a 3 — **CONFIRMADO como design; NÃO IMPLEMENTADO**
 
 A nova direção visual deve preservar o aspecto de **RPG clássico próximo de RPG
-Maker XP**, a visão frontal e a escala nativa 544×416. **Tactical Altar** é a
+Maker XP**, a visão frontal e a resolução base **816×624** (D-055). **Tactical Altar** é a
 direção aprovada: janelas e painéis legíveis, geometria contida, estética sombria e
 atenção prioritária às artes dos inimigos. Não reproduzir integralmente interfaces
 de jogos terceiros. A referência histórica a VX Ace acima descreve uma implementação
@@ -2779,7 +2778,7 @@ Formato: ID · data · decisão · estado · impacto documental.
 - **D-050 · 2026-11-22 (roteiro do criador) — prólogo.** Roteiro integral em
   `docs/PROLOGUE_SCRIPT.md` (texto do criador sem edição + leitura estruturada +
   pendências). Define cutscenes de abertura, primeiro combate contra 2 inimigos com
-  fichas 20/10/6/3/2/8/3 (Lunge, Bleedbuff) e 8/16/1/8/2/2/3 (Heat wave, Energy Eat),
+  fichas 20/10/6/3/2/8/3 (Lunge, Bleedbuff) e 8/16/1/8/2/2/3 (Heat wave, Energeat),
   resgate pelo humano controlado pela IA (cura total, SP atual pela metade, combate
   reiniciado), absorção tutorial (+2 MEF; depois +2 MAK com mash; permanentes), fala de
   despedida e escolha oeste/leste. **CONFIRMADO como roteiro; NÃO IMPLEMENTADO.**
@@ -3225,7 +3224,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   EMBER BURST, MIND BLAST -> MIND DRAIN, CRUSHING BLOW -> FINISHING BLOW, DARK SIPHON -> DARK BOON.
   **Escolhas do agente, aguardando o criador:** os valores dos efeitos (25%, 2 rodadas, 3 EN etc.) e
   a queimadura removida de PIXIE DUST, VENOM CLOUD, CURSE RAY e THUNDER CALL. Não alterado: LUNGE,
-  BLEEDBUFF, HEAT WAVE, ENERGY EAT e as rezas da Yoch. Impacto: `skill_book.gd`, `skill_fx.gd`,
+  BLEEDBUFF, HEAT WAVE, ENERGEAT e as rezas da Yoch. Impacto: `skill_book.gd`, `skill_fx.gd`,
   `battle_unit.gd`, `battle_state.gd`, `battle_controller.gd`, `playable_controller.gd`,
   `survival_battle.gd`, `survival_data.gd`, `tests/verify_skill_fx.gd`; `docs/SURVIVAL_MODE.md`,
   `docs/DECISIONS.md`.
@@ -3267,4 +3266,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   O criador confirmou que todas as rezas criadas até o momento (`Refuah`, `Haganah`, `Ra'am` da D-048; `Sanverim`, `Nechamah`, `Cherev` da D-107; e `Tahorah`, `Magen`, `Gevurah`, `Mishpat`, `Zohar` da D-112) vão para o **jogo canônico**, deixando de existir qualquer reza exclusiva do modo Survival. Todas seguem unificadas em `scripts/core/prayer_book.gd` e sujeitas à regra de VFX hebraico (D-113). **PENDENTE:** como/quando essas rezas entram ou são distribuídas ao longo da campanha (as 3 rezas iniciais do Yoch permanecem `Refuah`, `Haganah` e `Ra'am`). Impacto: `docs/DECISIONS.md`, `docs/GDD.md` (§9.1 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).
 
 - **D-116 · 2026-11-26 (registro do criador) — banco de vocabulário mágico hebraico para uso eventual.**
-  Registrado em `docs/MAGIC_VOCABULARY_BACKLOG.md` o catálogo completo de candidatos de magias hebraicas para consulta e uso futuro no EXODUS: conceito **Hineni** (teleporte/manifestação espacial), 12 magias de exploração/overworld (com destaque para a tríade `Zakhar`/`Ot`/`Hineni`), 16 elementais, 16 de suporte/oração, 12 de maldição/enfraquecimento, 10 metafísicas (`Hayah`, `Ayin`, `Shem`, `Berit`, `Nefesh`, `Davak`, `Bala`, `Tehom`, `Tohu`, `Kavod`), top 20 favoritos, qualificadores de evolução (com alerta de concordância de gênero em hebraico) e a divisão conceitual em 3 linguagens (Elemental / Oração / Metafísica). **Estado:** apenas banco de referência (candidatos não implementados, sem fórmulas, custos ou usuários definidos; colisões com as 11 rezas já canônicas explicitamente sinalizadas). Impacto: `docs/MAGIC_VOCABULARY_BACKLOG.md`, `docs/DECISIONS.md`, `docs/GDD.md` (§9 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).
+  Registrado em `docs/MAGIC_VOCABULARY_BACKLOG.md` o catálogo completo de candidatos de magias hebraicas para consulta e uso futuro no EXODUS: conceito **Hineni** (teleporte/manifestação espacial), 12 magias de exploração/overworld (com destaque para a tríade `Zakhar`/`Ot`/`Hineni`), 15 elementais candidatas, 13 de suporte/oração candidatas, 12 de maldição/enfraquecimento, 10 metafísicas (`Hayah`, `Ayin`, `Shem`, `Berit`, `Nefesh`, `Davak`, `Bala`, `Tehom`, `Tohu`, `Kavod`), top 20 favoritos, qualificadores de evolução (com alerta de concordância de gênero em hebraico) e a divisão conceitual em 3 linguagens (Elemental / Oração / Metafísica). **Estado:** apenas banco de referência (candidatos não implementados, sem fórmulas, custos ou usuários definidos; colisões com as 11 rezas já canônicas explicitamente sinalizadas). Impacto: `docs/MAGIC_VOCABULARY_BACKLOG.md`, `docs/DECISIONS.md`, `docs/GDD.md` (§9 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza).
+
+- **D-117 · 2026-11-26 (decisão do criador) — fronteira canônica, renome de Energeat e limpeza documental.**
+  Formalizada em `docs/CANON_BOUNDARY.md` a separação explícita entre conteúdo **canônico** (combate base, 11 rezas com VFX D-113, 4 skills do Prólogo, personagens/lore/locais principais) e **não-canônico** (modo Survival, 27 skills D-106, relíquias, 35 demônios SMT, backlog D-116, placeholders e cenas legadas). A skill **Energy Eat** foi renomeada para **Energeat** (`ENERGEAT`, mantendo o id interno `energy_eat` para compatibilidade). Trechos ultrapassados nos documentos (`Log de 3 linhas`, bloco revogado da D-061, referências antigas a `Zio / Thunder1.png`, escala antiga `544×416` em §17.1 e duplicação de rezas já canônicas no backlog D-116) foram removidos. Impacto: `docs/CANON_BOUNDARY.md`, `docs/DECISIONS.md`, `docs/GDD.md`, `docs/COMBAT_SPEC.md`, `docs/PROLOGUE_SCRIPT.md`, `docs/ROTEIRO_PROLOGO.md`, `docs/MAGIC_VOCABULARY_BACKLOG.md`, `scripts/core/skill_book.gd`, `scripts/battle/skill_letters.gd`, `tests/verify_playable_skills.gd`.
