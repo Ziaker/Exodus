@@ -1,5 +1,5 @@
 extends SceneTree
-## Verificação headless do overworld do Survival Mode: mapa 25x21, 20 demônios,
+## Verificação headless do primeiro estrato do Survival Mode,
 ## Curandeiro + Vendedor na mesma barra de opções, zona segura e transição de encontro.
 
 var checks := 0
@@ -38,20 +38,22 @@ func _run() -> void:
 	root.add_child(w)
 	await process_frame
 
-	_check(w.grid.size() == 21 and w.grid[0].length() == 25, "SurvivalWorld loads 25x21 map")
+	var start := SurvivalStrata.entrance(1)
+	var far := SurvivalStrata.NECROPOLE.sepulchre()
+	_check(w.grid == SurvivalStrata.maze(int(SurvivalState.data().seed), 1), "SurvivalWorld loads the Necropolis")
 	# D-066: o estrato 1 tem 7 dos 35 demônios (os outros esperam nos estratos 2..5).
 	_check(w.enemies.entries.size() == SurvivalStrata.PER_STRATUM + 1, "SurvivalWorld spawns the 7 demons and the human group of stratum 1 (got %d)" % w.enemies.entries.size())
 	_check(w.viewport.find_children("*", "Sprite3D", true, false).size() == SurvivalStrata.PER_STRATUM + 1, "All 7 stratum demons and the human group have 3D corridor silhouettes")
-	_check(w.cell == Vector2i(12, 10) and w.facing == 0, "Player starts at sanctuary facing North toward healer/vendor")
+	_check(w.cell == start and w.facing == 0, "Player starts at sanctuary facing North toward healer/vendor")
 	_check(w.npc_picture.visible, "Healer/vendor SMT portrait is visible directly ahead on spawn")
 	# Posições são embaralhadas pela semente: isola Pixie/Jack Frost para o teste de passo.
 	var keep: Array = []
 	for enemy in w.enemies.entries:
 		if String(enemy.id) == "pixie":
-			enemy.cell = Vector2i(12, 7)
+			enemy.cell = start + Vector2i.UP * 3
 			keep.append(enemy)
 		elif String(enemy.id) == "jack_frost":
-			enemy.cell = Vector2i(23, 19)
+			enemy.cell = far
 			keep.append(enemy)
 	w.enemies.entries.assign(keep)
 	_check(w.nearest_demon_hint() == "N 3", "HUD points to the nearest demon from the start (got %s)" % w.nearest_demon_hint())
@@ -94,17 +96,15 @@ func _run() -> void:
 	_check(w.confirm_service_option() == "leave", "Last option closes bar")
 	_check(not w.service_open, "Service bar closed after LEAVE")
 
-	# Movimento: dar 1 passo para frente (12, 9) dentro da SAFE_ZONE — Pixie em (12, 7) persegue até (12, 8),
-	# mas demônio distante (Hel em 23, 19) não se move.
-	var far_before: Vector2i = w.enemies.at(Vector2i(23, 19)).cell
+	# Pixie persegue até a borda do santuário, Jack Frost fica no extremo do mapa.
 	w.request(w.Act.FORWARD)
 	await _idle(w)
-	_check(w.cell == Vector2i(12, 9), "Player stepped to (12, 9)")
-	_check(w.enemies.at(Vector2i(23, 19)).cell == far_before, "Distant demon outside chase radius stays put")
-	_check(not w.enemies.at(Vector2i(12, 8)).is_empty(), "Nearby Pixie stepped toward player to (12, 8)")
+	_check(w.cell == start + Vector2i.UP, "Player stepped North within sanctuary")
+	_check(not w.enemies.at(far).is_empty(), "Distant demon outside chase radius stays put")
+	_check(not w.enemies.at(start + Vector2i.UP * 2).is_empty(), "Nearby Pixie follows to the edge of sanctuary")
 	_check(not w.encounter_pending, "No battle while inside safe zone")
 
-	# Mais um passo para (12, 8): encosta na Pixie e inicia batalha!
+	# Mais um passo encosta na Pixie fora da zona segura.
 	w.request(w.Act.FORWARD)
 	await _idle(w)
 	_check(w.encounter_pending, "Stepping into Pixie triggers encounter")

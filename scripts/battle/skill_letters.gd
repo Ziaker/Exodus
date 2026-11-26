@@ -63,7 +63,7 @@ func is_busy() -> bool:
 func _rect(unit: BattleUnit) -> Rect2:
 	var i: int = hud.players.find(unit)
 	if i >= 0:
-		return hud.STATUS_RECTS[i]
+		return hud.status_rect(i)
 	i = hud.opponents.find(unit)
 	return hud.enemy_sprite_rect(i) if i >= 0 else Rect2()
 

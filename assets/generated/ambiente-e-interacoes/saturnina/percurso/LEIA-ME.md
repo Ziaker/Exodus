@@ -2,6 +2,8 @@
 
 O estudo segue as cinco zonas do briefing. A Ruptura faz parte do caminho principal e ocupa o trecho do pórtico. Os dois arquivos detalhados mostram a intenção visual da aproximação e do interior dessa passagem.
 
+A versão de 55 salas usada no Survival está no [refinamento do percurso](refinamento_55/LEIA-ME.md).
+
 [Maquete editável](Necropole_Saturnina_Percurso.blend) · [Mapa do trajeto](mapa_percurso.png) · [Cinco vistas e planta da maquete](galeria/prancha.png) · [Exterior detalhado](../ruptura/Necropole_Saturnina_Ruptura.blend) · [Interior detalhado](../ruptura/interior/Necropole_Saturnina_Interior.blend)
 
 | Zona | O que muda no caminho | O que orienta o jogador |

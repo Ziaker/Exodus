@@ -144,7 +144,7 @@ func stop_cues() -> void:
 
 func _unit_rect(unit: BattleUnit) -> Rect2:
 	var index: int = battle.hud.players.find(unit)
-	if index >= 0: return battle.hud.STATUS_RECTS[index]
+	if index >= 0: return battle.hud.status_rect(index)
 	index = battle.hud.opponents.find(unit)
 	return battle.hud.enemy_sprite_rect(index)
 
@@ -240,9 +240,6 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 	if not unit.is_player:
 		var index: int = battle.hud.opponents.find(unit)
 		var silhouette: Texture2D = battle.hud.silhouettes[index % battle.hud.silhouettes.size()]
-		# D-107: a human flashes over its own colours (only mazikim are silhouettes).
-		if unit.race == &"human":
-			silhouette = battle.hud.battler_textures[index % battle.hud.battler_textures.size()]
 		ghost = Sprite2D.new()
 		ghost.texture = silhouette
 		ghost.centered = false
@@ -250,7 +247,7 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		ghost.scale = target_rect.size / silhouette.get_size()
 		ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		var shader := Shader.new()
-		shader.code = FLASH_SHADER_COLOUR if unit.race == &"human" else FLASH_SHADER
+		shader.code = FLASH_SHADER
 		var material := ShaderMaterial.new()
 		material.shader = shader
 		ghost.material = material

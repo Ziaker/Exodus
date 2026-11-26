@@ -142,7 +142,10 @@ func _mazes() -> void:
 				different += 1
 			prev = joined
 	_check(different > 700, "Generated mazes vary with seed/stratum (%d distinct of 800)" % different)
-	_check(SurvivalStrata.maze(1, 1) == SurvivalData.MAZE, "Stratum 1 keeps the hand-made maze")
+	var first := SurvivalStrata.maze(1, 1)
+	var entrance := SurvivalStrata.entrance(1)
+	_check(first[entrance.y][entrance.x] == "S" and first == SurvivalStrata.maze(42, 1),
+		"Stratum 1 keeps the authored Necropolis across seeds")
 	_check(SurvivalStrata.maze(42, 3) == SurvivalStrata.maze(42, 3), "Maze is deterministic per seed")
 	_check(str(SurvivalStrata.layout(42, 1)) == str(SurvivalStrata.layout(42, 1)), "Layout is deterministic per seed")
 

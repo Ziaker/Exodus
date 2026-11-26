@@ -479,13 +479,13 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 	# Creator 2026-11-23: magic = same formula with MAK/MEF; IGNI is normal (x1) for
 	# everyone until elemental affinities exist. ATK stages raise physical ATK only.
 	var affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL if magic else defender.affinity
-	var defence_stat: int = defender.stats.mef if magic else defender.stats.defense
+	var defence_stat: int = defender.stats.mef if magic else defender.effective_def()
 	var pierce := float(_hit_mods.get("pierce", 0.0))
 	if pierce > 0.0:
 		defence_stat = maxi(1, int(round(float(defence_stat) * (1.0 - pierce))))
 	var result: Dictionary
 	if bool(_hit_mods.get("prayer_base", false)):
-		# D-107 CHERAV: the prayer formula (10 + MAK - MEF), like Ra'am.
+		# D-107 CHEREV (id &"cherav"): the prayer formula (10 + MAK - MEF), like Ra'am.
 		result = PrayerBook.raam_damage(0, attacker.stats.mak, attacker.stats.agi, defender.stats.mef,
 			attacker.current_sp, defender.current_sp, affinity, defender.race, rng)
 	else:
@@ -501,6 +501,7 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 	SkillFx.consume_attack(attacker)
 
 	var applied := defender.take_damage(amount)
+	attacker.last_damage_dealt = applied
 	# Press Turn applies to a landed hit, not to a miss or a perfect dodge.
 	attacker.grant_acts(BattleMath.press_turn_acts(affinity))
 	if bool(result.crit):

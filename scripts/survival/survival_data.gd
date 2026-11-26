@@ -471,7 +471,7 @@ static func demon_by_id(id: String) -> Dictionary:
 
 ## D-107 (criador 2026-11-25): em cada estrato há 1 grupo só de humanos ("humanos normais, sem lore
 ## nem nada"). Humanos não se juntam a mazikim, rezam com PP como a Yoch (sem EN), usam PRAY, SANVERIM,
-## NECHAMAH e CHERAV e NÃO podem ser absorvidos. Arte: o modelo de NPC humano do jogo (P15).
+## NECHAMAH e CHEREV (id interno cherav) e NÃO podem ser absorvidos. Arte: o modelo de NPC humano do jogo (P15).
 const HUMAN_COUNT := 3
 ## Modelos de NPC humano do jogo (SMT VX, Pictures): P15 é o "[PLACEHOLDER] HUMAN" do teste de dungeon,
 ## P10 a mulher de uniforme azul e P19 o homem de terno vermelho. Só mazikim são silhuetas: humanos usam a

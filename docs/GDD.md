@@ -3232,7 +3232,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   absorvíveis``, as rezas da Yoch ``não mudam``, arte = ``modelo de NPC humano`` do jogo (P15, depois P10 e P19 para variar) e, por correção do criador, ``só maziks são silhuetas``: humanos usam a arte colorida e não têm sombra no chão. As 3
   rezas foram desenhadas pelo criador: **SANVERIM** (2 PP) cegueira de luz até o fim do próximo round,
   o alvo erra mais (zona de acerto menor); **NECHAMAH** (1 PP) cura 5 HP por round durante 3 rounds,
-  como o oposto da queimadura (acumula); **CHERAV** (3 PP) dano em área, um corte de luz, 10 + MAK −
+  como o oposto da queimadura (acumula); **CHEREV** (3 PP; grafado inicialmente CHERAV, corrigido para a transliteração de חֶרֶב, id interno `cherav`) dano em área, um corte de luz, 10 + MAK −
   MEF (a fórmula do Ra'am) em todos os heróis. Nomes aprovados pelo criador. Os humanos usam também
   PRAY (+1 PP, +2 SP, 1 ato). **Escolhas do agente, aguardando o criador:** 3 humanos por grupo, todos
   com as 3 rezas, atributos = SP esperado do estrato repartido (HP 38%, MAK 16%, ATK/DEF/AGI 12%, MEF
@@ -3243,3 +3243,16 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   `battle_unit.gd`, `battle_math.gd`, `battle_controller.gd`, `playable_controller.gd`,
   `survival_battle.gd`, `survival_data.gd`, `survival_strata.gd`, `survival_state.gd`,
   `survival_meta.gd`, `tests/verify_human_groups.gd`; `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
+
+- **D-112 · 2026-11-26 (decisão do criador) — cinco novas rezas em hebraico.**
+  O criador aprovou e especificou 5 novas rezas para o sistema de Reza (D-048 / D-107 / D-111):
+  - **Tahorah** (`טָהֳרָה`, 2 PP / 1 ACT): limpa condições negativas (queimaduras, sangramentos e debuffs) de um aliado.
+  - **Magen** (`מָגֵן`, 2 PP / 2 ACT): aumenta a defesa física de todos os aliados em +1 estágio (+25% DEF física) até o fim do próximo round.
+  - **Gevurah** (`גְּבוּרָה`, 1 PP / 1 ACT): aumenta o dano do próximo ataque do aliado escolhido em 15% + 5% por PP extra alocado.
+  - **Mishpat** (`מִשְׁפָּט`, 2 PP / 2 ACT): causa dano em um inimigo igual ao dano que ele causou em sua última ação + 15.
+  - **Zohar** (`זֹהַר`, 3 PP / 1 ACT): alarga a zona POINT da barra de ritmo de um aliado até o fim do próximo round (contraponto ao Sanverim).
+  **Implementado** no catálogo canônico `PrayerBook`, `prayer_flow.gd`, `pray_fx.gd`, `battle_unit.gd`, `skill_fx.gd`, `battle_math.gd`, `battle_controller.gd`, `playable_controller.gd` e no pool humano de `survival_allies.gd` (as 3 rezas iniciais do Yoch na campanha continuam `Refuah`, `Haganah` e `Ra'am`). **VFX 100% letras aprovados pelo criador (2026-11-26) e implementados em `pray_fx.gd`** (removidos círculos, arcos, polylines e bordas geométricas de todos os efeitos de reza, inclusive Ra'am e Haganah): Tahorah (fileira horizontal de letras + `טהרה` subindo e convertendo glifos vermelhos em `#f5f58c`), Magen (grade descendente com `מגן` + marca persistente `מ` pulsando), Gevurah (colapso espiral + anel formado puramente por 16 letras + marca `ג` vibrando), Mishpat (letras vermelhas de retribuição em arco até o alvo + paredes de letras fechando com `משפט`, impact frame, shake e queda até o chão) e Zohar (`זוהר` abrindo em dois feixes horizontais + marca `ז`). Cobertura: `tests/verify_new_prayers.gd`.
+  **Escolhas do agente, aguardando o criador:** multiplicador da zona POINT do Zohar (`×1,5`, limitado a 90% de `BEAM_HALF_WIDTH`), estágio de DEF física do Magen igual ao estágio de ATK (`+25%`), Tahorah focado em limpar condições negativas de 1 aliado (não dissipa buffs inimigos ainda), Mishpat como dano direto sem barra de ritmo/reação inimiga/exceção contra anjos.
+
+- **D-113 · 2026-11-26 (decisão do criador) — regra obrigatória de VFX de letras hebraicas para todas as rezas.**
+  Todos os efeitos de reza do jogo (atuais e futuros, campanha e Survival, heróis e inimigos humanos) devem **obrigatoriamente** possuir efeitos visuais compostos por letras hebraicas (`scripts/battle/pray_fx.gd`), sem geometria estrangeira substituindo os glifos, e com marca hebraica persistente sempre que a reza mantiver estado ativo por rodadas ou até a próxima ação. Documento dedicado com princípios, tabela de cobertura das 11 rezas atuais e critério de aceitação: `docs/PRAYER_VFX_RULE.md`. Impacto: `docs/PRAYER_VFX_RULE.md`, `docs/DECISIONS.md`, `docs/GDD.md`, `scripts/battle/pray_fx.gd`.

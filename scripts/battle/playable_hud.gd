@@ -42,11 +42,16 @@ const LOG_BACKGROUND := WINDOW_FILL
 ## The scene is not covered by a footer any more (the windows are translucent).
 const SCENE_BOTTOM := 416.0
 const STATUS_RECTS := [Rect2(16.0 / 3.0, 364, 586.0 / 3.0, 44), Rect2(206, 364, 586.0 / 3.0, 44)]
-const COMMAND_RECT := Rect2(1220.0 / 3.0, 364, 132, 44)
-## Commands: 3 columns (plan, command, reaction); long lists (skills, prayers) use one
-## column and the window grows upwards.
-const COMMAND_COLUMNS := 3
-const COMMAND_ROW := 38.0 / 3.0
+## D-111 (creator 2026-11-26, Survival): with 3 heroes the 3 windows share the width of the 2
+## ("3 estreitos").
+const NARROW_PANEL_LIMIT := 160.0
+## Creator 2026-11-26: the choice menu is one vertical column right above the log
+## (left edge on the log's); COMMAND_RECT is its bottom anchor (height 0) and the
+## window grows upwards from it, whatever the number of rows.
+const COMMAND_RECT := Rect2(16.0 / 3.0, 300.0 - 3.0, 132, 0)
+const COMMAND_COLUMNS := 1
+const COMMAND_NARROW_WIDTH := 64.0
+const COMMAND_ROW := 11.0
 const COMMAND_PX := 9
 ## Cursor "›" at the cell's left edge, the label right after it (ABSORB bold fits).
 const MENU_TEXT_X := 4.5
@@ -234,7 +239,10 @@ func set_opponent_sprites(paths: Array[String]) -> void:
 			image.convert(Image.FORMAT_RGBA8)
 		var w := image.get_width()
 		var h := image.get_height()
-		var interior: Image = image.get_region(Rect2i(2, 2, maxi(1, w - 4), maxi(1, h - 4))) if w > 8 and h > 8 else image.duplicate() as Image
+		# Figuras já recortadas (PNG com alfa, como os humanos) não têm moldura de VX: cortar 2 px da
+		# borda e as linhas largas da base comia os pés (criador 2026-11-26).
+		var framed := image.get_pixel(0, 0).a > 0.15 or image.get_pixel(w - 1, h - 1).a > 0.15
+		var interior: Image = image.get_region(Rect2i(2, 2, maxi(1, w - 4), maxi(1, h - 4))) if (framed and w > 8 and h > 8) else image.duplicate() as Image
 		_strip_opaque_bg(interior)
 		var used: Rect2i = interior.get_used_rect()
 		if used.size.x <= 0 or used.size.y <= 0:
@@ -243,7 +251,8 @@ func set_opponent_sprites(paths: Array[String]) -> void:
 		var sil: Image = make_silhouette(cropped)
 		# VX battlers trazem uma moldura fina na borda: sem removê-la o crop
 		# inclui dezenas de linhas vazias abaixo do demônio e a sombra descola.
-		strip_frame_lines(sil)
+		if framed:
+			strip_frame_lines(sil)
 		var visible := alpha_used_rect(sil)
 		if visible.size.x > 0 and visible.size.y > 0:
 			cropped = cropped.get_region(visible)
@@ -411,12 +420,12 @@ func mark_targets() -> Dictionary:
 	if sel >= 0:
 		result["enemy:%d" % sel] = enemy_mark_rect(sel)
 	if mode == "target" and battle.target_side == "player" and target >= 0 and target < players.size():
-		result["player:%d" % target] = STATUS_RECTS[target]
+		result["player:%d" % target] = status_rect(target)
 	var chosen: BattleUnit = null
 	if battle.in_reaction: chosen = battle.reaction_defender
 	elif mode in ["react", "announce"] or (mode == "timing" and battle.timing_role == "DEFEND"): chosen = battle.action_defender
 	if chosen != null and players.has(chosen):
-		result["player:%d" % players.find(chosen)] = STATUS_RECTS[players.find(chosen)]
+		result["player:%d" % players.find(chosen)] = status_rect(players.find(chosen))
 	return result
 
 
@@ -723,7 +732,7 @@ func _draw() -> void:
 	_announcement()
 	_log_line()
 	for who in players.size():
-		_character(who, STATUS_RECTS[who])
+		_character(who, status_rect(who))
 	_menu()
 	if mode in ["timing", "counter", "absorb", "continue", "announce", "turn", "result"]:
 		hitboxes.append({"rect": Rect2(Vector2.ZERO, SCREEN), "key": "live-confirm"})
@@ -927,8 +936,8 @@ func _enemy(_x: float, index: int) -> void:
 	if unit.race == &"human":
 		# D-107 (creator 2026-11-25): only mazikim are silhouettes; a human is drawn with its own
 		# colours and has no ground shadow.
-		var colour: Texture2D = battler_textures[index % battler_textures.size()]
-		draw_texture_rect_region(colour, art, Rect2(Vector2.ZERO, colour.get_size()), Color.WHITE)
+		# Criador 2026-11-26: humano = silhueta preta como a dos mazikim, mas sem sombra no chão.
+		draw_texture_rect_region(texture, art, region, Color.BLACK)
 	else:
 		# Ground shadow from the HTML silhouettes (ellipse rx 44 ry 6 at 111/119), filled black.
 		var k := SPRITE_BOX.x / 112.0
@@ -1224,7 +1233,7 @@ func track_sp() -> void:
 		elif hero:
 			# A hero's loss leaves from the top edge of the log above its window (like the role
 			# arrows, D-059) so the letter never runs across the log's text.
-			var r: Rect2 = STATUS_RECTS[mini(players.find(unit), STATUS_RECTS.size() - 1)]
+			var r: Rect2 = status_rect(maxi(0, players.find(unit)))
 			origin = Vector2(r.get_center().x, BATTLE_LOG_RECT.position.y - 2.0)
 		else:
 			var art := enemy_sprite_rect(opponents.find(unit))
@@ -1476,6 +1485,17 @@ func _window(r: Rect2, fill: Color, border: Color) -> void:
 	draw_rect(Rect2(r.position + Vector2(0.5, 0.5), r.size - Vector2.ONE), border, false, 1)
 
 
+## The window of hero `i`: the two windows of the base battle, or 3 narrower ones (D-111).
+func status_rect(i: int) -> Rect2:
+	if players.size() >= 3:
+		var first: Rect2 = STATUS_RECTS[0]
+		var second: Rect2 = STATUS_RECTS[1]
+		var gap := second.position.x - first.end.x
+		var w := (second.end.x - first.position.x - gap * 2.0) / 3.0
+		return Rect2(first.position.x + clampi(i, 0, 2) * (w + gap), first.position.y, w, first.size.y)
+	return STATUS_RECTS[clampi(i, 0, STATUS_RECTS.size() - 1)]
+
+
 func _character(who: int, r: Rect2) -> void:
 	if who >= players.size(): return
 	var unit := players[who]
@@ -1514,12 +1534,14 @@ func _character(who: int, r: Rect2) -> void:
 	var pip_gap := 2.0
 	var pips_left := right - 4 * pip_w - 3 * pip_gap
 	var act_right := pips_left - 16.0 / 3.0
-	var act_text := "ACT %d/4" % unit.acts_available
+	# D-111: a narrow window (3 heroes) keeps the four pips but drops the "ACT n/4" text.
+	var narrow := r.size.x < NARROW_PANEL_LIMIT
+	var act_text := "" if narrow else "ACT %d/4" % unit.acts_available
 	var sp_text := "SP %d" % unit.current_sp
 	var name_limit := right - name_x
 	if not down:
 		# Nome, SP e ACT dividem a mesma linha: o nome encolhe antes de colidir.
-		name_limit = act_right - _width(act_text, 9) - SP_ACT_GAP - _width(sp_text, 9) - 32.0 / 3.0 - name_x
+		name_limit = act_right - _width(act_text, 9) - (0.0 if narrow else SP_ACT_GAP) - _width(sp_text, 9) - (6.0 if narrow else 32.0 / 3.0) - name_x
 	var label := unit.display_name + (" [DOWN]" if down else "")
 	_str(label, name_x, top_line,
 			Color("ede7e1") if down else Color.WHITE,
@@ -1541,10 +1563,11 @@ func _character(who: int, r: Rect2) -> void:
 				draw_rect(pip, fill)
 			else:
 				draw_rect(Rect2(pip.position + Vector2(0.5, 0.5), pip.size - Vector2.ONE), Color(1, 1, 1, 0.66), false, 1)
-		_str(act_text, act_right, top_line, Color.WHITE, 9, true, HORIZONTAL_ALIGNMENT_RIGHT)
+		if not narrow:
+			_str(act_text, act_right, top_line, Color.WHITE, 9, true, HORIZONTAL_ALIGNMENT_RIGHT)
 		# stat-gain: .65s steps(4) — opacity 1, .55, 1, .55 then back to 1.
 		var sp_alpha: float = _keyframes(seen.sp_age, 0.65, [0.0, 0.25, 0.5, 0.7, 1.0], [1.0, 0.55, 1.0, 0.55, 1.0], 4)
-		_str(sp_text, act_right - _width(act_text, 9) - SP_ACT_GAP, top_line,
+		_str(sp_text, act_right - (0.0 if narrow else _width(act_text, 9) + SP_ACT_GAP), top_line,
 				Color(GREEN_TEXT, sp_alpha), 9, true, HORIZONTAL_ALIGNMENT_RIGHT)
 	var vitals_alpha := 0.58 if defending else 1.0
 	var bottom_line := r.position.y + 35
@@ -1610,14 +1633,17 @@ func _menu_rows() -> Array[String]:
 ## window; long lists (skills, prayers, extra EN) use one column and the window grows
 ## upwards from the same bottom edge.
 func menu_columns() -> int:
-	return COMMAND_COLUMNS if mode in ["plan", "command", "react", "target"] else 1
+	return COMMAND_COLUMNS
 
 
 func menu_rect(count: int) -> Rect2:
 	var r := COMMAND_RECT
 	var columns := menu_columns()
 	var rows := ceili(float(count) / columns)
-	var height := maxf(r.size.y, rows * COMMAND_ROW + 6.0)
+	var height := rows * COMMAND_ROW + 6.0
+	# Creator 2026-11-26: short menus stay compact; long labels (skills, prayers, items) keep the wide window.
+	if mode in ["plan", "command", "react", "target"]:
+		return Rect2(r.position.x, r.position.y - height, COMMAND_NARROW_WIDTH, height)
 	return Rect2(r.position.x, r.end.y - height, r.size.x, height)
 
 
@@ -1732,6 +1758,9 @@ func _input(event: InputEvent) -> void:
 				battle.exec_plan()
 			else:
 				battle.handle_back()
+		elif mode in ["party", "offer"] and battle.has_method("overlay_key"):
+			# D-111 (Survival): the PARTY panel and the join offer read their own arrows.
+			battle.overlay_key(event.keycode)
 		elif mode == "absorb_choice" and event.keycode in [KEY_LEFT, KEY_UP]:
 			if battle.has_method("move_absorb_cursor"):
 				battle.move_absorb_cursor(-1)

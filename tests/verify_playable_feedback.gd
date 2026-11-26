@@ -52,7 +52,7 @@ func _run() -> void:
 		if not (String(hit.key).begins_with("live-command:") or String(hit.key).begins_with("live-plan:")): continue
 		rows += 1
 		check(not hit.rect.intersects(battle.hud.BATTLE_LOG_RECT), "Battle log must not cover any command cell")
-		check(battle.hud.COMMAND_RECT.encloses(hit.rect), "Every command cell must stay inside the command window")
+		check(battle.hud.menu_rect(battle.hud._menu_rows().size()).encloses(hit.rect), "Every command cell must stay inside the command window")
 		check(hit.rect.end.y <= battle.hud.SCREEN.y, "Every command must fit inside the screen")
 		for who in battle.hud.STATUS_RECTS:
 			check(not hit.rect.intersects(who), "Commands must not cover either character's status")

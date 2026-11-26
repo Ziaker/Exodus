@@ -15,6 +15,10 @@ const SLEEP_ID := &"sleep"
 const MEND_HEAL := 5             # NECHAMAH: HP per mend per round (the opposite of a burn)
 const MEND_ROUNDS := 3
 const BLIND_ROUNDS := 2          # SANVERIM: until the end of the next round
+const MAGEN_ROUNDS := 2          # D-112 MAGEN: +1 physical DEF stage until the end of the next round
+const ZOHAR_ROUNDS := 2          # D-112 ZOHAR: wider POINT zone until the end of the next round
+## Negative statuses cleared by Tahorah (D-112). Positive buffs (taunt, zohar, etc.) are preserved.
+const NEGATIVE_STATUSES: Array[StringName] = [&"blind", &"chill", &"weaken", &"mark", &"snare", &"break", &"sleep", &"slow"]
 
 ## Statuses that only change a stat (restored when they end).
 const STAT_STATUSES := [&"snare", &"break", &"berserk"]
@@ -30,18 +34,21 @@ static func apply_status(target: BattleUnit, id: StringName, rounds: int) -> voi
 	target.add_status(id, rounds, mod)
 
 
-## Multiplier on the damage of a hit by `attacker` (CHILL, WEAKEN).
+## Multiplier on the damage of a hit by `attacker` (CHILL, WEAKEN, D-112 GEVURAH).
 static func out_mult(attacker: BattleUnit) -> float:
 	var m := 1.0
 	if attacker.has_status(&"chill"): m *= CHILL_MULT
 	if attacker.has_status(&"weaken"): m *= WEAKEN_MULT
+	if attacker.gevurah_bonus > 0.0: m *= 1.0 + attacker.gevurah_bonus
 	return m
 
 
-## CHILL ends with the first attack it weakens.
+## CHILL and GEVURAH end with the first attack they modify.
 static func consume_attack(attacker: BattleUnit) -> void:
 	if attacker.has_status(&"chill"):
 		attacker.remove_status(&"chill")
+	if attacker.gevurah_bonus > 0.0:
+		attacker.gevurah_bonus = 0.0
 
 
 ## Multiplier on a hit that lands on `defender` (MARK, consumed by the hit).
@@ -75,6 +82,10 @@ static func tick(unit: BattleUnit) -> Dictionary:
 		unit.regen_rounds -= 1
 		if unit.regen_rounds <= 0:
 			unit.regen_amount = 0
+	for i in range(unit.def_stages.size() - 1, -1, -1):
+		unit.def_stages[i] -= 1
+		if unit.def_stages[i] <= 0:
+			unit.def_stages.remove_at(i)
 	for id in unit.statuses.keys():
 		unit.statuses[id].rounds = int(unit.statuses[id].rounds) - 1
 		if int(unit.statuses[id].rounds) <= 0:
@@ -86,6 +97,19 @@ static func tick(unit: BattleUnit) -> Dictionary:
 static func cleanse(unit: BattleUnit) -> void:
 	unit.burns.clear()
 	unit.bleeds.clear()
+
+
+## D-112 TAHORAH: clears burns, bleeds, and all negative statuses from one ally.
+## Returns the total number of conditions removed.
+static func cleanse_all(unit: BattleUnit) -> int:
+	var removed := unit.burns.size() + unit.bleeds.size()
+	unit.burns.clear()
+	unit.bleeds.clear()
+	for id in NEGATIVE_STATUSES:
+		if unit.has_status(id):
+			unit.remove_status(id)
+			removed += 1
+	return removed
 
 
 ## TAUNT: when a taunting unit is among the candidates, only it can be attacked.

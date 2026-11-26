@@ -56,7 +56,7 @@ func can_continue(unit: BattleUnit, details: Array) -> bool:
 	if unit == null or not unit.prays or projected_pp(details) < 1:
 		return false
 	for detail in details:
-		if _is_spell(detail):
+		if _is_spell(detail) and PrayerBook.accepts_extra_pp(StringName((detail as Dictionary).pray)):
 			return true
 	return false
 
@@ -129,7 +129,7 @@ func projected_pp(details: Array) -> int:
 func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 	while true:
 		var avail := projected_pp(details)
-		_build_menu(avail, details, acts_left)
+		_build_menu(avail, details, acts_left, unit)
 		if menu_rows.is_empty():
 			_say("No act left and no queued spell to raise.")
 			return {}
@@ -138,17 +138,20 @@ func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 			return {}
 		if pick == PrayerBook.PRAY:
 			return {"pray": PrayerBook.PRAY}
-		var side := "enemy" if PrayerBook.targets_enemy(pick) else "player"
-		var target: BattleUnit = await battle._wait_target(side)
-		if target == null:
-			continue
+		var target: BattleUnit = unit
+		if not PrayerBook.targets_allies(pick) and not PrayerBook.targets_enemies(pick):
+			var side := "enemy" if PrayerBook.targets_enemy(pick) else "player"
+			target = await battle._wait_target(side)
+			if target == null:
+				continue
 		# Creator 2026-11-23: the same spell on the same target = +1 PP on it (no act);
-		# another target = a new cast.
+		# another target = a new cast. Only spells with extra PP scaling (Refuah, Ra'am, Gevurah).
 		var same := -1
-		for i in details.size():
-			var d: Dictionary = details[i]
-			if d.has("pray") and StringName(d.pray) == pick and d.get("target") == target:
-				same = i
+		if PrayerBook.accepts_extra_pp(pick):
+			for i in details.size():
+				var d: Dictionary = details[i]
+				if d.has("pray") and StringName(d.pray) == pick and d.get("target") == target:
+					same = i
 		if same >= 0:
 			if not bool(PrayerBook.simulate(_plan_start_pp, _queue(details, same, 1)).ok):
 				_say("Not enough PP for +1 on %s." % PrayerBook.spell_name(pick))
@@ -159,19 +162,26 @@ func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 			_say("%s on %s: +1 PP (%d PP in total)." % [PrayerBook.spell_name(pick),
 				target.display_name, _cost(details[same])])
 			return {"allocated": true}
-		if acts_left <= 0:
-			_say("No act left for a new cast; pick a queued spell and target for +1 PP.")
+		var acts_needed := PrayerBook.act_cost(pick)
+		if acts_left < acts_needed:
+			_say("Need %d ACT for %s." % [acts_needed, PrayerBook.spell_name(pick)])
 			continue
 		var entry := {"spell": pick, "cost": PrayerBook.base_cost(pick)}
 		if not bool(PrayerBook.simulate(_plan_start_pp, _queue(details, -1, 0, entry)).ok):
 			_say("Not enough PP for %s." % PrayerBook.spell_name(pick))
 			continue
-		_say("%s queued on %s: %d PP." % [PrayerBook.spell_name(pick), target.display_name, PrayerBook.base_cost(pick)])
+		if PrayerBook.targets_allies(pick):
+			_say("%s queued on all allies: %d PP." % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
+		elif PrayerBook.targets_enemies(pick):
+			_say("%s queued on all foes: %d PP." % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
+		else:
+			_say("%s queued on %s: %d PP." % [PrayerBook.spell_name(pick), target.display_name, PrayerBook.base_cost(pick)])
 		return {"pray": pick, "target": target, "extra": 0, "paid": 0, "owed": 0}
 	return {}
 
 
-func _build_menu(avail: int, details: Array, acts_left: int) -> void:
+## D-111: a unit with the "spells" meta (Survival human allies) only lists the spells it knows.
+func _build_menu(avail: int, details: Array, acts_left: int, unit: BattleUnit = null) -> void:
 	menu_rows.clear()
 	menu_ids.clear()
 	menu_info.clear()
@@ -179,17 +189,27 @@ func _build_menu(avail: int, details: Array, acts_left: int) -> void:
 		menu_rows.append("PRAY  +1 PP")
 		menu_ids.append(PrayerBook.PRAY)
 		menu_info.append("PRAY 1 ACT: +1 PP (max %d)." % PrayerBook.MAX_PP)
-	for id in PrayerBook.SPELL_ORDER:
+	var has_meta := unit != null and unit.has_meta("spells")
+	var known: Array = unit.get_meta("spells") as Array if has_meta else []
+	var order: Array[StringName] = PrayerBook.ALL_BOOK_ORDER if has_meta else PrayerBook.SPELL_ORDER
+	for id in order:
+		if has_meta and not known.has(String(id)):
+			continue
 		var queued := false
 		for d in details:
 			if (d as Dictionary).get("pray", &"") == id:
 				queued = true
-		var castable := acts_left > 0 and PrayerBook.base_cost(id) <= avail
-		var allocatable := queued and avail >= 1
+		var acts_needed := PrayerBook.act_cost(id)
+		var castable := acts_left >= acts_needed and PrayerBook.base_cost(id) <= avail
+		var allocatable := queued and avail >= 1 and PrayerBook.accepts_extra_pp(id)
 		if castable or allocatable:
-			menu_rows.append("%s  %d PP" % [PrayerBook.spell_name(id), PrayerBook.base_cost(id)])
+			var label := "%s  %d PP" % [PrayerBook.spell_name(id), PrayerBook.base_cost(id)]
+			if acts_needed > 1:
+				label += " / %d ACT" % acts_needed
+			menu_rows.append(label)
 			menu_ids.append(id)
-			menu_info.append(String(PrayerBook.spell(id).info) + (" | queued: same target = +1 PP" if queued else ""))
+			var extra_hint := " | queued: same target = +1 PP" if (queued and PrayerBook.accepts_extra_pp(id)) else ""
+			menu_info.append(String(PrayerBook.spell(id).info) + extra_hint)
 
 
 func _wait_menu(feedback: String) -> StringName:
@@ -235,17 +255,38 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 		d = await _reaction_pick(unit)
 		if d.is_empty():
 			return false
-	if not unit.spend_act():
+	var id := StringName(d.pray)
+	var acts_needed := PrayerBook.act_cost(id)
+	if unit.acts_available < acts_needed:
 		_release(unit, d, "no act left")
 		return true
+	for _a in acts_needed:
+		unit.spend_act()
 	d["done"] = true
-	var id := StringName(d.pray)
 	var hud: Control = battle.hud
 	battle.action_attacker = unit
 	battle.action_defender = d.get("target", unit)
 	battle.phase_text = ("REACTION " if reacting else "") + ("PRAY" if id == PrayerBook.PRAY else PrayerBook.spell_name(id).to_upper())
 	if id == PrayerBook.PRAY:
 		await _pray(unit, reacting)
+	elif id == PrayerBook.MAGEN:
+		var allies: Array = battle._allies_of(unit)
+		for ally in allies:
+			(ally as BattleUnit).def_stages.append(SkillFx.MAGEN_ROUNDS)
+		fx.play_magen(allies)
+		_log("%s prays Magen: all allies +1 DEF stage until the end of the next round (%d PP)." % [unit.display_name, _cost(d)])
+		_event("%s prays Magen: allies' DEF rises." % battle.short_name(unit))
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	elif id == PrayerBook.CHEREV:
+		var foes: Array[BattleUnit] = []
+		for foe in battle.hud.opponents.duplicate():
+			if (foe as BattleUnit).is_alive():
+				foes.append(foe)
+		if foes.is_empty():
+			_release(unit, d, "no foe left")
+		else:
+			await _cherev(unit, foes, d, reacting)
 	else:
 		var target: BattleUnit = d.target
 		if not target.is_alive():
@@ -255,7 +296,7 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			await _raam(unit, target, d, reacting)
 		elif id == PrayerBook.REFUAH:
 			var healed := target.heal(PrayerBook.refuah_heal(int(d.extra)))
-			fx.cast(target)
+			fx.play_refuah(target, int(d.extra))
 			_log("%s prays Refuah on %s: +%d HP (%d PP)." % [unit.display_name, target.display_name, healed, _cost(d)])
 			_event("%s prays Refuah on %s: +%d HP." % [battle.short_name(unit), battle.short_name(target), healed])
 			hud.feedback = "%s: HP %d/%d | PP %d/%d" % [battle.short_name(target), target.current_hp,
@@ -267,7 +308,50 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			_log("%s prays Haganah on %s: shielded from status conditions for one round (%d PP)." % [
 				unit.display_name, target.display_name, _cost(d)])
 			_event("%s prays Haganah on %s." % [battle.short_name(unit), battle.short_name(target)])
-		if reacting and id in [PrayerBook.REFUAH, PrayerBook.HAGANAH]:
+		elif id == PrayerBook.TAHORAH:
+			var cleared := SkillFx.cleanse_all(target)
+			fx.play_tahorah(target)
+			_log("%s prays Tahorah on %s: %d condition(s) cleansed (%d PP)." % [unit.display_name, target.display_name, cleared, _cost(d)])
+			_event("%s prays Tahorah on %s." % [battle.short_name(unit), battle.short_name(target)])
+		elif id == PrayerBook.GEVURAH:
+			var bonus := PrayerBook.gevurah_bonus(int(d.extra))
+			target.gevurah_bonus = maxf(target.gevurah_bonus, bonus)
+			fx.play_gevurah(target)
+			var pct := int(round(bonus * 100.0))
+			_log("%s prays Gevurah on %s: next attack +%d%% damage (%d PP)." % [unit.display_name, target.display_name, pct, _cost(d)])
+			_event("%s prays Gevurah on %s (+%d%%)." % [battle.short_name(unit), battle.short_name(target), pct])
+		elif id == PrayerBook.MISHPAT:
+			await fx.play_mishpat(unit, target)
+			if not battle.is_inside_tree() or not target.is_alive():
+				return true
+			var dmg := PrayerBook.mishpat_damage(target.last_damage_dealt)
+			var applied := target.take_damage(dmg)
+			unit.last_damage_dealt = applied
+			battle.fx.play("RAAM", target, applied, unit)
+			_log("%s prays Mishpat on %s: %d damage (last dealt %d + 15, %d PP)." % [
+				unit.display_name, target.display_name, applied, target.last_damage_dealt, _cost(d)])
+			_event("Mishpat strikes %s: %d damage." % [battle.short_name(target), applied])
+			if not target.is_alive():
+				_event("%s is down." % battle.short_name(target))
+		elif id == PrayerBook.ZOHAR:
+			SkillFx.apply_status(target, &"zohar", SkillFx.ZOHAR_ROUNDS)
+			fx.play_zohar(target)
+			_log("%s prays Zohar on %s: POINT zone widened until the end of the next round (%d PP)." % [
+				unit.display_name, target.display_name, _cost(d)])
+			_event("%s prays Zohar on %s." % [battle.short_name(unit), battle.short_name(target)])
+		elif id == PrayerBook.SANVERIM:
+			SkillFx.apply_status(target, &"blind", SkillFx.BLIND_ROUNDS)
+			fx.play_sanverim(target)
+			_log("%s prays Sanverim on %s: blinded until the end of the next round (%d PP)." % [
+				unit.display_name, target.display_name, _cost(d)])
+			_event("%s prays Sanverim on %s." % [battle.short_name(unit), battle.short_name(target)])
+		elif id == PrayerBook.NECHAMAH:
+			target.mends.append(SkillFx.MEND_ROUNDS)
+			fx.play_nechamah(target, target.mends.size())
+			_log("%s prays Nechamah on %s: +%d HP per round for %d rounds (%d PP)." % [
+				unit.display_name, target.display_name, SkillFx.MEND_HEAL, SkillFx.MEND_ROUNDS, _cost(d)])
+			_event("%s prays Nechamah on %s." % [battle.short_name(unit), battle.short_name(target)])
+		if reacting and id in [PrayerBook.REFUAH, PrayerBook.HAGANAH, PrayerBook.TAHORAH, PrayerBook.GEVURAH, PrayerBook.MISHPAT, PrayerBook.ZOHAR, PrayerBook.SANVERIM, PrayerBook.NECHAMAH]:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	save(unit)
 	battle._refresh_all()
@@ -277,15 +361,17 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 func _reaction_pick(unit: BattleUnit) -> Dictionary:
 	_plan_start_pp = unit.current_pp
 	while true:
-		_build_menu(unit.current_pp, [], 1)
+		_build_menu(unit.current_pp, [], unit.acts_available, unit)
 		var pick := await _wait_menu("PRAY  %d PP | Z: confirm | X: back" % unit.current_pp)
 		if pick == &"":
 			return {}
 		if pick == PrayerBook.PRAY:
 			return {"pray": PrayerBook.PRAY}
-		var target: BattleUnit = await battle._wait_target("enemy" if PrayerBook.targets_enemy(pick) else "player")
-		if target == null:
-			continue
+		var target: BattleUnit = unit
+		if not PrayerBook.targets_allies(pick) and not PrayerBook.targets_enemies(pick):
+			target = await battle._wait_target("enemy" if PrayerBook.targets_enemy(pick) else "player")
+			if target == null:
+				continue
 		var cost := PrayerBook.base_cost(pick)
 		unit.change_pp(-cost)
 		battle._refresh_all()
@@ -352,6 +438,69 @@ func _settle_owed(unit: BattleUnit) -> String:
 		if pay > 0:
 			note += ", %d to the queued %s" % [pay, PrayerBook.spell_name(StringName(d.pray))]
 	return note
+
+
+## D-107 / D-109 Cherev (ally cast): uses the rhythm bar like Ra'am and enemy Cherev,
+## then slices every living foe with the prayer formula (10 + MAK - MEF).
+func _cherev(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting: bool) -> void:
+	_log("%s prays Cherev on all foes (%d PP)." % [unit.display_name, _cost(d)])
+	if not reacting:
+		battle._clear_roles()
+	battle._set_role(unit, "REACT" if reacting else "ATTACK")
+	for foe in foes:
+		battle._set_role(foe, "TARGET")
+	_event("%s prays Cherev!" % battle.short_name(unit))
+	var marks: Array[float] = [0.5]
+	var attack: Array[int] = await battle._skill_attack_timing(unit, foes[0], marks, false)
+	await fx.play_cherev(true)
+	if not battle.is_inside_tree():
+		return
+	var gained_react_sp := false
+	for foe in foes:
+		if not foe.is_alive():
+			continue
+		var defense: Array[int] = await battle._skill_defense_timing(foe, unit, marks, false)
+		battle.action_attacker = unit
+		battle.action_defender = foe
+		battle.attack_result = attack[0]
+		battle.defense_result = defense[0]
+		if not BattleMath.has_contact(attack[0], defense[0]):
+			if defense[0] != BattleMath.RhythmResult.MISS:
+				battle._set_role(foe, "DEFEND")
+			_log("%s -> %s: 0 dmg (Cherev, NO CONTACT)" % [unit.display_name, foe.display_name])
+			_event("%s dodges." % battle.short_name(foe))
+			battle._present_strike(unit, foe, 0)
+			continue
+		var r := PrayerBook.raam_damage(0, unit.stats.mak, unit.stats.agi, foe.stats.mef,
+			unit.current_sp, foe.current_sp, foe.affinity, foe.race, battle.rng)
+		if bool(r.angel):
+			_log("%s -> %s: 0 dmg (Cherev has no effect on angels)" % [unit.display_name, foe.display_name])
+			_event("Cherev has no effect on %s." % battle.short_name(foe))
+			battle._present_strike(unit, foe, 0, true)
+			continue
+		var amount := BattleMath.scaled_damage(int(r.amount), attack[0], defense[0])
+		var beam := defense[0] == BattleMath.RhythmResult.BEAM
+		var applied := foe.take_damage(amount)
+		unit.last_damage_dealt = applied
+		unit.grant_acts(BattleMath.press_turn_acts(foe.affinity))
+		if bool(r.crit):
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+		if foe.affinity == BattleMath.Affinity.WEAK and applied > 0:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+		if reacting and not gained_react_sp:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+			gained_react_sp = true
+		if defense[0] != BattleMath.RhythmResult.MISS:
+			battle._set_role(foe, "DEFEND")
+		battle.fx.play("RAAM_BLOCK" if beam else "RAAM", foe, applied, unit)
+		_log("%s -> %s: %d dmg (Cherev, rhythm %s, def %s)" % [unit.display_name, foe.display_name, applied,
+			battle._rhythm_name(attack[0]), battle._rhythm_name(defense[0])])
+		if beam:
+			_event("%s blocks: %d damage." % [battle.short_name(foe), applied])
+		else:
+			_event("Cherev cuts %s: %d damage." % [battle.short_name(foe), applied])
+		if not foe.is_alive():
+			_event("%s is down." % battle.short_name(foe))
 
 
 ## Ra'am: the struck enemy may counter-attack it on the D-049 two rails (33%); otherwise
@@ -426,6 +575,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	amount = BattleMath.scaled_damage(amount, attack, defense)
 	var beam := defense == BattleMath.RhythmResult.BEAM
 	var applied := target.take_damage(amount)
+	unit.last_damage_dealt = applied
 	unit.grant_acts(BattleMath.press_turn_acts(target.affinity))
 	if bool(r.crit):
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)

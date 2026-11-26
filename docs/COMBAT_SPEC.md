@@ -1550,6 +1550,11 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 | **Refuah** | רְפוּאָה | Cura / Healing | 2 PP | Cura um alvo: **20 HP + 10 por PP extra**, valor **fixo**. |
 | **Haganah** | הֲגָנָה | Proteção / Protection | 2 PP | Escudo anti-condição de status em **um aliado** (inclusive Yoch) por **1 round inteiro** (do momento da conjuração até o mesmo ponto do round seguinte); desfaz-se quando o personagem receberia uma condição. |
 | **Ra'am** | רַעַם | Trovão / Thunder | 3 PP | **10 + 10 por PP extra** de dano em um alvo, como **base da fórmula mágica**. **Sem efeito contra anjos.** |
+| **Tahorah** *(D-112)* | טָהֳרָה | Pureza / Purity | 2 PP / 1 ACT | Limpa queimaduras, sangramentos e condições negativas de **um aliado**. |
+| **Magen** *(D-112)* | מָגֵן | Escudo / Shield | 2 PP / 2 ACT | **+1 estágio de DEF física** (+25%) para **todos os aliados** até o fim do próximo round. |
+| **Gevurah** *(D-112)* | גְּבוּרָה | Força / Might | 1 PP / 1 ACT | Próximo ataque do aliado escolhido causa **+15% + 5% por PP extra** de dano. |
+| **Mishpat** *(D-112)* | מִשְׁפָּט | Julgamento / Judgment | 2 PP / 2 ACT | Causa dano a **um inimigo** igual ao **dano que ele causou em sua última ação + 15**. |
+| **Zohar** *(D-112)* | זֹהַר | Esplendor / Radiance | 3 PP / 1 ACT | Alarga a zona **POINT** da barra de ritmo de **um aliado** até o fim do próximo round (`×1,5`, contraponto ao Sanverim). |
 
 - Exemplos com os números do criador: Refuah 3 PP = 30 HP; Ra'am 4 PP = base 20.
 - **Efeito visual do Ra'am (placeholder):** animação **Zio** (ジオ) do SMT VX The Genesis,

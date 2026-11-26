@@ -38,6 +38,12 @@ var regen_amount: int = 0
 var regen_rounds: int = 0
 ## D-107 NECHAMAH: remaining rounds of each mend (they stack, SkillFx.MEND_HEAL HP each per round).
 var mends: Array[int] = []
+## D-112 MAGEN: remaining rounds of each physical DEF stage (+25% physical DEF each).
+var def_stages: Array[int] = []
+## D-112 GEVURAH: damage bonus fraction on the next attack (0.15 + 0.05 per extra PP); consumed on attack.
+var gevurah_bonus: float = 0.0
+## D-112 MISHPAT: damage dealt by this unit in its last offensive action.
+var last_damage_dealt: int = 0
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 		player_side: bool, fallen: bool = false) -> void:
@@ -73,6 +79,11 @@ func change_pp(amount: int) -> int:
 ## ATK with the active stages applied (+25% per stage).
 func effective_atk() -> float:
 	return float(stats.atk) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(atk_stages.size()))
+
+
+## Physical DEF with active Magen stages applied (+25% per stage).
+func effective_def() -> int:
+	return maxi(1, int(round(float(stats.defense) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(def_stages.size())))))
 
 ## D-106: adds a status (a repeat refreshes it); `mod` changes a stat until it ends.
 func add_status(id: StringName, rounds: int, mod: Dictionary = {}) -> void:

@@ -29,8 +29,18 @@ var _survival_gameover := false
 var _result_recorded := false
 var suppress_scene_change := false
 var left_to_title := false
-## D-071: ganhos próprios da Yoch nesta luta (absorção pode fortalecê-la).
-var _yoch_gains: Dictionary = {}
+## D-111: aliados do grupo nesta luta (os caídos ficam fora) e o uid de cada um na run.
+var _members: Array[BattleUnit] = []
+var _member_uid: Dictionary = {}
+## D-111: aliados em AUTO (unit.id -> true): a IA dos inimigos age por eles, sem barra e sem reação.
+var _auto: Dictionary = {}
+## D-111: ficha de cada inimigo ao começar a luta (a oferta ao vencer entra "igual ao inimigo").
+var _foe_base: Dictionary = {}
+## D-111: luta-teste de um encontro do mapa (sem absorção e sem morte de verdade).
+var duel := false
+var duel_won := false
+## D-111: aliado em AUTO agindo agora (alvos escolhidos pela IA, nunca pelo jogador).
+var _auto_actor: BattleUnit = null
 ## D-069: intenção da primeira ação de cada inimigo na rodada (id -> dados).
 var intents: Dictionary = {}
 var _intent_round := -1
@@ -40,8 +50,8 @@ var _intent_layer: CanvasLayer
 var _intent_panel: Control
 ## Saque da vitória (relíquia de elite) para o log/testes.
 var loot_relic := ""
-## PP da Yoch salvo na run antes do bônus da ARK SHARD.
-var _saved_yoch_pp := 0
+## PP de cada aliado que reza, salvo na run antes do bônus da ARK SHARD (uid -> PP).
+var _saved_pp: Dictionary = {}
 
 
 func _init() -> void:
@@ -57,7 +67,6 @@ func _create_units() -> void:
 	var s := SurvivalState.data()
 	var gains: Dictionary = s.get("gains", {})
 	_progress_gains = gains.duplicate(true)
-	_yoch_gains = (s.get("yoch_gains", {}) as Dictionary).duplicate(true)
 	var run_seed := int(s.get("seed", 1))
 	var omen_level := int(s.get("omen", 0))
 
@@ -71,14 +80,25 @@ func _create_units() -> void:
 	_fallen.skills = saved_skills
 	_absorb_counts = (s.get("absorbs", {}) as Dictionary).duplicate(true)
 
-	_ally = BattleUnit.new(&"ally", "Yoch", SurvivalState.yoch_stats(), true)
-	_ally.race = &"human"
-	var pp := int(s.get("yoch_pp", SurvivalData.YOCH_BASE.pp))
-	_saved_yoch_pp = pp
-	if SurvivalRelics.party_has(s, "yoch_pp"):
-		pp += 2
-	_ally.start_praying(clampi(pp, 0, PrayerBook.MAX_PP))
-	_ally.current_hp = clampi(int(s.get("yoch_hp", _ally.stats.max_hp)), 1, _ally.stats.max_hp)
+	# D-111: o grupo é o Fallen + até 2 aliados de pé (o caído espera o HEAL do santuário).
+	_members.clear()
+	_member_uid.clear()
+	_auto.clear()
+	_saved_pp.clear()
+	_foe_base.clear()
+	var slot := 0
+	for m in SurvivalState.party():
+		if bool(m.get("down", false)):
+			continue
+		var u := _unit_from_member(m, slot, s)
+		_members.append(u)
+		_member_uid[u.id] = String(m.uid)
+		if bool(m.get("auto", false)):
+			_auto[u.id] = true
+		slot += 1
+	_ally = _members[0] if not _members.is_empty() else null
+	var duel_state: Dictionary = s.get("duel", {})
+	duel = not duel_state.is_empty()
 
 	var enc_id := String(s.get("encounter_id", "pixie"))
 	# Uma run tem uma semente, mas cada encontro deve sortear uma oferta diferente:
@@ -87,7 +107,11 @@ func _create_units() -> void:
 	var continues_used: int = SurvivalData.MAX_CONTINUES - int(s.get("continues", SurvivalData.MAX_CONTINUES))
 	var derived: int = run_seed + absi(enc_id.hash()) + defeated.size() * 7919 + continues_used * 104729
 	run_rng.seed = absi(derived) % 2147483647
-	encounter_ids.assign(SurvivalData.encounter_for(enc_id, defeated))
+	if duel:
+		# D-111: a luta-teste é só contra o candidato do encontro.
+		encounter_ids.assign([String(duel_state.get("candidate", ""))])
+	else:
+		encounter_ids.assign(SurvivalData.encounter_for(enc_id, defeated))
 	if encounter_ids.is_empty():
 		encounter_ids.assign([String(SurvivalData.DEMONS[0].id)])
 	demon_def = SurvivalData.demon_by_id(encounter_ids[0])
@@ -95,22 +119,23 @@ func _create_units() -> void:
 	# D-070/D-066: elite ou guardião na luta liga a SLING OF DAVID de quem a usa.
 	var big_fight := false
 	for id in encounter_ids:
-		if SurvivalStrata.is_warden(id) or SurvivalData.is_elite(run_seed, id, omen_level):
+		if not duel and (SurvivalStrata.is_warden(id) or SurvivalData.is_elite(run_seed, id, omen_level)):
 			big_fight = true
 	if big_fight:
-		for pair in [[_fallen, "fallen_relics"], [_ally, "yoch_relics"]]:
-			if SurvivalRelics.has_perk(s.get(pair[1], []), "giant_slayer"):
+		for pair in _relic_pairs():
+			if SurvivalRelics.has_perk(pair[1], "giant_slayer"):
 				var u: BattleUnit = pair[0]
 				u.stats.atk += 4
 				u.stats.mak += 4
 				u.restore_sp()
 	# AARON'S ROD: quem a usa abre a luta com +1 estágio de ATK (dura a rodada 1).
-	for pair in [[_fallen, "fallen_relics"], [_ally, "yoch_relics"]]:
-		if SurvivalRelics.has_perk(s.get(pair[1], []), "opening_stage"):
+	for pair in _relic_pairs():
+		if SurvivalRelics.has_perk(pair[1], "opening_stage"):
 			(pair[0] as BattleUnit).atk_stages.append({"round": 1, "owner": (pair[0] as BattleUnit).id})
 
 	state.add_unit(_fallen)
-	state.add_unit(_ally)
+	for u in _members:
+		state.add_unit(u)
 
 	# 1 a 3 demônios por luta, conforme o tier do encontrado (ver SurvivalData).
 	var paths: Array[String] = []
@@ -129,8 +154,10 @@ func _create_units() -> void:
 		enemy_stats.agi = int(ds.agi)
 		# D-101: os inimigos acompanham o SP atual do Fallen (com o herói no esperado, nada muda).
 		SurvivalData.follow_hero(enemy_stats, _fallen.stats.sp_value(), SurvivalStrata.par_sp(maxi(1, SurvivalStrata.stratum_of(String(def.id)))))
-		var power := SurvivalData.empower(enemy_stats, String(def.id), run_seed, omen_level)
-		var label := SurvivalData.battle_label(String(def.id), run_seed, omen_level)
+		# D-111: na luta-teste o candidato vem "como na luta" (sem elite, guardião nem OMEN).
+		var power := {"skills": [], "affinity": int(def.get("affinity", BattleMath.Affinity.NORMAL)), "tag": ""} \
+				if duel else SurvivalData.empower(enemy_stats, String(def.id), run_seed, omen_level)
+		var label := String(def.name) if duel else SurvivalData.battle_label(String(def.id), run_seed, omen_level)
 		var enemy := BattleUnit.new(StringName("foe_%d" % i), label, enemy_stats, false)
 		enemy.kind = StringName(String(def.id))
 		enemy.sprite_path = String(def.picture)
@@ -142,6 +169,7 @@ func _create_units() -> void:
 				enemy_skills.append(sk)
 		enemy.skills = enemy_skills
 		enemy.affinity = int(power.affinity)
+		_foe_base[enemy.id] = SurvivalAllies.stats_dict(enemy_stats)
 		if bool(def.get("human", false)):
 			# D-107: humans pray with PP like Yoch (no EN), start with 0 PP and cannot be absorbed.
 			enemy.race = &"human"
@@ -155,18 +183,19 @@ func _create_units() -> void:
 
 
 func _refresh_all() -> void:
-	if state.units.size() < 3 or hud == null:
+	# D-111: o Fallen pode lutar sozinho (2 unidades: ele e 1 inimigo).
+	if hud == null or state.units.size() < 2:
 		return
 	if state.round_number != _indicator_round:
 		_indicator_round = state.round_number
 		queued_acts_by_foe.clear()
-	hud.players.assign([_fallen, _ally])
+	hud.players.assign(heroes())
 	var foes: Array[BattleUnit] = []
 	for u in state.units:
 		if not u.is_player:
 			foes.append(u)
 	hud.opponents.assign(foes)
-	hud.actor = 0 if active_actor == null or active_actor == _fallen else 1
+	hud.actor = maxi(0, hud.players.find(active_actor))
 	hud.queue_redraw()
 	if state.round_number != _intent_round and state.round_number > 0:
 		_intent_round = state.round_number
@@ -177,16 +206,12 @@ func _refresh_all() -> void:
 
 # ------------------------------------------------- D-069: temperaments & intents
 
-func temperament_of(unit: BattleUnit) -> String:
-	return SurvivalStrata.temperament(String(unit.kind))
-
-
 ## Peso de cada escolha conforme o temperamento (&"" = ATTACK).
 func choice_weight(unit: BattleUnit, skill: StringName) -> float:
 	var t := temperament_of(unit)
 	var kind := "attack" if skill == &"" else String(SkillBook.def(skill).get("kind", "strike"))
 	var hurt := float(unit.current_hp) / float(maxi(1, unit.stats.max_hp))
-	if kind == "prayer" or skill == &"cherav":
+	if kind == "prayer" or PrayerBook.is_prayer(skill):
 		return _prayer_weight(unit, skill)
 	if kind == "heal":
 		if hurt >= 0.6:
@@ -385,10 +410,10 @@ func _draw_intents() -> void:
 ## D-073 LEVIATHAN SCALE: quem a usa não queima (as queimaduras somem antes do tique).
 func _burn_tick() -> void:
 	var s := SurvivalState.data()
-	if SurvivalRelics.has_perk(s.get("fallen_relics", []), "burn_immune"):
-		_fallen.burns.clear()
-	if SurvivalRelics.has_perk(s.get("yoch_relics", []), "burn_immune"):
-		_ally.burns.clear()
+	var _unused := s
+	for pair in _relic_pairs():
+		if SurvivalRelics.has_perk(pair[1], "burn_immune"):
+			(pair[0] as BattleUnit).burns.clear()
 	await super._burn_tick()
 
 
@@ -400,6 +425,11 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 	var options := super._commands(unit, reacting)
 	if SurvivalState.total_items() <= 0 and options.has("ITEM"):
 		options.erase("ITEM")
+	# D-111: a luta-teste não deixa absorver; o comando PARTY é só do turno do Fallen.
+	if duel:
+		options.erase("ABSORB")
+	if unit != null and unit.is_fallen and not reacting:
+		options.append("PARTY")
 	return options
 
 
@@ -604,6 +634,9 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 
 
 func handle_confirm() -> void:
+	if hud != null and hud.mode in ["party", "offer"]:
+		overlay_key(KEY_Z)
+		return
 	if continue_prompt_open:
 		answer_continue(true)
 		return
@@ -620,6 +653,9 @@ func handle_confirm() -> void:
 
 
 func handle_back() -> void:
+	if hud != null and hud.mode in ["party", "offer"]:
+		overlay_key(KEY_X)
+		return
 	if continue_prompt_open:
 		answer_continue(false)
 		return
@@ -653,7 +689,6 @@ func absorb_context() -> Dictionary:
 		"stratum": int(s.get("stratum", 1)),
 		"skill_bonus": bonus,
 		"count": 4 if SurvivalRelics.party_has(s, "absorb_four") else SurvivalAbsorb.OPTION_COUNT,
-		"yoch": _ally != null and _ally.is_alive(),
 	}
 
 ## Regra própria do Survival: 30% de uma habilidade nova; sempre 3 opções na
@@ -704,18 +739,16 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	var chosen: Dictionary = options[pick]
 	var owned_before: Array[StringName] = owned.duplicate()
 	var base_before := unit.sp_base()
-	var ally_before := _ally.sp_base()
+	var fallen_sp_before := _fallen.stats.sp_value()
 	var hp_before := unit.stats.max_hp
 	var en_before := unit.stats.max_en
-	var ally_hp_before := _ally.stats.max_hp
-	SurvivalAbsorb.apply_option(unit.stats, _progress_gains, _fallen.skills, chosen, _ally.stats, _yoch_gains)
+	SurvivalAbsorb.apply_option(unit.stats, _progress_gains, _fallen.skills, chosen)
 	unit.add_sp(unit.sp_base() - base_before)
-	_ally.add_sp(_ally.sp_base() - ally_before)
 	# HP/EN máximos novos chegam cheios (o ganho também entra no atual).
 	unit.current_hp += unit.stats.max_hp - hp_before
 	unit.current_en += unit.stats.max_en - en_before
-	if _ally.is_alive():
-		_ally.current_hp += _ally.stats.max_hp - ally_hp_before
+	# D-111: o Yoch tem sempre o SP do Fallen; a ficha dele acompanha a absorção na hora.
+	_follow_fallen_with_yoch(fallen_sp_before)
 	absorb_gain_label = String(chosen.label)
 	absorb_count_label = String(chosen.get("rarity", "RUN"))
 	absorb_skill_label = ""
@@ -733,7 +766,6 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 			unknown.append(String(learned))
 	SurvivalState.patch({
 		"gains": _progress_gains.duplicate(true),
-		"yoch_gains": _yoch_gains.duplicate(true),
 		"skills": skill_names,
 		"unidentified": unknown,
 	})
@@ -884,6 +916,10 @@ func _draw_absorb_overlay() -> void:
 # ------------------------------------------------- 3 Continues (no stat loss)
 
 func _play_death() -> void:
+	# D-111: na luta-teste ninguém morre de verdade: tudo volta (menos itens) e o candidato vai embora.
+	if duel:
+		_finish_duel(false)
+		return
 	# Survival Mode: NUNCA chama ProgressStore.halve_gains() nem ProgressStore.add_death().
 	var left := int(SurvivalState.data().get("continues", 0))
 	_append_log("FALLEN FELL.")
@@ -938,9 +974,10 @@ func _revive_party_for_continue() -> void:
 	_fallen.current_en = _fallen.stats.max_en
 	_fallen.burns.clear()
 	_fallen.restore_sp()
-	_ally.current_hp = _ally.stats.max_hp
-	_ally.burns.clear()
-	_ally.restore_sp()
+	for u in _members:
+		u.current_hp = u.stats.max_hp
+		u.burns.clear()
+		u.restore_sp()
 	waiting_players.clear()
 	_planned.clear()
 	_planned_skills.clear()
@@ -1002,6 +1039,10 @@ static func _draw_centered(canvas: Control, f: Font, text: String, cx: float, y:
 # ------------------------------------------------- Victory persistence (SurvivalState only)
 
 func _show_result() -> void:
+	if duel:
+		_finish_duel(state.player_victory())
+		return
+	var offer_ready := false
 	if state.player_victory() and not _result_recorded:
 		_result_recorded = true
 		var reward := 0
@@ -1037,11 +1078,7 @@ func _show_result() -> void:
 		SurvivalState.patch({
 			"fallen_hp": clampi(_fallen.current_hp + bonus_heal, 1, _fallen.stats.max_hp),
 			"fallen_en": clampi(_fallen.current_en, 0, _fallen.stats.max_en),
-			"yoch_hp": clampi(_ally.current_hp + bonus_heal, 1, _ally.stats.max_hp),
-			# ARK SHARD: os +2 PP da luta são gastos primeiro e não ficam na run.
-			"yoch_pp": clampi(mini(_ally.current_pp, _saved_yoch_pp) if SurvivalRelics.party_has(s0, "yoch_pp") else _ally.current_pp, 0, PrayerBook.MAX_PP),
 			"gains": _progress_gains.duplicate(true),
-			"yoch_gains": _yoch_gains.duplicate(true),
 			"skills": skill_names,
 			"absorbs": _absorb_counts.duplicate(true),
 			"battles": int(s0.get("battles", 0)) + 1,
@@ -1063,9 +1100,585 @@ func _show_result() -> void:
 				SurvivalState.patch({"last_loot": loot_relic})
 				_append_log("RELIC FOUND: %s." % SurvivalRelics.name_of(loot_relic))
 				_event("Relic found: %s." % SurvivalRelics.name_of(loot_relic))
+		# D-111: aliados (HP/EN/PP, caídos) e crescimento a cada 2 lutas; depois a oferta ao vencer.
+		_store_members(bonus_heal, s0)
+		_grow_members()
 		Engine.set_meta(DUNGEON_RETURN_META, SurvivalData.WORLD_SCENE)
 		_append_log("Earned +%d MACCA (total %dM)." % [reward, int(SurvivalState.data().macca)])
 		_event("Earned %d MACCA." % reward)
+		offer_ready = true
+	if offer_ready:
+		await _offer_flow()
+		if not is_inside_tree():
+			return
 	super._show_result()
 	if hud != null:
 		hud.feedback = "Battle finished. Z / Enter: return to the Survival Arena."
+
+# ------------------------------------------------- D-111: aliados (grupo, AUTO, PARTY, oferta, luta-teste)
+
+## Fallen + aliados de pé desta luta, na ordem dos painéis.
+func heroes() -> Array[BattleUnit]:
+	var out: Array[BattleUnit] = [_fallen]
+	out.append_array(_members)
+	return out
+
+
+## [unidade, relíquias] do Fallen e de cada aliado da luta (as relíquias valem para quem as usa).
+func _relic_pairs() -> Array:
+	var s := SurvivalState.data()
+	var out: Array = [[_fallen, s.get("fallen_relics", [])]]
+	for u in _members:
+		var m := SurvivalState.find_member(String(_member_uid.get(u.id, "")))
+		out.append([u, m.get("relics", [])])
+	return out
+
+
+func _unit_from_member(m: Dictionary, slot: int, s: Dictionary) -> BattleUnit:
+	var st := SurvivalState.member_stats(m)
+	var u := BattleUnit.new(StringName("ally_%d" % slot), String(m.name), st, true)
+	u.set_meta("ally_id", String(m.id))
+	u.set_meta("ally_kind", String(m.kind))
+	u.affinity = int(m.get("affinity", BattleMath.Affinity.NORMAL))
+	u.sprite_path = String(m.get("picture", ""))
+	var skills: Array[StringName] = []
+	for sk in m.get("skills", []):
+		skills.append(StringName(String(sk)))
+	if SurvivalAllies.prays(m):
+		u.race = &"human"
+		var pp := int(m.get("pp", 0))
+		_saved_pp[String(m.uid)] = pp
+		# ARK SHARD: o Yoch começa a luta com +2 PP.
+		if String(m.kind) == "yoch" and SurvivalRelics.party_has(s, "yoch_pp"):
+			pp += 2
+		u.start_praying(clampi(pp, 0, PrayerBook.MAX_PP))
+		u.set_meta("spells", (m.get("spells", []) as Array).duplicate())
+		# Em AUTO a IA dos inimigos ganha PP com PRAY (em MANUAL, PRAY é o comando do herói).
+		if bool(m.get("auto", false)) and not skills.has(&"pray"):
+			skills.append(&"pray")
+	else:
+		u.current_en = clampi(int(m.get("en", st.max_en)), 0, st.max_en)
+	u.skills = skills
+	u.current_hp = SurvivalState.member_hp(m)
+	u.restore_sp()
+	return u
+
+
+## D-111: o Yoch tem sempre o mesmo SP do Fallen; quando o Fallen absorve, a ficha dele sobe junto.
+func _follow_fallen_with_yoch(fallen_sp_before: int) -> void:
+	var now := _fallen.stats.sp_value()
+	if now == fallen_sp_before:
+		return
+	for u in _members:
+		if String(u.get_meta("ally_kind", "")) != "yoch":
+			continue
+		var m := SurvivalState.find_member(String(_member_uid.get(u.id, "")))
+		var old := SurvivalAllies.member_stats(m, fallen_sp_before)
+		var new := SurvivalAllies.member_stats(m, now)
+		var base_before := u.sp_base()
+		for k in SurvivalAllies.STAT_KEYS:
+			u.stats.set(k, int(u.stats.get(k)) + int(new.get(k)) - int(old.get(k)))
+		if u.is_alive():
+			u.current_hp = clampi(u.current_hp + new.max_hp - old.max_hp, 1, u.stats.max_hp)
+		u.add_sp(u.sp_base() - base_before)
+
+
+func temperament_of(unit: BattleUnit) -> String:
+	if unit != null and unit.has_meta("ally_id"):
+		return SurvivalStrata.temperament(String(unit.get_meta("ally_id")))
+	return SurvivalStrata.temperament(String(unit.kind))
+
+
+# ---- AUTO: a IA dos inimigos joga pelo aliado (sem barra, sem reação)
+
+func is_auto(unit: BattleUnit) -> bool:
+	return unit != null and _auto.has(unit.id)
+
+
+func _player_turn(unit: BattleUnit) -> void:
+	if is_auto(unit):
+		await _auto_turn(unit)
+		return
+	await super._player_turn(unit)
+
+
+## Mesma regra de escolha dos inimigos (temperamento, rezas), mirando o lado inimigo.
+func _auto_turn(unit: BattleUnit) -> void:
+	_turn_passed = false
+	active_actor = unit
+	action_attacker = unit
+	action_defender = null
+	_clear_roles()
+	_append_log("%s (AUTO): %d acts available." % [unit.display_name, unit.acts_available])
+	_event("%s's turn (AUTO)." % short_name(unit))
+	_refresh_all()
+	_auto_actor = unit
+	var guard := 0
+	while unit.is_alive() and not state.is_over() and unit.acts_available > 0 and guard < 8:
+		guard += 1
+		var skill := temperament_pick(unit, mini(2, unit.acts_available))
+		var detail := {} if skill == &"" else {"skill": skill, "extra": 0}
+		var target: BattleUnit = null
+		if skill == &"" or String(SkillBook.def(skill).get("kind", "")) == "strike":
+			target = _auto_target(unit)
+			if target == null:
+				break
+		var done: bool = await _execute_command(unit, FIGHT, false, false, detail, target)
+		if not is_inside_tree():
+			return
+		if not done:
+			break
+		await _pause_result()
+		if not is_inside_tree():
+			return
+	_auto_actor = null
+	_refresh_all()
+
+
+## Alvo da IA do aliado: TAUNT primeiro; HUNTER persegue o inimigo com menos HP; os outros, o de mais SP.
+func _auto_target(unit: BattleUnit) -> BattleUnit:
+	var foes: Array = []
+	for u in state.units:
+		if not u.is_player and u.is_alive():
+			foes.append(u)
+	if foes.is_empty():
+		return null
+	var taunter := SkillFx.taunter(foes)
+	if taunter != null:
+		return taunter
+	var best: BattleUnit = foes[0]
+	var hunter := temperament_of(unit) == "hunter"
+	for f in foes:
+		var foe: BattleUnit = f
+		if hunter:
+			if float(foe.current_hp) / float(maxi(1, foe.stats.max_hp)) < float(best.current_hp) / float(maxi(1, best.stats.max_hp)):
+				best = foe
+		elif foe.current_sp > best.current_sp:
+			best = foe
+	return best
+
+
+func _wait_target(side: String = "enemy") -> BattleUnit:
+	if _auto_actor != null:
+		return _weakest_ally(_auto_actor) if side == "player" else _auto_target(_auto_actor)
+	return await super._wait_target(side)
+
+
+func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float, auto_hit: bool = false, chain: bool = false) -> int:
+	if is_auto(attacker):
+		attack_result = _ai_roll(attacker, defender)
+		return attack_result
+	return await super._attack_timing(attacker, defender, duration, auto_hit, chain)
+
+
+func _skill_attack_timing(attacker: BattleUnit, defender: BattleUnit, marks: Array[float], auto_hit: bool) -> Array[int]:
+	if is_auto(attacker):
+		var results: Array[int] = []
+		for _m in marks:
+			results.append(_ai_roll(attacker, defender))
+		attack_result = results[0] if not results.is_empty() else BattleMath.RhythmResult.MISS
+		return results
+	return await super._skill_attack_timing(attacker, defender, marks, auto_hit)
+
+
+## O contra-ataque inimigo pede a barra do herói: um aliado em AUTO não joga barra nenhuma.
+func _enemy_counter_roll(enemy: BattleUnit) -> bool:
+	if _auto_actor != null:
+		return false
+	return super._enemy_counter_roll(enemy)
+
+
+## Aliado em AUTO nunca reage.
+func eligible_reactors() -> Array[BattleUnit]:
+	var out: Array[BattleUnit] = []
+	for u in super.eligible_reactors():
+		if not is_auto(u):
+			out.append(u)
+	return out
+
+
+func select_reactor(index: int) -> void:
+	if index >= 0 and index < hud.players.size() and is_auto(hud.players[index]):
+		return
+	super.select_reactor(index)
+
+
+## SANVERIM de um herói cega um inimigo (a regra base é a do inimigo, que cega um herói).
+func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
+	if not unit.is_player or not bool(SkillFx.fx_of(skill).get("blind", false)):
+		super._enemy_prayer(unit, skill)
+		return
+	var seen: BattleUnit = null
+	for foe in hud.opponents:
+		if foe.is_alive() and not foe.has_status(&"blind") and (seen == null or foe.current_sp > seen.current_sp):
+			seen = foe
+	if seen == null:
+		seen = _auto_target(unit)
+	if seen != null:
+		SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
+		if prayer != null:
+			prayer.fx.play_sanverim(seen)
+		_append_log("%s is blinded by %s." % [seen.display_name, unit.display_name])
+		_event("%s is blinded." % short_name(seen))
+	hud.message = "%s USES %s" % [short_name(unit), SkillBook.display_name(skill)]
+	_refresh_all()
+
+
+# ---- PARTY: status, bolsa e MANUAL/AUTO (comando do Fallen, não gasta ato)
+
+signal party_closed
+var party_open := false
+var party_index := 0
+var _party_layer: CanvasLayer
+var _party_panel: Control
+var _mode_before_panel := "busy"
+
+
+func _immediate_command(unit: BattleUnit, command: String) -> bool:
+	if command != "PARTY" or not unit.is_fallen:
+		return false
+	await open_party()
+	return true
+
+
+func open_party() -> void:
+	party_open = true
+	party_index = 0
+	_mode_before_panel = hud.mode
+	hud.mode = "party"
+	_party_layer = CanvasLayer.new()
+	_party_layer.layer = 61
+	_party_panel = Control.new()
+	_party_panel.name = "PartyPanel"
+	_party_panel.size = HUD_SCRIPT.SCREEN
+	_party_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_party_panel.draw.connect(_draw_party)
+	_party_layer.add_child(_party_panel)
+	add_child(_party_layer)
+	await party_closed
+	if _party_layer != null:
+		_party_layer.queue_free()
+	_party_layer = null
+	_party_panel = null
+	party_open = false
+	hud.mode = "busy"
+	_refresh_all()
+
+
+## Linhas do painel: o Fallen e cada aliado do grupo (os caídos aparecem como DOWN).
+func party_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = [{"uid": "", "name": "FALLEN", "unit": _fallen}]
+	for m in SurvivalState.party():
+		var unit: BattleUnit = null
+		for u in _members:
+			if String(_member_uid.get(u.id, "")) == String(m.uid):
+				unit = u
+		rows.append({"uid": String(m.uid), "name": String(m.name), "unit": unit, "member": m})
+	return rows
+
+
+func set_member_auto(uid: String, on: bool) -> void:
+	SurvivalState.update_member(uid, {"auto": on})
+	for u in _members:
+		if String(_member_uid.get(u.id, "")) != uid:
+			continue
+		if on:
+			_auto[u.id] = true
+			if u.prays and not u.skills.has(&"pray"):
+				u.skills.append(&"pray")
+		else:
+			_auto.erase(u.id)
+			if u.prays:
+				u.skills.erase(&"pray")
+	if _party_panel != null:
+		_party_panel.queue_redraw()
+
+
+func overlay_key(keycode: int) -> void:
+	if offer_open:
+		match keycode:
+			KEY_Z, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE: answer_offer(true)
+			KEY_X, KEY_ESCAPE: answer_offer(false)
+		return
+	if not party_open:
+		return
+	var rows := party_rows()
+	match keycode:
+		KEY_UP, KEY_LEFT:
+			party_index = posmod(party_index - 1, rows.size())
+		KEY_DOWN, KEY_RIGHT:
+			party_index = posmod(party_index + 1, rows.size())
+		KEY_Z, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+			var row: Dictionary = rows[clampi(party_index, 0, rows.size() - 1)]
+			if not String(row.uid).is_empty():
+				set_member_auto(String(row.uid), not bool((row.member as Dictionary).get("auto", false)))
+		KEY_X, KEY_ESCAPE:
+			party_closed.emit()
+			return
+	if _party_panel != null:
+		_party_panel.queue_redraw()
+
+
+const PARTY_BOUNDS := Rect2(72, 70, 400, 210)
+
+
+func _draw_party() -> void:
+	if _party_panel == null:
+		return
+	var b := PARTY_BOUNDS
+	_party_panel.draw_rect(Rect2(Vector2.ZERO, HUD_SCRIPT.SCREEN), Color(0.02, 0.01, 0.03, 0.72))
+	_party_panel.draw_rect(b, Color(0.06, 0.03, 0.05, 0.98))
+	_party_panel.draw_rect(b, Color("f5e08e"), false, 1.5)
+	var bold: Font = hud.ui_bold
+	var regular: Font = hud.ui_font
+	_draw_centered(_party_panel, bold, "PARTY", b.get_center().x, b.position.y + 18, 12, Color("f5e08e"))
+	var rows := party_rows()
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		var y := b.position.y + 30 + i * 34
+		var active := i == party_index
+		if active:
+			_party_panel.draw_rect(Rect2(b.position.x + 8, y, b.size.x - 16, 30), Color(1, 1, 1, 0.14))
+		var unit: BattleUnit = row.unit
+		var ink := Color.WHITE if active else Color("f7f3ed")
+		_party_panel.draw_string(bold, Vector2(b.position.x + 14, y + 13), ("> " if active else "  ") + String(row.name),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, ink)
+		var line := ""
+		if unit != null:
+			line = "HP %d/%d   %s %d/%d   SP %d" % [unit.current_hp, unit.stats.max_hp,
+					"PP" if unit.prays else "EN", unit.current_pp if unit.prays else unit.current_en,
+					PrayerBook.MAX_PP if unit.prays else unit.stats.max_en, unit.current_sp]
+		else:
+			line = "DOWN — revive with HEAL at the sanctuary"
+		_party_panel.draw_string(regular, Vector2(b.position.x + 26, y + 26), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("f7f3ed"))
+		if not String(row.uid).is_empty():
+			var auto_on := bool((row.member as Dictionary).get("auto", false))
+			var tag := "AUTO" if auto_on else "MANUAL"
+			var w := bold.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			_party_panel.draw_string(bold, Vector2(b.end.x - 16 - w, y + 13), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 10,
+					Color("7fd4ff") if auto_on else Color("81e6a8"))
+	var s := SurvivalState.data()
+	var bag: Array[String] = []
+	for id in SurvivalState.ITEM_KEYS:
+		if int(s.get(id, 0)) > 0:
+			bag.append("%s x%d" % [String(SurvivalData.shop_item(id).name), int(s.get(id, 0))])
+	_party_panel.draw_string(regular, Vector2(b.position.x + 14, b.end.y - 26), "BAG: " + (", ".join(bag) if not bag.is_empty() else "empty"),
+			HORIZONTAL_ALIGNMENT_LEFT, b.size.x - 28, 9, Color("f5e08e"))
+	_draw_centered(_party_panel, bold, "Up/Down: select   Z: MANUAL / AUTO   X: close", b.get_center().x, b.end.y - 9, 9, Color("f7f3ed"))
+
+
+# ---- Fim da luta: aliados, crescimento e oferta ao vencer
+
+func _store_members(bonus_heal: int, s0: Dictionary) -> void:
+	var p: Array = SurvivalState.party().duplicate(true)
+	for u in _members:
+		var uid := String(_member_uid.get(u.id, ""))
+		for m in p:
+			if String(m.uid) != uid:
+				continue
+			if u.is_alive():
+				m["hp"] = clampi(u.current_hp + bonus_heal, 1, u.stats.max_hp)
+				m["down"] = false
+			else:
+				m["hp"] = 0
+				m["down"] = true
+			if u.prays:
+				var pp := u.current_pp
+				if String(m.kind) == "yoch" and SurvivalRelics.party_has(s0, "yoch_pp"):
+					pp = mini(pp, int(_saved_pp.get(uid, pp)))
+				m["pp"] = clampi(pp, 0, PrayerBook.MAX_PP)
+			else:
+				m["en"] = clampi(u.current_en, 0, u.stats.max_en)
+	SurvivalState.patch({"party": p})
+
+
+## A cada 2 lutas terminadas de pé, +1/+2/+3 num atributo (aviso no mapa).
+func _grow_members() -> void:
+	var s := SurvivalState.data()
+	var p: Array = SurvivalState.party().duplicate(true)
+	var toast: Array = (s.get("growth_toast", []) as Array).duplicate()
+	var grng := RandomNumberGenerator.new()
+	grng.seed = absi(int(s.get("seed", 1)) + int(s.get("battles", 0)) * 1_299_709) % 2147483647
+	for u in _members:
+		if not u.is_alive():
+			continue
+		var uid := String(_member_uid.get(u.id, ""))
+		for m in p:
+			if String(m.uid) == uid:
+				var g := SurvivalAllies.grow(m, grng)
+				if not g.is_empty():
+					toast.append(SurvivalAllies.growth_line(m, g))
+	SurvivalState.patch({"party": p, "growth_toast": toast})
+
+
+signal offer_answered
+var offer_unit: BattleUnit = null
+var offer_open := false
+var offer_accepted := false
+## "party", "reserve", "refused" ou "" (sem oferta).
+var offer_result := ""
+var _offer_layer: CanvasLayer
+var _offer_panel: Control
+var _offer_texture: Texture2D
+
+
+## Derrotados que podem pedir para entrar (não absorvidos; nunca anjo).
+func offer_pool() -> Array:
+	var pool: Array = []
+	for u in state.units:
+		if not u.is_player and not u.absorbed and not SurvivalData.demon_by_id(String(u.kind)).is_empty():
+			pool.append(u)
+	return pool
+
+
+func _offer_flow() -> void:
+	var s := SurvivalState.data()
+	var number := int(s.get("battles", 0))
+	var seed := int(s.get("seed", 1))
+	if not SurvivalAllies.offer_rolls(seed, number) or not SurvivalState.has_room():
+		return
+	var pool := offer_pool()
+	var pick := SurvivalAllies.offer_pick(seed, number, pool)
+	if pick < 0:
+		return
+	offer_unit = pool[pick]
+	offer_accepted = false
+	offer_open = true
+	hud.mode = "offer"
+	hud.message = ""
+	_show_offer_overlay()
+	if is_inside_tree():
+		await offer_answered
+	_hide_offer_overlay()
+	offer_open = false
+	hud.mode = "busy"
+	var name := offer_name()
+	if offer_accepted:
+		var where := SurvivalState.add_member(member_from_foe(offer_unit))
+		offer_result = where
+		_append_log("%s joins the %s." % [name, where])
+		_event("%s joins the %s." % [name, "party" if where == "party" else "reserve"])
+	else:
+		offer_result = "refused"
+		_append_log("%s's offer refused." % name)
+		_event("%s leaves." % name)
+
+
+func offer_name() -> String:
+	if offer_unit == null:
+		return ""
+	return String(SurvivalData.demon_by_id(String(offer_unit.kind)).get("name", offer_unit.display_name))
+
+
+func answer_offer(yes: bool) -> void:
+	if not offer_open:
+		return
+	offer_accepted = yes
+	offer_answered.emit()
+
+
+## "Igual ao inimigo": a ficha e as habilidades que ele tinha nesta luta; entra cheio.
+func member_from_foe(u: BattleUnit) -> Dictionary:
+	var s := SurvivalState.data()
+	var stats: Dictionary = (_foe_base.get(u.id, SurvivalAllies.stats_dict(u.stats)) as Dictionary).duplicate()
+	var m := SurvivalAllies.new_member(SurvivalState.new_uid(), String(u.kind), stats, int(s.get("seed", 1)))
+	if String(m.kind) == "demon":
+		var sk: Array = []
+		for x in u.skills:
+			sk.append(String(x))
+		m["skills"] = sk
+	m["affinity"] = u.affinity
+	m["hp"] = int(stats.get("max_hp", 1))
+	m["en"] = int(stats.get("max_en", 0))
+	m["pp"] = PrayerBook.MAX_PP if SurvivalAllies.prays(m) else 0
+	return m
+
+
+const OFFER_BOUNDS := Rect2(122, 92, 300, 190)
+
+
+func _show_offer_overlay() -> void:
+	_hide_offer_overlay()
+	_offer_texture = null
+	if offer_unit != null and not offer_unit.sprite_path.is_empty() and ResourceLoader.exists(offer_unit.sprite_path):
+		var src: Texture2D = load(offer_unit.sprite_path)
+		var img := src.get_image()
+		if img != null:
+			if img.is_compressed():
+				img.decompress()
+			img.convert(Image.FORMAT_RGBA8)
+			var used := img.get_used_rect()
+			if used.size.x > 0 and used.size.y > 0:
+				_offer_texture = ImageTexture.create_from_image(img.get_region(used))
+	_offer_layer = CanvasLayer.new()
+	_offer_layer.layer = 61
+	_offer_panel = Control.new()
+	_offer_panel.name = "JoinOffer"
+	_offer_panel.size = HUD_SCRIPT.SCREEN
+	_offer_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_offer_panel.draw.connect(_draw_offer)
+	_offer_layer.add_child(_offer_panel)
+	add_child(_offer_layer)
+	_offer_panel.queue_redraw()
+
+
+func _hide_offer_overlay() -> void:
+	if _offer_layer != null:
+		_offer_layer.queue_free()
+	_offer_layer = null
+	_offer_panel = null
+
+
+func _draw_offer() -> void:
+	if _offer_panel == null or offer_unit == null:
+		return
+	var b := OFFER_BOUNDS
+	_offer_panel.draw_rect(Rect2(Vector2.ZERO, HUD_SCRIPT.SCREEN), Color(0.02, 0.01, 0.03, 0.72))
+	_offer_panel.draw_rect(b, Color(0.06, 0.03, 0.05, 0.98))
+	_offer_panel.draw_rect(b, Color("81e6a8"), false, 1.5)
+	if _offer_texture != null:
+		var box := Rect2(b.position.x + 10, b.position.y + 10, b.size.x - 20, 120)
+		var sz := _offer_texture.get_size()
+		var k := minf(box.size.x / sz.x, box.size.y / sz.y)
+		var dst := Rect2(box.get_center() - sz * k * 0.5, sz * k)
+		_offer_panel.draw_texture_rect(_offer_texture, dst, false)
+	var bold: Font = hud.ui_bold
+	_draw_centered(_offer_panel, bold, "%s wants to join you." % offer_name(), b.get_center().x, b.position.y + 150, 12, Color("f7f3ed"))
+	_draw_centered(_offer_panel, bold, "Z: ACCEPT    X: REFUSE", b.get_center().x, b.position.y + 174, 11, Color("81e6a8"))
+
+
+# ---- Luta-teste do mapa
+
+## Fim da luta-teste: HP/EN/PP, caídos e continues voltam ao que eram (itens gastos não voltam);
+## se venceu, o candidato entra. O encontro some do mapa nos dois casos.
+func _finish_duel(won: bool) -> void:
+	duel_won = won
+	var s := SurvivalState.data()
+	var d: Dictionary = s.get("duel", {})
+	var snap: Dictionary = d.get("snapshot", {})
+	SurvivalState.patch({
+		"duel": {},
+		"fallen_hp": int(snap.get("fallen_hp", s.get("fallen_hp", 1))),
+		"fallen_en": int(snap.get("fallen_en", s.get("fallen_en", 0))),
+		"party": (snap.get("party", s.get("party", [])) as Array).duplicate(true),
+		"continues": int(snap.get("continues", s.get("continues", 0))),
+	})
+	var done: Array = (SurvivalState.data().get("recruits_done", []) as Array).duplicate()
+	if not done.has(String(d.get("encounter", ""))):
+		done.append(String(d.get("encounter", "")))
+	SurvivalState.patch({"recruits_done": done})
+	var name := String(SurvivalData.demon_by_id(String(d.get("candidate", ""))).get("name", "?"))
+	if won:
+		var m := SurvivalAllies.new_member(SurvivalState.new_uid(), String(d.get("candidate", "")),
+				d.get("stats", {}), int(s.get("seed", 1)))
+		var where := SurvivalState.add_member(m)
+		offer_result = where
+		_event("%s joins the %s." % [name, "party" if where == "party" else "reserve"])
+	else:
+		_event("%s leaves: the test was lost." % name)
+	Engine.set_meta(DUNGEON_RETURN_META, SurvivalData.WORLD_SCENE)
+	phase_text = "TEST WON" if won else "TEST LOST"
+	hud.announce(phase_text)
+	hud.feedback = "Everything but items is restored. Z / Enter: return to the Survival Arena."
+	hud.mode = "result"
+	_refresh_all()

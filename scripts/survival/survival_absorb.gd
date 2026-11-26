@@ -5,15 +5,14 @@ extends RefCounted
 ## D-071: cada oferta de atributo tem RARIDADE (COMMON/RARE/EPIC) cujo peso sobe
 ## por estrato; HP < 35% sobe um nível (risco/recompensa); a primeira oferta é um
 ## dos 2 atributos mais fortes do demônio (herança, como na fusão do SMT); HP e EN
-## máximos entram no sorteio; e até uma oferta pode fortalecer a Yoch.
+## máximos entram no sorteio. D-111 (criador 2026-11-26): a absorção só melhora o Fallen (a oferta
+## YOCH +n saiu; os aliados crescem a cada 2 lutas, SurvivalAllies.grow).
 ## Tudo vem de um RNG semeado pela run, reproduzível para debug/daily.
 
 const SKILL_CHANCE := 0.30
 const OPTION_COUNT := 3
-const YOCH_CHANCE := 0.25
 const STAT_KEYS: Array[StringName] = [&"atk", &"mak", &"defense", &"mef", &"agi"]
 const POOL_KEYS: Array[StringName] = [&"atk", &"mak", &"defense", &"mef", &"agi", &"max_hp", &"max_en"]
-const YOCH_KEYS: Array[StringName] = [&"atk", &"mak", &"defense", &"mef", &"agi", &"max_hp"]
 const RARITIES := ["COMMON", "RARE", "EPIC"]
 ## Pontos por raridade (combate: sorteado no intervalo; HP/EN: fixo).
 const AMOUNTS := {
@@ -107,15 +106,12 @@ static func _stat_option(rng: RandomNumberGenerator, stat: StringName, rarity: S
 			return {"kind": "stat2", "stats": [stat, second], "amount": 3, "rarity": rarity,
 				"label": "+3 %s / +3 %s" % [LABELS[stat], LABELS[second]]}
 	var amount := amount_for(rng, stat, rarity)
-	if who == "yoch":
-		return {"kind": "yoch", "stat": stat, "amount": amount, "rarity": rarity,
-			"label": "YOCH +%d %s" % [amount, LABELS[stat]]}
 	return {"kind": "stat", "stat": stat, "amount": amount, "rarity": rarity,
 		"label": "+%d %s" % [amount, LABELS[stat]]}
 
 
 ## Opções: [skill?] + atributos até completar `count` (3; 4 com PROPHET'S SCROLL).
-## ctx: stratum (1..5), skill_bonus (0..1), count, yoch (bool: a Yoch pode receber).
+## ctx: stratum (1..5), skill_bonus (0..1), count.
 static func roll_options(rng: RandomNumberGenerator, demon: Dictionary,
 		owned: Array[StringName], hp_share: float = 1.0, ctx: Dictionary = {}) -> Array[Dictionary]:
 	var stratum := int(ctx.get("stratum", 1))
@@ -135,17 +131,13 @@ static func roll_options(rng: RandomNumberGenerator, demon: Dictionary,
 	for stat in shuffled(rng, POOL_KEYS):
 		if not order.has(stat):
 			order.append(stat)
-	var yoch_slot := bool(ctx.get("yoch", true)) and rng.randf() < YOCH_CHANCE
 	for stat in order:
-		if out.size() >= count - (1 if yoch_slot else 0):
+		if out.size() >= count:
 			break
 		if used.has(stat):
 			continue
 		used.append(stat)
 		out.append(_stat_option(rng, stat, roll_rarity(rng, stratum, desperate), used))
-	if yoch_slot:
-		var ystat: StringName = shuffled(rng, YOCH_KEYS)[0]
-		out.append(_stat_option(rng, ystat, roll_rarity(rng, stratum, desperate), used, "yoch"))
 	return out
 
 
@@ -163,9 +155,8 @@ static func _add(stats: UnitStats, stat: StringName, amount: int) -> bool:
 
 
 ## Aplicação pura (testável sem cena): altera status/ganhos/habilidades da run.
-## Ofertas da Yoch vão para `yoch_stats`/`yoch_gains` (ignoradas se nulas).
 static func apply_option(stats: UnitStats, gains: Dictionary, skills: Array[StringName],
-		option: Dictionary, yoch_stats: UnitStats = null, yoch_gains: Dictionary = {}) -> void:
+		option: Dictionary) -> void:
 	var kind := String(option.get("kind", ""))
 	match kind:
 		"skill":
@@ -182,11 +173,3 @@ static func apply_option(stats: UnitStats, gains: Dictionary, skills: Array[Stri
 			for s in option.get("stats", []):
 				if _add(stats, StringName(s), amount):
 					gains[String(s)] = int(gains.get(String(s), 0)) + amount
-		"yoch":
-			var stat := StringName(option.get("stat", &""))
-			var amount := int(option.get("amount", 0))
-			if not LABELS.has(stat):
-				return
-			if yoch_stats != null:
-				_add(yoch_stats, stat, amount)
-			yoch_gains[String(stat)] = int(yoch_gains.get(String(stat), 0)) + amount

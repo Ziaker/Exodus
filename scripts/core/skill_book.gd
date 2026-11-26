@@ -114,20 +114,6 @@ const DEFS := {
 	&"blade_dance": {"name": "BLADE DANCE", "acts": 2, "en": 6, "hp": 0, "pp": 0, "kind": "strike",
 		"power": 4, "powers": [3, 4, 5, 6], "marks": [0.25, 0.5, 0.75, 0.9],
 		"info": "BLADE DANCE 2 ACT / 6 EN: four physical hits whose power climbs 3, 4, 5, 6."},
-	# D-107 (creator 2026-11-25): prayers of the human enemies. They cost PP, not EN; all are HOLY by
-	# name only (HOLY has no mechanical effect yet) and have Hebrew names.
-	&"pray": {"name": "PRAY", "acts": 1, "en": 0, "hp": 0, "pp": 0, "kind": "prayer",
-		"fx": {"pray": true},
-		"info": "PRAY 1 ACT: +1 PP."},
-	&"sanverim": {"name": "SANVERIM", "hebrew": "סַנְוֵרִים", "acts": 1, "en": 0, "hp": 0, "pp": 2, "kind": "prayer",
-		"fx": {"blind": true},
-		"info": "SANVERIM 2 PP: blinding light; until the end of the next round the target is more likely to miss (smaller POINT zone)."},
-	&"nechamah": {"name": "NECHAMAH", "hebrew": "נֶחָמָה", "acts": 1, "en": 0, "hp": 0, "pp": 1, "kind": "prayer",
-		"fx": {"mend": true},
-		"info": "NECHAMAH 1 PP: heals an ally 5 HP at the start of each of the next 3 rounds; mends stack."},
-	&"cherav": {"name": "CHERAV", "hebrew": "חֶרֶב", "acts": 1, "en": 0, "hp": 0, "pp": 3, "kind": "magic",
-		"power": 10, "burn_chance": 0, "fx": {"prayer_base": true},
-		"info": "CHERAV 3 PP: a cut of light across every hero, 10 + MAK - MEF each."},
 	&"stone_grasp": {"name": "STONE GRASP", "acts": 1, "en": 4, "hp": 0, "pp": 0, "kind": "strike",
 		"power": 6, "marks": [0.5], "fx": {"status": "snare", "rounds": 2},
 		"info": "STONE GRASP 1 ACT / 4 EN: power 6 earth strike; the target's AGI falls by 4 for 2 rounds (SNARE)."},
@@ -142,7 +128,11 @@ const KIND_SKILLS := {
 
 
 static func def(skill: StringName) -> Dictionary:
-	return DEFS.get(skill, {})
+	if DEFS.has(skill):
+		return DEFS[skill]
+	if PrayerBook.is_prayer(skill):
+		return PrayerBook.as_skill_def(skill)
+	return {}
 
 
 static func display_name(skill: StringName) -> String:

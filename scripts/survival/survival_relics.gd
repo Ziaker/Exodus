@@ -1,11 +1,24 @@
 class_name SurvivalRelics
 extends RefCounted
-## Relíquias antigas equipáveis (máximo 2 por aliado). Dados puros + regras de
+## Relíquias antigas equipáveis. D-111 (criador 2026-11-26): 1 por unidade (Fallen incluído) e 2 nos
+## humanos (Yoch incluído). Dados puros + regras de
 ## equipamento. Dois tipos: de atributo (bônus aplicado na criação do herói) e,
 ## desde a D-073, de efeito (perk que muda uma regra da run). Pares no mesmo
 ## aliado liberam pactos (COVENANTS).
 
+## Teto antigo (2 por aliado) mantido como o máximo absoluto (humanos).
 const MAX_PER_ALLY := 2
+## D-111: teto do Fallen e de um demônio aliado.
+const MAX_PER_UNIT := 1
+## D-111: teto de um humano (Yoch incluído).
+const MAX_PER_HUMAN := 2
+
+
+## Quantas relíquias a unidade pode usar ("fallen" ou o dicionário de um aliado).
+static func cap_of(member: Variant) -> int:
+	if member is Dictionary and String((member as Dictionary).get("kind", "")) in ["human", "yoch"]:
+		return MAX_PER_HUMAN
+	return MAX_PER_UNIT
 
 const RELICS := [
 	{"id": "shard_of_urim", "name": "SHARD OF URIM", "hebrew": "שבר אורים",
@@ -167,10 +180,14 @@ static func has_perk(equipped: Array, perk: String) -> bool:
 	return false
 
 
-## Perk em qualquer aliado da run (economia: Macca, loja, absorção).
+## Perk em qualquer unidade do grupo (Fallen + aliados do grupo; a reserva não conta).
 static func party_has(state: Dictionary, perk: String) -> bool:
-	return has_perk(state.get("fallen_relics", []), perk) \
-			or has_perk(state.get("yoch_relics", []), perk)
+	if has_perk(state.get("fallen_relics", []), perk):
+		return true
+	for m in state.get("party", []):
+		if m is Dictionary and has_perk((m as Dictionary).get("relics", []), perk):
+			return true
+	return false
 
 
 static func name_of(id: String) -> String:
@@ -225,15 +242,35 @@ static func bonus(equipped: Array, stat: String) -> int:
 	return total
 
 
-## Equipa alternando; a relíquia é única e muda de aliado ao ser equipada alhures.
-static func toggle(equipped: Dictionary, who: String, id: String) -> Dictionary:
-	var fallen: Array = equipped.get("fallen_relics", []).duplicate()
-	var yoch: Array = equipped.get("yoch_relics", []).duplicate()
-	var target := fallen if who == "fallen" else yoch
-	var other := yoch if who == "fallen" else fallen
+## Equipa alternando; a relíquia é única e muda de dono ao ser equipada alhures.
+## `who` = "fallen" ou o uid de um aliado (grupo ou reserva). Devolve as chaves mudadas.
+static func toggle(state: Dictionary, who: String, id: String) -> Dictionary:
+	var fallen: Array = (state.get("fallen_relics", []) as Array).duplicate()
+	var party: Array = (state.get("party", []) as Array).duplicate(true)
+	var reserve: Array = (state.get("reserve", []) as Array).duplicate(true)
+	var target: Array = fallen
+	var cap := MAX_PER_UNIT
+	if who != "fallen":
+		var m := _member(party, reserve, who)
+		if m.is_empty():
+			return {}
+		target = m.get("relics", [])
+		m["relics"] = target
+		cap = cap_of(m)
 	if target.has(id):
 		target.erase(id)
-	elif target.size() < MAX_PER_ALLY:
-		other.erase(id)
+	elif target.size() < cap:
+		fallen.erase(id)
+		for list in [party, reserve]:
+			for other in list:
+				(other.get("relics", []) as Array).erase(id)
 		target.append(id)
-	return {"fallen_relics": fallen, "yoch_relics": yoch}
+	return {"fallen_relics": fallen, "party": party, "reserve": reserve}
+
+
+static func _member(party: Array, reserve: Array, uid: String) -> Dictionary:
+	for list in [party, reserve]:
+		for m in list:
+			if String(m.get("uid", "")) == uid:
+				return m
+	return {}

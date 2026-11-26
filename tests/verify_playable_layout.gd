@@ -59,7 +59,7 @@ func _run() -> void:
 	var win := func(x: float, y: float, w: float, h: float) -> Rect2: return Rect2(x / 1.5, y / 1.5, w / 1.5, h / 1.5)
 	_check(hud.BATTLE_LOG_RECT.is_equal_approx(win.call(8, 450, 800, 88)), "Log window: 8, 450, 800 x 88 on screen (two lines, D-056)")
 	_check(hud.STATUS_RECTS[0].is_equal_approx(win.call(8, 546, 293, 66)) and hud.STATUS_RECTS[1].is_equal_approx(win.call(309, 546, 293, 66)), "Hero windows: 293 x 66 at 8 and 309, y 546 on screen")
-	_check(hud.COMMAND_RECT.is_equal_approx(win.call(610, 546, 198, 66)), "Command window: 610, 546, 198 x 66 on screen")
+	_check(is_equal_approx(hud.COMMAND_RECT.end.y, hud.BATTLE_LOG_RECT.position.y - 3.0) and is_equal_approx(hud.COMMAND_RECT.position.x, hud.BATTLE_LOG_RECT.position.x), "Choice menu: vertical column anchored right above the log (creator 2026-11-26)")
 	_check(hud.SP_TRACK.position.y < 15 and hud.HEADER_BASELINE < 16, "Round, SP names and SP bar share one thin top line")
 	_check(hud.LOG_LINES == 2 and hud.LOG_FIRST_BASELINE + (hud.LOG_LINES - 1) * hud.LOG_STEP + 3 <= hud.BATTLE_LOG_RECT.end.y, "2 log lines inside the log window (D-056)")
 	_check(hud.BATTLE_LOG_RECT.position.y >= hud.enemy_column(0).end.y - 30 + 4, "The log stays under the enemies' name labels")
@@ -77,9 +77,10 @@ func _run() -> void:
 	_check(hud._menu_rows() == ["FIGHT", "ITEM", "PASS", "REST", "ABSORB"], "Fallen's empty plan lists FIGHT, ITEM, PASS, REST, ABSORB only (%s)" % [hud._menu_rows()])
 	_check(hud._choosing_unit() == battle._fallen, "The arrow marks Fallen as the one choosing")
 	var first_row: Rect2 = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key) == "live-plan:0")[0].rect
-	_check(hud.COMMAND_RECT.encloses(first_row) and is_equal_approx(first_row.position.y, hud.COMMAND_RECT.position.y + 2), "Plan cells start at the top of the command window")
+	var menu_win: Rect2 = hud.menu_rect(5)
+	_check(menu_win.encloses(first_row) and is_equal_approx(first_row.position.y, menu_win.position.y + 2) and is_equal_approx(menu_win.end.y, hud.COMMAND_RECT.end.y) and menu_win.end.y < hud.BATTLE_LOG_RECT.position.y, "Plan cells start at the top of the menu, which ends above the log")
 	var cells: Array = hud.hitboxes.filter(func(h: Dictionary) -> bool: return String(h.key).begins_with("live-plan:"))
-	_check(cells.size() == 5 and is_equal_approx(cells[2].rect.position.y, first_row.position.y) and cells[3].rect.position.y > first_row.position.y, "3-column grid: FIGHT ITEM PASS, then REST ABSORB")
+	_check(cells.size() == 5 and is_equal_approx(cells[2].rect.position.x, first_row.position.x) and cells[1].rect.position.y > first_row.position.y and cells[4].rect.position.y > cells[3].rect.position.y, "One vertical column: FIGHT, ITEM, PASS, REST, ABSORB top to bottom")
 	for c in ["FIGHT", "ITEM", "PASS", "REST", "ABSORB", "DEFEND", "PRAY", "EXEC", "UNDO", "REACT", "DENY"]:
 		_check(hud._width(c, hud.COMMAND_PX, true) + hud.MENU_TEXT_X <= cells[0].rect.size.x, "%s fits its command cell (%.1f + %.1f > %.1f)" % [c, hud._width(c, hud.COMMAND_PX, true), hud.MENU_TEXT_X, cells[0].rect.size.x])
 	battle.submit_plan(1)
@@ -158,7 +159,7 @@ func _run() -> void:
 	key.pressed = true
 	key.keycode = KEY_DOWN
 	battle.hud._input(key)
-	_check(battle.hud.plan_index == 3, "Down key moves one row of the 3-column plan grid")
+	_check(battle.hud.plan_index == 1, "Down key moves one row of the vertical plan column")
 	key.keycode = KEY_UP
 	battle.hud._input(key)
 	key.keycode = KEY_Z
