@@ -55,6 +55,8 @@ func _run() -> void:
 	var start := MAP.entrance()
 	var finish := MAP.sepulchre()
 	_check(dungeon.cell == start and SurvivalState.stratum() == 1, "run começa no Pórtico")
+	_check(dungeon.party.size() == 1 and dungeon.party[0].id == &"fallen",
+		"HUD inicial acompanha o grupo da run")
 	_check(dungeon.npc_near().get("id") == "sanctuary_keeper", "santuário na entrada")
 	_check(dungeon.enemies.entries.size() == SurvivalStrata.PER_STRATUM + 1, "demônios e grupo humano")
 	var warden: Dictionary = dungeon.enemies.at(finish)

@@ -59,9 +59,12 @@ func _run() -> void:
 	_check(w.nearest_demon_hint() == "N 3", "HUD points to the nearest demon from the start (got %s)" % w.nearest_demon_hint())
 
 	# Ferir o grupo e testar Curandeiro + Vendedor na mesma barra de opções.
-	SurvivalState.patch({"fallen_hp": 10, "fallen_en": 2, "yoch_hp": 5, "macca": 40, "bead": 0, "chakra": 0})
+	var yoch := SurvivalAllies.yoch_member("test_yoch")
+	yoch.hp = 5
+	SurvivalState.patch({"fallen_hp": 10, "fallen_en": 2, "party": [yoch], "macca": 40, "bead": 0, "chakra": 0})
 	w._sync_party_from_state()
 	_check(w.party[0].current_hp == 10 and w.party[0].current_en == 2, "Injured party synced to HUD")
+	_check(w.party.size() == 2 and w.party[1].current_hp == 5, "Recruited Yoch synced to HUD")
 
 	_check(w.talk(), "Z opens unified Healer & Shop option bar")
 	_check(w.service_open, "Service bar is open")

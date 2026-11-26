@@ -152,11 +152,26 @@ func _build_party() -> void:
 	var fallen := BattleUnit.new(&"fallen", "FALLEN", SurvivalState.fallen_stats(), true, true)
 	fallen.current_hp = clampi(int(s.get("fallen_hp", fallen.stats.max_hp)), 1, fallen.stats.max_hp)
 	fallen.current_en = clampi(int(s.get("fallen_en", fallen.stats.max_en)), 0, fallen.stats.max_en)
-	var yoch := BattleUnit.new(&"ally", "Yoch", SurvivalState.yoch_stats(), true)
-	yoch.race = &"human"
-	yoch.start_praying(int(s.get("yoch_pp", SurvivalData.YOCH_BASE.pp)))
-	yoch.current_hp = clampi(int(s.get("yoch_hp", yoch.stats.max_hp)), 1, yoch.stats.max_hp)
-	party = [fallen, yoch]
+	party = [fallen]
+	for member: Dictionary in SurvivalState.party():
+		var stats := SurvivalState.member_stats(member)
+		var ally := BattleUnit.new(StringName(member.uid), String(member.name), stats, true)
+		ally.current_hp = SurvivalState.member_hp(member)
+		if SurvivalAllies.prays(member):
+			ally.start_praying(int(member.get("pp", 0)))
+		else:
+			ally.current_en = clampi(int(member.get("en", stats.max_en)), 0, stats.max_en)
+		party.append(ally)
+
+
+func _status_rect(i: int) -> Rect2:
+	if party.size() <= STATUS_RECTS.size():
+		return super._status_rect(i)
+	var first: Rect2 = STATUS_RECTS[0]
+	var last: Rect2 = STATUS_RECTS[1]
+	var gap := last.position.x - first.end.x
+	var width := floorf((last.end.x - first.position.x - 2.0 * gap) / 3.0)
+	return Rect2(first.position.x + i * (width + gap), first.position.y, width, first.size.y)
 
 
 func _sync_party_from_state() -> void:
@@ -511,9 +526,15 @@ func confirm_event() -> String:
 					event_feedback = "No relic left to give: +100M instead."
 				done = true
 		"rest":
+			var members := SurvivalState.party().duplicate(true)
+			for member: Dictionary in members:
+				if bool(member.get("down", false)):
+					continue
+				var top := SurvivalState.member_max_hp(member)
+				member.hp = mini(top, SurvivalState.member_hp(member) + top / 2)
 			SurvivalState.patch({
 				"fallen_hp": mini(SurvivalState.fallen_max_hp(), int(s.fallen_hp) + SurvivalState.fallen_max_hp() / 2),
-				"yoch_hp": mini(SurvivalState.yoch_max_hp(), int(s.yoch_hp) + SurvivalState.yoch_max_hp() / 2)})
+				"party": members})
 			event_feedback = "The spirit's rest mends the party."
 			done = true
 		"commune":
