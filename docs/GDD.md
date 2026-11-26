@@ -1447,8 +1447,10 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
   ATTACK; IA 33% contra PRAY e Ra'am; todos os inimigos atacam o PRAY, qualquer contato
   interrompe, o primeiro que acertou ganha os atos; Yoch sem barra contra ataque ao PRAY;
   Haganah como marca de 1 round (renova); Refuah só aliados; derrota zera os PP. Visual
-  escolhido e implementado: letras subindo do cartão ao conjurar (PRAY/Refuah/Haganah); Haganah
-  = letra ה ao lado do nome + borda pulsando. Efeito do Ra'am: versão 2 de letras **aprovada e
+  implementado (atualizado pela D-112/D-113 em `pray_fx.gd`, 100% letras hebraicas): PRAY faz
+  letras subirem do cartão; Refuah sobe em dupla hélice com `רפואה`; Haganah exibe a letra **ה**
+  ao lado do nome e uma barreira composta inteiramente por letras hebraicas (substituindo a antiga
+  borda geométrica pulsando). Efeito do Ra'am: versão 2 de letras **aprovada e
   implementada** (raio de letras hebraicas com carga da palavra רעם, impacto e letras no chão).
 
 ---

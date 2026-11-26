@@ -1611,10 +1611,13 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     sem efeito prático até existir sistema de condições; reconjurar **renova**.
   - **Refuah** só em aliados. **Derrota zera os PP**; vitória os mantém no save.
   - REST do Yoch: só guarda atos (log sem EN).
-  - **Visual escolhido pelo criador (2026-11-23), IMPLEMENTADO em `scripts/battle/pray_fx.gd`:**
-    ao conjurar PRAY, Refuah e Haganah, letras hebraicas em `#f5f58c` sobem do pé do cartão de
-    quem recebe a reza (opção A, "rise"); a Haganah ativa mostra a letra **ה** ao lado do nome
-    **e** a borda do cartão acesa e pulsando em `#f5f58c` (mistura das ideias C e B).
+  - **Visual das rezas (D-048, atualizado pela D-112/D-113 em `scripts/battle/pray_fx.gd`):**
+    todos os efeitos de reza são 100% compostos por letras hebraicas (sem bordas ou primitivas
+    geométricas; ver `docs/PRAYER_VFX_RULE.md`). Ao conjurar PRAY, letras hebraicas em `#f5f58c`
+    sobem do pé do cartão; **Refuah** projeta dupla hélice ascendente com `רפואה`; **Haganah**
+    ativa mostra a letra **ה** ao lado do nome e uma **barreira composta inteiramente por letras
+    hebraicas** ao redor do cartão do protegido (a antiga borda geométrica pulsando foi removida
+    na D-112/D-113).
   - **Efeito do Ra'am APROVADO pelo criador (2026-11-23) e IMPLEMENTADO** (`pray_fx.gd`
     `play_raam`): versão 2 de letras do protótipo `prototypes/pray-vfx` — carga de 0,7 s
     (cenário escurece, letras em espiral formam a palavra רעם no céu), quadro branco, raio duplo
