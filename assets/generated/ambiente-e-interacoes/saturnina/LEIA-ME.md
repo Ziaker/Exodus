@@ -2,6 +2,8 @@
 
 Estudos de direção de arte para aprovação. Abra [Sloth_Necropole_Saturnina.blend](Sloth_Necropole_Saturnina.blend) e use o seletor de cenas do Blender para alternar entre A, B e C. Em cada cena, a coleção Câmeras contém os mesmos sete tipos de enquadramento.
 
+[Ruptura exterior](ruptura/LEIA-ME.md) · [Interior atrás do pórtico](ruptura/interior/LEIA-ME.md) · [Maquete de circulação das cinco zonas](percurso/LEIA-ME.md)
+
 | Estudo | Composição | Capturas |
 |---|---|---|
 | A · Necropolis of Stone | Pórtico em desfiladeiro, passagem processional, túmulos menores e esculturas sentadas | [Prancha](a_prancha.png), [POV](galeria/a_pov.png), [planta](galeria/a_planta.png) |
@@ -67,4 +69,4 @@ Notas de trabalho para comparar as capturas, de 0 a 10. O total segue os pesos d
 
 - `blender --background --factory-startup Sloth_Necropole_Saturnina.blend --python-exit-code 1 --python renderizar.py` reabre o arquivo, mede a câmera, conta os triângulos e renderiza as três cenas. [Resultado estrutural](auditoria.json)
 - `python galeria.py` valida dimensões e abertura de 24 PNGs e monta as pranchas. A auditoria visual abrange as sete vistas por cena e as três densidades sob o mesmo enquadramento. O primeiro passe do comparativo veio de prévias menores que as imagens finais.
-- `git status --short -- assets/generated/ambiente-e-interacoes/abertura` sem alterações nessa pasta. `git diff --stat -- docs/GDD.md docs/DECISIONS.md` mostrou 23 inserções e uma exclusão no momento da conferência. O diff contém o rework de habilidades D-106, de outra sessão. Este pacote está em `captures/`, fora do índice.
+- Na conferência original, `git status --short -- assets/generated/ambiente-e-interacoes/abertura` não retornou alterações nessa pasta. O rework D-106 aparecia no checkout e está fora do pacote da Necrópole. A cópia versionada mantém o código de modelagem, a LUT e os caminhos das capturas. O marcador `.gdignore` mantém os estudos fora da importação automática do Godot.

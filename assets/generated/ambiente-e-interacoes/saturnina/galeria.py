@@ -43,7 +43,7 @@ def filter_image(raw):
 def board(target,title,entries,cols=2,thumb=(388,236)):
     rows=(len(entries)+cols-1)//cols
     gap,pad,caption=12,16,23
-    frame=Image.new('RGB',(cols*thumb[0]+(cols-1)*gap+pad*2, 
+    frame=Image.new('RGB',(cols*thumb[0]+(cols-1)*gap+pad*2,
                              rows*(thumb[1]+caption)+(rows-1)*gap+pad*2+34),'#191713')
     draw=ImageDraw.Draw(frame)
     font_path=Path('C:/Windows/Fonts/segoeui.ttf')
