@@ -52,9 +52,9 @@ Voltadas a dar identidade própria ao dungeon crawler além do combate.
 
 ---
 
-## 3. Magias ofensivas elementais (15 candidatos)
+## 3. Magias ofensivas elementais (14 candidatos)
 
-*(Exclui `Ra'am`, já canônica na §0.1.)*
+*(Exclui `Ra'am`, já canônica na §0.1, e `Nogah`, removida por sobreposição com `Zohar`/`Cherev`.)*
 
 | Nome | Hebraico | Significado | Efeito proposto | Status / Observação |
 |---|---|---|---|---|
@@ -71,34 +71,29 @@ Voltadas a dar identidade própria ao dungeon crawler além do combate.
 | **Afar** | עָפָר | Pó, terra solta | Nuvem de poeira ofensiva. | Candidato |
 | **Mayim** | מַיִם | Água | Manipulação de água. | Candidato |
 | **Choshekh** | חֹשֶׁךְ | Escuridão | Ataque de natureza sombria. | Candidato |
-| **Nogah** | נֹגַהּ | Brilho, resplendor | Emissão ofensiva de luz. | Candidato *(próximo semanticamente de `Zohar` D-112)* |
 | **Mavet** | מָוֶת | Morte | Magia associada à morte. | Candidato |
 
 ---
 
-## 4. Magias de suporte e oração (13 candidatos)
+## 4. Magias de suporte e oração (7 candidatos)
 
-*(Exclui `Refuah`, `Haganah` e `Magen`, já canônicas na §0.1.)*
+*(Exclui `Refuah`, `Haganah` e `Magen`, já canônicas na §0.1, e as redundantes/colidentes `Chazak`, `Oz`, `Machseh`, `Shalom`, `Tahor` e `Neshamah`.)*
 
 | Nome | Hebraico | Significado | Efeito proposto | Status / Observação |
 |---|---|---|---|---|
 | **Berakhah** | בְּרָכָה | Bênção | Fortalecimento de atributos. | Candidato |
-| **Chazak** | חָזַק | Fortalecer-se | Aumento de ATK. | Candidato *(sobrepõe parcialmente `Gevurah` D-112)* |
-| **Oz** | עֹז | Força, poder | Fortalecimento ofensivo. | Candidato *(sobrepõe parcialmente `Gevurah` D-112)* |
-| **Machseh** | מַחְסֶה | Refúgio | Proteção coletiva. | Candidato |
 | **Chesed** | חֶסֶד | Misericórdia, bondade | Recuperação coletiva. | Candidato |
-| **Shalom** | שָׁלוֹם | Paz, integridade | Restauração de condições adversas. | Candidato |
-| **Tahor** | טָהוֹר | Puro | Purificação de efeitos negativos. | **Colide com `Tahorah` (D-112)** |
 | **Qodesh** | קֹדֶשׁ | Santidade | Consagração ou proteção sagrada. | Candidato |
 | **Tikvah** | תִּקְוָה | Esperança | Proteção contra derrota iminente. | Candidato |
-| **Neshamah** | נְשָׁמָה | Sopro vital | Revitalização. | Candidato *(cuidado: fonética muito próxima de `Nechamah` D-107)* |
 | **Techiyah** | תְּחִיָּה | Revivificação | Ressurreição de um aliado. | Candidato |
 | **Emunah** | אֱמוּנָה | Fidelidade, fé | Fortalecimento espiritual. | Candidato |
 | **Chayim** | חַיִּים | Vida | Aumento temporário da vitalidade. | Candidato |
 
 ---
 
-## 5. Magias de maldição e enfraquecimento (12 candidatos)
+## 5. Magias de maldição e enfraquecimento (11 candidatos)
+
+*(Exclui `Ivvaron`, removida por colisão com `Sanverim`.)*
 
 | Nome | Hebraico | Significado | Efeito proposto | Status / Observação |
 |---|---|---|---|---|
@@ -110,7 +105,6 @@ Voltadas a dar identidade própria ao dungeon crawler além do combate.
 | **Pachad** | פַּחַד | Medo, terror | Prejuízo à superioridade ou às ações. | Candidato |
 | **Emah** | אֵימָה | Pavor | Intimidação sobrenatural. | Candidato |
 | **Shever** | שֶׁבֶר | Ruptura, fratura | Redução de DEF. | Candidato *(par possível para `BREAK` do Survival)* |
-| **Ivvaron** | עִוָּרוֹן | Cegueira | Prejuízo à capacidade de acertar. | **Sobrepõe `Sanverim` (D-107/D-115)** |
 | **Ra'av** | רָעָב | Fome | Drenagem de recursos. | Candidato *(par possível para `MIND DRAIN` do Survival)* |
 | **Tame** | טָמֵא | Impuro | Condição de impureza. | Candidato |
 | **Keliyah** | כְּלָיָה | Destruição, consumação | Deterioração extrema. | Candidato |
@@ -136,7 +130,7 @@ Categoria voltada a propriedades da existência e à cosmologia dos Daemas / EXO
 
 ---
 
-## 7. Top 20 candidatos favoritos (referência criativa)
+## 7. Top 18 candidatos favoritos (referência criativa)
 
 Notas subjetivas de direção criativa (sonoridade, significado, originalidade e potencial mecânico):
 
@@ -152,16 +146,14 @@ Notas subjetivas de direção criativa (sonoridade, significado, originalidade e
 | 08 | **Qodesh** | קֹדֶשׁ | Consagração | 9.4 |
 | 09 | **Nefesh** | נֶפֶשׁ | Manipulação vital | 9.3 |
 | 10 | **Davak** | דָּבַק | Fusão | 9.2 |
-| 11 | **Neshamah** | נְשָׁמָה | Revitalização *(atenção: parecida com `Nechamah`)* | 9.1 |
-| 12 | **Chazak** | חָזַק | Fortalecimento | 9.0 |
-| 13 | **Barak** | בָּרָק | Relâmpago | 9.0 |
-| 14 | **Ot** | אוֹת | Marcação | 8.9 |
-| 15 | **Choshekh** | חֹשֶׁךְ | Escuridão | 8.8 |
-| 16 | **Shuv** | שׁוּב | Retorno | 8.8 |
-| 17 | **Pachad** | פַּחַד | Medo | 8.7 |
-| 18 | **Shever** | שֶׁבֶר | Ruptura | 8.7 |
-| 19 | **Mavet** | מָוֶת | Morte | 8.6 |
-| 20 | **Hayah** | הָיָה | Manifestação | 8.5 |
+| 11 | **Barak** | בָּרָק | Relâmpago | 9.0 |
+| 12 | **Ot** | אוֹת | Marcação | 8.9 |
+| 13 | **Choshekh** | חֹשֶׁךְ | Escuridão | 8.8 |
+| 14 | **Shuv** | שׁוּב | Retorno | 8.8 |
+| 15 | **Pachad** | פַּחַד | Medo | 8.7 |
+| 16 | **Shever** | שֶׁבֶר | Ruptura | 8.7 |
+| 17 | **Mavet** | מָוֶת | Morte | 8.6 |
+| 18 | **Hayah** | הָיָה | Manifestação | 8.5 |
 
 ---
 
@@ -195,5 +187,4 @@ Em vez de números ou sufixos arbitrários, explorar adjetivos/qualificadores he
 ### Pendências antes de promover qualquer item deste banco
 1. **Fronteira de lore/usuário:** definir se vocabulário hebraico é exclusivo de humanos (Reza/PP) ou se Fallen/demônios e magias de exploração/elementais também o utilizam.
 2. **Padronização de raízes em combate:** definir se elementais usarão 1 raiz por elemento + qualificadores (melhor legibilidade em batalha) ou nomes distintos por conceito.
-3. **Resolução de colisões:** evitar duplicação com as 11 rezas já existentes (`Magen`, `Tahorah`, `Sanverim`, `Gevurah`, `Zohar`, `Nechamah`).
-4. **Regra de VFX (D-113):** toda reza promovida deste banco ao jogo precisará de VFX 100% letras hebraicas em `scripts/battle/pray_fx.gd`.
+3. **Regra de VFX (D-113):** toda reza promovida deste banco ao jogo precisará de VFX 100% letras hebraicas em `scripts/battle/pray_fx.gd`.
