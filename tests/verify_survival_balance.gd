@@ -94,18 +94,21 @@ func _run() -> void:
 					var dealt := 0.0
 					var taken := 0.0
 					var zero := 0
+					var hero_zero := 0
 					for n in SAMPLES:
 						var a := BattleMath.physical_damage(POWER, float(h.atk), h.agi, es.defense, h.sp_value(), es.sp_value(), BattleMath.Affinity.NORMAL, rng)
 						dealt += float(a.amount)
+						if int(a.amount) == 0: hero_zero += 1
 						var b := BattleMath.physical_damage(POWER, float(es.atk), es.agi, h.defense, es.sp_value(), h.sp_value(), BattleMath.Affinity.NORMAL, rng)
 						taken += float(b.amount)
 						if int(b.amount) == 0: zero += 1
 					dealt /= SAMPLES
 					taken /= SAMPLES
-					if not acc.has(stratum): acc[stratum] = {"kill": 0.0, "die": 0.0, "zero": 0.0, "dsp": 0.0, "adsp": 0.0, "n": 0}
+					if not acc.has(stratum): acc[stratum] = {"kill": 0.0, "die": 0.0, "zero": 0.0, "hzero": 0, "dsp": 0.0, "adsp": 0.0, "n": 0}
 					acc[stratum].kill += float(es.max_hp) / maxf(dealt, 0.1)
 					acc[stratum].die += float(h.max_hp) / maxf(taken, 0.1)
 					acc[stratum].zero += float(zero) / SAMPLES
+					acc[stratum].hzero += hero_zero
 					acc[stratum].dsp += float(h.sp_value() - es.sp_value())
 					acc[stratum].adsp += absf(float(h.sp_value() - es.sp_value()))
 					acc[stratum].n += 1
@@ -134,6 +137,25 @@ func _run() -> void:
 			check(kill >= 1.5, "%s stratum %d: the hero does not one-shot (%.1f hits)" % [mode, stratum, kill])
 			check(die >= 1.5, "%s stratum %d: the hero is not one-shot (%.1f hits)" % [mode, stratum, die])
 			check(zero_share <= 0.25, "%s stratum %d: the hero is not immune (%d%% of blows deal 0)" % [mode, stratum, int(zero_share * 100.0)])
+			check(int(a.hzero) == 0, "%s stratum %d: D-108, the hero never deals 0 (%d blows did)" % [mode, stratum, int(a.hzero)])
+
+	# --- D-108 (criador: "tira isso de NUNCA causar dano a inimigos com alta defesa"): com o heroi no SP
+	# esperado de cada estrato, nenhum dos 35 inimigos (guardiao, elite e OMEN 0 e 5 inclusos) recebe
+	# ou causa golpe basico de 0. Antes: Oni 75%, Garuda 72%, Hel 70%, Beelzebub 83% de golpes 0.
+	for stratum in range(1, 6):
+		var par := SurvivalStrata.par_sp(stratum)
+		var top := _sheet(SurvivalData.FALLEN_BASE)
+		SurvivalData.follow_hero(top, par, top.sp_value())
+		for id in SurvivalStrata.ids_for(stratum):
+			for omen in [0, 5]:
+				var e := _sheet(SurvivalData.demon_by_id(id).stats)
+				SurvivalData.follow_hero(e, top.sp_value(), par)
+				SurvivalData.empower(e, id, 1, omen)
+				var zeros := 0
+				for n in 400:
+					if int(BattleMath.physical_damage(POWER, float(top.atk), top.agi, e.defense, top.sp_value(), e.sp_value(), BattleMath.Affinity.NORMAL, rng).amount) == 0: zeros += 1
+					if int(BattleMath.physical_damage(POWER, float(e.atk), e.agi, top.defense, e.sp_value(), top.sp_value(), BattleMath.Affinity.NORMAL, rng).amount) == 0: zeros += 1
+				check(zeros == 0, "D-108 stratum %d %s OMEN %d: no basic blow deals 0 (%d did)" % [stratum, id, omen, zeros])
 
 	print("verify_survival_balance: %d checks OK" % checks)
 	await process_frame

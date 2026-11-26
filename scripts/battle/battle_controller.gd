@@ -473,7 +473,7 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 		_append_log("%s -> %s: 0 dmg (rhythm %s, def %s, NO CONTACT)" % [
 			attacker.display_name, defender.display_name,
 			_rhythm_name(attack_timing), _rhythm_name(defense_timing)])
-		_flash_feedback("DODGE" if defense_timing == BattleMath.RhythmResult.POINT else "MISS")
+		_flash_feedback("DODGE")  # D-109: só o centro da defesa evita contato
 		return -1
 
 	# Creator 2026-11-23: magic = same formula with MAK/MEF; IGNI is normal (x1) for
@@ -494,10 +494,8 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 			defence_stat, attacker.current_sp, defender.current_sp,
 			affinity, rng)
 
-	var amount := int(result.amount)
-	if attack_timing == BattleMath.RhythmResult.BEAM \
-		or defense_timing == BattleMath.RhythmResult.BEAM:
-		amount = int(float(amount) * 0.5)
+	# D-109: the attack mark scales the hit (white 50%, grey 80%, yellow 100%; side defence halves).
+	var amount := BattleMath.scaled_damage(int(result.amount), attack_timing, defense_timing)
 	# D-106: CHILL / WEAKEN on the attacker, MARK on the defender, the skill's own multiplier.
 	amount = int(round(float(amount) * SkillFx.out_mult(attacker) * float(_hit_mods.get("mult", 1.0)) * SkillFx.in_mult(defender)))
 	SkillFx.consume_attack(attacker)
@@ -513,9 +511,10 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 
 	var outcome := "FULL"
-	if defense_timing == BattleMath.RhythmResult.BEAM \
-		or attack_timing == BattleMath.RhythmResult.BEAM:
+	if defense_timing == BattleMath.RhythmResult.BEAM:
 		outcome = "BLOCK"
+	elif attack_timing != BattleMath.RhythmResult.POINT:
+		outcome = "HIT %d%%" % int(round(BattleMath.strike_multiplier(attack_timing, defense_timing) * 100.0))
 	if bool(result.crit):
 		outcome += " CRITICAL"
 	_flash_feedback(outcome)
@@ -600,13 +599,14 @@ func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 func _defender_reaction(defender: BattleUnit, attacker: BattleUnit) -> int:
 	if defender.acts_available <= 0:
 		return BattleMath.RhythmResult.MISS
+	# D-109: defender custa 1 ACT sempre, dê certo ou não (igual ao jogador).
+	defender.spend_act()
 	var point_half := BattleMath.unit_point_half(defender, attacker)
 	var advantage := defender.current_sp - attacker.current_sp
 	var rolls := BattleMath.extra_block_rolls(advantage) + 1
 	for _i in rolls:
 		var result := _zone_roll(point_half)
 		if result != BattleMath.RhythmResult.MISS:
-			defender.spend_act()
 			return result
 	return BattleMath.RhythmResult.MISS
 

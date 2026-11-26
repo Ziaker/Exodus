@@ -406,10 +406,8 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 			target.display_name, battle._rhythm_name(attack), battle._rhythm_name(defense)])
 		if defense != BattleMath.RhythmResult.MISS:
 			battle._set_role(target, "DEFEND")
-		if defense == BattleMath.RhythmResult.POINT:
-			_event("%s dodges." % battle.short_name(target))
-		else:
-			_event("%s misses." % battle.short_name(unit))
+		# D-109: sem contato só existe com defesa no centro.
+		_event("%s dodges." % battle.short_name(target))
 		battle._present_strike(unit, target, 0)
 		return
 	# Approved thunder (2026-11-23): the damage lands at the strike.
@@ -424,9 +422,9 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 		battle._present_strike(unit, target, 0, true)
 		return
 	var amount := int(r.amount)
-	var beam := attack == BattleMath.RhythmResult.BEAM or defense == BattleMath.RhythmResult.BEAM
-	if beam:
-		amount = int(float(amount) * 0.5)
+	# D-109: marco do ataque 50/80/100%; defesa na lateral = metade.
+	amount = BattleMath.scaled_damage(amount, attack, defense)
+	var beam := defense == BattleMath.RhythmResult.BEAM
 	var applied := target.take_damage(amount)
 	unit.grant_acts(BattleMath.press_turn_acts(target.affinity))
 	if bool(r.crit):
@@ -436,7 +434,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	_log("%s -> %s: %d dmg (Ra'am base %d, %s, rhythm %s, def %s, crit %s, affinity %s, SP roll %+d)" % [
-		unit.display_name, target.display_name, applied, int(r.base), "BLOCK" if beam else "FULL",
+		unit.display_name, target.display_name, applied, int(r.base), "BLOCK" if beam else ("FULL" if attack == BattleMath.RhythmResult.POINT else "HIT %d%%" % int(round(BattleMath.strike_multiplier(attack, defense) * 100.0))),
 		battle._rhythm_name(attack), battle._rhythm_name(defense), "YES" if bool(r.crit) else "no",
 		battle._affinity_name(target.affinity), int(r.sp_roll)])
 	var dealt := hp_before - target.current_hp

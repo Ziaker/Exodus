@@ -3162,6 +3162,42 @@ Formato: ID · data · decisão · estado · impacto documental.
   nos valores da ficha antiga (BEAD cura 77% do HP inicial). Impacto: `survival_data.gd`,
   `survival_strata.gd`, `survival_battle.gd`, `tests/verify_survival_balance.gd`;
   `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
+- **D-108 · 2026-11-25 (decisão do criador) — Desvantagem de SP não tira dano; variação fixa ±10%.**
+  Motivo: o criador disse ``tira isso de NUNCA causar dano a inimigos com alta defesa, é impossível
+  jogar assim``. Medição (golpe básico do survival, poder 10, herói no SP esperado de cada estrato):
+  o dano base `poder × ATK ÷ DEF` fica entre 3 e 20, e a desvantagem de SP subtraía um sorteio de 1
+  até ΔSP; com a variação de ±10% + 2% por ponto de ΔSP, o golpe do Fallen dava 0 em 61 a 83% das
+  vezes contra Oni, Garuda, Succubus, Chimera, High Pixie, Nekomata, Incubus, Ganesha, Lakshmi, Hel,
+  Pazuzu e Beelzebub (40 a 46% contra Pyro Jack, Vampire e Loki). Escolhas do criador, uma por
+  pergunta: ``Só a vantagem soma``; ``Jogo todo``; e ``Sim, ±10% fixo`` (implementar a D-019, que
+  estava aprovada e não implementada; sem ela o Beelzebub ainda zerava 10% dos golpes).
+  Regra: `BattleMath.sp_bonus_roll` soma `1d(ΔSP)` só quando o atacante tem mais SP; com SP igual ou
+  menor não há sorteio nem desconto. A variação é `±BASE_VARIATION` (10%) sempre. Vale para o
+  ataque, a magia (`physical_damage`) e o Ra'am da Yoch (`PrayerBook.raam_damage`), na campanha, na
+  dungeon e no survival. Afinidade NULL/ABSORB continua dando 0 (não mudou). Resultado medido: 0%
+  de golpes de 0 nos dois sentidos contra os 35 inimigos do survival, com guardião, elite e OMEN 0 e
+  5. Substitui a regra "subtrai se tem menos" da COMBAT_SPEC e o item 3B (piso de 1), que fica sem
+  efeito. Impacto: `scripts/core/battle_math.gd`, `scripts/core/prayer_book.gd`,
+  `tests/test_battle_math.gd`, `tests/verify_survival_balance.gd`, `tools/measure_zero_damage.gd`;
+  `docs/COMBAT_SPEC.md`, `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
+- **D-109 · 2026-11-25 (decisão do criador) — Todo golpe com barra acerta; marcos 50/80/100%.**
+  Pedido: ``para com ataques normais, só ocorrer desvio de verdade se o alvo reagir defendendo ao
+  custo de 1ACT, não mais sempre, no caso, sempre causa dano, com marco branco 50%, marco cinza 80%
+  e marco amarelo 100%``. Respostas do criador, uma por pergunta: marcos = ``Pontas, laterais,
+  centro``; cores da barra = ``Não, só a regra``; defesa = ``Manter como hoje``; inimigos = ``Sim,
+  para todos``; alcance = ``Todo golpe com barra``; ataque cinza + defesa lateral = ``Só a defesa:
+  50%``; ACT da IA = ``Paga sempre que defende``; golpe branco = ``Sim, conta tudo``.
+  Regra: `BattleMath.has_contact` só é falso com defesa no centro; `strike_multiplier` dá 1,0 / 0,8
+  / 0,5 pelo marco do ataque, ou 0,5 se a defesa parou na lateral; `scaled_damage` arredonda (o
+  arredondamento é escolha do agente, para um golpe de 1 não virar 0). `_defender_reaction` e
+  `_skill_defense_timing` gastam 1 ACT do inimigo antes de rolar a defesa. Consequências
+  diretas, aguardando o criador: o golpe do inimigo no PRAY sempre interrompe a reza (antes só
+  quando não errava); o empate de contra-ataque na trilha branca faz os dois acertarem 50%; o
+  inimigo com ACT sempre defende e por isso sempre perde 1 ACT ao ser atacado. Cues `MISS` e a frase
+  "X misses." deixam de aparecer em golpes. Impacto: `battle_math.gd`, `battle_controller.gd`,
+  `playable_controller.gd`, `prayer_flow.gd`; testes `test_battle_math`, `test_battle_combat`,
+  `verify_playable_feedback/fx/prayer/reactions/skills`; `docs/COMBAT_SPEC.md`,
+  `docs/DECISIONS.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em

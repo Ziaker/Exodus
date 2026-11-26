@@ -105,7 +105,28 @@ func test_point_against_point_gives_no_contact() -> void:
 	assert_true(BattleMath.has_contact(p, m))
 	assert_false(BattleMath.has_contact(b, p))
 	assert_true(BattleMath.has_contact(b, b))
-	assert_false(BattleMath.has_contact(m, b))
+	# D-109: errar a barra de ataque nao evita mais o contato; so a defesa no centro desvia.
+	assert_true(BattleMath.has_contact(m, b))
+	assert_true(BattleMath.has_contact(m, m))
+	assert_false(BattleMath.has_contact(m, p))
+
+
+## D-109 (criador 2026-11-25): marco branco 50%, cinza 80%, amarelo 100%; defesa na lateral = 50%.
+func test_strike_marks_scale_damage() -> void:
+	var p := BattleMath.RhythmResult.POINT
+	var b := BattleMath.RhythmResult.BEAM
+	var m := BattleMath.RhythmResult.MISS
+	assert_almost_eq(BattleMath.strike_multiplier(p, m), 1.0, 0.0001)
+	assert_almost_eq(BattleMath.strike_multiplier(b, m), 0.8, 0.0001)
+	assert_almost_eq(BattleMath.strike_multiplier(m, m), 0.5, 0.0001)
+	for atk in [p, b, m]:
+		assert_almost_eq(BattleMath.strike_multiplier(atk, b), 0.5, 0.0001, "lateral da defesa = metade")
+	assert_eq(BattleMath.scaled_damage(20, p, m), 20)
+	assert_eq(BattleMath.scaled_damage(20, b, m), 16)
+	assert_eq(BattleMath.scaled_damage(20, m, m), 10)
+	assert_eq(BattleMath.scaled_damage(20, b, b), 10)
+	assert_eq(BattleMath.scaled_damage(1, m, m), 1, "um golpe de 1 nao vira 0")
+	assert_eq(BattleMath.scaled_damage(0, p, m), 0)
 
 
 func test_critical_roll_is_deterministic_with_seed() -> void:
@@ -121,12 +142,38 @@ func test_sp_roll_sign_follows_superiority() -> void:
 	var stronger := BattleMath.physical_damage(100, 10, 6, 5, 40, 10,
 		BattleMath.Affinity.NORMAL, _rng)
 	assert_gt(int(stronger.sp_roll), 0)
+	# D-108: ter menos SP nao tira dano; so a vantagem soma.
 	var weaker := BattleMath.physical_damage(100, 10, 6, 5, 10, 40,
 		BattleMath.Affinity.NORMAL, _rng)
-	assert_lt(int(weaker.sp_roll), 0)
+	assert_eq(int(weaker.sp_roll), 0)
 	var equal := BattleMath.physical_damage(100, 10, 6, 5, 20, 20,
 		BattleMath.Affinity.NORMAL, _rng)
 	assert_eq(int(equal.sp_roll), 0)
+
+
+## D-108 (criador: "tira isso de NUNCA causar dano a inimigos com alta defesa"): ATK 5 contra DEF 16
+## com 60 de desvantagem de SP. A formula antiga dava 0 em quase todo golpe; agora nunca da 0 e o
+## dano fica no base (10*5/16 = 3.1) mais ou menos 10% (D-019), com critico x1.5.
+func test_low_sp_attacker_still_damages_high_defense() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2026
+	for i in 2000:
+		var r := BattleMath.physical_damage(10, 5.0, 0, 16, 40, 100, BattleMath.Affinity.NORMAL, rng)
+		assert_eq(int(r.sp_roll), 0)
+		assert_between(float(r.variation), -0.1, 0.1)
+		assert_gt(int(r.amount), 0, "golpe %d deu 0" % i)
+		assert_lte(int(r.amount), 5)
+
+
+## D-019 implementada: a variacao fica em +-10% mesmo com grande diferenca de SP.
+func test_variation_is_fixed_ten_percent() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 19
+	for i in 500:
+		var up := BattleMath.physical_damage(10, 10.0, 0, 10, 200, 10, BattleMath.Affinity.NORMAL, rng)
+		var down := BattleMath.physical_damage(10, 10.0, 0, 10, 10, 200, BattleMath.Affinity.NORMAL, rng)
+		assert_between(float(up.variation), -0.1, 0.1)
+		assert_between(float(down.variation), -0.1, 0.1)
 
 
 func test_affinity_interacts_with_damage() -> void:
