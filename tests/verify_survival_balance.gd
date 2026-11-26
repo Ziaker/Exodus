@@ -137,9 +137,9 @@ func _run() -> void:
 			check(kill >= 1.5, "%s stratum %d: the hero does not one-shot (%.1f hits)" % [mode, stratum, kill])
 			check(die >= 1.5, "%s stratum %d: the hero is not one-shot (%.1f hits)" % [mode, stratum, die])
 			check(zero_share <= 0.25, "%s stratum %d: the hero is not immune (%d%% of blows deal 0)" % [mode, stratum, int(zero_share * 100.0)])
-			check(int(a.hzero) == 0, "%s stratum %d: D-106, the hero never deals 0 (%d blows did)" % [mode, stratum, int(a.hzero)])
+			check(int(a.hzero) == 0, "%s stratum %d: D-108, the hero never deals 0 (%d blows did)" % [mode, stratum, int(a.hzero)])
 
-	# --- D-106 (criador: "tira isso de NUNCA causar dano a inimigos com alta defesa"): com o heroi no SP
+	# --- D-108 (criador: "tira isso de NUNCA causar dano a inimigos com alta defesa"): com o heroi no SP
 	# esperado de cada estrato, nenhum dos 35 inimigos (guardiao, elite e OMEN 0 e 5 inclusos) recebe
 	# ou causa golpe basico de 0. Antes: Oni 75%, Garuda 72%, Hel 70%, Beelzebub 83% de golpes 0.
 	for stratum in range(1, 6):
@@ -155,7 +155,7 @@ func _run() -> void:
 				for n in 400:
 					if int(BattleMath.physical_damage(POWER, float(top.atk), top.agi, e.defense, top.sp_value(), e.sp_value(), BattleMath.Affinity.NORMAL, rng).amount) == 0: zeros += 1
 					if int(BattleMath.physical_damage(POWER, float(e.atk), e.agi, top.defense, e.sp_value(), top.sp_value(), BattleMath.Affinity.NORMAL, rng).amount) == 0: zeros += 1
-				check(zeros == 0, "D-106 stratum %d %s OMEN %d: no basic blow deals 0 (%d did)" % [stratum, id, omen, zeros])
+				check(zeros == 0, "D-108 stratum %d %s OMEN %d: no basic blow deals 0 (%d did)" % [stratum, id, omen, zeros])
 
 	print("verify_survival_balance: %d checks OK" % checks)
 	await process_frame

@@ -122,10 +122,10 @@ MAK 7, DEF 6, MEF 6, AGI 9; SP 73) e a Yoch com HP 17, ATK 8, DEF 6, AGI 8 (sem 
 começar cada batalha, cada inimigo recebe (ou perde) a diferença entre o SP atual do Fallen e o SP
 esperado no estrato (`SurvivalStrata.par_sp`), repartida pelos atributos (`SurvivalData.follow_hero`),
 antes de guardião, elite e OMEN. Simulação de 5 estratos com absorções reais (poder básico 10):
-antes da D-106, quem sempre pegava a maior oferta matava em 3 a 6 golpes e aguentava 3 a 8, com até
+antes da D-108, quem sempre pegava a maior oferta matava em 3 a 6 golpes e aguentava 3 a 8, com até
 8% dos golpes inimigos dando 0 (e até 83% dos golpes do Fallen contra os inimigos de mais SP/DEF).
 
-**D-106 (desvantagem de SP não tira dano; variação fixa ±10%, jogo todo).** O criador mandou tirar
+**D-108 (desvantagem de SP não tira dano; variação fixa ±10%, jogo todo).** O criador mandou tirar
 o "nunca causar dano a inimigos com alta defesa". Agora só a vantagem de SP soma `1d(ΔSP)` e a
 variação é sempre ±10%. Mesma simulação: quem pega a maior oferta mata em 2,5 / 3,9 / 5,4 / 6,0 /
 8,1 golpes (estratos 1 a 5) e aguenta 2,2 / 3,2 / 4,7 / 5,5 / 6,2; quem escolhe ao acaso mata em

@@ -3007,7 +3007,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   nos valores da ficha antiga (BEAD cura 77% do HP inicial). Impacto: `survival_data.gd`,
   `survival_strata.gd`, `survival_battle.gd`, `tests/verify_survival_balance.gd`;
   `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
-- **D-106 · 2026-11-25 (decisão do criador) — Desvantagem de SP não tira dano; variação fixa ±10%.**
+- **D-108 · 2026-11-25 (decisão do criador) — Desvantagem de SP não tira dano; variação fixa ±10%.**
   Motivo: o criador disse ``tira isso de NUNCA causar dano a inimigos com alta defesa, é impossível
   jogar assim``. Medição (golpe básico do survival, poder 10, herói no SP esperado de cada estrato):
   o dano base `poder × ATK ÷ DEF` fica entre 3 e 20, e a desvantagem de SP subtraía um sorteio de 1
@@ -3025,7 +3025,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   efeito. Impacto: `scripts/core/battle_math.gd`, `scripts/core/prayer_book.gd`,
   `tests/test_battle_math.gd`, `tests/verify_survival_balance.gd`, `tools/measure_zero_damage.gd`;
   `docs/COMBAT_SPEC.md`, `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.
-- **D-107 · 2026-11-25 (decisão do criador) — Todo golpe com barra acerta; marcos 50/80/100%.**
+- **D-109 · 2026-11-25 (decisão do criador) — Todo golpe com barra acerta; marcos 50/80/100%.**
   Pedido: ``para com ataques normais, só ocorrer desvio de verdade se o alvo reagir defendendo ao
   custo de 1ACT, não mais sempre, no caso, sempre causa dano, com marco branco 50%, marco cinza 80%
   e marco amarelo 100%``. Respostas do criador, uma por pergunta: marcos = ``Pontas, laterais,

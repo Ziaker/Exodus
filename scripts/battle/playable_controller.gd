@@ -886,7 +886,7 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_
 
 func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, magic: bool = false) -> void:
 	var outcome := "HIT"
-	# D-107: todo golpe com barra acerta; só a defesa paga desvia (centro) ou bloqueia (lateral).
+	# D-109: todo golpe com barra acerta; só a defesa paga desvia (centro) ou bloqueia (lateral).
 	if defense_result == BattleMath.RhythmResult.POINT: outcome = "DODGE"
 	elif defense_result == BattleMath.RhythmResult.BEAM: outcome = "BLOCK"
 	var source: String = log_history.back()
@@ -1884,7 +1884,7 @@ func _skill_attack_timing(attacker: BattleUnit, defender: BattleUnit, marks: Arr
 
 
 ## Defense per mark: a hero who paid DEFEND presses on its rail (same marks); an enemy
-## rolls each mark and spends one act for the whole rail (D-107: always, defended or not).
+## rolls each mark and spends one act for the whole rail (D-109: always, defended or not).
 func _skill_defense_timing(defender: BattleUnit, attacker: BattleUnit, marks: Array[float], paid: bool) -> Array[int]:
 	var results: Array[int] = []
 	if defender.is_player:
@@ -1907,7 +1907,7 @@ func _skill_defense_timing(defender: BattleUnit, attacker: BattleUnit, marks: Ar
 				result = _zone_roll(point_half)
 				if result != BattleMath.RhythmResult.MISS: break
 			results.append(result)
-		# D-107: defender custa 1 ACT sempre, dê certo ou não.
+		# D-109: defender custa 1 ACT sempre, dê certo ou não.
 		defender.spend_act()
 	while results.size() < marks.size():
 		results.append(BattleMath.RhythmResult.MISS)

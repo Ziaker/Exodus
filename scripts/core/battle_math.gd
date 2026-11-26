@@ -12,7 +12,7 @@ const BLOCK_ROLLS_PER_SP: int = 2
 const THRESHOLD_RATIO: float = 0.7
 const MAX_AVAILABLE_ACTS: int = 4
 const MAX_STORED_ACTS: int = 4
-## D-019 (implementada pela D-106): variação fixa de ±10%, sem depender da diferença de SP.
+## D-019 (implementada pela D-108): variação fixa de ±10%, sem depender da diferença de SP.
 const BASE_VARIATION: float = 0.10
 const CRIT_MULTIPLIER: float = 1.5
 const CRIT_PER_SP_POINT: float = 2.0
@@ -98,7 +98,7 @@ static func crit_chance(agi: int, sp_difference: int) -> float:
 	return clampf(float(agi) + sp_bonus, 0.0, CRIT_FINAL_CAP)
 
 
-## D-107 (criador 2026-11-25): todo golpe com barra acerta. Só há desvio de verdade quando o
+## D-109 (criador 2026-11-25): todo golpe com barra acerta. Só há desvio de verdade quando o
 ## alvo DEFENDE (paga 1 ACT) e para no centro da barra de defesa (D-015: a defesa perfeita
 ## prevalece sobre o ataque perfeito). Contato continua liberando dano, Press Turn e SP.
 static func has_contact(_attack_timing: RhythmResult,
@@ -106,7 +106,7 @@ static func has_contact(_attack_timing: RhythmResult,
 	return defense_timing != RhythmResult.POINT
 
 
-## D-107: parte do dano que entra, pelo marco do ataque: trilha branca (pontas) 50%,
+## D-109: parte do dano que entra, pelo marco do ataque: trilha branca (pontas) 50%,
 ## faixa lateral (cinza na fala do criador) 80%, centro (amarelo) 100%. Se o alvo defendeu
 ## e parou na faixa lateral, entra metade, qualquer que seja o marco do ataque.
 const ATTACK_MARK_WHITE: float = 0.5
@@ -123,7 +123,7 @@ static func strike_multiplier(attack_timing: int, defense_timing: int) -> float:
 	return ATTACK_MARK_WHITE
 
 
-## D-107: o dano com o marco aplicado. Arredonda (não trunca) para um golpe de 1 não virar 0.
+## D-109: o dano com o marco aplicado. Arredonda (não trunca) para um golpe de 1 não virar 0.
 static func scaled_damage(amount: int, attack_timing: int, defense_timing: int) -> int:
 	return maxi(0, int(round(float(amount) * strike_multiplier(attack_timing, defense_timing))))
 
@@ -242,7 +242,7 @@ static func physical_damage(power: int, attacker_atk: float, attacker_agi: int,
 		"variation": variation,
 	}
 
-## D-106 (criador 2026-11-25: "tira isso de NUNCA causar dano a inimigos com alta defesa"): só a
+## D-108 (criador 2026-11-25: "tira isso de NUNCA causar dano a inimigos com alta defesa"): só a
 ## vantagem de SP soma ao dano (1 a ΔSP). Ter menos SP não tira dano: o sorteio negativo saiu.
 ## Sem sorteio com SP igual ou menor, para não consumir o RNG.
 static func sp_bonus_roll(difference: int, rng: RandomNumberGenerator) -> int:

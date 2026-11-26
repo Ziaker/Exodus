@@ -134,7 +134,7 @@ func test_ai_defense_resolves_without_human_input() -> void:
 		or result == BattleMath.RhythmResult.BEAM \
 		or result == BattleMath.RhythmResult.MISS
 	assert_true(valid)
-	# D-107: defender custa 1 ACT sempre, de certo ou nao.
+	# D-109: defender custa 1 ACT sempre, de certo ou nao.
 	assert_eq(enemy.acts_available, 1)
 
 
@@ -167,7 +167,7 @@ func test_ai_defense_uses_point_width_and_spends_act() -> void:
 		expected_rng.randf_range(0.0, 1.0), point_half)
 	battle.rng.seed = 777
 	assert_eq(battle._defender_reaction(defender, attacker), expected)
-	# D-107: a tentativa de defesa custa 1 ACT mesmo quando falha.
+	# D-109: a tentativa de defesa custa 1 ACT mesmo quando falha.
 	assert_eq(defender.acts_available, 1)
 
 

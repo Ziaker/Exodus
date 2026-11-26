@@ -406,7 +406,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 			target.display_name, battle._rhythm_name(attack), battle._rhythm_name(defense)])
 		if defense != BattleMath.RhythmResult.MISS:
 			battle._set_role(target, "DEFEND")
-		# D-107: sem contato só existe com defesa no centro.
+		# D-109: sem contato só existe com defesa no centro.
 		_event("%s dodges." % battle.short_name(target))
 		battle._present_strike(unit, target, 0)
 		return
@@ -422,7 +422,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 		battle._present_strike(unit, target, 0, true)
 		return
 	var amount := int(r.amount)
-	# D-107: marco do ataque 50/80/100%; defesa na lateral = metade.
+	# D-109: marco do ataque 50/80/100%; defesa na lateral = metade.
 	amount = BattleMath.scaled_damage(amount, attack, defense)
 	var beam := defense == BattleMath.RhythmResult.BEAM
 	var applied := target.take_damage(amount)

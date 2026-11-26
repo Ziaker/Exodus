@@ -105,13 +105,13 @@ func test_point_against_point_gives_no_contact() -> void:
 	assert_true(BattleMath.has_contact(p, m))
 	assert_false(BattleMath.has_contact(b, p))
 	assert_true(BattleMath.has_contact(b, b))
-	# D-107: errar a barra de ataque nao evita mais o contato; so a defesa no centro desvia.
+	# D-109: errar a barra de ataque nao evita mais o contato; so a defesa no centro desvia.
 	assert_true(BattleMath.has_contact(m, b))
 	assert_true(BattleMath.has_contact(m, m))
 	assert_false(BattleMath.has_contact(m, p))
 
 
-## D-107 (criador 2026-11-25): marco branco 50%, cinza 80%, amarelo 100%; defesa na lateral = 50%.
+## D-109 (criador 2026-11-25): marco branco 50%, cinza 80%, amarelo 100%; defesa na lateral = 50%.
 func test_strike_marks_scale_damage() -> void:
 	var p := BattleMath.RhythmResult.POINT
 	var b := BattleMath.RhythmResult.BEAM
@@ -142,7 +142,7 @@ func test_sp_roll_sign_follows_superiority() -> void:
 	var stronger := BattleMath.physical_damage(100, 10, 6, 5, 40, 10,
 		BattleMath.Affinity.NORMAL, _rng)
 	assert_gt(int(stronger.sp_roll), 0)
-	# D-106: ter menos SP nao tira dano; so a vantagem soma.
+	# D-108: ter menos SP nao tira dano; so a vantagem soma.
 	var weaker := BattleMath.physical_damage(100, 10, 6, 5, 10, 40,
 		BattleMath.Affinity.NORMAL, _rng)
 	assert_eq(int(weaker.sp_roll), 0)
@@ -151,7 +151,7 @@ func test_sp_roll_sign_follows_superiority() -> void:
 	assert_eq(int(equal.sp_roll), 0)
 
 
-## D-106 (criador: "tira isso de NUNCA causar dano a inimigos com alta defesa"): ATK 5 contra DEF 16
+## D-108 (criador: "tira isso de NUNCA causar dano a inimigos com alta defesa"): ATK 5 contra DEF 16
 ## com 60 de desvantagem de SP. A formula antiga dava 0 em quase todo golpe; agora nunca da 0 e o
 ## dano fica no base (10*5/16 = 3.1) mais ou menos 10% (D-019), com critico x1.5.
 func test_low_sp_attacker_still_damages_high_defense() -> void:

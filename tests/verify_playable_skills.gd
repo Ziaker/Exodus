@@ -62,7 +62,7 @@ func press_at(battle: Control, fractions: Array) -> void:
 		battle.rhythm._elapsed = float(f) * battle.rhythm.duration
 		battle.handle_confirm()
 
-## D-107: dano que o golpe do inimigo (trilha branca, 50%) causou em FALLEN depois da acao.
+## D-109: dano que o golpe do inimigo (trilha branca, 50%) causou em FALLEN depois da acao.
 func hit_on_fallen(battle: Control) -> int:
 	var total := 0
 	for line in battle.log_history:
@@ -234,7 +234,7 @@ func _run() -> void:
 	check(battle.rhythm.marks == [0.5], "A plain ATTACK after Lunge is back to one centre mark")
 	battle.queue_free(); await process_frame
 
-	# ---- Each bar is judged on its own: white first bar (D-107: 50%), a POINT on the second.
+	# ---- Each bar is judged on its own: white first bar (D-109: 50%), a POINT on the second.
 	battle = fresh([&"lunge"])
 	battle.hud.opponents[0].current_hp = 999
 	from = battle.log_history.size()
@@ -381,7 +381,7 @@ func _run() -> void:
 	var sp0: int = battle._fallen.current_sp
 	battle.submit_skill(1)
 	battle.confirm_en_extra()
-	check(battle.log_history.any(func(l: String) -> bool: return l.contains("+5 HP")) and hit_on_fallen(battle) > 0 and battle._fallen.current_hp == 8 - hit_on_fallen(battle) and battle._fallen.current_sp == sp0 + 1, "Reaction Energy Eat heals (+5), the announced white-mark attack still hits (D-107), and gives the reaction SP and gives the reaction SP (HP %d SP %d->%d, log %s)" % [battle._fallen.current_hp, sp0, battle._fallen.current_sp, battle.log_history.slice(-4)])
+	check(battle.log_history.any(func(l: String) -> bool: return l.contains("+5 HP")) and hit_on_fallen(battle) > 0 and battle._fallen.current_hp == 8 - hit_on_fallen(battle) and battle._fallen.current_sp == sp0 + 1, "Reaction Energy Eat heals (+5), the announced white-mark attack still hits (D-109), and gives the reaction SP and gives the reaction SP (HP %d SP %d->%d, log %s)" % [battle._fallen.current_hp, sp0, battle._fallen.current_sp, battle.log_history.slice(-4)])
 	battle.queue_free(); await process_frame
 
 	# ---- Enemy counter against Fallen's Lunge: winning hero lands both hits.

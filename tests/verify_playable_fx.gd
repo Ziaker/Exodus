@@ -83,8 +83,8 @@ func _run() -> void:
 	battle = fresh(); fx = battle.get_node("BattleEffects")
 	battle.submit_command(0); battle.submit_target(0)
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
-	# D-107 (criador 2026-11-25): a trilha branca acerta com 50%: impacto de golpe, nunca o cue MISS.
-	check(fx.count_kind("MISS") == 0 and fx.count_kind("HIT") + fx.count_kind("CRITICAL") == 1, "D-107: the white mark lands a real hit (no MISS cue)")
+	# D-109 (criador 2026-11-25): a trilha branca acerta com 50%: impacto de golpe, nunca o cue MISS.
+	check(fx.count_kind("MISS") == 0 and fx.count_kind("HIT") + fx.count_kind("CRITICAL") == 1, "D-109: the white mark lands a real hit (no MISS cue)")
 	battle.queue_free(); await process_frame
 	battle = fresh(); fx = battle.get_node("BattleEffects")
 	battle.submit_command(battle.hud.command_options.find("REACT"))
