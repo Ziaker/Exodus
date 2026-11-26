@@ -85,14 +85,8 @@ static func raam_damage(extra_pp: int, caster_mak: int, caster_agi: int, target_
 		return {"amount": 0, "base": base, "crit": false, "affinity": affinity, "sp_roll": 0,
 			"variation": 0.0, "angel": true}
 	var difference := caster_sp - target_sp
-	var sp_roll := 0
-	var magnitude := absi(difference)
-	if magnitude > 0:
-		sp_roll = rng.randi_range(1, magnitude)
-		if difference < 0:
-			sp_roll = -sp_roll
-	var span := BattleMath.BASE_VARIATION + BattleMath.VARIATION_PER_SP * float(magnitude)
-	var variation := rng.randf_range(-span, span)
+	var sp_roll := BattleMath.sp_bonus_roll(difference, rng)  # D-106: só a vantagem soma
+	var variation := rng.randf_range(-BattleMath.BASE_VARIATION, BattleMath.BASE_VARIATION)  # D-019
 	var crit := BattleMath.critical_roll(caster_agi, caster_sp, target_sp, rng)
 	var amount := maxf(0.0, base) + float(sp_roll)
 	amount *= 1.0 + variation

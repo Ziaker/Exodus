@@ -886,9 +886,9 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_
 
 func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, magic: bool = false) -> void:
 	var outcome := "HIT"
+	# D-107: todo golpe com barra acerta; só a defesa paga desvia (centro) ou bloqueia (lateral).
 	if defense_result == BattleMath.RhythmResult.POINT: outcome = "DODGE"
-	elif attack_result == BattleMath.RhythmResult.MISS: outcome = "MISS"
-	elif attack_result == BattleMath.RhythmResult.BEAM or defense_result == BattleMath.RhythmResult.BEAM: outcome = "BLOCK"
+	elif defense_result == BattleMath.RhythmResult.BEAM: outcome = "BLOCK"
 	var source: String = log_history.back()
 	if source.contains("crit YES"): outcome += " / CRITICAL"
 	var contact := not source.contains("NO CONTACT")
@@ -1884,7 +1884,7 @@ func _skill_attack_timing(attacker: BattleUnit, defender: BattleUnit, marks: Arr
 
 
 ## Defense per mark: a hero who paid DEFEND presses on its rail (same marks); an enemy
-## rolls each mark and spends one act for the whole rail if any mark is defended.
+## rolls each mark and spends one act for the whole rail (D-107: always, defended or not).
 func _skill_defense_timing(defender: BattleUnit, attacker: BattleUnit, marks: Array[float], paid: bool) -> Array[int]:
 	var results: Array[int] = []
 	if defender.is_player:
@@ -1901,15 +1901,14 @@ func _skill_defense_timing(defender: BattleUnit, attacker: BattleUnit, marks: Ar
 	elif defender.acts_available > 0:
 		var point_half := BattleMath.point_half_width(defender.stats.agi, attacker.stats.agi, defender.current_sp, attacker.current_sp)
 		var rolls := BattleMath.extra_block_rolls(defender.current_sp - attacker.current_sp) + 1
-		var defended := false
 		for _m in marks:
 			var result: int = BattleMath.RhythmResult.MISS
 			for _i in rolls:
 				result = _zone_roll(point_half)
 				if result != BattleMath.RhythmResult.MISS: break
-			defended = defended or result != BattleMath.RhythmResult.MISS
 			results.append(result)
-		if defended: defender.spend_act()
+		# D-107: defender custa 1 ACT sempre, dê certo ou não.
+		defender.spend_act()
 	while results.size() < marks.size():
 		results.append(BattleMath.RhythmResult.MISS)
 	defense_result = results[0]

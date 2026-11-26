@@ -84,6 +84,11 @@ func _run() -> void:
 	check(battle.hud.mode == "target", "D-057: Z on FIGHT asks for its target while planning")
 	key(battle, KEY_Z)
 	check(battle._planned.size() == 1 and battle._planned_targets[0] == battle.hud.opponents[0], "Z must commit one command, with its target, to the D-046 plan")
+	# D-107 (criador 2026-11-25): a trilha branca nao erra mais, acerta com 50% do dano. O alvo
+	# ganha HP e perde a fraqueza para o resto do fluxo (plano com o ACT que sobrou) seguir igual.
+	battle.hud.opponents[0].stats.max_hp = 999
+	battle.hud.opponents[0].current_hp = 999
+	battle.hud.opponents[0].affinity = BattleMath.Affinity.NORMAL
 	battle.exec_plan()
 	check(battle.hud.mode == "timing", "D-057: EXEC runs the plan without asking for the target again")
 	# HTML lab: the attack rail sits over the targeted enemy, above its name, clear of the log.
@@ -94,7 +99,9 @@ func _run() -> void:
 	check(battle.rhythm._label.text.contains("FALLEN") and battle.rhythm._label.text.contains("FOE A"), "Timing must identify attacker and target")
 	battle.rhythm._finish(BattleMath.RhythmResult.MISS)
 	# D-057: the log shows event sentences, not instructions or rhythm internals.
-	check(battle.hud.visible_log_lines() == ["FALLEN attacks FOE A.", "FALLEN misses."], "Resolved miss must be told as events in the drawn log (%s)" % [battle.hud.visible_log_lines()])
+	var shown: Array = battle.hud.visible_log_lines()
+	check(shown.size() == 2 and shown[0] == "FALLEN attacks FOE A." and String(shown[1]).begins_with("FALLEN hits FOE A: ") and not String(shown[1]).ends_with(" 0 damage."), "D-107: the white mark still hits, told as events in the drawn log (%s)" % [shown])
+	check(battle.log_history.back().contains("HIT 50%") and battle.hud.opponents[0].current_hp < 999, "D-107: the white mark deals 50%% (%s)" % battle.log_history.back())
 	check(battle.roles.get(battle._fallen.id, "") == "ATTACK" and battle.roles.get(battle.hud.opponents[0].id, "") == "TARGET", "D-057: attacker and target carry their role tags until the result is confirmed")
 	# D-060 (creator 2026-11-25): the names in the log take the colour of their role.
 	var attack_line: Dictionary = battle.hud.events.filter(func(e): return e.text == "FALLEN attacks FOE A.").back()

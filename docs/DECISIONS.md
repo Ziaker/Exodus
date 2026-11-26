@@ -81,7 +81,8 @@ qualquer alteração em documentos ou código.
 | D-075 | 2026-11-25 (liberdade criativa, Survival) | OMEN 0–5 desbloqueado por vitória, CODEX de demônios e score novo com multiplicador de OMEN. | `docs/GDD.md` Apêndice A |
 | D-076 | 2026-11-25 (liberdade criativa, Survival) | Save da run v2 com migração da v1 e validação ampliada. | `docs/GDD.md` Apêndice A |
 | D-101 | 2026-11-25 (decisão do criador) | Survival: o SP do Fallen fica parecido com o dos inimigos em cada estrato (ficha inicial = média do estrato 1, SP 73 contra 72) e os inimigos acompanham o SP atual do Fallen ao começar cada batalha (`follow_hero`); corrige o protagonista "mil vezes mais forte". | `docs/GDD.md` Apêndice A |
+| D-106 | 2026-11-25 (decisão do criador) | Jogo todo: só a vantagem de SP soma ao dano (sorteio 1 a ΔSP); ter menos SP não tira mais dano. A variação do dano fica fixa em ±10% (implementa a D-019). Fim dos golpes de 0 contra DEF ou SP altos. | `docs/GDD.md` Apêndice A |
 
 D-062 a D-065 estão reservadas por sessões paralelas (ainda não integradas neste ramo).
 
-Total: 71 decisões indexadas.
+Total: 72 decisões indexadas.

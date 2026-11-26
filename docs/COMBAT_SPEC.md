@@ -151,7 +151,7 @@
 
 - **Somente a ficha resistente de laboratório** da D-032 muda: **HP 40, DEF 8**, conservando EN 8, ATK 8, MAK 8, MEF 8, AGI 8; **SP_base=88**, antes 104. Perfil antigo HP 48/DEF 16/SP 104 continua documentado como histórico da D-032, mas não é o valor vigente para novos testes.
 - Perfis ágil/equilibrado, referência neutra independente, Fallen, dados de espécies e progresso D-028 intactos.
-- Contra poder básico 8 e ATK 8, DEF 8 produz dano-base 8 e **cinco acertos nominais** em HP 40. Diferença de SP resistente 88 contra atacante 80 causa `−1d8` antes dos demais modificadores; a meta 5–7 não está validada estatisticamente.
+- Contra poder básico 8 e ATK 8, DEF 8 produz dano-base 8 e **cinco acertos nominais** em HP 40. Diferença de SP resistente 88 contra atacante 80 causava `−1d8` antes dos demais modificadores (desde a D-106 a desvantagem não desconta nada); a meta 5–7 não está validada estatisticamente.
 
 ## Tela da batalha na resolução D-055 (criador, 2026-11-24; IMPLEMENTADO)
 
@@ -395,12 +395,12 @@
 - **D-019 (Rodada 3, 3A):** a fórmula física acima é **preservada**;
   devem ser recalibrados os **valores de poder dos ataques/habilidades**.
   Novos valores específicos ainda não foram aprovados.
-- Modificador de SP: rolar `1dN` onde `N = |SP_atuante - SP_alvo|`;
-  soma se o atuante tem mais SP, subtrai se tem menos.
-- **Implementação anterior da variação:** `±10% ± 2% por ponto de diferença de SP`
-  (sinal conforme vantagem); ainda presente no código, mas **SUBSTITUÍDA
-  como design** pela D-019.
-- **D-019 (Rodada 3, 2C) — novo design, NÃO IMPLEMENTADO:** a
+- Modificador de SP (**D-106, criador 2026-11-25; IMPLEMENTADO**): rolar `1dN` onde
+  `N = SP_atuante - SP_alvo`, **somado só quando o atuante tem mais SP**. Com SP igual ou menor
+  não há sorteio nem desconto (antes: subtraía, o que zerava golpes contra DEF/SP altos).
+- **Implementação anterior da variação:** `±10% ± 2% por ponto de diferença de SP`;
+  **removida do código pela D-106**.
+- **D-019 (Rodada 3, 2C) — IMPLEMENTADO pela D-106 (2026-11-25):** a
   variação percentual aleatória do dano passa a ser **fixa em ±10%**,
   independente da diferença de SP, **preservando separadamente a
   rolagem `1dN` de superioridade**. Não alterou a ordem dos demais
@@ -566,7 +566,7 @@
 
 ### D-033 (Rodada 11, 3B; 6A; 8A) — dano mínimo e critérios de teste; DESIGN, NÃO IMPLEMENTADO
 
-- **3B:** manter a rolagem SP `1d|ΔSP|` com sinal; ataques que **causam dano, fazem contato e possuem afinidade que permita dano** recebem **piso final de 1 dano**, mesmo se a diferença de SP anular o valor. Sem contato não há dano; afinidades **Null/Absorb** não recebem piso. Preservar D-015, fórmula crítica implementada D-021 e variação fixa ±10% aprovada D-019. **PENDENTE:** poder zero/Moves sem dano nominal, composição com efeitos futuros e estágio preciso em casos especiais. Código `BattleMath.physical_damage()` ainda permite zero.
+- **3B:** manter a rolagem SP `1d|ΔSP|` com sinal; ataques que **causam dano, fazem contato e possuem afinidade que permita dano** recebem **piso final de 1 dano**, mesmo se a diferença de SP anular o valor. Sem contato não há dano; afinidades **Null/Absorb** não recebem piso. Preservar D-015, fórmula crítica implementada D-021 e variação fixa ±10% aprovada D-019. **PENDENTE:** poder zero/Moves sem dano nominal, composição com efeitos futuros e estágio preciso em casos especiais. Código `BattleMath.physical_damage()` ainda permite zero. **Sem efeito desde a D-106:** a desvantagem de SP não subtrai mais e a variação é ±10%, então só dá 0 com afinidade NULL/ABSORB ou quando `poder × ATK ÷ DEF` fica abaixo de ~0,55 (arredonda para 0); o piso de 1 não foi implementado.
 - **6A:** 10.000 **casos controlados** com referência neutra contra cópia equivalente: **HP 32, ATK 8, DEF 8, poder básico 8, SP iguais, afinidade Normal, sem crítico/bloqueio, variação fixa ±10%**. Exigir **≥95% dos casos** com derrota em **3–5 ataques bem-sucedidos** (D-032). Diferença inicial de SP é zero e não produz `1dN`; não introduzir ganhos extras não definidos. **PENDENTES:** seeds, amostragem, resets e harness. Não houve execução de 10.000 casos; o motor ainda não implementa ±10% fixos para ΔSP diferente de zero.
 - **8A:** testar **duelos** e **combates com múltiplos inimigos**, cobrindo teto e armazenamento de atos, reações e prioridade, fraquezas/Press Turn, dominância e ganhos SP, dano e duração dos perfis. Preservar D-024/D-025: propriedades, reprodutibilidade por seed, fronteiras, integração, equivalência mecânica em **30/60/120 FPS** com timestamps controlados. Matrizes, métricas, seeds e scripts de execução **PENDENTES**.
 

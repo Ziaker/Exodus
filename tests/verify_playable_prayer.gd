@@ -253,15 +253,16 @@ func _run() -> void:
 	check(foes[0].acts_available + foes[1].acts_available == foe_acts[0] + foe_acts[1] - 2 + 1, "Each attack spent 1 enemy act; +1 act to the first hitter")
 	battle.queue_free(); await process_frame
 
-	# ---- Enemy MISS does not interrupt.
+	# ---- D-107 (criador 2026-11-25): o golpe do inimigo na trilha branca acerta (50%) e interrompe.
 	battle = fresh(0)
 	y = yoch(battle)
 	battle.pray_reaction = true
 	battle.enemy_timing = BattleMath.RhythmResult.MISS
 	to_yoch(battle, 1)
+	var y_hp: int = y.current_hp
 	open_pray(battle); pick(battle, "PRAY")
 	confirm(battle); confirm(battle)
-	check(y.current_pp == 1, "Enemy MISS: the PRAY resolves (+1 PP)")
+	check(y.current_pp == 0 and y.current_hp < y_hp, "D-107: enemy white mark hits (50%%) and interrupts the PRAY (PP %d, HP %d -> %d)" % [y.current_pp, y_hp, y.current_hp])
 	battle.queue_free(); await process_frame
 
 	# ---- Ra'am, no counter: rail like ATTACK, base 10 + MAK - MEF, WEAK x1.5 and +1 act.
@@ -285,7 +286,7 @@ func _run() -> void:
 	check(line.contains("affinity WEAK") and 999 - weak.current_hp > 0 and y.acts_available == 1 and y.current_pp == 0, "WEAK: x1.5 damage and +1 act (%s, acts %d)" % [line, y.acts_available])
 	battle.queue_free(); await process_frame
 
-	# ---- Ra'am BEAM halves, MISS = no contact.
+	# ---- Ra'am: D-107, trilha branca = 50%, lateral = 80%.
 	battle = fresh(3)
 	y = yoch(battle)
 	battle.hero_timing = BattleMath.RhythmResult.MISS
@@ -294,8 +295,9 @@ func _run() -> void:
 	to_yoch(battle, 1)
 	queue_spell(battle, "Ra'am", 1)
 	battle.exec_plan()
-	check(foes[1].current_hp == hp_before and last_line(battle, "Ra'am").contains("NO CONTACT"), "Ra'am MISS: no contact")
-	check(y.current_pp == 0, "A Ra'am that missed still spent its PP")
+	await wait_mode(battle, "continue")
+	check(foes[1].current_hp < hp_before and last_line(battle, "Ra'am base").contains("rhythm MISS") and last_line(battle, "Ra'am base").contains("HIT 50%"), "D-107: Ra'am on the white mark still hits for 50%% (%s)" % last_line(battle, "Ra'am base"))
+	check(y.current_pp == 0, "A Ra'am on the white mark spent its PP")
 	battle.queue_free(); await process_frame
 
 	# ---- Ra'am counter-attacked: enemy wins -> interrupted, PP back, queue lost.

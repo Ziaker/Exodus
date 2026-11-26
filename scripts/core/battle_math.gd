@@ -12,8 +12,8 @@ const BLOCK_ROLLS_PER_SP: int = 2
 const THRESHOLD_RATIO: float = 0.7
 const MAX_AVAILABLE_ACTS: int = 4
 const MAX_STORED_ACTS: int = 4
+## D-019 (implementada pela D-106): variação fixa de ±10%, sem depender da diferença de SP.
 const BASE_VARIATION: float = 0.10
-const VARIATION_PER_SP: float = 0.02
 const CRIT_MULTIPLIER: float = 1.5
 const CRIT_PER_SP_POINT: float = 2.0
 const CRIT_SP_BONUS_CAP: float = 20.0
@@ -98,12 +98,34 @@ static func crit_chance(agi: int, sp_difference: int) -> float:
 	return clampf(float(agi) + sp_bonus, 0.0, CRIT_FINAL_CAP)
 
 
-## D-015: a perfect defense overrides a perfect attack. Contact is the only
-## gate for damage, Press Turn and SP rewards.
-static func has_contact(attack_timing: RhythmResult,
+## D-107 (criador 2026-11-25): todo golpe com barra acerta. Só há desvio de verdade quando o
+## alvo DEFENDE (paga 1 ACT) e para no centro da barra de defesa (D-015: a defesa perfeita
+## prevalece sobre o ataque perfeito). Contato continua liberando dano, Press Turn e SP.
+static func has_contact(_attack_timing: RhythmResult,
 		defense_timing: RhythmResult) -> bool:
-	return attack_timing != RhythmResult.MISS \
-		and defense_timing != RhythmResult.POINT
+	return defense_timing != RhythmResult.POINT
+
+
+## D-107: parte do dano que entra, pelo marco do ataque: trilha branca (pontas) 50%,
+## faixa lateral (cinza na fala do criador) 80%, centro (amarelo) 100%. Se o alvo defendeu
+## e parou na faixa lateral, entra metade, qualquer que seja o marco do ataque.
+const ATTACK_MARK_WHITE: float = 0.5
+const ATTACK_MARK_GRAY: float = 0.8
+const ATTACK_MARK_YELLOW: float = 1.0
+const DEFENSE_BLOCK: float = 0.5
+
+static func strike_multiplier(attack_timing: int, defense_timing: int) -> float:
+	if defense_timing == RhythmResult.BEAM:
+		return DEFENSE_BLOCK
+	match attack_timing:
+		RhythmResult.POINT: return ATTACK_MARK_YELLOW
+		RhythmResult.BEAM: return ATTACK_MARK_GRAY
+	return ATTACK_MARK_WHITE
+
+
+## D-107: o dano com o marco aplicado. Arredonda (não trunca) para um golpe de 1 não virar 0.
+static func scaled_damage(amount: int, attack_timing: int, defense_timing: int) -> int:
+	return maxi(0, int(round(float(amount) * strike_multiplier(attack_timing, defense_timing))))
 
 ## D-034: the bar has its own fixed speed. AGI and SP no longer change time.
 static func rhythm_duration(_attacker_agi: int, _defender_agi: int,
@@ -200,15 +222,8 @@ static func physical_damage(power: int, attacker_atk: float, attacker_agi: int,
 	var difference := attacker_sp - defender_sp
 	var base := float(power) * float(attacker_atk) / maxf(float(defender_defense), 1.0)
 
-	var sp_roll := 0
-	var magnitude := absi(difference)
-	if magnitude > 0:
-		sp_roll = rng.randi_range(1, magnitude)
-		if difference < 0:
-			sp_roll = -sp_roll
-
-	var variation_span := BASE_VARIATION + VARIATION_PER_SP * float(magnitude)
-	var variation := rng.randf_range(-variation_span, variation_span)
+	var sp_roll := sp_bonus_roll(difference, rng)
+	var variation := rng.randf_range(-BASE_VARIATION, BASE_VARIATION)
 
 	var crit := critical_roll(attacker_agi, attacker_sp, defender_sp, rng)
 	var multiplier := affinity_multiplier(affinity)
@@ -226,6 +241,14 @@ static func physical_damage(power: int, attacker_atk: float, attacker_agi: int,
 		"sp_roll": sp_roll,
 		"variation": variation,
 	}
+
+## D-106 (criador 2026-11-25: "tira isso de NUNCA causar dano a inimigos com alta defesa"): só a
+## vantagem de SP soma ao dano (1 a ΔSP). Ter menos SP não tira dano: o sorteio negativo saiu.
+## Sem sorteio com SP igual ou menor, para não consumir o RNG.
+static func sp_bonus_roll(difference: int, rng: RandomNumberGenerator) -> int:
+	if difference <= 0:
+		return 0
+	return rng.randi_range(1, difference)
 
 static func critical_roll(attacker_agi: int, attacker_sp: int, defender_sp: int,
 		rng: RandomNumberGenerator) -> bool:

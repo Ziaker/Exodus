@@ -122,8 +122,16 @@ MAK 7, DEF 6, MEF 6, AGI 9; SP 73) e a Yoch com HP 17, ATK 8, DEF 6, AGI 8 (sem 
 começar cada batalha, cada inimigo recebe (ou perde) a diferença entre o SP atual do Fallen e o SP
 esperado no estrato (`SurvivalStrata.par_sp`), repartida pelos atributos (`SurvivalData.follow_hero`),
 antes de guardião, elite e OMEN. Simulação de 5 estratos com absorções reais (poder básico 10):
-quem sempre pega a maior oferta mata o inimigo em 3 a 6 golpes (14 no estrato 5) e aguenta 3 a 8;
-quem escolhe ao acaso, 2 a 3 golpes para matar e 2 a 5 para morrer; no máximo 8% dos golpes dão 0.
+antes da D-106, quem sempre pegava a maior oferta matava em 3 a 6 golpes e aguentava 3 a 8, com até
+8% dos golpes inimigos dando 0 (e até 83% dos golpes do Fallen contra os inimigos de mais SP/DEF).
+
+**D-106 (desvantagem de SP não tira dano; variação fixa ±10%, jogo todo).** O criador mandou tirar
+o "nunca causar dano a inimigos com alta defesa". Agora só a vantagem de SP soma `1d(ΔSP)` e a
+variação é sempre ±10%. Mesma simulação: quem pega a maior oferta mata em 2,5 / 3,9 / 5,4 / 6,0 /
+8,1 golpes (estratos 1 a 5) e aguenta 2,2 / 3,2 / 4,7 / 5,5 / 6,2; quem escolhe ao acaso mata em
+1,8 a 2,4 e aguenta 2,0 a 2,5. **0% de golpes de 0** nos dois sentidos, contra os 35 inimigos com
+guardião, elite e OMEN 0 e 5 (`verify_survival_balance.gd`; medição por inimigo em
+`tools/measure_zero_damage.gd`).
 `BEAD`, `MEDICINE` e `CHAKRA` seguem nos valores antigos (pendente). O ataque básico usa
 `basic_power = 10` neste modo (100 na campanha), na mesma ordem das habilidades placeholder (4–13).
 
