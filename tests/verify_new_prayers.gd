@@ -223,6 +223,80 @@ func _run() -> void:
 	fx_node.queue_redraw()
 	await process_frame
 
+	# D-113 static source guard: PrayFX must stay 100% typographic (no geometric primitives or stroked borders)
+	var fx_src := FileAccess.get_file_as_string("res://scripts/battle/pray_fx.gd")
+	check(not fx_src.is_empty(), "D-113: pray_fx.gd source readable for static guard")
+	var strip_comments := func(src: String) -> String:
+		var out_lines: PackedStringArray = []
+		for raw_line in src.split("\n"):
+			var in_quote := ""
+			var cut := raw_line.length()
+			for i in raw_line.length():
+				var ch := raw_line.substr(i, 1)
+				if in_quote.is_empty():
+					if ch == "\"" or ch == "'":
+						in_quote = ch
+					elif ch == "#":
+						cut = i
+						break
+				elif ch == in_quote and (i == 0 or raw_line.substr(i - 1, 1) != "\\"):
+					in_quote = ""
+			out_lines.append(raw_line.substr(0, cut))
+		return "\n".join(out_lines)
+	var has_stroked_draw_rect := func(clean_src: String) -> bool:
+		var idx := clean_src.find("draw_rect(")
+		while idx >= 0:
+			var depth := 0
+			var arg_idx := 0
+			var cur_arg := ""
+			var in_q := ""
+			for i in range(idx + 9, clean_src.length()):
+				var ch := clean_src.substr(i, 1)
+				if not in_q.is_empty():
+					cur_arg += ch
+					if ch == in_q and clean_src.substr(i - 1, 1) != "\\":
+						in_q = ""
+					continue
+				if ch == "\"" or ch == "'":
+					in_q = ch
+					cur_arg += ch
+				elif ch == "(":
+					depth += 1
+					if depth > 1:
+						cur_arg += ch
+				elif ch == ")":
+					depth -= 1
+					if depth == 0:
+						if arg_idx == 2 and cur_arg.strip_edges() == "false":
+							return true
+						break
+					cur_arg += ch
+				elif ch == "," and depth == 1:
+					if arg_idx == 2 and cur_arg.strip_edges() == "false":
+						return true
+					arg_idx += 1
+					cur_arg = ""
+				else:
+					cur_arg += ch
+			idx = clean_src.find("draw_rect(", idx + 10)
+		return false
+	var fx_clean: String = strip_comments.call(fx_src)
+	var forbidden_draws: Array[String] = [
+		"draw_circle(", "draw_arc(", "draw_line(", "draw_polyline(",
+		"draw_polygon(", "draw_colored_polygon(", "draw_multiline(", "draw_dashed_line(",
+	]
+	for prim in forbidden_draws:
+		check(not fx_clean.contains(prim), "D-113: pray_fx.gd must not use geometric primitive '%s'" % prim)
+	check(not has_stroked_draw_rect.call(fx_clean), "D-113: pray_fx.gd must not draw stroked geometric borders with draw_rect(..., false)")
+	# Self-test the stroked-rect detector on nested-paren and multi-line negative samples
+	check(has_stroked_draw_rect.call(strip_comments.call("draw_rect(r, Color(\"#f5f58c\"), false, 2.0)")), "D-113 guard catches nested-paren draw_rect with hex color")
+	check(has_stroked_draw_rect.call(strip_comments.call("draw_rect(\n\tr,\n\tColor(1, 1, 1),\n\tfalse\n)")), "D-113 guard catches multi-line stroked draw_rect")
+	check(fx_clean.contains("draw_string("), "D-113: pray_fx.gd renders Hebrew glyphs via draw_string(")
+	# D-113 BiDi/RTL guard: never concatenate Hebrew glyph with ASCII 'xN' suffix inside the same draw_string call
+	var bidi_concat_re := RegEx.new()
+	bidi_concat_re.compile("draw_string\\s*\\([^\\n]*(MARK_[A-Z_]+|[\\x{0590}-\\x{05FF}])[^\\n]*\\+\\s*\"x")
+	check(bidi_concat_re.search(fx_clean) == null, "D-113: pray_fx.gd must not concatenate Hebrew glyphs with ASCII 'x' suffix in one draw_string")
+
 	print("VERIFY_NEW_PRAYERS_OK: %d checks; D-112 Tahorah, Magen, Gevurah, Mishpat, Zohar + D-107 unified + D-113 Hebrew VFX guard" % checks)
 	ProgressStore.clear()
 	b.queue_free()
