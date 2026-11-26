@@ -134,6 +134,21 @@ quem escolhe ao acaso, 2 a 3 golpes para matar e 2 a 5 para morrer; no máximo 8
 `BEAD`, `MEDICINE` e `CHAKRA` seguem nos valores antigos (pendente). O ataque básico usa
 `basic_power = 10` neste modo (100 na campanha), na mesma ordem das habilidades placeholder (4–13).
 
+## Habilidades (D-106)
+
+As 27 habilidades do pool têm cada uma um efeito próprio; os estados duram rodadas, acabam com a
+batalha e não entram no save. Tabela completa e valores em `docs/plans/2026-11-25-survival-skills-rework.md`
+e em `SkillBook.DEFS` (campo `fx`); regras em `scripts/core/skill_fx.gd`. LUNGE, BLEEDBUFF,
+HEAT WAVE, ENERGY EAT e as rezas da Yoch não mudaram. `tests/verify_skill_fx.gd` prova os 27 efeitos.
+
+## Humanos (D-107)
+
+Cada estrato tem 1 grupo só de humanos (3), que aparece no mapa como uma silhueta humana (modelo de NPC
+P15) e luta sem demônios. Humanos rezam com PP (sem EN): PRAY (+1 PP), SANVERIM (2 PP, cegueira),
+NECHAMAH (1 PP, 5 HP por round por 3 rounds) e CHERAV (3 PP, 10 + MAK − MEF em todos os heróis).
+Não podem ser absorvidos e não entram no CODEX. Regras em `SkillBook.DEFS`, `SkillFx` e
+`SurvivalData.human_defs`; prova em `tests/verify_human_groups.gd`.
+
 ## Verificação
 
 - `verify_survival_strata.gd` — 15827 checks (estratos, guardiões, 800 labirintos

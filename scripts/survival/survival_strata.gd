@@ -72,6 +72,11 @@ static func ids_for(stratum: int) -> Array[String]:
 
 
 static func stratum_of(id: String) -> int:
+	# D-107: humans_sN (group) and human_sN_x (unit) belong to stratum N.
+	if id.begins_with("humans_s"):
+		return int(id.substr(8, 1))
+	if id.begins_with("human_s"):
+		return int(id.substr(7, 1))
 	var idx := ranked_ids().find(id)
 	return 0 if idx < 0 else idx / PER_STRATUM + 1
 
@@ -225,6 +230,9 @@ static func layout(seed: int, stratum: int) -> Dictionary:
 			continue
 		demons[id] = candidates[k]
 		k += 1
+	# D-107: o grupo de humanos do estrato ocupa mais uma célula.
+	demons[SurvivalData.human_group_id(stratum)] = candidates[k]
+	k += 1
 	var kinds: Array = EVENT_KINDS.duplicate()
 	var krng := _rng(seed, stratum, 3)
 	for i in range(kinds.size() - 1, 0, -1):

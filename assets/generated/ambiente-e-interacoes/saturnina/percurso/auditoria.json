@@ -1,0 +1,17 @@
+{
+  "celulas": 343,
+  "por_zona": [
+    40,
+    67,
+    64,
+    73,
+    99
+  ],
+  "celulas_da_rota_principal": 54,
+  "lacos_laterais_na_avenida": 2,
+  "altura_do_piso_da_rota": [
+    0.024,
+    0.117
+  ],
+  "cameras": 6
+}

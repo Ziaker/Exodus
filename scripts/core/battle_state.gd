@@ -51,6 +51,9 @@ func start_round() -> void:
 ## Creator 2026-11-23: fastest first; equal AGI goes to the higher SP at the start of
 ## the round. Equal AGI and SP has no rule yet (PENDENTE).
 func _faster_first(a: BattleUnit, b: BattleUnit) -> bool:
+	# D-106 SLOW (FROST BREATH): a slowed unit acts after everyone who is not.
+	if a.has_status(&"slow") != b.has_status(&"slow"):
+		return b.has_status(&"slow")
 	if a.stats.agi != b.stats.agi:
 		return a.stats.agi > b.stats.agi
 	return a.current_sp > b.current_sp

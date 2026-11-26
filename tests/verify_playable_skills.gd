@@ -71,7 +71,11 @@ func _run() -> void:
 	check(not SkillBook.affordable(&"heat_wave", 1, 10, 10) and SkillBook.affordable(&"heat_wave", 2, 6, 1), "Heat wave needs 2 acts and 6 EN")
 	check(not SkillBook.affordable(&"lunge", 1, 3, 10), "Lunge needs 4 EN")
 	for skill in SkillBook.DEFS:
-		check(int(SkillBook.DEFS[skill].pp) == 0, "First-fight skills use no PP")
+		# D-107: the human enemies' prayers cost PP; they are never learnable, so Fallen's skills use none.
+		if int(SkillBook.DEFS[skill].pp) > 0:
+			check(SkillBook.learnable(&"genetic_foe_a", []).find(skill) < 0 and not SurvivalData.SURVIVAL_SKILLS.has(skill), "%s is a prayer and cannot be learned" % skill)
+		else:
+			check(true, "First-fight skills use no PP")
 	check(BattleMath.rhythm_zone_at(0.35, 0.35) == R.POINT and BattleMath.rhythm_zone_at(0.48, 0.35) == R.BEAM and BattleMath.rhythm_zone_at(0.65, 0.35) == R.MISS, "Zones around a 35% mark")
 
 	# ---- Save: counters and skills persist next to the gains.

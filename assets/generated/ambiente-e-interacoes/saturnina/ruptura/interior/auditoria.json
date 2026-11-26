@@ -1,0 +1,79 @@
+{
+  "cameras": 6,
+  "pecas_do_portico": 3,
+  "entrada_global": [
+    7.182260990142822,
+    17.700000762939453,
+    0.0
+  ],
+  "piso_do_percurso": {
+    "2.3": [
+      0.049,
+      "Laje côncava da via.097"
+    ],
+    "6.2": [
+      0.018,
+      "Piso contínuo da passagem.001"
+    ],
+    "10.1": [
+      0.056,
+      "Laje côncava da via.119"
+    ],
+    "14.6": [
+      0.076,
+      "Laje côncava da via.136"
+    ],
+    "19.1": [
+      0.038,
+      "Laje côncava da via.149"
+    ],
+    "24.2": [
+      0.052,
+      "Laje côncava da via.170"
+    ]
+  },
+  "fundo_do_corte": -3.777,
+  "quadros_para_4_sprites": [
+    [
+      [
+        0.309,
+        0.402
+      ],
+      [
+        0.371,
+        0.682
+      ]
+    ],
+    [
+      [
+        0.412,
+        0.401
+      ],
+      [
+        0.476,
+        0.684
+      ]
+    ],
+    [
+      [
+        0.518,
+        0.4
+      ],
+      [
+        0.583,
+        0.685
+      ]
+    ],
+    [
+      [
+        0.626,
+        0.399
+      ],
+      [
+        0.693,
+        0.687
+      ]
+    ]
+  ],
+  "triangulos_avaliados": 48642
+}

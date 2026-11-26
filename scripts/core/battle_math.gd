@@ -123,6 +123,18 @@ static func point_half_width(own_agi: int, rival_agi: int,
 	return clampf(total * 0.5, POINT_MIN_HALF_WIDTH, POINT_MAX_HALF_WIDTH)
 
 
+## D-107 BLIND (SANVERIM): a blinded unit's POINT zone is smaller, so it misses more often.
+const BLIND_POINT_MULT := 0.5
+
+
+## POINT half-width of `own` against `rival`, with BLIND applied.
+static func unit_point_half(own: BattleUnit, rival: BattleUnit) -> float:
+	var half := point_half_width(own.stats.agi, rival.stats.agi, own.current_sp, rival.current_sp)
+	if own.has_status(&"blind"):
+		half = maxf(POINT_MIN_HALF_WIDTH * 0.5, half * BLIND_POINT_MULT)
+	return half
+
+
 ## D-049: the opponent's red pointer moves at base speed x AGI_opponent / AGI_player,
 ## so its crossing time is the base duration x AGI_player / AGI_opponent.
 static func counter_red_duration(base_seconds: float, opponent_agi: int, player_agi: int) -> float:

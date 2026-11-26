@@ -301,7 +301,7 @@ func _world() -> void:
 	SurvivalState.patch({"seed": 4321, "stratum": 2, "cell": [12, 10], "macca": 1000})
 	var w := await _world_instance()
 	_check(w.grid == SurvivalStrata.maze(4321, 2), "Stratum 2 uses its generated maze")
-	_check(w.enemies.entries.size() == 7, "7 demons on the stratum map (%d)" % w.enemies.entries.size())
+	_check(w.enemies.entries.size() == 8, "7 demons + 1 human group on the stratum map (%d)" % w.enemies.entries.size())
 	var warden: Dictionary = {}
 	for e in w.enemies.entries:
 		_check(SurvivalStrata.stratum_of(String(e.id)) == 2, "%s belongs to stratum 2" % e.id)

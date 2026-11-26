@@ -40,8 +40,8 @@ func _run() -> void:
 
 	_check(w.grid.size() == 21 and w.grid[0].length() == 25, "SurvivalWorld loads 25x21 map")
 	# D-066: o estrato 1 tem 7 dos 35 demônios (os outros esperam nos estratos 2..5).
-	_check(w.enemies.entries.size() == SurvivalStrata.PER_STRATUM, "SurvivalWorld spawns the 7 demons of stratum 1 (got %d)" % w.enemies.entries.size())
-	_check(w.viewport.find_children("*", "Sprite3D", true, false).size() == SurvivalStrata.PER_STRATUM, "All 7 stratum demons have 3D corridor silhouettes")
+	_check(w.enemies.entries.size() == SurvivalStrata.PER_STRATUM + 1, "SurvivalWorld spawns the 7 demons and the human group of stratum 1 (got %d)" % w.enemies.entries.size())
+	_check(w.viewport.find_children("*", "Sprite3D", true, false).size() == SurvivalStrata.PER_STRATUM + 1, "All 7 stratum demons and the human group have 3D corridor silhouettes")
 	_check(w.cell == Vector2i(12, 10) and w.facing == 0, "Player starts at sanctuary facing North toward healer/vendor")
 	_check(w.npc_picture.visible, "Healer/vendor SMT portrait is visible directly ahead on spawn")
 	# Posições são embaralhadas pela semente: isola Pixie/Jack Frost para o teste de passo.

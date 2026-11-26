@@ -186,6 +186,8 @@ static func _valid_state(s: Dictionary) -> bool:
 	var known := {}
 	for demon in SurvivalData.DEMONS:
 		known[String(demon.id)] = true
+	for st in range(1, SurvivalStrata.COUNT + 1):
+		known[SurvivalData.human_group_id(st)] = true
 	for id in (s.get("defeated") as Array):
 		if not (id is String) or not known.has(id):
 			return false

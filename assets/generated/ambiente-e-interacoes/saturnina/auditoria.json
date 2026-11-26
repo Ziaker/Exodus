@@ -1,0 +1,26 @@
+{
+  "A": {
+    "cameras": 7,
+    "meshes": 185,
+    "triangulos": 37320,
+    "triangulos_avaliados": 61068,
+    "fov_vertical": 77.73214264186736,
+    "altura_olho": 0.8421
+  },
+  "B": {
+    "cameras": 7,
+    "meshes": 226,
+    "triangulos": 31372,
+    "triangulos_avaliados": 66796,
+    "fov_vertical": 77.73214264186736,
+    "altura_olho": 0.8421
+  },
+  "C": {
+    "cameras": 7,
+    "meshes": 191,
+    "triangulos": 33076,
+    "triangulos_avaliados": 61808,
+    "fov_vertical": 77.73214264186736,
+    "altura_olho": 0.8421
+  }
+}

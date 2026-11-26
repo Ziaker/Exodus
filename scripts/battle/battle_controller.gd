@@ -454,6 +454,11 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 	_apply_strike(attacker, defender, power, is_reaction, attack_timing, defense_timing)
 
 
+## D-106: modifiers of the hit being resolved, set by the skill code just before it
+## ("pierce": share of DEF ignored, "mult": extra damage multiplier) and cleared by it after.
+var _hit_mods: Dictionary = {}
+
+
 ## Damage, Press Turn and SP rewards of one strike whose timings are already known.
 ## Shared by the single rail and by the D-049 counter-attack exchange.
 ## Returns the HP removed, or -1 when there was no contact.
@@ -474,15 +479,28 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 	# Creator 2026-11-23: magic = same formula with MAK/MEF; IGNI is normal (x1) for
 	# everyone until elemental affinities exist. ATK stages raise physical ATK only.
 	var affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL if magic else defender.affinity
-	var result := BattleMath.physical_damage(power,
-		float(attacker.stats.mak) if magic else attacker.effective_atk(), attacker.stats.agi,
-		defender.stats.mef if magic else defender.stats.defense, attacker.current_sp, defender.current_sp,
-		affinity, rng)
+	var defence_stat: int = defender.stats.mef if magic else defender.stats.defense
+	var pierce := float(_hit_mods.get("pierce", 0.0))
+	if pierce > 0.0:
+		defence_stat = maxi(1, int(round(float(defence_stat) * (1.0 - pierce))))
+	var result: Dictionary
+	if bool(_hit_mods.get("prayer_base", false)):
+		# D-107 CHERAV: the prayer formula (10 + MAK - MEF), like Ra'am.
+		result = PrayerBook.raam_damage(0, attacker.stats.mak, attacker.stats.agi, defender.stats.mef,
+			attacker.current_sp, defender.current_sp, affinity, defender.race, rng)
+	else:
+		result = BattleMath.physical_damage(power,
+			float(attacker.stats.mak) if magic else attacker.effective_atk(), attacker.stats.agi,
+			defence_stat, attacker.current_sp, defender.current_sp,
+			affinity, rng)
 
 	var amount := int(result.amount)
 	if attack_timing == BattleMath.RhythmResult.BEAM \
 		or defense_timing == BattleMath.RhythmResult.BEAM:
 		amount = int(float(amount) * 0.5)
+	# D-106: CHILL / WEAKEN on the attacker, MARK on the defender, the skill's own multiplier.
+	amount = int(round(float(amount) * SkillFx.out_mult(attacker) * float(_hit_mods.get("mult", 1.0)) * SkillFx.in_mult(defender)))
+	SkillFx.consume_attack(attacker)
 
 	var applied := defender.take_damage(amount)
 	# Press Turn applies to a landed hit, not to a miss or a perfect dodge.
@@ -513,8 +531,7 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 func _attack_timing(attacker: BattleUnit, defender: BattleUnit, duration: float,
 		auto_hit: bool = false, chain: bool = false) -> int:
 	if attacker.is_player:
-		var point_half := BattleMath.point_half_width(attacker.stats.agi,
-			defender.stats.agi, attacker.current_sp, defender.current_sp)
+		var point_half := BattleMath.unit_point_half(attacker, defender)
 		return await _manual_rhythm(duration, point_half, chain)
 	# D-014/D-022: without a declared reaction the hit is guaranteed. POINT is a
 	# normal landed hit — it grants no automatic critical and no extra bonus.
@@ -529,8 +546,7 @@ func _defense_timing(defender: BattleUnit, attacker: BattleUnit, duration: float
 	if defender.is_player:
 		if not act_paid:
 			return BattleMath.RhythmResult.MISS
-		var point_half := BattleMath.point_half_width(defender.stats.agi,
-			attacker.stats.agi, defender.current_sp, attacker.current_sp)
+		var point_half := BattleMath.unit_point_half(defender, attacker)
 		return await _manual_rhythm(duration, point_half)
 	# AI defense is resolved locally and spends one of its own acts.
 	return _defender_reaction(defender, attacker)
@@ -554,8 +570,7 @@ func _zone_roll(point_half: float) -> int:
 
 
 func _ai_roll(attacker: BattleUnit, defender: BattleUnit) -> int:
-	var point_half := BattleMath.point_half_width(attacker.stats.agi,
-		defender.stats.agi, attacker.current_sp, defender.current_sp)
+	var point_half := BattleMath.unit_point_half(attacker, defender)
 	var advantage := attacker.current_sp - defender.current_sp
 	var rolls := BattleMath.extra_block_rolls(advantage) + 1
 	for _i in rolls:
@@ -585,8 +600,7 @@ func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 func _defender_reaction(defender: BattleUnit, attacker: BattleUnit) -> int:
 	if defender.acts_available <= 0:
 		return BattleMath.RhythmResult.MISS
-	var point_half := BattleMath.point_half_width(defender.stats.agi,
-		attacker.stats.agi, defender.current_sp, attacker.current_sp)
+	var point_half := BattleMath.unit_point_half(defender, attacker)
 	var advantage := defender.current_sp - attacker.current_sp
 	var rolls := BattleMath.extra_block_rolls(advantage) + 1
 	for _i in rolls:
@@ -941,6 +955,13 @@ func _first_alive_enemy() -> BattleUnit:
 
 
 func _player_with_most_sp() -> BattleUnit:
+	# D-106 TAUNT: a hero that taunted is the only one foes may attack.
+	var heroes: Array = []
+	for unit in state.units:
+		if unit.is_player: heroes.append(unit)
+	var taunter := SkillFx.taunter(heroes)
+	if taunter != null:
+		return taunter
 	var best: BattleUnit = null
 	for unit in state.units:
 		if unit.is_player and unit.is_alive():

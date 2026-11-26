@@ -29,6 +29,15 @@ var current_pp: int = 0
 var race: StringName = &""
 ## D-048 Haganah: {"round": cast round, "step": cast step} while the shield is up, else {}.
 var haganah: Dictionary = {}
+## D-106 (Survival skills, see SkillFx): id -> {"rounds": int, "mod": {"stat","delta"}}.
+var statuses: Dictionary = {}
+## Bleeds: remaining rounds of each one (they stack, SkillFx.BLEED_DAMAGE per round each).
+var bleeds: Array[int] = []
+## REGEN: HP restored at the start of each of the next `regen_rounds` rounds.
+var regen_amount: int = 0
+var regen_rounds: int = 0
+## D-107 NECHAMAH: remaining rounds of each mend (they stack, SkillFx.MEND_HEAL HP each per round).
+var mends: Array[int] = []
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 		player_side: bool, fallen: bool = false) -> void:
@@ -64,6 +73,29 @@ func change_pp(amount: int) -> int:
 ## ATK with the active stages applied (+25% per stage).
 func effective_atk() -> float:
 	return float(stats.atk) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(atk_stages.size()))
+
+## D-106: adds a status (a repeat refreshes it); `mod` changes a stat until it ends.
+func add_status(id: StringName, rounds: int, mod: Dictionary = {}) -> void:
+	if statuses.has(id):
+		remove_status(id)
+	if not mod.is_empty():
+		stats.set(String(mod.stat), int(stats.get(String(mod.stat))) + int(mod.delta))
+	statuses[id] = {"rounds": rounds, "mod": mod}
+
+
+func has_status(id: StringName) -> bool:
+	return statuses.has(id)
+
+
+## Ends a status and gives its stat back.
+func remove_status(id: StringName) -> void:
+	if not statuses.has(id):
+		return
+	var mod: Dictionary = statuses[id].mod
+	if not mod.is_empty():
+		stats.set(String(mod.stat), int(stats.get(String(mod.stat))) - int(mod.delta))
+	statuses.erase(id)
+
 
 func is_alive() -> bool:
 	return current_hp > 0

@@ -1,0 +1,19 @@
+{
+  "cameras": 7,
+  "medicoes": {
+    "exploracao": [
+      -0.005,
+      "Margem oriental.001"
+    ],
+    "margem": [
+      0.076,
+      "Laje cortada pela erosão.117"
+    ],
+    "eixo_da_fenda": [
+      -17.441,
+      "Sedimento ao fundo.001"
+    ]
+  },
+  "triangulos_avaliados": 66080,
+  "malhas": 279
+}

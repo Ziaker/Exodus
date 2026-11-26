@@ -24,13 +24,13 @@ const SURVIVAL_SKILLS: Array[StringName] = [
 ## Nomes em hebraico das habilidades não identificadas (D-052 / Ra'am).
 const HEBREW_SKILLS := {
 	&"pixie_dust": "אבק פיה", &"frost_breath": "נשימת כפור", &"hellfire": "אש גיהנום",
-	&"spirit_bolt": "בר רוח", &"curse_ray": "קרן קללה", &"shadow_bite": "נשיכת צל",
+	&"spirit_bolt": "סימן רוח", &"curse_ray": "קרן קללה", &"shadow_bite": "נשיכת צל",
 	&"fang_flurry": "סערת ניבים", &"heavy_crush": "מעיכה כבדה", &"howl": "יללה",
-	&"primal_roar": "שאגה קדומה", &"mend": "תיקון", &"dark_siphon": "שאיבה אפלה",
+	&"primal_roar": "שאגה קדומה", &"mend": "תיקון", &"dark_siphon": "מתנה אפלה",
 	&"soul_pierce": "חדירת נשמה", &"twin_fang": "ניב כפול", &"war_cry": "זעקת מלחמה",
-	&"venom_cloud": "ענן ארס", &"mind_blast": "פיצוץ מוח", &"frost_lance": "רומח כפור",
-	&"thunder_call": "קריאת רעם", &"life_drain": "ניקוז חיים", &"spirit_wave": "גל רוח",
-	&"crushing_blow": "מכה מוחצת", &"ember_touch": "מגע גחלת", &"renew": "חידוש",
+	&"venom_cloud": "ענן ארס", &"mind_blast": "שאיבת מוח", &"frost_lance": "רומח כפור",
+	&"thunder_call": "קריאת רעם", &"life_drain": "ניקוז חיים", &"spirit_wave": "עלוקת נשמה",
+	&"crushing_blow": "מכת סיום", &"ember_touch": "התפרצות גחלת", &"renew": "חידוש",
 	&"void_gaze": "מבט הריק", &"blade_dance": "מחול להבים", &"stone_grasp": "אחיזת אבן",
 }
 
@@ -461,7 +461,85 @@ static func demon_by_id(id: String) -> Dictionary:
 	for entry in DEMONS:
 		if String(entry.id) == id:
 			return entry
+	for entry in human_defs():
+		if String(entry.id) == id:
+			return entry
 	return {}
+
+
+# ------------------------------------------------------------------ D-107 humanos
+
+## D-107 (criador 2026-11-25): em cada estrato há 1 grupo só de humanos ("humanos normais, sem lore
+## nem nada"). Humanos não se juntam a mazikim, rezam com PP como a Yoch (sem EN), usam PRAY, SANVERIM,
+## NECHAMAH e CHERAV e NÃO podem ser absorvidos. Arte: o modelo de NPC humano do jogo (P15).
+const HUMAN_COUNT := 3
+## Modelo de NPC humano do jogo (o mesmo "[PLACEHOLDER] HUMAN" do teste de dungeon, P15), por pedido do criador.
+const HUMAN_SPRITES := [
+	{"name": "HUMAN A", "picture": REF_PICTURES + "P15.png", "silhouette": SILHOUETTES_DIR + "human.png"},
+	{"name": "HUMAN B", "picture": REF_PICTURES + "P15.png", "silhouette": SILHOUETTES_DIR + "human.png"},
+	{"name": "HUMAN C", "picture": REF_PICTURES + "P15.png", "silhouette": SILHOUETTES_DIR + "human.png"},
+]
+const HUMAN_SKILLS: Array[StringName] = [&"pray", &"sanverim", &"nechamah", &"cherav"]
+## Parte do SP esperado do estrato em cada atributo (sem EN: humanos rezam com PP).
+const HUMAN_SHARES := {"max_hp": 0.38, "atk": 0.12, "mak": 0.16, "defense": 0.12, "mef": 0.10, "agi": 0.12}
+const HUMAN_MACCA := 30
+
+static var _human_cache: Array = []
+
+
+static func human_group_id(stratum: int) -> String:
+	return "humans_s%d" % stratum
+
+
+static func is_human_id(id: String) -> bool:
+	return id.begins_with("human")
+
+
+## Grupo (humans_sN) a que um humano (human_sN_x) pertence.
+static func human_group_of(id: String) -> String:
+	if id.begins_with("humans_s"):
+		return id
+	if id.begins_with("human_s") and id.length() >= 8:
+		return human_group_id(int(id.substr(7, 1)))
+	return ""
+
+
+static func human_unit_ids(stratum: int) -> Array[String]:
+	var out: Array[String] = []
+	for i in HUMAN_COUNT:
+		out.append("human_s%d_%s" % [stratum, String("abc")[i]])
+	return out
+
+
+## Os 15 humanos (3 por estrato) e os 5 grupos que aparecem no mapa.
+static func human_defs() -> Array:
+	if not _human_cache.is_empty():
+		return _human_cache
+	for stratum in range(1, SurvivalStrata.COUNT + 1):
+		var par := SurvivalStrata.par_sp(stratum)
+		var stats := {"max_en": 0}
+		var spent := 0
+		for key in HUMAN_SHARES:
+			if key == "max_hp": continue
+			stats[key] = maxi(1, int(round(float(par) * float(HUMAN_SHARES[key]))))
+			spent += int(stats[key])
+		stats["max_hp"] = maxi(1, par - spent)
+		var ids := human_unit_ids(stratum)
+		for i in HUMAN_COUNT:
+			var sprite: Dictionary = HUMAN_SPRITES[i]
+			_human_cache.append({
+				"id": ids[i], "name": String(sprite.name), "tier": stratum, "macca": HUMAN_MACCA,
+				"picture": String(sprite.picture), "silhouette": String(sprite.silhouette),
+				"stats": stats.duplicate(), "skills": HUMAN_SKILLS, "affinity": BattleMath.Affinity.NORMAL,
+				"human": true,
+			})
+		var lead: Dictionary = HUMAN_SPRITES[0]
+		_human_cache.append({
+			"id": human_group_id(stratum), "name": "HUMANS", "tier": stratum, "macca": 0,
+			"picture": String(lead.picture), "silhouette": String(lead.silhouette),
+			"stats": {}, "skills": [], "human_group": true,
+		})
+	return _human_cache
 
 
 ## Células possíveis para demônios: chão, fora do santuário e do ponto inicial.
@@ -496,6 +574,16 @@ static func stratum_enemy_defs(seed: int, stratum: int) -> Array:
 			"picture": String(entry.silhouette),
 			"warden": SurvivalStrata.warden_of(stratum) == id,
 		})
+	# D-107: o grupo de humanos do estrato.
+	var group_id := human_group_id(stratum)
+	var group := demon_by_id(group_id)
+	out.append({
+		"id": group_id,
+		"name": String(group.name),
+		"cell": cells[group_id],
+		"picture": String(group.silhouette),
+		"warden": false,
+	})
 	return out
 
 
@@ -523,7 +611,7 @@ static func daily_seed() -> int:
 ## Elite é determinístico por semente + id: mesmo seed, mesmo demônio elite.
 ## Guardiões nunca são elites (já têm o próprio reforço, D-066). OMEN 3 sobe a chance.
 static func is_elite(seed: int, id: String, omen: int = 0) -> bool:
-	if SurvivalStrata.is_warden(id):
+	if SurvivalStrata.is_warden(id) or is_human_id(id):
 		return false
 	var rng := RandomNumberGenerator.new()
 	rng.seed = (absi(seed) + absi(id.hash()) * 13) % 2147483647
@@ -625,6 +713,9 @@ static func price(base: int, stratum: int, state: Dictionary) -> int:
 ## Combate de teste: lutas com 1, 2 ou 3 demônios conforme o tier do encontrado.
 ## O demônio tocado no mapa sempre abre a luta; os reforços vêm da mesma lista.
 static func encounter_for(id: String, defeated: Array = []) -> Array[String]:
+	# D-107: tocar o grupo de humanos abre uma luta só com os 3 humanos do estrato.
+	if id.begins_with("humans_s"):
+		return human_unit_ids(int(id.substr(8, 1)))
 	var found := -1
 	for i in DEMONS.size():
 		if String(DEMONS[i].id) == id:

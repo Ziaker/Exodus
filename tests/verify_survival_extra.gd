@@ -154,7 +154,7 @@ func _run() -> void:
 	restored.battle_scene = ""
 	root.add_child(restored)
 	await process_frame
-	_check(restored.enemies.entries.size() == SurvivalStrata.PER_STRATUM - 2,
+	_check(restored.enemies.entries.size() == SurvivalStrata.PER_STRATUM - 2 + 1,  # D-107: +1 human group
 			"Defeated demons stay off the map after reload (got %d)" % restored.enemies.entries.size())
 	restored.queue_free()
 	await process_frame

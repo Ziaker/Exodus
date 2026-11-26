@@ -86,7 +86,8 @@ static func finish_run(defeated: int, macca: int, continues: int, state: Diction
 	if not state.is_empty():
 		var codex: Array = meta.codex
 		for id in state.get("defeated", []):
-			if not codex.has(String(id)):
+			# D-107: o CODEX é de demônios; grupos de humanos não entram.
+			if not codex.has(String(id)) and not String(id).begins_with("humans_"):
 				codex.append(String(id))
 		meta["codex"] = codex
 		# Vencer no OMEN n libera o n+1.

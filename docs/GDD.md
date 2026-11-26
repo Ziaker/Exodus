@@ -3156,3 +3156,44 @@ Formato: ID · data · decisão · estado · impacto documental.
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
 `docs/COMBAT_SPEC.md`. Este apêndice não as duplica.
+
+- **D-106 · 2026-11-25 (decisão do criador) — rework das habilidades do Survival.**
+  Motivo: o criador pediu um rework com ``Identidade única para aqueles que não fui eu quem
+  criou`` e ``Só o survival``, aprovou a proposta (`docs/plans/2026-11-25-survival-skills-rework.md`)
+  com ``só muda os nomes que não fazem sentido com os efeitos equivalentes``. As 27 habilidades do
+  pool ganham um efeito que nenhuma outra tem (SkillBook ``fx``, regras em `scripts/core/skill_fx.gd`):
+  SHADOW BITE rouba SP, SOUL PIERCE ignora metade da DEF, FROST LANCE esfria (CHILL), STONE GRASP
+  prende (SNARE), TWIN FANG combo, FANG FLURRY sangramento acumulável, BLADE DANCE poder crescente,
+  HEAVY CRUSH quebra DEF, FINISHING BLOW executa abaixo de 40% de HP, PIXIE DUST sono, SOUL LEECH
+  cura por golpe, SPIRIT BRAND marca, EMBER BURST detona a queimadura, HELLFIRE queimadura de 5
+  rodadas, FROST BREATH lentidão, VENOM CLOUD enfraquece, MIND DRAIN drena EN, CURSE RAY drena SP,
+  THUNDER CALL 1 ou 2 raios, VOID GAZE inesquivável, MEND limpa estados, DARK BOON cura um aliado,
+  LIFE DRAIN cura pelo dano, RENEW regenera 3 rodadas, HOWL taunt, PRIMAL ROAR berserk e WAR CRY
+  reforça a equipe. Renomeadas: SPIRIT WAVE -> SOUL LEECH, SPIRIT BOLT -> SPIRIT BRAND, EMBER TOUCH ->
+  EMBER BURST, MIND BLAST -> MIND DRAIN, CRUSHING BLOW -> FINISHING BLOW, DARK SIPHON -> DARK BOON.
+  **Escolhas do agente, aguardando o criador:** os valores dos efeitos (25%, 2 rodadas, 3 EN etc.) e
+  a queimadura removida de PIXIE DUST, VENOM CLOUD, CURSE RAY e THUNDER CALL. Não alterado: LUNGE,
+  BLEEDBUFF, HEAT WAVE, ENERGY EAT e as rezas da Yoch. Impacto: `skill_book.gd`, `skill_fx.gd`,
+  `battle_unit.gd`, `battle_state.gd`, `battle_controller.gd`, `playable_controller.gd`,
+  `survival_battle.gd`, `survival_data.gd`, `tests/verify_skill_fx.gd`; `docs/SURVIVAL_MODE.md`,
+  `docs/DECISIONS.md`.
+
+- **D-107 · 2026-11-25 (decisão do criador) — grupos de humanos e rezas inimigas.**
+  Motivo: o criador pediu humanos como inimigos que rezam, com rezas próprias ``HOLY e com nomes
+  hebraicos``. Respostas: ``Maziks não se juntam com humanos, humanos lutam em grupos de humanos e
+  maziks em grupos de maziks``, ``1 grupo por estrato``, ``só humanos normais, sem lore nem nada``,
+  HOLY ``ignora`` (sem efeito mecânico), humanos ``com PP como a Yoch``, humanos ``não são
+  absorvíveis``, as rezas da Yoch ``não mudam``, arte = ``modelo de NPC humano`` do jogo (P15). As 3
+  rezas foram desenhadas pelo criador: **SANVERIM** (2 PP) cegueira de luz até o fim do próximo round,
+  o alvo erra mais (zona de acerto menor); **NECHAMAH** (1 PP) cura 5 HP por round durante 3 rounds,
+  como o oposto da queimadura (acumula); **CHERAV** (3 PP) dano em área, um corte de luz, 10 + MAK −
+  MEF (a fórmula do Ra'am) em todos os heróis. Nomes aprovados pelo criador. Os humanos usam também
+  PRAY (+1 PP, +2 SP, 1 ato). **Escolhas do agente, aguardando o criador:** 3 humanos por grupo, todos
+  com as 3 rezas, atributos = SP esperado do estrato repartido (HP 38%, MAK 16%, ATK/DEF/AGI 12%, MEF
+  10%, sem EN) e ajustados ao SP do Fallen (D-101), a cegueira reduz a zona de acerto à metade, a IA
+  (PRAY enquanto tem pouco PP, NECHAMAH só com aliado ferido, SANVERIM só com herói enxergando),
+  a cura em quem tem menos HP, e a reza resolver na hora (sem reação dos heróis e sem cast lento).
+  **Não alterado:** Refuah, Haganah e Ra'am da Yoch. Impacto: `skill_book.gd`, `skill_fx.gd`,
+  `battle_unit.gd`, `battle_math.gd`, `battle_controller.gd`, `playable_controller.gd`,
+  `survival_battle.gd`, `survival_data.gd`, `survival_strata.gd`, `survival_state.gd`,
+  `survival_meta.gd`, `tests/verify_human_groups.gd`; `docs/SURVIVAL_MODE.md`, `docs/DECISIONS.md`.

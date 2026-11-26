@@ -142,6 +142,10 @@ func _create_units() -> void:
 				enemy_skills.append(sk)
 		enemy.skills = enemy_skills
 		enemy.affinity = int(power.affinity)
+		if bool(def.get("human", false)):
+			# D-107: humans pray with PP like Yoch (no EN), start with 0 PP and cannot be absorbed.
+			enemy.race = &"human"
+			enemy.start_praying(0)
 		state.add_unit(enemy)
 		paths.append(enemy.sprite_path)
 
@@ -182,6 +186,8 @@ func choice_weight(unit: BattleUnit, skill: StringName) -> float:
 	var t := temperament_of(unit)
 	var kind := "attack" if skill == &"" else String(SkillBook.def(skill).get("kind", "strike"))
 	var hurt := float(unit.current_hp) / float(maxi(1, unit.stats.max_hp))
+	if kind == "prayer" or skill == &"cherav":
+		return _prayer_weight(unit, skill)
 	if kind == "heal":
 		if hurt >= 0.6:
 			return 0.0
@@ -199,11 +205,30 @@ func choice_weight(unit: BattleUnit, skill: StringName) -> float:
 	return float((table.get(t, {}) as Dictionary).get(kind, 1.0))
 
 
+## D-107: how a human weighs its prayers (PRAY while it has little PP, NECHAMAH only when an
+## ally is hurt, SANVERIM only while some hero can still be blinded).
+func _prayer_weight(unit: BattleUnit, skill: StringName) -> float:
+	match skill:
+		&"pray": return 3.0 if unit.current_pp < 3 else 1.0
+		&"nechamah":
+			for ally in _allies_of(unit):
+				if float(ally.current_hp) < 0.8 * float(ally.stats.max_hp) and ally.mends.size() < 2:
+					return 4.0
+			return 0.0
+		&"sanverim":
+			for hero in state.units:
+				if hero.is_player and hero.is_alive() and not hero.has_status(&"blind"):
+					return 2.0
+			return 0.0
+		&"cherav": return 4.0
+	return 1.0
+
+
 func temperament_pick(unit: BattleUnit, budget: int) -> StringName:
 	var choices: Array[StringName] = [&""]
 	var acts := mini(budget, maxi(unit.acts_available, 0))
 	for skill in unit.skills:
-		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp):
+		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99):
 			choices.append(skill)
 	var total := 0.0
 	for c in choices:
@@ -280,7 +305,7 @@ func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	if not it.is_empty() and not bool(it.used):
 		it.used = true
 		var skill: StringName = it.skill
-		if skill == &"" or SkillBook.affordable(skill, mini(budget, unit.acts_available), unit.current_en, unit.current_hp):
+		if skill == &"" or SkillBook.affordable(skill, mini(budget, unit.acts_available), unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99):
 			var t: BattleUnit = it.target
 			_forced_target = t if t != null and t.is_alive() else null
 			return skill
@@ -289,6 +314,14 @@ func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 
 
 func _player_with_most_sp() -> BattleUnit:
+	# D-106 TAUNT beats the announced target and the temperament.
+	var heroes: Array = []
+	for u in state.units:
+		if u.is_player: heroes.append(u)
+	var taunter := SkillFx.taunter(heroes)
+	if taunter != null:
+		_forced_target = null
+		return taunter
 	if _forced_target != null and _forced_target.is_alive():
 		var t := _forced_target
 		_forced_target = null
@@ -993,7 +1026,8 @@ func _show_result() -> void:
 				warden_beaten = true
 			gain = int(round(float(gain) * macca_mult))
 			reward += gain
-			SurvivalState.record_victory(id, gain)
+			# D-107: um grupo de humanos conta como uma derrota só, no id do grupo do mapa.
+			SurvivalState.record_victory(SurvivalData.human_group_of(id) if SurvivalData.is_human_id(id) else id, gain)
 		var skill_names: Array[String] = []
 		for sk in _fallen.skills:
 			skill_names.append(String(sk))
