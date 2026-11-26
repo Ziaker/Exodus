@@ -9,12 +9,10 @@ para GLB. A grade navegável do jogo usa as células alcançáveis e as bordas
 medidas na malha, com 2.639 células navegáveis, 66 bordas fechadas entre
 células e 314 células na rota mínima.
 
-[Captura no Survival](video/Survival_Necropole.mp4) ·
-[Entrada, santuário e cinco zonas](video/prancha_survival.jpg)
+[Entrada, santuário e cinco zonas](video/prancha_survival.jpg) ·
+[Histórico da criação e protótipo de batalha](../../../../../../docs/NECROPOLE_SATURNINA.md)
 
-[Travessia no ensaio com fundo animado](video/EXODUS_Necropole_Saturnina_Fundo_Animado.mp4) ·
-[Amostra de iluminação e céu](video/Amostra_Fundo_Animado_e_Luz_Pendular.mp4) ·
-[Travessia original do ensaio](video/EXODUS_Necropole_Saturnina.mp4)
+As travessias e amostras animadas ficam nas capturas locais do projeto.
 
 O refinamento conserva as 11 salas por zona, as 67 ligações e os 13 circuitos. Os centros ganharam deslocamentos, as salas ganharam recortes e alcovas, e 61 passagens têm curvas em planta. A entrada continua sem uma rota alternativa à Ruptura.
 
