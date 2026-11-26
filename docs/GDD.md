@@ -3193,7 +3193,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   hebraicos``. Respostas: ``Maziks não se juntam com humanos, humanos lutam em grupos de humanos e
   maziks em grupos de maziks``, ``1 grupo por estrato``, ``só humanos normais, sem lore nem nada``,
   HOLY ``ignora`` (sem efeito mecânico), humanos ``com PP como a Yoch``, humanos ``não são
-  absorvíveis``, as rezas da Yoch ``não mudam``, arte = ``modelo de NPC humano`` do jogo (P15). As 3
+  absorvíveis``, as rezas da Yoch ``não mudam``, arte = ``modelo de NPC humano`` do jogo (P15, depois P10 e P19 para variar) e, por correção do criador, ``só maziks são silhuetas``: humanos usam a arte colorida e não têm sombra no chão. As 3
   rezas foram desenhadas pelo criador: **SANVERIM** (2 PP) cegueira de luz até o fim do próximo round,
   o alvo erra mais (zona de acerto menor); **NECHAMAH** (1 PP) cura 5 HP por round durante 3 rounds,
   como o oposto da queimadura (acumula); **CHERAV** (3 PP) dano em área, um corte de luz, 10 + MAK −

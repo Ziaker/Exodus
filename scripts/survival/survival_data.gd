@@ -473,11 +473,13 @@ static func demon_by_id(id: String) -> Dictionary:
 ## nem nada"). Humanos não se juntam a mazikim, rezam com PP como a Yoch (sem EN), usam PRAY, SANVERIM,
 ## NECHAMAH e CHERAV e NÃO podem ser absorvidos. Arte: o modelo de NPC humano do jogo (P15).
 const HUMAN_COUNT := 3
-## Modelo de NPC humano do jogo (o mesmo "[PLACEHOLDER] HUMAN" do teste de dungeon, P15), por pedido do criador.
+## Modelos de NPC humano do jogo (SMT VX, Pictures): P15 é o "[PLACEHOLDER] HUMAN" do teste de dungeon,
+## P10 a mulher de uniforme azul e P19 o homem de terno vermelho. Só mazikim são silhuetas: humanos usam a
+## própria arte colorida, na batalha e no mapa (o grupo no mapa mostra o P15).
 const HUMAN_SPRITES := [
-	{"name": "HUMAN A", "picture": REF_PICTURES + "P15.png", "silhouette": SILHOUETTES_DIR + "human.png"},
-	{"name": "HUMAN B", "picture": REF_PICTURES + "P15.png", "silhouette": SILHOUETTES_DIR + "human.png"},
-	{"name": "HUMAN C", "picture": REF_PICTURES + "P15.png", "silhouette": SILHOUETTES_DIR + "human.png"},
+	{"name": "HUMAN A", "picture": REF_PICTURES + "P15.png"},
+	{"name": "HUMAN B", "picture": REF_PICTURES + "P10.png"},
+	{"name": "HUMAN C", "picture": REF_PICTURES + "P19.png"},
 ]
 const HUMAN_SKILLS: Array[StringName] = [&"pray", &"sanverim", &"nechamah", &"cherav"]
 ## Parte do SP esperado do estrato em cada atributo (sem EN: humanos rezam com PP).
@@ -529,14 +531,14 @@ static func human_defs() -> Array:
 			var sprite: Dictionary = HUMAN_SPRITES[i]
 			_human_cache.append({
 				"id": ids[i], "name": String(sprite.name), "tier": stratum, "macca": HUMAN_MACCA,
-				"picture": String(sprite.picture), "silhouette": String(sprite.silhouette),
+				"picture": String(sprite.picture),
 				"stats": stats.duplicate(), "skills": HUMAN_SKILLS, "affinity": BattleMath.Affinity.NORMAL,
 				"human": true,
 			})
 		var lead: Dictionary = HUMAN_SPRITES[0]
 		_human_cache.append({
 			"id": human_group_id(stratum), "name": "HUMANS", "tier": stratum, "macca": 0,
-			"picture": String(lead.picture), "silhouette": String(lead.silhouette),
+			"picture": String(lead.picture),
 			"stats": {}, "skills": [], "human_group": true,
 		})
 	return _human_cache
@@ -581,7 +583,7 @@ static func stratum_enemy_defs(seed: int, stratum: int) -> Array:
 		"id": group_id,
 		"name": String(group.name),
 		"cell": cells[group_id],
-		"picture": String(group.silhouette),
+		"picture": String(group.picture),
 		"warden": false,
 	})
 	return out

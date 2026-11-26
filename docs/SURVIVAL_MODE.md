@@ -143,8 +143,8 @@ HEAT WAVE, ENERGY EAT e as rezas da Yoch não mudaram. `tests/verify_skill_fx.gd
 
 ## Humanos (D-107)
 
-Cada estrato tem 1 grupo só de humanos (3), que aparece no mapa como uma silhueta humana (modelo de NPC
-P15) e luta sem demônios. Humanos rezam com PP (sem EN): PRAY (+1 PP), SANVERIM (2 PP, cegueira),
+Cada estrato tem 1 grupo só de humanos (3), que aparece no mapa e na batalha com a própria arte colorida e sem
+sombra no chão (só mazikim são silhuetas), usando modelos de NPC humano do jogo (P15, P10 e P19), e luta sem demônios. Humanos rezam com PP (sem EN): PRAY (+1 PP), SANVERIM (2 PP, cegueira),
 NECHAMAH (1 PP, 5 HP por round por 3 rounds) e CHERAV (3 PP, 10 + MAK − MEF em todos os heróis).
 Não podem ser absorvidos e não entram no CODEX. Regras em `SkillBook.DEFS`, `SkillFx` e
 `SurvivalData.human_defs`; prova em `tests/verify_human_groups.gd`.

@@ -924,19 +924,25 @@ func _enemy(_x: float, index: int) -> void:
 	var texture := silhouettes[index % silhouettes.size()]
 	var region := Rect2(Vector2.ZERO, texture.get_size())
 	var box := Rect2(column.position + Vector2(maxf(0.0, (column.size.x - SPRITE_BOX.x) * 0.5), 0), SPRITE_BOX)
-	# Ground shadow from the HTML silhouettes (ellipse rx 44 ry 6 at 111/119), filled black.
-	var k := SPRITE_BOX.x / 112.0
-	var shadow_x := box.position.x + 55 * k
-	# A sombra fica exatamente na linha dos pés da arte (art.end.y), que é a
-	# mesma com qualquer depth/horizonte — antes usava a caixa e descolava.
-	draw_set_transform(Vector2(shadow_x, art.end.y + 8), 0, Vector2(1, 6.0 / 44.0))
-	draw_circle(Vector2.ZERO, 44 * k * enemy_depth, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
-	draw_set_transform(Vector2(shadow_x, art.end.y), 0, Vector2(1, 6.0 / 44.0))
-	draw_circle(Vector2.ZERO, 44 * k * enemy_depth, Color.BLACK)
-	draw_set_transform(Vector2.ZERO)
-	# drop-shadow(0 8px 2px rgba(24,17,26,.45)) and the silhouette (fill:#000).
-	draw_texture_rect_region(texture, Rect2(art.position + Vector2(0, 8), art.size), region, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
-	draw_texture_rect_region(texture, art, region, Color.BLACK)
+	if unit.race == &"human":
+		# D-107 (creator 2026-11-25): only mazikim are silhouettes; a human is drawn with its own
+		# colours and has no ground shadow.
+		var colour: Texture2D = battler_textures[index % battler_textures.size()]
+		draw_texture_rect_region(colour, art, Rect2(Vector2.ZERO, colour.get_size()), Color.WHITE)
+	else:
+		# Ground shadow from the HTML silhouettes (ellipse rx 44 ry 6 at 111/119), filled black.
+		var k := SPRITE_BOX.x / 112.0
+		var shadow_x := box.position.x + 55 * k
+		# A sombra fica exatamente na linha dos pés da arte (art.end.y), que é a
+		# mesma com qualquer depth/horizonte — antes usava a caixa e descolava.
+		draw_set_transform(Vector2(shadow_x, art.end.y + 8), 0, Vector2(1, 6.0 / 44.0))
+		draw_circle(Vector2.ZERO, 44 * k * enemy_depth, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
+		draw_set_transform(Vector2(shadow_x, art.end.y), 0, Vector2(1, 6.0 / 44.0))
+		draw_circle(Vector2.ZERO, 44 * k * enemy_depth, Color.BLACK)
+		draw_set_transform(Vector2.ZERO)
+		# drop-shadow(0 8px 2px rgba(24,17,26,.45)) and the silhouette (fill:#000).
+		draw_texture_rect_region(texture, Rect2(art.position + Vector2(0, 8), art.size), region, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
+		draw_texture_rect_region(texture, art, region, Color.BLACK)
 	var selected := _selected_enemy() == index
 	if alert_visible() and alert_unit == unit:
 		var t := announcement_age / 0.75

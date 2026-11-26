@@ -367,7 +367,8 @@ func _draw_intents() -> void:
 			continue
 		var r := intent_rect(i)
 		var it: Dictionary = intents.get(unit.id, {})
-		var tag: String = String(SurvivalStrata.TEMPERAMENT_LABELS.get(temperament_of(unit), ""))
+		# D-107: humans have no demon temperament, so no label (it used to show TRICKSTER).
+		var tag: String = "" if unit.race == &"human" else String(SurvivalStrata.TEMPERAMENT_LABELS.get(temperament_of(unit), ""))
 		_draw_centered(_intent_panel, regular, tag, r.get_center().x, r.position.y + 22.0, 8, Color(1, 1, 1, 0.72))
 		if it.is_empty() or bool(it.used):
 			continue
