@@ -41,15 +41,6 @@ const DEFS := {
 	&"hellfire": {"name": "HELLFIRE", "acts": 2, "en": 7, "hp": 0, "pp": 0, "kind": "magic",
 		"power": 8, "burn_chance": 35, "fx": {"burn_rounds": 5},
 		"info": "HELLFIRE 2 ACT / 7 EN: power 8 flame magic, all foes, 35% burn lasting 5 rounds (INFERNO)."},
-	&"spirit_bolt": {"name": "SPIRIT BRAND", "acts": 1, "en": 5, "hp": 0, "pp": 0, "kind": "magic",
-		"power": 7, "burn_chance": 0, "fx": {"status": "mark", "rounds": 3},
-		"info": "SPIRIT BRAND 1 ACT / 5 EN: power 7 spirit magic, all foes; the next hit on a branded foe deals +25% (MARK)."},
-	&"curse_ray": {"name": "CURSE RAY", "acts": 2, "en": 8, "hp": 0, "pp": 0, "kind": "magic",
-		"power": 9, "burn_chance": 0, "fx": {"sp_drain": 2},
-		"info": "CURSE RAY 2 ACT / 8 EN: power 9 dark magic, all foes; each foe hit loses 2 SP (CURSE)."},
-	&"heavy_crush": {"name": "HEAVY CRUSH", "acts": 2, "en": 5, "hp": 0, "pp": 0, "kind": "strike",
-		"power": 11, "marks": [0.5], "fx": {"status": "break", "rounds": 2},
-		"info": "HEAVY CRUSH 2 ACT / 5 EN: power 11 heavy strike; the target's DEF falls 25% for 2 rounds (BREAK)."},
 	&"howl": {"name": "HOWL", "acts": 1, "en": 4, "hp": 0, "pp": 0, "kind": "buff",
 		"fx": {"stages": 1, "taunt": true},
 		"info": "HOWL 1 ACT / 4 EN: +1 ATK stage and foes can only attack the user until the next round (TAUNT)."},
@@ -91,6 +82,36 @@ const DEFS := {
 	&"ignoma_esh": {"name": "IGNOMA ESH", "acts": 3, "en": 12, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike", "magic": true,
 		"power": 10, "marks": [0.35, 0.65], "burn_chance": 35, "dual": true, "zahav": true, "zahav_of": &"ignoma",
 		"info": "IGNOMA ESH (ZAHAV) 3 ACT / 12 EN: two power-10 fire balls on one or two foes, 35% BURN each."},
+	# D-131 (criador 2026-11-27): Lote 2 canonico, taxonomia oficial ("cat": PHYS/MAGI/STAT, "dmg_type": PHYS/MAGI/DMG,
+	# "targets": 1T/2T/3T). Substituem HEAVY CRUSH, FINISHING BLOW, LIFE DRAIN, CURSE RAY e SPIRIT BRAND do Survival.
+	# "DMG" = dano sem tipagem (ignora DEF e MEF). As habilidades STAT usam uma passagem de ritmo sem dano ("no_damage").
+	&"stone_crush": {"name": "STONE CRUSH", "acts": 4, "en": 0, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike",
+		"cat": "PHYS", "dmg_type": "PHYS", "targets": "1T", "power": 30, "marks": [0.5],
+		"info": "STONE CRUSH 4 ACT / 0 EN (PHYS, 1T): a huge rock thrown at one foe, power 30 physical damage (+ATK)."},
+	&"energy_blow": {"name": "ENERGY BLOW", "acts": 3, "en": 0, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike", "magic": true,
+		"cat": "MAGI", "dmg_type": "DMG", "targets": "1T", "power": 25, "marks": [0.5],
+		"fx": {"cond": "vuln_or_quarter_hp", "steal_max_en_ratio": 0.5},
+		"info": "ENERGY BLOW 3 ACT / 0 EN (MAGI, 1T): only on a vulnerable foe or one at 1/4 HP or less; power 25 untyped damage (+MAK, ignores DEF/MEF) and steals half of the foe's max EN until the end of the battle."},
+	&"drain_claw": {"name": "DRAIN CLAW", "acts": 2, "en": 15, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike",
+		"cat": "PHYS", "dmg_type": "PHYS", "targets": "1T", "power": 15, "marks": [0.5], "zahav_to": &"vital_claws",
+		"fx": {"drain_max_hp_ratio": 0.25, "boss_cap": 40, "heal_ratio": 0.8},
+		"info": "DRAIN CLAW 2 ACT / 15 EN (PHYS, 1T): power 15 physical hit plus 1/4 of the foe's max HP (40 cap vs bosses); heals 80% of the HP drained (BLEED applies)."},
+	&"vital_claws": {"name": "VITAL CLAWS", "acts": 3, "en": 25, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike",
+		"cat": "PHYS", "dmg_type": "PHYS", "targets": "1T", "power": 30, "marks": [0.5], "zahav": true, "zahav_of": &"drain_claw",
+		"fx": {"drain_max_hp_ratio": 0.25, "boss_cap": 60, "heal_ratio": 0.8, "steal_en": 15},
+		"info": "VITAL CLAWS (ZAHAV) 3 ACT / 25 EN (PHYS, 1T): power 30 physical hit plus 1/4 of the foe's max HP (60 cap vs bosses) and 15 EN; heals 80% of the HP drained."},
+	&"weaken": {"name": "WEAKEN", "acts": 1, "en": 10, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike",
+		"cat": "STAT", "targets": "1T", "power": 0, "marks": [0.5], "zahav_to": &"weakenen",
+		"fx": {"no_damage": true, "weaken_mef_base": 5, "weaken_mak_ratio": 0.5, "dispellable": true},
+		"info": "WEAKEN 1 ACT / 10 EN (STAT, 1T): lowers the foe's MEF by 5 (+50% of your MAK) until the end of the battle; stacks up to -50% of its base MEF; dispellable."},
+	&"weakenen": {"name": "WEAKENEN", "acts": 2, "en": 15, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike",
+		"cat": "STAT", "targets": "2T", "power": 0, "marks": [0.35, 0.65], "dual": true, "zahav": true, "zahav_of": &"weaken",
+		"fx": {"no_damage": true, "weaken_mef_base": 10, "weaken_mak_base": 10, "weaken_mak_ratio": 0.5, "dispellable": true},
+		"info": "WEAKENEN (ZAHAV) 2 ACT / 15 EN (STAT, 2T): lowers MAK and MEF of two distinct foes by 10 (+50% of your MAK) until the end of the battle; stacks up to -50%; dispellable."},
+	&"mark_of_sun": {"name": "MARK OF SUN", "acts": 4, "en": 20, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike",
+		"cat": "STAT", "targets": "1T", "power": 0, "marks": [0.5],
+		"fx": {"no_damage": true, "mark_of_sun_hits": 3, "mark_of_sun_magi": 20, "mark_of_sun_min": 5, "dispellable": true},
+		"info": "MARK OF SUN 4 ACT / 20 EN (STAT, 1T): a sun over the foe; each hit it takes deals 20 MAGI extra (MEF mitigates, min 5) until the end of the next round or its 3rd hit."},
 	&"twin_fang": {"name": "TWIN FANG", "acts": 2, "en": 5, "hp": 0, "pp": 0, "kind": "strike",
 		"power": 5, "marks": [0.35, 0.65], "fx": {"combo": 0.5},
 		"info": "TWIN FANG 2 ACT / 5 EN: power 5 physical hit, twice; if the first lands the second deals +50% (COMBO)."},
@@ -109,15 +130,9 @@ const DEFS := {
 	&"thunder_call": {"name": "THUNDER CALL", "acts": 2, "en": 9, "hp": 0, "pp": 0, "kind": "magic",
 		"power": 10, "burn_chance": 0, "fx": {"storm": true},
 		"info": "THUNDER CALL 2 ACT / 9 EN: power 10 lightning magic, all foes; each foe takes 1 or 2 bolts at random (STORM)."},
-	&"life_drain": {"name": "LIFE DRAIN", "acts": 2, "en": 8, "hp": 0, "pp": 0, "kind": "strike",
-		"power": 6, "marks": [0.5], "fx": {"lifesteal": 1.0},
-		"info": "LIFE DRAIN 2 ACT / 8 EN: power 6 strike; the user heals as much HP as the damage dealt."},
 	&"spirit_wave": {"name": "SOUL LEECH", "acts": 1, "en": 4, "hp": 0, "pp": 0, "kind": "magic",
 		"power": 5, "burn_chance": 0, "fx": {"leech": 2},
 		"info": "SOUL LEECH 1 ACT / 4 EN: power 5 spirit magic, all foes; the user heals 2 HP per foe hit."},
-	&"crushing_blow": {"name": "FINISHING BLOW", "acts": 2, "en": 7, "hp": 0, "pp": 0, "kind": "strike",
-		"power": 13, "marks": [0.5], "fx": {"execute": 1.5, "below": 0.4},
-		"info": "FINISHING BLOW 2 ACT / 7 EN: power 13 strike, x1.5 against a target below 40% HP (EXECUTE)."},
 	&"ember_touch": {"name": "EMBER BURST", "acts": 1, "en": 5, "hp": 0, "pp": 0, "kind": "magic",
 		"power": 7, "burn_chance": 50, "fx": {"detonate": true},
 		"info": "EMBER BURST 1 ACT / 5 EN: power 7 flame magic, all foes, 50% burn; a foe already burning takes its burn damage now (DETONATE)."},
@@ -151,6 +166,12 @@ const DEFS := {
 
 ## Creator 2026-11-23: the current first-fight enemies keep their attributes and get the
 ## prologue skills (enemy 1 -> FOE A, enemy 2 -> FOE B).
+## D-131: the five older Survival skills became the canonical ones; saved runs are migrated with this map.
+const LEGACY_IDS := {
+	&"spirit_bolt": &"mark_of_sun", &"curse_ray": &"weaken", &"heavy_crush": &"stone_crush",
+	&"life_drain": &"drain_claw", &"crushing_blow": &"energy_blow",
+}
+
 const KIND_SKILLS := {
 	&"genetic_foe_a": [&"lunge", &"bleedbuff"],
 	&"genetic_foe_b": [&"heat_wave", &"energy_eat"],
@@ -168,6 +189,23 @@ static func is_high_speed(skill: StringName) -> bool:
 ## Bar seconds after HIGH SPEED (the base seconds when the attack is not HIGH SPEED).
 static func bar_seconds(seconds: float, high_speed: bool) -> float:
 	return seconds / HIGH_SPEED_FACTOR if high_speed else seconds
+
+
+## D-131: a (possibly old) skill id as the current one.
+static func migrate_id(skill: Variant) -> Variant:
+	var id := StringName(str(skill))
+	var current: StringName = LEGACY_IDS.get(id, id)
+	return String(current) if skill is String else current
+
+
+## D-131: a saved list of skill ids migrated (and without duplicates).
+static func migrate_ids(skills: Array) -> Array:
+	var result: Array = []
+	for skill in skills:
+		var id: Variant = migrate_id(skill)
+		if not result.has(id):
+			result.append(id)
+	return result
 
 
 static func def(skill: StringName) -> Dictionary:

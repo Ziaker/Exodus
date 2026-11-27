@@ -63,6 +63,18 @@ var last_damage_dealt: int = 0
 var burn_power: int = 0
 ## D-118 ANGEL HUG: acts this unit still has to lose (paralysis); taken from every grant of acts.
 var paralyzed_acts: int = 0
+## D-131 ENERGY BLOW: temporary change of the max EN until the end of the battle (never touches stats.max_en,
+## sp_base() or the save). The thief gains what the victim loses.
+var battle_max_en_delta: int = 0
+## D-131 WEAKEN / WEAKENEN: accumulated MEF / MAK reduction until the end of the battle (capped at -50% of the base
+## attribute, effective floor 1; never touches stats or sp_base()).
+var weaken_mef_penalty: int = 0
+var weaken_mak_penalty: int = 0
+## D-131 MARK OF SUN: hits left before the mark is consumed (0 = no mark) and rounds left (2 ticks, like BLIND).
+var sun_mark_hits: int = 0
+var sun_mark_rounds: int = 0
+## D-131: bosses, Guardians and Angels (the Drain Claw / Vital Claws cap applies against them).
+var boss_class: bool = false
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 		player_side: bool, fallen: bool = false) -> void:
@@ -118,9 +130,12 @@ func effective_atk() -> float:
 	return float(stats.atk) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(atk_stages.size()))
 
 
-## MAK with the active stages applied (+25% per stage, D-129 VERDANT MIGHT).
+## MAK with the active stages applied (+25% per stage, D-129 VERDANT MIGHT) and the D-131 WEAKENEN penalty.
 func effective_mak() -> float:
-	return float(stats.mak) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mak_stages.size()))
+	var base := stats.mak
+	if weaken_mak_penalty > 0:
+		base = maxi(1, base - weaken_mak_penalty)
+	return float(base) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mak_stages.size()))
 
 
 ## Physical DEF with active Magen and Verdant Shell stages applied (+25% per stage).
@@ -132,9 +147,46 @@ func effective_def() -> int:
 
 ## Magic DEF (MEF) with active Verdant Shell stages applied (+25% per stage, D-129).
 func effective_mef() -> int:
+	var base := stats.mef
+	if weaken_mef_penalty > 0:
+		base = maxi(1, base - weaken_mef_penalty)
 	if mef_stages.is_empty():
-		return stats.mef
-	return maxi(1, int(round(float(stats.mef) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mef_stages.size())))))
+		return base
+	return maxi(1, int(round(float(base) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mef_stages.size())))))
+
+
+## D-131: max EN of this battle (stats.max_en + ENERGY BLOW delta); 0 for those who pray (Yoch has no EN).
+func effective_max_en() -> int:
+	if prays or (stats.max_en <= 0 and battle_max_en_delta <= 0):
+		return 0
+	return maxi(1, stats.max_en + battle_max_en_delta)
+
+
+## D-131 ENERGY BLOW: takes half of the target's effective max EN until the end of the battle and gives it to
+## `self`. Returns the amount moved (0 = nothing: target or thief without EN, or an empty half).
+func steal_max_en_from(target: BattleUnit) -> int:
+	if prays or target.prays:
+		return 0
+	var amount := int(floor(float(target.effective_max_en()) / 2.0))
+	if amount <= 0:
+		return 0
+	target.battle_max_en_delta -= amount
+	target.current_en = mini(target.current_en, target.effective_max_en())
+	battle_max_en_delta += amount
+	current_en += amount
+	return amount
+
+
+## D-131: boss, Guardian or Angel.
+func is_boss_class() -> bool:
+	return boss_class or race == PrayerBook.ANGEL
+
+
+## D-131 MARK OF SUN: applies (or renews) the mark: 3 charges and 2 round ticks.
+func apply_sun_mark(hits: int = 3, rounds: int = 2) -> void:
+	add_status(&"mark_of_sun", rounds, {})
+	sun_mark_hits = hits
+	sun_mark_rounds = rounds
 
 
 ## AGI with active Keen Gaze buffs applied (D-129: never mutates stats.agi or sp_base()).
@@ -174,6 +226,13 @@ func remove_status(id: StringName) -> void:
 	if not mod.is_empty():
 		stats.set(String(mod.stat), int(stats.get(String(mod.stat))) - int(mod.delta))
 	statuses.erase(id)
+	if id == &"mark_of_sun":
+		sun_mark_hits = 0
+		sun_mark_rounds = 0
+	elif id == &"weaken_mef":
+		weaken_mef_penalty = 0
+	elif id == &"weaken_mak":
+		weaken_mak_penalty = 0
 
 
 func is_alive() -> bool:
@@ -208,12 +267,13 @@ func restore_sp() -> void:
 	current_sp = sp_base()
 
 func recover_en(fraction: float) -> void:
-	current_en = mini(stats.max_en, current_en + int(float(stats.max_en) * fraction))
+	var cap := stats.max_en + battle_max_en_delta
+	current_en = mini(cap, current_en + int(float(cap) * fraction))
 
 
 ## D-038: REST restores a fixed amount, never a percentage.
 func recover_en_flat(amount: int) -> void:
-	current_en = mini(stats.max_en, current_en + maxi(0, amount))
+	current_en = mini(stats.max_en + battle_max_en_delta, current_en + maxi(0, amount))
 
 ## D-017: a successful absorption consumes the target. It cannot act again,
 ## cannot be absorbed twice and no longer counts as a living enemy.

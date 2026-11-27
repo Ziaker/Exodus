@@ -709,7 +709,7 @@ func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
 	_event("%s  REST  +%d EN  %d ACT KEPT" % [short_name(unit), unit.current_en - before, remaining])
 	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	hud.feedback = "%s: EN %d/%d | 0 ACT spent, %d stored" % [
-		unit.display_name, unit.current_en, unit.stats.max_en, remaining]
+		unit.display_name, unit.current_en, unit.effective_max_en(), remaining]
 	_refresh_all()
 	return true
 
@@ -1085,6 +1085,7 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_
 	var hp_before := defender.current_hp
 	await super._perform_attack(attacker, defender, power, is_reaction, defense_act_paid, auto_hit, chain)
 	_present_strike(attacker, defender, hp_before - defender.current_hp)
+	_sun_mark_trigger(attacker, defender, hp_before - defender.current_hp)
 
 
 ## `tell` false: the caller already wrote the result line (D-110: one line per blow).
@@ -1289,6 +1290,7 @@ func _strike(attacker: BattleUnit, defender: BattleUnit, timing: int, is_reactio
 	var hp_before := defender.current_hp
 	_apply_strike(attacker, defender, basic_power, is_reaction, timing, BattleMath.RhythmResult.MISS)
 	_present_strike(attacker, defender, hp_before - defender.current_hp)
+	_sun_mark_trigger(attacker, defender, hp_before - defender.current_hp)
 
 
 ## The winner steals SP; a perfect interruption also flashes the stage and shakes the loser.
@@ -1643,6 +1645,10 @@ func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: i
 			if not SkillBook.affordable(skill, acts_left, en_left, hp_left, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 				skill_disabled.append(labels.size() - 1)
 				skill_reasons[labels.size() - 1] = _short_reason(skill, acts_left, en_left, hp_left)
+			elif not _any_foe_meets_cond(skill):
+				# D-131 ENERGY BLOW `COND`: no foe is vulnerable or at 1/4 HP, so the menu says why it is off.
+				skill_disabled.append(labels.size() - 1)
+				skill_reasons[labels.size() - 1] = "NO VULNERABLE FOE"
 		hud.command_options = labels
 		hud.command_index = 0
 		hud.mode = "skill"
@@ -1663,6 +1669,16 @@ func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: i
 			return {"skill": skill, "extra": extra}
 		return {"skill": skill, "extra": 0}
 	return {}
+
+
+## D-131: does any living foe satisfy the skill's `COND` (true for a skill without one)?
+func _any_foe_meets_cond(skill: StringName) -> bool:
+	if String(SkillFx.fx_of(skill).get("cond", "")).is_empty():
+		return true
+	for foe in hud.opponents:
+		if foe.is_alive() and SkillFx.cond_met(skill, foe, false):
+			return true
+	return false
 
 
 func _short_reason(skill: StringName, acts_left: int, en_left: int, _hp_left: int) -> String:
@@ -1754,6 +1770,12 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 		# D-057: the target chosen in the plan (a reaction chooses it here).
 		target = await _planned_or_new_target(planned)
 		if target == null: return false
+		# D-131 ENERGY BLOW `COND`: only on a vulnerable target or one at 1/4 HP or less.
+		if not SkillFx.cond_met(skill, target, false):
+			_append_log("%s cannot use %s on %s (no vulnerable target, HP above 1/4)." % [unit.display_name, d.name, target.display_name])
+			_flash_feedback("NOT VULNERABLE")
+			_event("%s  NOT VULNERABLE" % short_name(target))
+			return false
 	var ally_target: BattleUnit = null
 	if (d.kind == "heal" and bool(SkillFx.fx_of(skill).get("ally", false))) \
 			or (d.kind == "buff" and bool(SkillFx.fx_of(skill).get("ally_only", false))):
@@ -1768,8 +1790,22 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 	_second_target = null
 	if bool(d.get("dual", false)):
 		phase_text = "SELECT %s 2ND TARGET" % d.name
-		_second_target = await _wait_target("enemy")
-		if _second_target == null: return false
+		if String(d.get("targets", "")) == "2T":
+			# D-131 2T: two DISTINCT targets (with a single living foe the skill lands once on it).
+			var living := 0
+			for foe in hud.opponents:
+				if foe.is_alive(): living += 1
+			if living < 2:
+				_second_target = target
+			else:
+				_second_target = await _wait_target("enemy")
+				while _second_target == target:
+					hud.announce("CHOOSE A DIFFERENT TARGET")
+					_second_target = await _wait_target("enemy")
+				if _second_target == null: return false
+		else:
+			_second_target = await _wait_target("enemy")
+			if _second_target == null: return false
 	_current_skill = skill
 	_high_speed = SkillBook.is_high_speed(skill) or (d.kind in ["strike", "magic"] and unit.next_attack_high_speed)
 	if d.kind in ["strike", "magic"]:
@@ -1896,7 +1932,7 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 			if not popup_lines.is_empty():
 				fx.label_override(recipient, popup_lines, fx._unit_rect(recipient), HUD_SCRIPT.FLOATER_EYE_GREEN)
 			_append_log("%s casts %s on %s: %s (EN %d/%d)." % [
-				unit.display_name, d.name, recipient.display_name, ", ".join(notes), unit.current_en, unit.stats.max_en])
+				unit.display_name, d.name, recipient.display_name, ", ".join(notes), unit.current_en, unit.effective_max_en()])
 			# D-110: telegraphic Battle Log line matching the rest of the combat events.
 			_event("%s → %s  %s" % [short_name(unit), short_name(recipient), "  ".join(tags)])
 		else:
@@ -1934,7 +1970,7 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 			" (%d extra EN)" % extra if skill == SkillBook.ENERGY_EAT else ""])
 		_event("%s  +%d HP" % [short_name(patient), healed])
 	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-	hud.feedback = "%s: HP %d/%d | EN %d/%d" % [short_name(unit), unit.current_hp, unit.stats.max_hp, unit.current_en, unit.stats.max_en]
+	hud.feedback = "%s: HP %d/%d | EN %d/%d" % [short_name(unit), unit.current_hp, unit.stats.max_hp, unit.current_en, unit.effective_max_en()]
 
 
 func _add_stage(unit: BattleUnit) -> void:
@@ -2211,6 +2247,8 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		_hit_mods["pierce"] = float(fxd.pierce)
 	if fxd.has("no_damage"):
 		_hit_mods["no_damage"] = true
+	if String(SkillBook.def(skill).get("dmg_type", "")) == "DMG":
+		_hit_mods["untyped"] = true
 	var was_burning := not defender.burns.is_empty()
 	var applied := _skill_hit(attacker, defender, SkillFx.hit_power(skill, index, attacker), reacting, attack, defense, magic)
 	_hit_mods = {}
@@ -2230,6 +2268,44 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		if drained_pp > 0:
 			_append_log("%s loses %d PP." % [defender.display_name, drained_pp])
 			_event("%s  -%d PP" % [short_name(defender), drained_pp])
+	# D-131 ENERGY BLOW: half of the target's max EN moves to the user until the end of the battle.
+	if fxd.has("steal_max_en_ratio") and defender.is_alive():
+		var moved := attacker.steal_max_en_from(defender)
+		if moved > 0:
+			_append_log("%s steals %d max EN from %s until the end of the battle." % [attacker.display_name, moved, defender.display_name])
+			_event("%s → %s  -%d MAX EN" % [short_name(attacker), short_name(defender), moved])
+	# D-131 DRAIN CLAW / VITAL CLAWS: the percentage part (capped against bosses) is taken on top of the
+	# mitigated fixed hit; the user heals 80% of the HP drained (BLEED applies) and VITAL CLAWS steals EN.
+	if fxd.has("drain_max_hp_ratio"):
+		var pct := int(floor(float(defender.stats.max_hp) * float(fxd.drain_max_hp_ratio)))
+		if defender.is_boss_class():
+			pct = mini(pct, int(fxd.get("boss_cap", pct)))
+		var pct_taken := defender.take_damage(pct) if defender.is_alive() else 0
+		var drained_total := applied + pct_taken
+		var healed_hp := attacker.heal(int(floor(float(drained_total) * float(fxd.get("heal_ratio", 0.8)))))
+		var steal_en := int(fxd.get("steal_en", 0))
+		var en_moved := 0
+		if steal_en > 0 and not attacker.prays and not defender.prays:
+			en_moved = mini(steal_en, defender.current_en)
+			defender.current_en -= en_moved
+			attacker.current_en = mini(attacker.effective_max_en(), attacker.current_en + en_moved)
+		_append_log("%s drains %d HP from %s (+%d HP%s)." % [attacker.display_name, drained_total, defender.display_name,
+			healed_hp, ", +%d EN" % en_moved if en_moved > 0 else ""])
+		_event("%s → %s  DRAIN %d  +%d HP%s" % [short_name(attacker), short_name(defender), drained_total, healed_hp,
+			"  +%d EN" % en_moved if en_moved > 0 else ""])
+	# D-131 WEAKEN / WEAKENEN: MEF (and MAK) fall until the end of the battle, stacking up to -50% of the base.
+	if (fxd.has("weaken_mef_base") or fxd.has("weaken_mak_base")) and defender.is_alive() and defender.haganah.is_empty():
+		var cut := SkillFx.apply_weaken(defender, attacker, fxd)
+		var tags: Array[String] = []
+		if int(cut.mef) > 0: tags.append("MEF -%d" % int(cut.mef))
+		if int(cut.mak) > 0: tags.append("MAK -%d" % int(cut.mak))
+		_append_log("%s is weakened (MEF -%d, MAK -%d)." % [defender.display_name, defender.weaken_mef_penalty, defender.weaken_mak_penalty])
+		_event("%s  %s" % [short_name(defender), "  ".join(tags) if not tags.is_empty() else "WEAKEN MAX"])
+	# D-131 MARK OF SUN: 3 charges and 2 round ticks (a repeat renews them).
+	if fxd.has("mark_of_sun_hits") and defender.is_alive() and defender.haganah.is_empty():
+		defender.apply_sun_mark(int(fxd.mark_of_sun_hits), SkillFx.SUN_MARK_ROUNDS)
+		_append_log("%s is marked by the sun (%d hits)." % [defender.display_name, defender.sun_mark_hits])
+		_event("%s  SUN MARK" % short_name(defender))
 	var is_point := attack == BattleMath.RhythmResult.POINT
 	var bleed_stacks := int(fxd.get("bleed_point", fxd.get("bleed", 0))) if is_point else int(fxd.get("bleed", 0))
 	if bool(fxd.get("bleed_point_only", false)) and not is_point:
@@ -2285,6 +2361,19 @@ func _enemy_en_extra(maximum: int) -> int:
 	return rng.randi_range(0, maxi(0, maximum))
 
 
+## D-131 `COND`: the hero an enemy may hit with `skill` (the one with most SP among those that qualify); the
+## usual target when the skill has no COND; null when nobody qualifies.
+func _cond_target_for_enemy(skill: StringName) -> BattleUnit:
+	if String(SkillFx.fx_of(skill).get("cond", "")).is_empty():
+		return _player_with_most_sp()
+	var best: BattleUnit = null
+	for hero in hud.players:
+		if hero.is_alive() and SkillFx.cond_met(skill, hero, false):
+			if best == null or hero.current_sp > best.current_sp:
+				best = hero
+	return best
+
+
 ## &"" = ATTACK, &"flee" / &"rest" = D-129 Floater Eye fallback, else the skill drawn among the payable ones.
 func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	if unit.race == &"floater_eye":
@@ -2301,7 +2390,8 @@ func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	var choices: Array[StringName] = [&""]
 	var acts := mini(budget, unit.acts_available)
 	for skill in unit.skills:
-		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
+		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp) \
+				and _cond_target_for_enemy(skill) != null:
 			choices.append(skill)
 	return choices[clampi(_enemy_skill_pick(choices.size()), 0, choices.size() - 1)]
 
@@ -2333,7 +2423,7 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		return
 	var targets: Array[BattleUnit] = []
 	if d.kind == "strike":
-		var defender := _player_with_most_sp()
+		var defender := _cond_target_for_enemy(skill)
 		if defender != null: targets.append(defender)
 	else:
 		for hero in hud.players:
@@ -2459,6 +2549,10 @@ func _enemy_second_target(first: BattleUnit) -> BattleUnit:
 	for hero in hud.players:
 		if hero.is_alive(): heroes.append(hero)
 	if heroes.is_empty(): return first
+	# D-131 2T: a second DISTINCT target whenever another one is alive.
+	if String(SkillBook.def(_current_skill).get("targets", "")) == "2T":
+		heroes.erase(first)
+		if heroes.is_empty(): return first
 	return heroes[rng.randi_range(0, heroes.size() - 1)]
 
 
@@ -2477,6 +2571,9 @@ func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 			and defender.acts_available > 0 and _enemy_counter_roll(defender):
 		await _enemy_counter(attacker, defender, skill)
 		return
+	var two_t := String(d.get("targets", "")) == "2T"
+	if two_t and (_second_target == null or _second_target == defender or not _second_target.is_alive()):
+		marks.assign([marks[0]])  # D-131 2T with a single living target: it lands once
 	var attack := await _skill_attack_timing(attacker, defender, marks, auto_hit)
 	var second: BattleUnit = _second_target if bool(d.get("dual", false)) and marks.size() > 1 else null
 	var defense: Array[int] = []
@@ -2545,7 +2642,7 @@ func _hero_skill_lands(hero: BattleUnit, counterer: BattleUnit, skill: StringNam
 	if d.kind == "strike":
 		var prev := -1
 		var gstart := _gfx_start(hero, skill, [counterer, counterer])
-		for i in d.marks.size():
+		for i in (1 if String(d.get("targets", "")) == "2T" else d.marks.size()):
 			if not counterer.is_alive(): break
 			await _gfx_wait(gstart, skill, i)
 			cross_hit = true
@@ -2580,7 +2677,7 @@ func _enemy_skill_lands(enemy: BattleUnit, target: BattleUnit, skill: StringName
 	if d.kind == "strike":
 		var prev := -1
 		var gstart := _gfx_start(enemy, skill, [target, target])
-		for i in d.marks.size():
+		for i in (1 if String(d.get("targets", "")) == "2T" else d.marks.size()):
 			if not target.is_alive(): break
 			await _gfx_wait(gstart, skill, i)
 			cross_hit = true
@@ -2626,7 +2723,25 @@ func _skill_hit(attacker: BattleUnit, defender: BattleUnit, power: int, is_react
 	var hp_before := defender.current_hp
 	var applied := _apply_strike(attacker, defender, power, is_reaction, attack, defense, magic)
 	_present_strike(attacker, defender, hp_before - defender.current_hp, magic)
+	_sun_mark_trigger(attacker, defender, hp_before - defender.current_hp)
 	return applied
+
+
+## D-131 MARK OF SUN: every landed hit that deals damage to a marked unit adds `20 - MEF` MAGI damage (floor 5),
+## including each hit of a multi-hit skill. The mark is consumed on its 3rd charge.
+func _sun_mark_trigger(attacker: BattleUnit, defender: BattleUnit, damage_done: int) -> void:
+	if damage_done <= 0 or defender.sun_mark_hits <= 0 or not defender.is_alive():
+		return
+	var extra := defender.take_damage(SkillFx.sun_mark_damage(defender))
+	defender.sun_mark_hits -= 1
+	_append_log("%s: Mark of Sun burns %d (%d hit(s) left)." % [defender.display_name, extra, defender.sun_mark_hits])
+	var line := "%s  SUN %d" % [short_name(defender), extra]
+	if defender.sun_mark_hits <= 0:
+		defender.remove_status(&"mark_of_sun")
+	if not defender.is_alive():
+		line += result_suffix(defender, attacker, true, 0)
+		if _hold_down: _pending_down.append(defender)
+	_event(line)
 
 
 func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, is_reaction: bool,

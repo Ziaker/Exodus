@@ -477,6 +477,9 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 
 	# Creator 2026-11-23: magic = same formula with MAK/MEF. D-129 adds MAK/MEF/DEF stages.
 	var defence_stat: int = defender.effective_mef() if magic else defender.effective_def()
+	# D-131 DMG (untyped damage): DEF and MEF are ignored completely (rhythm, block, SP and +-10% stay).
+	if bool(_hit_mods.get("untyped", false)):
+		defence_stat = 0
 	var pierce := float(_hit_mods.get("pierce", 0.0))
 	if pierce > 0.0:
 		defence_stat = maxi(1, int(round(float(defence_stat) * (1.0 - pierce))))

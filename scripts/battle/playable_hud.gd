@@ -1568,7 +1568,7 @@ func hero_role_cue(who: int) -> Dictionary:
 	var x := r.position.x + 9.0
 	var right := r.end.x - 9.0
 	var sec_label := "PP" if unit.prays else "EN"
-	var sec_value := "%d/%d" % [unit.current_pp, PrayerBook.MAX_PP] if unit.prays else "%d/%d" % [unit.current_en, unit.stats.max_en]
+	var sec_value := "%d/%d" % [unit.current_pp, PrayerBook.MAX_PP] if unit.prays else "%d/%d" % [unit.current_en, unit.effective_max_en()]
 	var hp_value := "%d/%d" % [unit.current_hp, unit.stats.max_hp]
 	var sec_label_x := x + _width("HP", 9) + 4.0 + _width(hp_value, 9, true) + 10.0
 	var sec_end_x := sec_label_x + _width(sec_label, 9) + 4.0 + _width(sec_value, 9, true)
@@ -1687,7 +1687,7 @@ func _character(who: int, r: Rect2) -> void:
 	var bottom_line := r.position.y + 35
 	var sec_label := "PP" if unit.prays else "EN"  # EN is the magic resource (the creator's "MP").
 	var sec_ink: Color = Color(PrayerBook.INK, vitals_alpha) if unit.prays else Color(EN_NUMBER, vitals_alpha)
-	var sec_value := "%d/%d" % [unit.current_pp, PrayerBook.MAX_PP] if unit.prays else "%d/%d" % [unit.current_en, unit.stats.max_en]
+	var sec_value := "%d/%d" % [unit.current_pp, PrayerBook.MAX_PP] if unit.prays else "%d/%d" % [unit.current_en, unit.effective_max_en()]
 	var hp_value := "%d/%d" % [unit.current_hp, unit.stats.max_hp]
 	# Creator 2026-11-24: no bars, just the coloured numbers (HP red, EN blue, PP yellow).
 	var hp_label_w := _str("HP", x, bottom_line, Color(TEXT, vitals_alpha), 9)

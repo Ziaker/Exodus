@@ -71,7 +71,7 @@ static func load_skills() -> Array[StringName]:
 	var result: Array[StringName] = []
 	if raw is Array:
 		for skill in raw:
-			var id := StringName(str(skill))
+			var id := StringName(str(SkillBook.migrate_id(StringName(str(skill)))))
 			if SkillBook.DEFS.has(id) and not result.has(id):
 				result.append(id)
 	return result

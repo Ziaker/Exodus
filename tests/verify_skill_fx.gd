@@ -97,18 +97,22 @@ func _run() -> void:
 	check(ids.size() == 28, "28 Survival skills (D-124: 5 reworked + IGNOMA)")
 	for id in ids:
 		var d := SkillBook.def(id)
+		if d.has("cat") and not d.has("fx"):
+			continue  # D-131 STONE CRUSH: a plain 30 PHYS hit, no extra effect by design
 		check(d.has("fx") or d.has("powers") or int(d.get("burn_chance", 0)) > 0, "%s has a signature effect" % id)
 		check(String(d.info).begins_with(String(d.name)), "%s: the description starts with its name" % id)
 	for id in [&"lunge", &"bleedbuff", &"heat_wave", &"energy_eat"]:
 		check(not SkillBook.def(id).has("fx"), "%s (yours) keeps its own effect" % id)
 	var seen := {}
 	for id in ids:
+		if SkillBook.def(id).has("cat") and not SkillBook.def(id).has("fx"):
+			continue
 		var sig := JSON.stringify(SkillBook.def(id).get("fx", {})) + str(SkillBook.def(id).get("powers", []))
 		check(not seen.has(sig), "%s has an effect no other skill has" % id)
 		seen[sig] = true
 	# renamed because the old name no longer fit the effect
-	for pair in [[&"spirit_wave", "SOUL LEECH"], [&"spirit_bolt", "SPIRIT BRAND"], [&"ember_touch", "EMBER BURST"],
-			[&"mind_blast", "MIND DRAIN"], [&"crushing_blow", "FINISHING BLOW"], [&"dark_siphon", "DARK BOON"]]:
+	for pair in [[&"spirit_wave", "SOUL LEECH"], [&"ember_touch", "EMBER BURST"],
+			[&"mind_blast", "MIND DRAIN"], [&"dark_siphon", "DARK BOON"]]:
 		check(SkillBook.display_name(pair[0]) == pair[1], "%s is now %s" % [pair[0], pair[1]])
 
 	# ---- physical
@@ -155,19 +159,13 @@ func _run() -> void:
 	check(foe.heal_factor() < 0.5 + 0.001 and foe.heal_factor() > 0.39, "3 bleeds cut the healing received by 60%")
 	await b._status_tick()
 	check(foe.bleeds.is_empty(), "A bleed lasts until the end of the next turn (2 round ticks)")
+	# D-131: HEAVY CRUSH, FINISHING BLOW and LIFE DRAIN became STONE CRUSH, ENERGY BLOW and DRAIN CLAW (tests/verify_d131_rules.gd);
+	# BREAK is still a status of the engine.
 	reset()
-	hit(&"heavy_crush")
-	check(foe.has_status(&"break") and foe.stats.defense == 8, "HEAVY CRUSH breaks DEF 10 -> 8")
+	SkillFx.apply_status(foe, &"break", 2)
+	check(foe.has_status(&"break") and foe.stats.defense == 8, "BREAK lowers DEF 10 -> 8")
 	foe.remove_status(&"break")
 	check(foe.stats.defense == 10, "BREAK gives the DEF back")
-	reset(); foe.current_hp = 300
-	var finish_low := hit(&"crushing_blow")
-	reset(); foe.current_hp = 900
-	var finish_high := hit(&"crushing_blow")
-	check(finish_low > finish_high, "FINISHING BLOW hits harder below 40%% HP (%d vs %d)" % [finish_low, finish_high])
-	reset(); hero.current_hp = 500
-	var drained_hit := hit(&"life_drain")
-	check(hero.current_hp == 500 + drained_hit and drained_hit > 0, "LIFE DRAIN heals as much as the damage (%d)" % drained_hit)
 
 	# ---- magic
 	reset(); b.roll = true
@@ -181,9 +179,9 @@ func _run() -> void:
 	b.rng.seed = 7
 	b._magic_hit(hero, foe, &"spirit_wave", false, R.POINT, R.MISS)
 	check(hero.current_hp == 502, "SOUL LEECH heals 2 HP per foe hit")
+	# D-131: SPIRIT BRAND became MARK OF SUN; the old MARK status still multiplies the next hit by 1.25.
 	reset()
-	hit(&"spirit_bolt", 0, -1, true)
-	check(foe.has_status(&"mark"), "SPIRIT BRAND marks the foe")
+	foe.add_status(&"mark", 3)
 	foe.current_hp = 1000
 	var marked := plain(7)
 	foe.current_hp = 1000
@@ -208,9 +206,6 @@ func _run() -> void:
 	b._magic_hit(hero, foe, &"mind_blast", false, R.POINT, R.MISS)
 	check(foe.current_en == 7, "MIND DRAIN takes 3 EN")
 	check(not SkillBook.affordable(&"lunge", 2, 0, 10), "With no EN a skill cannot be used")
-	reset()
-	b._magic_hit(hero, foe, &"curse_ray", false, R.POINT, R.MISS)
-	check(foe.current_sp == 98, "CURSE RAY drains 2 SP")
 	reset()
 	var log_before: int = b.log_history.size()
 	b.rng.seed = 7

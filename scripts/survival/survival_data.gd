@@ -14,23 +14,23 @@ const SILHOUETTES_DIR := "res://assets/generated/survival/"
 
 ## Pool de habilidades roguelike do modo: qualquer uma pode cair como recompensa.
 const SURVIVAL_SKILLS: Array[StringName] = [
-	&"pixie_dust", &"dark_breath", &"hellfire", &"spirit_bolt", &"curse_ray", &"mazz_bite",
-	&"fang_sting", &"heavy_crush", &"howl", &"primal_roar", &"mend", &"dark_siphon",
+	&"pixie_dust", &"dark_breath", &"hellfire", &"mark_of_sun", &"weaken", &"mazz_bite",
+	&"fang_sting", &"stone_crush", &"howl", &"primal_roar", &"mend", &"dark_siphon",
 	&"vuln_pierce", &"twin_fang", &"war_cry", &"venom_cloud", &"mind_blast", &"frost_lance",
-	&"thunder_call", &"life_drain", &"spirit_wave", &"crushing_blow", &"ember_touch", &"renew",
+	&"thunder_call", &"drain_claw", &"spirit_wave", &"energy_blow", &"ember_touch", &"renew",
 	&"umbral_gaze", &"blade_dance", &"stone_grasp", &"ignoma",
 ]
 
 ## Nomes em hebraico das habilidades não identificadas (D-052 / Ra'am).
 const HEBREW_SKILLS := {
 	&"pixie_dust": "אבק פיה", &"dark_breath": "נשימת כפור", &"hellfire": "אש גיהנום",
-	&"spirit_bolt": "סימן רוח", &"curse_ray": "קרן קללה", &"mazz_bite": "נשיכת צל",
-	&"fang_sting": "סערת ניבים", &"heavy_crush": "מעיכה כבדה", &"howl": "יללה",
+	&"mark_of_sun": "סימן רוח", &"weaken": "קרן קללה", &"mazz_bite": "נשיכת צל",
+	&"fang_sting": "סערת ניבים", &"stone_crush": "מעיכה כבדה", &"howl": "יללה",
 	&"primal_roar": "שאגה קדומה", &"mend": "תיקון", &"dark_siphon": "מתנה אפלה",
 	&"vuln_pierce": "חדירת נשמה", &"twin_fang": "ניב כפול", &"war_cry": "זעקת מלחמה",
 	&"venom_cloud": "ענן ארס", &"mind_blast": "שאיבת מוח", &"frost_lance": "רומח כפור",
-	&"thunder_call": "קריאת רעם", &"life_drain": "ניקוז חיים", &"spirit_wave": "עלוקת נשמה",
-	&"crushing_blow": "מכת סיום", &"ember_touch": "התפרצות גחלת", &"renew": "חידוש",
+	&"thunder_call": "קריאת רעם", &"drain_claw": "ניקוז חיים", &"spirit_wave": "עלוקת נשמה",
+	&"energy_blow": "מכת סיום", &"ember_touch": "התפרצות גחלת", &"renew": "חידוש",
 	&"umbral_gaze": "מבט הריק", &"ignoma": "כדור אש", &"blade_dance": "מחול להבים", &"stone_grasp": "אחיזת אבן",
 	# D-129 Floater Eye buffs (hebrew placeholder when unidentified after absorption).
 	&"verdant_might": "עוצמה ירוקה", &"verdant_shell": "שריון ירוק",
@@ -156,7 +156,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "jack_frost.png",
 		"cell": Vector2i(12, 13),
 		"stats": {"max_hp": 22, "max_en": 12, "atk": 5, "mak": 8, "defense": 5, "mef": 7, "agi": 7},
-		"skills": [&"dark_breath", &"spirit_bolt"],
+		"skills": [&"dark_breath", &"mark_of_sun"],
 	},
 	{
 		"id": "pyro_jack", "name": "PYRO JACK", "tier": 1, "macca": 30,
@@ -180,7 +180,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "oni.png",
 		"cell": Vector2i(7, 7),
 		"stats": {"max_hp": 38, "max_en": 10, "atk": 11, "mak": 3, "defense": 9, "mef": 4, "agi": 5},
-		"skills": [&"heavy_crush", &"howl"],
+		"skills": [&"stone_crush", &"howl"],
 	},
 	{
 		"id": "garuda", "name": "GARUDA", "tier": 2, "macca": 35,
@@ -188,7 +188,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "garuda.png",
 		"cell": Vector2i(17, 7),
 		"stats": {"max_hp": 28, "max_en": 12, "atk": 8, "mak": 6, "defense": 6, "mef": 6, "agi": 12},
-		"skills": [&"spirit_bolt", &"mazz_bite"],
+		"skills": [&"mark_of_sun", &"mazz_bite"],
 	},
 	{
 		"id": "anubis", "name": "ANUBIS", "tier": 2, "macca": 40,
@@ -196,7 +196,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "anubis.png",
 		"cell": Vector2i(7, 13),
 		"stats": {"max_hp": 34, "max_en": 14, "atk": 8, "mak": 7, "defense": 8, "mef": 7, "agi": 8},
-		"skills": [&"curse_ray", &"mend"],
+		"skills": [&"weaken", &"mend"],
 	},
 	{
 		"id": "chimera", "name": "CHIMERA", "tier": 2, "macca": 40,
@@ -212,7 +212,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "andras.png",
 		"cell": Vector2i(10, 5),
 		"stats": {"max_hp": 30, "max_en": 11, "atk": 10, "mak": 5, "defense": 6, "mef": 5, "agi": 10},
-		"skills": [&"mazz_bite", &"curse_ray"],
+		"skills": [&"mazz_bite", &"weaken"],
 	},
 	{
 		"id": "succubus", "name": "SUCCUBUS", "tier": 2, "macca": 40,
@@ -228,7 +228,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "ganesha.png",
 		"cell": Vector2i(10, 15),
 		"stats": {"max_hp": 44, "max_en": 13, "atk": 9, "mak": 6, "defense": 10, "mef": 7, "agi": 4},
-		"skills": [&"heavy_crush", &"mend"],
+		"skills": [&"stone_crush", &"mend"],
 	},
 	{
 		"id": "vritra", "name": "VRITRA", "tier": 3, "macca": 45,
@@ -252,7 +252,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "lich.png",
 		"cell": Vector2i(21, 10),
 		"stats": {"max_hp": 32, "max_en": 18, "atk": 5, "mak": 12, "defense": 6, "mef": 11, "agi": 6},
-		"skills": [&"curse_ray", &"dark_siphon"],
+		"skills": [&"weaken", &"dark_siphon"],
 	},
 	{
 		"id": "matador", "name": "MATADOR", "tier": 3, "macca": 55,
@@ -268,7 +268,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "mara.png",
 		"cell": Vector2i(21, 5),
 		"stats": {"max_hp": 50, "max_en": 16, "atk": 12, "mak": 9, "defense": 10, "mef": 8, "agi": 7},
-		"skills": [&"hellfire", &"heavy_crush", &"howl"],
+		"skills": [&"hellfire", &"stone_crush", &"howl"],
 	},
 	{
 		"id": "loki", "name": "LOKI", "tier": 4, "macca": 60,
@@ -276,7 +276,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "loki.png",
 		"cell": Vector2i(3, 15),
 		"stats": {"max_hp": 42, "max_en": 16, "atk": 9, "mak": 12, "defense": 7, "mef": 9, "agi": 11},
-		"skills": [&"dark_breath", &"spirit_bolt", &"mazz_bite"],
+		"skills": [&"dark_breath", &"mark_of_sun", &"mazz_bite"],
 	},
 	{
 		"id": "zouchouten", "name": "ZOUCHOUTEN", "tier": 4, "macca": 60,
@@ -284,7 +284,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "zouchouten.png",
 		"cell": Vector2i(21, 15),
 		"stats": {"max_hp": 48, "max_en": 14, "atk": 13, "mak": 5, "defense": 11, "mef": 5, "agi": 6},
-		"skills": [&"heavy_crush", &"primal_roar", &"fang_sting"],
+		"skills": [&"stone_crush", &"primal_roar", &"fang_sting"],
 	},
 	{
 		"id": "lakshmi", "name": "LAKSHMI", "tier": 4, "macca": 65,
@@ -292,7 +292,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "lakshmi.png",
 		"cell": Vector2i(1, 1),
 		"stats": {"max_hp": 38, "max_en": 20, "atk": 6, "mak": 12, "defense": 7, "mef": 11, "agi": 7},
-		"skills": [&"dark_siphon", &"spirit_bolt", &"pixie_dust"],
+		"skills": [&"dark_siphon", &"mark_of_sun", &"pixie_dust"],
 	},
 	{
 		"id": "hel", "name": "HEL", "tier": 4, "macca": 75,
@@ -300,7 +300,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "hel.png",
 		"cell": Vector2i(23, 19),
 		"stats": {"max_hp": 54, "max_en": 18, "atk": 11, "mak": 13, "defense": 10, "mef": 10, "agi": 7},
-		"skills": [&"curse_ray", &"hellfire", &"dark_siphon"],
+		"skills": [&"weaken", &"hellfire", &"dark_siphon"],
 	},
 	{
 		"id": "high_pixie", "name": "HIGH PIXIE", "tier": 3, "macca": 45,
@@ -324,7 +324,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "shuten_douji.png",
 		"cell": Vector2i(5, 3),
 		"stats": {"max_hp": 46, "max_en": 15, "atk": 12, "mak": 7, "defense": 10, "mef": 6, "agi": 7},
-		"skills": [&"crushing_blow", &"war_cry"],
+		"skills": [&"energy_blow", &"war_cry"],
 	},
 	{
 		"id": "phoenix", "name": "PHOENIX", "tier": 4, "macca": 65,
@@ -348,7 +348,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "orobas.png",
 		"cell": Vector2i(13, 3),
 		"stats": {"max_hp": 36, "max_en": 14, "atk": 8, "mak": 9, "defense": 8, "mef": 8, "agi": 9},
-		"skills": [&"vuln_pierce", &"life_drain"],
+		"skills": [&"vuln_pierce", &"drain_claw"],
 	},
 	{
 		"id": "incubus", "name": "INCUBUS", "tier": 3, "macca": 50,
@@ -372,7 +372,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "leviathan.png",
 		"cell": Vector2i(3, 9),
 		"stats": {"max_hp": 56, "max_en": 18, "atk": 13, "mak": 10, "defense": 12, "mef": 9, "agi": 6},
-		"skills": [&"crushing_blow", &"umbral_gaze", &"renew"],
+		"skills": [&"energy_blow", &"umbral_gaze", &"renew"],
 	},
 	{
 		"id": "vampire", "name": "VAMPIRE", "tier": 4, "macca": 60,
@@ -380,7 +380,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "vampire.png",
 		"cell": Vector2i(21, 9),
 		"stats": {"max_hp": 38, "max_en": 17, "atk": 9, "mak": 12, "defense": 7, "mef": 10, "agi": 10},
-		"skills": [&"life_drain", &"vuln_pierce"],
+		"skills": [&"drain_claw", &"vuln_pierce"],
 	},
 	{
 		"id": "white_rider", "name": "WHITE RIDER", "tier": 5, "macca": 85,
@@ -420,7 +420,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "izanami.png",
 		"cell": Vector2i(12, 19),
 		"stats": {"max_hp": 58, "max_en": 19, "atk": 12, "mak": 14, "defense": 11, "mef": 11, "agi": 7},
-		"skills": [&"umbral_gaze", &"life_drain", &"venom_cloud"],
+		"skills": [&"umbral_gaze", &"drain_claw", &"venom_cloud"],
 	},
 ]
 
@@ -687,7 +687,7 @@ static func empower(stats: UnitStats, id: String, seed: int, omen: int) -> Dicti
 			"SWIFT": stats.agi += 5
 			"STONE": stats.defense += 4
 			"BURNING": extra.append(&"ember_touch")
-			"VAMPIRIC": extra.append(&"life_drain")
+			"VAMPIRIC": extra.append(&"drain_claw")
 	if omen >= 1:
 		stats.max_hp = int(round(float(stats.max_hp) * 1.15))
 	return {"skills": extra, "tag": tag}

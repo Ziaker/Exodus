@@ -268,6 +268,12 @@ static func load_from_file() -> bool:
 	for key in (loaded as Dictionary).keys():
 		if restored.has(key):
 			restored[key] = loaded[key]
+	# D-131: the five older skills became the canonical ones (also inside the saved party and reserve).
+	restored["skills"] = SkillBook.migrate_ids(restored.get("skills", []))
+	for key in ["party", "reserve"]:
+		for m in (restored.get(key, []) as Array):
+			if m is Dictionary and (m as Dictionary).get("skills") is Array:
+				(m as Dictionary)["skills"] = SkillBook.migrate_ids((m as Dictionary).skills)
 	if int(restored.get("stratum", 1)) == 1 and loaded.get("necropole", false) != true:
 		# A grade antiga só perde a posição e a memória espacial.
 		var entrance := SurvivalStrata.entrance(1)
