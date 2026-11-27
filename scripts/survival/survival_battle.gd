@@ -112,7 +112,7 @@ func _create_units() -> void:
 		# D-111: a luta-teste é só contra o candidato do encontro.
 		encounter_ids.assign([String(duel_state.get("candidate", ""))])
 	else:
-		encounter_ids.assign(SurvivalData.encounter_for(enc_id, defeated))
+		encounter_ids.assign(SurvivalData.encounter_for(enc_id, defeated, run_seed))
 	if encounter_ids.is_empty():
 		encounter_ids.assign([String(SurvivalData.DEMONS[0].id)])
 	demon_def = SurvivalData.demon_by_id(encounter_ids[0])
@@ -138,12 +138,19 @@ func _create_units() -> void:
 	for u in _members:
 		state.add_unit(u)
 
-	# 1 a 3 demônios por luta, conforme o tier do encontrado (ver SurvivalData).
+	# 1 a 3 inimigos por luta, conforme o tier do encontrado e D-129 (Floater Eyes).
+	var floater_total := 0
+	for eid in encounter_ids:
+		if SurvivalData.is_floater_eye_id(eid):
+			floater_total += 1
+	var floater_idx := 0
+	var cur_stratum := SurvivalState.stratum()
 	var paths: Array[String] = []
 	for i in encounter_ids.size():
 		var def := SurvivalData.demon_by_id(encounter_ids[i])
 		if def.is_empty():
 			continue
+		var is_eye := bool(def.get("floater_eye", false))
 		var ds: Dictionary = def.stats
 		var enemy_stats := UnitStats.new()
 		enemy_stats.max_hp = int(ds.max_hp)
@@ -153,12 +160,23 @@ func _create_units() -> void:
 		enemy_stats.defense = int(ds.defense)
 		enemy_stats.mef = int(ds.mef)
 		enemy_stats.agi = int(ds.agi)
-		# D-101: os inimigos acompanham o SP atual do Fallen (com o herói no esperado, nada muda).
-		SurvivalData.follow_hero(enemy_stats, _fallen.stats.sp_value(), SurvivalStrata.par_sp(maxi(1, SurvivalStrata.stratum_of(String(def.id)))))
-		# D-111: na luta-teste o candidato vem "como na luta" (sem elite, guardião nem OMEN).
-		var power := {"skills": [], "tag": ""} \
-				if duel else SurvivalData.empower(enemy_stats, String(def.id), run_seed, omen_level)
-		var label := String(def.name) if duel else SurvivalData.battle_label(String(def.id), run_seed, omen_level)
+		var power := {"skills": [], "tag": ""}
+		var label := String(def.name)
+		if is_eye:
+			# D-129: Floater Eyes ficam fracos e fáceis de derrotar em todo estrato (HP 8..12, EN 24..40).
+			if cur_stratum > 1:
+				enemy_stats.max_hp += cur_stratum - 1
+				enemy_stats.max_en += (cur_stratum - 1) * 4
+			if floater_total > 1:
+				label = "FLOATER EYE %s" % char(65 + floater_idx)
+			floater_idx += 1
+		else:
+			# D-101: os inimigos acompanham o SP atual do Fallen (com o herói no esperado, nada muda).
+			SurvivalData.follow_hero(enemy_stats, _fallen.stats.sp_value(), SurvivalStrata.par_sp(maxi(1, SurvivalStrata.stratum_of(String(def.id)))))
+			# D-111: na luta-teste o candidato vem "como na luta" (sem elite, guardião nem OMEN).
+			if not duel:
+				power = SurvivalData.empower(enemy_stats, String(def.id), run_seed, omen_level)
+				label = SurvivalData.battle_label(String(def.id), run_seed, omen_level)
 		var enemy := BattleUnit.new(StringName("foe_%d" % i), label, enemy_stats, false)
 		enemy.kind = StringName(String(def.id))
 		enemy.sprite_path = String(def.picture)
@@ -174,6 +192,8 @@ func _create_units() -> void:
 			# D-107: humans pray with PP like Yoch (no EN), start with 0 PP and cannot be absorbed.
 			enemy.race = &"human"
 			enemy.start_praying(0)
+		elif is_eye:
+			enemy.race = &"floater_eye"
 		state.add_unit(enemy)
 		paths.append(enemy.sprite_path)
 
@@ -252,8 +272,31 @@ func _prayer_weight(unit: BattleUnit, skill: StringName) -> float:
 
 
 func temperament_pick(unit: BattleUnit, budget: int) -> StringName:
-	var choices: Array[StringName] = [&""]
 	var acts := mini(budget, maxi(unit.acts_available, 0))
+	if unit.race == &"floater_eye":
+		# D-129: Floater Eyes only cast buffs on their accompanied human/Mazik; out of EN or
+		# with no non-floater ally alive, they REST (D-038: +2 EN, end round).
+		var host := _buff_ally_target(unit)
+		if host == null:
+			return &"rest"
+		var buffs: Array[StringName] = []
+		var weights: Array[float] = []
+		var total_w := 0.0
+		for skill in unit.skills:
+			if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, 99, unit.stats.max_hp):
+				var w := _floater_buff_weight(host, skill)
+				buffs.append(skill)
+				weights.append(w)
+				total_w += w
+		if buffs.is_empty():
+			return &"rest"
+		var roll := rng.randf() * total_w
+		for i in buffs.size():
+			roll -= weights[i]
+			if roll < 0.0:
+				return buffs[i]
+		return buffs[buffs.size() - 1]
+	var choices: Array[StringName] = [&""]
 	for skill in unit.skills:
 		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 			choices.append(skill)
@@ -268,6 +311,16 @@ func temperament_pick(unit: BattleUnit, budget: int) -> StringName:
 		if r < 0.0:
 			return c
 	return choices[choices.size() - 1]
+
+
+## D-129: prefere buffs ainda não ativos no aliado principal para diversificar o suporte.
+func _floater_buff_weight(host: BattleUnit, skill: StringName) -> float:
+	match skill:
+		&"verdant_might": return 3.0 if host.atk_stages.is_empty() else 1.0
+		&"verdant_shell": return 3.0 if host.def_round_stages.is_empty() else 1.0
+		&"keen_gaze": return 3.0 if host.agi_buffs.is_empty() else 0.75
+		&"ether_link": return 2.5 if host.sp_buffs.is_empty() else 0.75
+	return 1.0
 
 
 ## HUNTER persegue o herói com menor % de HP; os outros seguem a regra base (mais SP).
@@ -292,9 +345,11 @@ func roll_intents() -> void:
 			continue
 		var skill := temperament_pick(unit, 2)
 		var target: BattleUnit = null
-		var kind := "attack" if skill == &"" else String(SkillBook.def(skill).get("kind", "strike"))
+		var kind := "rest" if skill == &"rest" else ("attack" if skill == &"" else String(SkillBook.def(skill).get("kind", "strike")))
 		if kind in ["attack", "strike"]:
 			target = temperament_target(unit)
+		elif kind == "buff" and bool(SkillFx.fx_of(skill).get("ally_only", false)):
+			target = _buff_ally_target(unit)
 		intents[unit.id] = {"skill": skill, "kind": kind, "target": target, "used": false}
 
 
@@ -303,11 +358,17 @@ func intent_text(unit: BattleUnit) -> String:
 	if it.is_empty():
 		return ""
 	var skill: StringName = it.skill
+	if skill == &"rest":
+		return "REST (+2 EN)"
 	var name := "ATTACK" if skill == &"" else SkillBook.display_name(skill)
 	match String(it.kind):
 		"attack", "strike":
 			var t: BattleUnit = it.target
 			return "%s ▸ %s" % [name, t.display_name.to_upper() if t != null else "?"]
+		"buff":
+			var bt: BattleUnit = it.target
+			if bt != null:
+				return "%s ▸ %s" % [name, bt.display_name.to_upper()]
 		"magic":
 			return "%s ▸ ALL" % name
 	return name
@@ -332,6 +393,10 @@ func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	if not it.is_empty() and not bool(it.used):
 		it.used = true
 		var skill: StringName = it.skill
+		if skill == &"rest":
+			return &"rest" if unit.race == &"floater_eye" else temperament_pick(unit, budget)
+		if unit.race == &"floater_eye" and _buff_ally_target(unit) == null:
+			return &"rest"
 		if skill == &"" or SkillBook.affordable(skill, mini(budget, unit.acts_available), unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 			var t: BattleUnit = it.target
 			_forced_target = t if t != null and t.is_alive() else null
@@ -372,7 +437,7 @@ func _build_intent_layer() -> void:
 
 
 const INTENT_INK := {"attack": Color("ff8a7a"), "strike": Color("ff8a7a"),
-	"magic": Color("c9a2ff"), "heal": Color("81e6a8"), "buff": Color("f5e08e")}
+	"magic": Color("c9a2ff"), "heal": Color("81e6a8"), "buff": Color("f5e08e"), "rest": Color("81e6a8")}
 
 
 ## Rótulo sob a sombra de cada inimigo (o nome do HUD fica acima da arte):
@@ -384,29 +449,9 @@ func intent_rect(index: int) -> Rect2:
 
 
 func _draw_intents() -> void:
-	if _intent_panel == null or hud == null or hud.mode in ["result", "death", "absorb_choice"]:
-		return
-	var font: Font = hud.ui_bold
-	var regular: Font = hud.ui_font
-	for i in hud.opponents.size():
-		var unit: BattleUnit = hud.opponents[i]
-		if not unit.is_alive():
-			continue
-		var r := intent_rect(i)
-		var it: Dictionary = intents.get(unit.id, {})
-		# D-107: humans have no demon temperament, so no label (it used to show TRICKSTER).
-		var tag: String = "" if unit.race == &"human" else String(SurvivalStrata.TEMPERAMENT_LABELS.get(temperament_of(unit), ""))
-		_draw_centered(_intent_panel, regular, tag, r.get_center().x, r.position.y + 22.0, 8, Color(1, 1, 1, 0.72))
-		if it.is_empty() or bool(it.used):
-			continue
-		var text := intent_text(unit)
-		var px := 8
-		var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-		var box := Rect2(r.get_center().x - tw * 0.5 - 4.0, r.position.y, tw + 8.0, 12.0)
-		_intent_panel.draw_rect(box, Color(0.04, 0.02, 0.04, 0.85))
-		var ink: Color = INTENT_INK.get(String(it.kind), Color.WHITE)
-		_intent_panel.draw_rect(box, ink, false, 1.0)
-		_draw_centered(_intent_panel, font, text, r.get_center().x, box.position.y + 9.0, px, ink)
+	# Criador 2026-11-27: não desenhar caixas de intenção nem rótulos de temperamento abaixo dos inimigos.
+	# A lógica interna de temperamento e seleção de ações continua ativa na IA.
+	return
 
 
 ## D-073 LEVIATHAN SCALE: quem a usa não queima (as queimaduras somem antes do tique).
@@ -1074,7 +1119,9 @@ func _show_result() -> void:
 			gain = int(round(float(gain) * macca_mult))
 			reward += gain
 			# D-107: um grupo de humanos conta como uma derrota só, no id do grupo do mapa.
-			SurvivalState.record_victory(SurvivalData.human_group_of(id) if SurvivalData.is_human_id(id) else id, gain)
+			# D-129: Floater Eyes rendem Macca sem entrar em defeated/CODEX.
+			var record_id := "" if SurvivalData.is_floater_eye_id(id) else (SurvivalData.human_group_of(id) if SurvivalData.is_human_id(id) else id)
+			SurvivalState.record_victory(record_id, gain)
 		var skill_names: Array[String] = []
 		for sk in _fallen.skills:
 			skill_names.append(String(sk))
@@ -1188,6 +1235,8 @@ func _follow_fallen_with_yoch(fallen_sp_before: int) -> void:
 
 
 func temperament_of(unit: BattleUnit) -> String:
+	if unit != null and unit.race == &"floater_eye":
+		return "support"
 	if unit != null and unit.has_meta("ally_id"):
 		return SurvivalStrata.temperament(String(unit.get_meta("ally_id")))
 	return SurvivalStrata.temperament(String(unit.kind))
@@ -1528,11 +1577,11 @@ var _offer_panel: Control
 var _offer_texture: Texture2D
 
 
-## Derrotados que podem pedir para entrar (não absorvidos; nunca anjo).
+## Derrotados que podem pedir para entrar (não absorvidos; nunca anjo; D-129: nunca Floater Eye).
 func offer_pool() -> Array:
 	var pool: Array = []
 	for u in state.units:
-		if not u.is_player and not u.absorbed and not SurvivalData.demon_by_id(String(u.kind)).is_empty():
+		if not u.is_player and not u.absorbed and u.race != &"floater_eye" and not SurvivalData.demon_by_id(String(u.kind)).is_empty():
 			pool.append(u)
 	return pool
 

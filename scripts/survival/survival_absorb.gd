@@ -59,7 +59,10 @@ static func available_skills(demon: Dictionary, owned: Array[StringName]) -> Arr
 
 
 ## Os 2 atributos de combate mais fortes do demônio (empate: ordem de STAT_KEYS).
+## D-129: Floater Eye herda EN (seu atributo de destaque) e AGI.
 static func signature_stats(demon: Dictionary) -> Array[StringName]:
+	if bool(demon.get("floater_eye", false)):
+		return [&"max_en", &"agi"]
 	var stats: Dictionary = demon.get("stats", {})
 	var keys := STAT_KEYS.duplicate()
 	keys.sort_custom(func(a: StringName, b: StringName) -> bool:
@@ -120,7 +123,17 @@ static func roll_options(rng: RandomNumberGenerator, demon: Dictionary,
 	var pool := available_skills(demon, owned)
 	var chance := SKILL_CHANCE + float(ctx.get("skill_bonus", 0.0))
 	if rng.randf() < chance and not pool.is_empty():
-		var skill: StringName = pool[rng.randi_range(0, pool.size() - 1)]
+		var pick_pool := pool
+		# D-129: absorver um Floater Eye prioriza as magias de buff dele ainda não aprendidas.
+		if bool(demon.get("floater_eye", false)):
+			var own_skills: Array[StringName] = []
+			for sk in demon.get("skills", []):
+				var sid := StringName(sk)
+				if not owned.has(sid) and not SkillBook.def(sid).is_empty():
+					own_skills.append(sid)
+			if not own_skills.is_empty():
+				pick_pool = own_skills
+		var skill: StringName = pick_pool[rng.randi_range(0, pick_pool.size() - 1)]
 		out.append({"kind": "skill", "skill": skill, "rarity": "SKILL",
 			"label": "LEARN: %s" % SkillBook.display_name(skill)})
 	var desperate := hp_share < 0.35

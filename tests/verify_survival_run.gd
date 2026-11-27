@@ -275,7 +275,13 @@ func _battle_loot() -> void:
 	b._fallen.current_hp = 8
 	b._show_result()
 	var s := SurvivalState.data()
-	_check(int(s.macca) == int(round(35 * 2 * 1.5)), "Elite x2 and GOLDEN CALF x1.5 Macca (%d)" % int(s.macca))
+	var expected_elite := 0
+	for eid in b.encounter_ids:
+		var g := int(SurvivalData.demon_by_id(eid).macca)
+		if SurvivalData.is_elite(seed, eid):
+			g *= 2
+		expected_elite += int(round(float(g) * 1.5))
+	_check(int(s.macca) == expected_elite, "Elite x2 and GOLDEN CALF x1.5 Macca (%d, expected %d)" % [int(s.macca), expected_elite])
 	_check((s.relics as Array).size() == relics_before + 1 and not String(s.last_loot).is_empty(), "Elite drops a relic (%s)" % s.last_loot)
 	_check(int(s.fallen_hp) == 8 + 15, "MANNA JAR heals 15 after victory (%d)" % int(s.fallen_hp))
 	_check(int(s.battles) == 1, "Battle counter")

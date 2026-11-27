@@ -221,6 +221,22 @@ NECHAMAH (1 PP, 5 HP por round por 3 rounds) e CHEREV (3 PP, 10 + MAK − MEF em
 Não podem ser absorvidos e não entram no CODEX. Regras em `SkillBook.DEFS`, `SkillFx` e
 `SurvivalData.human_defs`; prova em `tests/verify_human_groups.gd`.
 
+## Floater Eyes (D-129, criador 2026-11-27)
+
+Inimigos de suporte da dungeon que voam junto de humanos ou Maziks (35% dos encontros normais, determinístico pela semente; Guardiões ficam de fora) e entram como aliados deles na batalha:
+
+- **Formação:** 1 ou 2 olhos (50/50) acompanhando **exatamente 1 único humano ou 1 único Mazik** — impede a formação de duplas ou trios de humanos e Maziks nessa situação.
+- **Visual:** sprite 2D em silhueta completamente verde (`assets/generated/survival/floater_eye.png`, gerado por `tools/generate_floater_eye_sprite.py`), flutuando ao lado do aliado no corredor 3D e na batalha (sem nomes desenhados sobre inimigos nem intenções/temperamentos abaixo deles).
+- **Atributos base (Estrato 1):** `HP 8`, `EN 24`, `ATK 2`, `MAK 4`, `DEF 3`, `MEF 3`, `AGI 10` (`SP 54`; escala leve por estrato `+1 HP / +4 EN` para manter baixa durabilidade e EN alta).
+- **4 magias novas de buff (exclusivas no humano ou Mazik acompanhado, nunca em Floater Eyes, duração 1 rodada cheia):**
+  - `VERDANT MIGHT` (`1 ACT / 8 EN`): `+1` estágio de `ATK` e `MAK` (`+25%` cada).
+  - `VERDANT SHELL` (`1 ACT / 8 EN`): `+1` estágio de `DEF` e `MEF` (`+25%` cada).
+  - `KEEN GAZE` (`1 ACT / 6 EN`): `+4 AGI` e próximo ataque com `HIGH SPEED` (D-124).
+  - `ETHER LINK` (`2 ACT / 10 EN`): `+6 SP` temporários.
+- **Sem EN (ou sem aliado principal vivo):** executa `REST` (D-038: `0 ACT`, `+2 EN` fixos, encerra participação na rodada). Nunca contra-ataca.
+- **Absorção e economia:** absorvível pelo Fallen (herda `max_en` e pode ensinar os buffs novos), rende `10M` sem entrar em `defeated`/`CODEX`, e nunca aparece em oferta de recrutamento ou loja.
+- **Verificação:** `tests/verify_floater_eyes.gd` (2612 checks) e capturas em `captures/floater_eyes/` (`tools/capture_floater_eyes.gd`). **Aprovação visual pertence ao autor.**
+
 ## Verificação
 
 - `verify_survival_strata.gd` — 15827 checks (estratos, guardiões, 800 labirintos

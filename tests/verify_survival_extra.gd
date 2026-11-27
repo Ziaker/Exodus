@@ -57,6 +57,7 @@ func _with_yoch(patch: Dictionary) -> Dictionary:
 func _new_battle(enc_id: String, extra: Dictionary) -> Control:
 	SurvivalState.reset()
 	var patch := {
+		"seed": 1,
 		"encounter_id": enc_id,
 		"gains": {"max_hp": 0, "max_en": 0, "atk": 0, "mak": 0, "defense": 0, "mef": 0, "agi": 20},
 	}

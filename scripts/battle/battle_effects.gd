@@ -247,7 +247,12 @@ func play(kind: String, unit: BattleUnit, amount: int = 0, source: BattleUnit = 
 		ghost.scale = target_rect.size / silhouette.get_size()
 		ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		var shader := Shader.new()
-		shader.code = FLASH_SHADER
+		if unit.race == &"floater_eye":
+			# D-129: green silhouette flashes from green to white (never gray/black).
+			ghost.modulate = battle.hud.FLOATER_EYE_GREEN
+			shader.code = FLASH_SHADER_COLOUR
+		else:
+			shader.code = FLASH_SHADER
 		var material := ShaderMaterial.new()
 		material.shader = shader
 		ghost.material = material

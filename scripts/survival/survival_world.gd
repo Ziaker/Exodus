@@ -37,6 +37,11 @@ var _meta_cache: Dictionary = {}
 ## Um único overlay para relíquias, loja, escolha do guardião e fim de run.
 var _overlay_layer: CanvasLayer
 var _overlay: Control
+## D-129: sprites 3D dos Floater Eyes voando junto de humanos ou Maziks no corredor (host_id -> Array[Sprite3D]).
+const FLOATER_EYE_HEIGHT := 0.24
+const FLOATER_EYE_INK := Color("36ce72")
+var floater_sprites: Dictionary = {}
+var _floater_time: float = 0.0
 
 
 func _init() -> void:
@@ -60,6 +65,68 @@ func _build_world() -> void:
 	world.add_child(necropole)
 	necropole.install(pivot, camera)
 	_build_enemy_sprites(world)
+
+
+## D-129: além da silhueta do inimigo principal, cria 1 ou 2 sprites 2D verdes de Floater Eyes
+## voando ao lado do humano ou Mazik que eles acompanham.
+func _build_enemy_sprites(world: Node3D) -> void:
+	super._build_enemy_sprites(world)
+	floater_sprites.clear()
+	var run_seed := int(SurvivalState.data().get("seed", 1))
+	var eye_tex: Texture2D = load(SurvivalData.FLOATER_EYE_PICTURE)
+	if eye_tex == null:
+		return
+	for enemy in enemies.entries:
+		var id := String(enemy.id)
+		var count := SurvivalData.floater_eye_count(run_seed, id)
+		if count <= 0:
+			continue
+		var list: Array = []
+		for i in count:
+			var eye := Sprite3D.new()
+			eye.name = "FloaterEye:%s:%d" % [id, i]
+			eye.texture = eye_tex
+			eye.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			eye.centered = true
+			eye.shaded = false
+			eye.modulate = FLOATER_EYE_INK
+			var fit := FLOATER_EYE_HEIGHT / (float(eye_tex.get_height()) * eye.pixel_size)
+			eye.scale = Vector3(fit, fit, fit)
+			world.add_child(eye)
+			list.append(eye)
+		floater_sprites[id] = list
+	_update_floater_sprites()
+
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	_floater_time += delta
+	_update_floater_sprites()
+
+
+## Posiciona cada Floater Eye flutuando ao lado e acima do humano/Mazik acompanhado,
+## acompanhando o eixo lateral da câmera para permanecer sempre visível no corredor.
+func _update_floater_sprites() -> void:
+	if floater_sprites.is_empty():
+		return
+	var right := Vector3.RIGHT
+	if camera != null and is_instance_valid(camera):
+		var cam_x := camera.global_transform.basis.x
+		cam_x.y = 0.0
+		if cam_x.length_squared() > 0.0001:
+			right = cam_x.normalized()
+	for id in floater_sprites.keys():
+		var host: Sprite3D = enemy_sprites.get(id)
+		if host == null or not is_instance_valid(host):
+			continue
+		var eyes: Array = floater_sprites[id]
+		for i in eyes.size():
+			var eye: Sprite3D = eyes[i]
+			if eye == null or not is_instance_valid(eye):
+				continue
+			var side := 0.28 if eyes.size() == 1 else (-0.30 if i == 0 else 0.30)
+			var hover_y := 0.17 + sin(_floater_time * 3.0 + float(i) * 2.2) * 0.025
+			eye.position = host.position + right * side + Vector3(0.0, hover_y, 0.0)
 
 
 func _can_step(from: Vector2i, to: Vector2i) -> bool:
@@ -1228,11 +1295,15 @@ func _draw_automap() -> void:
 		return
 	var inner := automap.size
 	var center := Vector2(floor(inner.x / 2.0) - CELL_PX / 2.0, floor(inner.y / 2.0) - CELL_PX / 2.0)
+	var run_seed := int(SurvivalState.data().get("seed", 1))
 	for enemy in enemies.entries:
-		if not bool(enemy.get("warden", false)) or not enemies.seen.has(enemy.id) or enemy.cell == cell:
+		if not enemies.seen.has(enemy.id) or enemy.cell == cell:
 			continue
 		var p := center + Vector2((enemy.cell - cell) * CELL_PX)
-		automap.draw_rect(Rect2(p + Vector2(1.5, 1.5), Vector2(13, 13)), GOLD_INK, false, 1.0)
+		if bool(enemy.get("warden", false)):
+			automap.draw_rect(Rect2(p + Vector2(1.5, 1.5), Vector2(13, 13)), GOLD_INK, false, 1.0)
+		elif SurvivalData.floater_eye_count(run_seed, String(enemy.id)) > 0:
+			automap.draw_rect(Rect2(p + Vector2(11.0, 2.0), Vector2(3.0, 3.0)), FLOATER_EYE_INK)
 
 
 # ------------------------------------------------------------ demônios
@@ -1296,7 +1367,13 @@ func _step_nearby_demons() -> Dictionary:
 
 
 func _begin_battle(enemy: Dictionary) -> void:
-	SurvivalState.patch({"encounter_id": String(enemy.get("id", ""))})
+	var id := String(enemy.get("id", ""))
+	if floater_sprites.has(id):
+		for eye in floater_sprites[id]:
+			if eye != null and is_instance_valid(eye):
+				(eye as Node).queue_free()
+		floater_sprites.erase(id)
+	SurvivalState.patch({"encounter_id": id})
 	super._begin_battle(enemy)
 
 

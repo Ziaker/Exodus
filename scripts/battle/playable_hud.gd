@@ -70,6 +70,7 @@ const SVG_SCALE_Y := 298.0 / 251.0
 
 const TEXT := Color("f7f3ed")
 const GREEN_TEXT := Color("81e6a8")
+const FLOATER_EYE_GREEN := Color("36ce72")
 const RED_TEXT := Color("ff9a92")
 const OWN_FILL := Color("36aa6d")
 const FOE_FILL := Color("bb3d48")
@@ -468,11 +469,19 @@ func _track_hp_shake() -> void:
 		if unit.current_hp < last: shake(unit)
 
 
+## D-125 (SkillGrotesqueFX): units whose enemy silhouette is replaced by the fever-warp overlay (the HUD
+## skips the plain black silhouette) and the horizontal wobble of a hero card under the same warp.
+var warp_hidden: Dictionary = {}
+var warp_card: Dictionary = {}
+
+
 ## Horizontal shake offset for a unit's sprite or card.
 func shake_offset(unit: BattleUnit) -> Vector2:
-	if unit == null or not _shakes.has(unit.id): return Vector2.ZERO
+	if unit == null: return Vector2.ZERO
+	var wobble: Vector2 = warp_card.get(unit.id, Vector2.ZERO)
+	if not _shakes.has(unit.id): return wobble
 	var age: float = _shakes[unit.id]
-	return Vector2(SHAKE_PX if int(age * SHAKE_HZ) % 2 == 0 else -SHAKE_PX, 0)
+	return wobble + Vector2(SHAKE_PX if int(age * SHAKE_HZ) % 2 == 0 else -SHAKE_PX, 0)
 
 
 ## D-049 rails: [top = opponent (red), bottom = player (white)].
@@ -615,7 +624,15 @@ func enemy_sprite_rect(index: int) -> Rect2:
 	var box := Rect2(column.position + Vector2(maxf(0.0, (column.size.x - SPRITE_BOX.x) * 0.5), 0), SPRITE_BOX)
 	var rect := Rect2(Vector2(box.get_center().x - art.x * 0.5, box.end.y - art.y), art)
 	var top := _depth_point(rect.position, rect.get_center().x)
-	return Rect2(top, rect.size * enemy_depth)
+	var out := Rect2(top, rect.size * enemy_depth)
+	if index >= 0 and index < opponents.size() and opponents[index].race == &"floater_eye":
+		# D-129: Floater Eyes are smaller hovering 2D silhouettes; keeping this in enemy_sprite_rect
+		# aligns SP arrows, intent tags, WHITEN ghosts, hit VFX and absorption fragments cleanly.
+		var eye_size := out.size * 0.72
+		var hover_y := sin(time * 3.0 + float(index) * 1.9) * 4.0
+		out = Rect2(Vector2(out.get_center().x - eye_size.x * 0.5,
+				out.position.y + out.size.y * 0.14 + hover_y), eye_size)
+	return out
 
 
 ## Perspective push: scale about the horizon point straight above/below `pivot_x`.
@@ -957,11 +974,16 @@ func _enemy(_x: float, index: int) -> void:
 	var texture := silhouettes[index % silhouettes.size()]
 	var region := Rect2(Vector2.ZERO, texture.get_size())
 	var box := Rect2(column.position + Vector2(maxf(0.0, (column.size.x - SPRITE_BOX.x) * 0.5), 0), SPRITE_BOX)
-	if unit.race == &"human":
+	# D-125: while the fever-warp overlay draws this silhouette, the plain black one is transparent.
+	var ink := Color(0, 0, 0, 0) if warp_hidden.has(unit.id) else Color.BLACK
+	if unit.race == &"floater_eye":
+		# D-129: Floater Eyes are 2D completely green silhouettes hovering beside their ally.
+		draw_texture_rect_region(texture, art, region, Color(0, 0, 0, 0) if warp_hidden.has(unit.id) else FLOATER_EYE_GREEN)
+	elif unit.race == &"human":
 		# D-107 (creator 2026-11-25): only mazikim are silhouettes; a human is drawn with its own
 		# colours and has no ground shadow.
 		# Criador 2026-11-26: humano = silhueta preta como a dos mazikim, mas sem sombra no chão.
-		draw_texture_rect_region(texture, art, region, Color.BLACK)
+		draw_texture_rect_region(texture, art, region, ink)
 	else:
 		# Ground shadow from the HTML silhouettes (ellipse rx 44 ry 6 at 111/119), filled black.
 		var k := SPRITE_BOX.x / 112.0
@@ -975,7 +997,7 @@ func _enemy(_x: float, index: int) -> void:
 		draw_set_transform(Vector2.ZERO)
 		# drop-shadow(0 8px 2px rgba(24,17,26,.45)) and the silhouette (fill:#000).
 		draw_texture_rect_region(texture, Rect2(art.position + Vector2(0, 8), art.size), region, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
-		draw_texture_rect_region(texture, art, region, Color.BLACK)
+		draw_texture_rect_region(texture, art, region, ink)
 	var selected := _selected_enemy() == index
 	if alert_visible() and alert_unit == unit:
 		var t := announcement_age / 0.75
@@ -1003,26 +1025,23 @@ func _enemy(_x: float, index: int) -> void:
 				_sp_arrow(Vector2(left + ARROW_HEAD.x * 0.5, art.position.y), up)
 				label_x += ARROW_HEAD.x
 			_str("SP", label_x + SIGN_GAP, art.position.y + ARROW_HEIGHT * 0.5 + 4, color, 12, true, HORIZONTAL_ALIGNMENT_LEFT, Color(0, 0, 0, 0.65))
-	# Nome acima da arte (antes ficava em baixo, sobre a sombra).
-	var name_y := maxf(FIELD_RECT.position.y + 16.0, art.position.y - 16.0)
-	var foe_name: String = battle.short_name(unit)
+	# Criador 2026-11-27: sem nomes desenhados acima dos inimigos na tela de batalha;
+	# mantém o ponto de ancoragem para cartões de papel (D-057) e setas de atos planejados.
+	var name_y := maxf(FIELD_RECT.position.y + 16.0, art.position.y - 10.0)
 	var role := role_of(unit)
-	var foe_px := _fit_px(foe_name, 13, maxf(12.0, column.size.x - 8), true)
-	_str(foe_name, column.get_center().x, name_y, Color("fffaf5"),
-			foe_px, true, HORIZONTAL_ALIGNMENT_CENTER, Color("1f0e14"))
-	# D-057: the enemy's role in the action on screen sits right above its name (the
+	# D-057: the enemy's role in the action on screen sits right above its art (the
 	# queued-acts arrows give way to it while the action runs).
 	if not role.is_empty():
-		_role_tag(role, column.get_center().x, name_y - 25.0, true)
+		_role_tag(role, column.get_center().x, name_y - 16.0, true)
 		_role_tags[-1]["unit"] = unit
 		_role_tags[-1]["side"] = "enemy"
-		_role_tags[-1]["anchor"] = Vector2(column.get_center().x, name_y + 5.0)
+		_role_tags[-1]["anchor"] = Vector2(column.get_center().x, name_y + 2.0)
 	# Atos já planejados com este inimigo como alvo: setas verdes sem cabo.
 	var queued: int = battle.queued_acts_for(unit) if battle.has_method("queued_acts_for") and role.is_empty() else 0
 	for i in mini(queued, 4):
 		var cx := column.get_center().x + (float(i) - float(mini(queued, 4) - 1) * 0.5) * 11.0
 		var head := PackedVector2Array([
-			Vector2(cx, name_y - 27.0), Vector2(cx - 5.0, name_y - 18.0), Vector2(cx + 5.0, name_y - 18.0)])
+			Vector2(cx, name_y - 18.0), Vector2(cx - 5.0, name_y - 9.0), Vector2(cx + 5.0, name_y - 9.0)])
 		draw_colored_polygon(head, SP_UP)
 		draw_polyline(PackedVector2Array([head[0], head[1], head[2], head[0]]),
 				Color(0.05, 0.1, 0.06, 0.8), 1.0)

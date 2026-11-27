@@ -32,6 +32,9 @@ const HEBREW_SKILLS := {
 	&"thunder_call": "קריאת רעם", &"life_drain": "ניקוז חיים", &"spirit_wave": "עלוקת נשמה",
 	&"crushing_blow": "מכת סיום", &"ember_touch": "התפרצות גחלת", &"renew": "חידוש",
 	&"umbral_gaze": "מבט הריק", &"ignoma": "כדור אש", &"blade_dance": "מחול להבים", &"stone_grasp": "אחיזת אבן",
+	# D-129 Floater Eye buffs (hebrew placeholder when unidentified after absorption).
+	&"verdant_might": "עוצמה ירוקה", &"verdant_shell": "שריון ירוק",
+	&"keen_gaze": "מבט חד", &"ether_link": "קשר אתר",
 }
 
 static func hebrew_skill(skill: StringName) -> String:
@@ -423,6 +426,8 @@ const DEMONS := [
 
 
 static func demon_by_id(id: String) -> Dictionary:
+	if is_floater_eye_id(id):
+		return floater_eye_def()
 	for entry in DEMONS:
 		if String(entry.id) == id:
 			return entry
@@ -430,6 +435,50 @@ static func demon_by_id(id: String) -> Dictionary:
 		if String(entry.id) == id:
 			return entry
 	return {}
+
+
+# ------------------------------------------------------------------ D-129 Floater Eyes
+
+## D-129 (criador 2026-11-27): inimigos de suporte da dungeon. Fracos (HP 8, DEF/MEF 3),
+## EN alta (24) para lançar 4 magias novas de buff exclusivamente no humano ou Mazik que
+## acompanham (nunca em si mesmos nem em outro olho). Aparecem em 35% dos encontros normais
+## (1 ou 2 olhos, impedindo duplas/trios de humanos ou Maziks); Guardiões ficam de fora.
+const FLOATER_EYE_ID := "floater_eye"
+const FLOATER_EYE_PICTURE := SILHOUETTES_DIR + "floater_eye.png"
+const FLOATER_EYE_CHANCE := 0.35
+const FLOATER_EYE_MACCA := 10
+const FLOATER_EYE_SALT := 53993
+const FLOATER_EYE_STATS := {
+	"max_hp": 8, "max_en": 24, "atk": 2, "mak": 4, "defense": 3, "mef": 3, "agi": 10,
+}
+const FLOATER_EYE_SKILLS: Array[StringName] = [
+	&"verdant_might", &"verdant_shell", &"keen_gaze", &"ether_link",
+]
+
+
+static func is_floater_eye_id(id: String) -> bool:
+	return id == FLOATER_EYE_ID
+
+
+static func floater_eye_def() -> Dictionary:
+	return {
+		"id": FLOATER_EYE_ID, "name": "FLOATER EYE", "tier": 1, "macca": FLOATER_EYE_MACCA,
+		"picture": FLOATER_EYE_PICTURE, "silhouette": FLOATER_EYE_PICTURE,
+		"stats": FLOATER_EYE_STATS.duplicate(), "skills": FLOATER_EYE_SKILLS,
+		"floater_eye": true,
+	}
+
+
+## Quantos Floater Eyes voam junto deste inimigo na dungeon (0, 1 ou 2).
+## Determinístico pela semente + id; 35% de chance, 50/50 entre 1 e 2 olhos. Guardiões nunca têm.
+static func floater_eye_count(seed: int, id: String) -> int:
+	if seed < 0 or id.is_empty() or is_floater_eye_id(id) or SurvivalStrata.is_warden(id):
+		return 0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = (absi(seed) * 1009 + absi(id.hash()) * 37 + FLOATER_EYE_SALT) % 2147483647
+	if rng.randf() >= FLOATER_EYE_CHANCE:
+		return 0
+	return 1 if rng.randf() < 0.5 else 2
 
 
 # ------------------------------------------------------------------ D-107 humanos
@@ -534,14 +583,16 @@ static func stratum_enemy_defs(seed: int, stratum: int) -> Array:
 	var out: Array = []
 	for id in SurvivalStrata.ids_for(stratum):
 		var entry := demon_by_id(id)
+		var is_w := SurvivalStrata.warden_of(stratum) == id
 		out.append({
 			"id": id,
 			"name": String(entry.name),
 			"cell": cells[id],
 			"picture": String(entry.silhouette),
-			"warden": SurvivalStrata.warden_of(stratum) == id,
+			"warden": is_w,
+			"floater_eyes": 0 if is_w else floater_eye_count(seed, id),
 		})
-	# D-107: o grupo de humanos do estrato.
+	# D-107: o grupo de humanos do estrato (D-129: pode vir acompanhado por 1–2 Floater Eyes).
 	var group_id := human_group_id(stratum)
 	var group := demon_by_id(group_id)
 	out.append({
@@ -550,6 +601,7 @@ static func stratum_enemy_defs(seed: int, stratum: int) -> Array:
 		"cell": cells[group_id],
 		"picture": String(group.picture),
 		"warden": false,
+		"floater_eyes": floater_eye_count(seed, group_id),
 	})
 	return out
 
@@ -578,7 +630,7 @@ static func daily_seed() -> int:
 ## Elite é determinístico por semente + id: mesmo seed, mesmo demônio elite.
 ## Guardiões nunca são elites (já têm o próprio reforço, D-066). OMEN 3 sobe a chance.
 static func is_elite(seed: int, id: String, omen: int = 0) -> bool:
-	if SurvivalStrata.is_warden(id) or is_human_id(id):
+	if SurvivalStrata.is_warden(id) or is_human_id(id) or is_floater_eye_id(id):
 		return false
 	var rng := RandomNumberGenerator.new()
 	rng.seed = (absi(seed) + absi(id.hash()) * 13) % 2147483647
@@ -676,10 +728,23 @@ static func price(base: int, stratum: int, state: Dictionary) -> int:
 
 ## Combate de teste: lutas com 1, 2 ou 3 demônios conforme o tier do encontrado.
 ## O demônio tocado no mapa sempre abre a luta; os reforços vêm da mesma lista.
-static func encounter_for(id: String, defeated: Array = []) -> Array[String]:
-	# D-107: tocar o grupo de humanos abre uma luta só com os 3 humanos do estrato.
+## D-129: quando `run_seed >= 0` (ou `floater_override > 0`) traz Floater Eyes acompanhando o
+## humano ou Mazik, a formação tem EXATAMENTE 1 humano ou 1 Mazik + 1–2 Floater Eyes (nunca
+## duplas ou trios de humanos ou Maziks).
+static func encounter_for(id: String, defeated: Array = [], run_seed: int = -1, floater_override: int = -1) -> Array[String]:
+	var eyes := clampi(floater_override, 0, 2) if floater_override >= 0 \
+			else (floater_eye_count(run_seed, id) if run_seed >= 0 else 0)
+	# D-107 / D-129: tocar o grupo de humanos abre 1 humano + Floater Eyes quando acompanhado,
+	# ou os 3 humanos do estrato quando sem olhos.
 	if id.begins_with("humans_s"):
-		return human_unit_ids(int(id.substr(8, 1)))
+		var stratum := int(id.substr(8, 1))
+		var units := human_unit_ids(stratum)
+		if eyes > 0 and not units.is_empty():
+			var h_out: Array[String] = [units[0]]
+			for _e in eyes:
+				h_out.append(FLOATER_EYE_ID)
+			return h_out
+		return units
 	var found := -1
 	for i in DEMONS.size():
 		if String(DEMONS[i].id) == id:
@@ -687,6 +752,12 @@ static func encounter_for(id: String, defeated: Array = []) -> Array[String]:
 			break
 	if found < 0:
 		return []
+	# D-129: Mazik acompanhado por Floater Eyes entra sozinho (1 Mazik + 1–2 olhos), nunca dupla/trio.
+	if eyes > 0 and not SurvivalStrata.is_warden(id):
+		var f_out: Array[String] = [id]
+		for _e in eyes:
+			f_out.append(FLOATER_EYE_ID)
+		return f_out
 	var lead: Dictionary = DEMONS[found]
 	var tier := int(lead.tier)
 	var count := 1
