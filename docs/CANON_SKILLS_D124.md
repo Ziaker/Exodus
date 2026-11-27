@@ -59,6 +59,11 @@
 3. **`Dark Breath`:** **não causa dano** (0 de dano; apenas `−3 PP` em quem não desvia + cegueira até o fim do round; alvos sem PP sofrem apenas a cegueira).
 4. **Temporização de Ação:** conta **qualquer ação global realizada na batalha** após a efetuação do efeito (liberando o alvo aprisionado após `X` ações globais).
 5. **Substituição no código e migração de `BLEED`:** substituir os 5 antigos diretamente no Survival (`skill_book.gd`) e migrar `BLEED` para `−20%` cura ×4 no jogo todo.
-6. **Direção visual (VFX):** **apenas `Ignoma Esh` usa letras hebraicas** (por conter `Esh` no nome — `אש`). As demais 7 entradas (`Mazz Bite`, `Fang Sting`, `Fang Spine`, `Vuln Pierce`, `Dark Breath`, `Umbral Gaze`, `Ignoma`) usam VFX não-tipográficos (mordidas/presas, estocadas/espinhos de sangue, perfuração de vulnerabilidade, bafo/névoa de trevas, círculo sombrio com estacas de sombra e bola de fogo).
+6. **Direção visual oficial dos ataques não-reza (`D-125`):**
+   * **Linguagem unificada:** **Anatômico Grotesco de Rabisco (12 FPS, silhueta negra + contorno orgânico)** combinado com **Interferência Hipnótica (Moiré / ondas febris)** em paleta sombria (sem neon).
+   * **Regra de outline `ZAHAV`:** o **outline dourado só existe quando o ataque é realizado através de `ZAHAV`**; ataques normais sempre usam suas cores naturais.
+   * **Hebraico:** **apenas `Ignoma Esh` usa letras hebraicas** (por conter `Esh` no nome — `אש`).
+   * **Geometria:** reservada para **alguns outros anjos** (não usada em ataques demoníacos/não-reza comuns).
+   * **Status de aprovação visual (2026-11-27):** **Aprovados:** `Mazz Bite`, `Fang Sting`, `Vuln Pierce` *(sem outline dourado)*, `Umbral Gaze` *(versão mais escura)*. **Em iteração:** `Fang Spine [ZAHAV]`, `Dark Breath`, `Ignoma`, `Ignoma Esh [ZAHAV]`.
 
 *Única pendência menor:* confirmar se `Vuln Pierce` dobra o dano apenas em reação contra ação não-ofensiva anunciada ou também contra alvo com estado/postura não-ofensiva ativa no round.

@@ -3291,3 +3291,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   - **`BLEED` canônico:** reduz curas recebidas em 20% até o fim do próximo turno, acumulando até 4 vezes (−80%).
   - **Temporização de ação:** efeitos de X ações/atos duram X ações realizadas após a efetuação; aprisionamento age como `PASS` automático (não perde atos/reações não usados, porém perde os atos em fila).
   Impacto: `docs/CANON_SKILLS_D124.md`, `docs/DECISIONS.md`, `docs/GDD.md`, `docs/COMBAT_SPEC.md`, `docs/CANON_BOUNDARY.md`.
+
+- **D-125 · 2026-11-27 (decisão do criador) — estética visual canônica dos ataques não-reza (Anatômico Grotesco de Rabisco + Interferência Hipnótica) e regra de outline dourado `ZAHAV`.**
+  Todo ataque não-reza adota como linguagem visual unificada o **Anatômico Grotesco de Rabisco (12 FPS, silhueta negra + traço orgânico)** combinado com **Interferência Hipnótica (Moiré / ondas febris)** em paleta sombria (sem neon). O **outline dourado só existe quando o ataque é realizado através de `ZAHAV`**; ataques normais usam suas cores naturais. Apenas ataques híbridos com palavra hebraica (ex.: `Ignoma Esh`) usam letras hebraicas (`אש`). A estética de **Geometria** fica reservada para alguns outros anjos. Aprovados visualmente na rodada v2: `Mazz Bite`, `Fang Sting`, `Vuln Pierce` (sem dourado) e `Umbral Gaze` (versão mais escura).
+  Impacto: `docs/CANON_SKILLS_D124.md`, `docs/DECISIONS.md`, `docs/GDD.md`.
