@@ -30,7 +30,7 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
 
 ### 1.3 Skills canônicas do Prólogo e Expansão Canônica (`D-050`, `D-117`, `D-124`)
 * **4 skills do Prólogo** (`SkillBook.KIND_SKILLS`): **LUNGE**, **BLEEDBUFF**, **HEAT WAVE**, **ENERGEAT** *(renomeada de Energy Eat em D-117; id interno `energy_eat`)* + aprendizado permanente a cada 4 absorções.
-* **6 skills canônicas revisadas + 2 evoluções `ZAHAV` (`D-124`, [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) — DESIGN CONFIRMADO; NÃO IMPLEMENTADO):**
+* **6 skills canônicas revisadas + 2 evoluções `ZAHAV` (`D-124`, [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) — DESIGN CONFIRMADO; IMPLEMENTADO (mecânica e VFX; aguardando validação visual final do criador no Godot; ativação ZAHAV, IA de escolha das novas skills e distribuição na campanha PENDENTES)):**
   * **Mazz Bite** *(rework de `SHADOW BITE`)*, **Fang Sting** *(rework de `FANG FLURRY`)* → ZAHAV **Fang Spine**, **Vuln Pierce** *(rework de `SOUL PIERCE`)*, **Dark Breath** *(rework de `FROST BREATH`)*, **Umbral Gaze** *(rework de `VOID GAZE`)*, **Ignoma** → ZAHAV **Ignoma Esh**.
   * **3 regras globais canônicas (`D-124`):** `HIGH SPEED` (ponteiro 20% mais rápido e vantagem no contra-ataque), `BLEED` canônico (−20% cura recebida até o fim do próximo turno, acumula 4×) e `Temporização de ação` (dura X ações após o efeito; aprisionamento age como `PASS` automático perdendo a fila atual).
 

@@ -59,9 +59,9 @@ func _shaders() -> void:
 	for token in ["floor(p / STEP) * STEP", "const float STEP = 5.0",
 			"sin(dist * 0.21 - time_val * 14.0 + sin(ang * 4.0 + time_val * 5.0) * 2.1)",
 			"cos((dx * 0.1 - dy * 0.08) + sin(c.y * 0.08 + time_val * 8.0) * 1.9)",
-			"float half_h = 16.0 + dx * 0.21;",
-			"sin(dx * 0.095 - time_val * 19.0 + sin(c.y * 0.1 + time_val * 9.0) * 2.3)",
-			"cos((c.y - mouth_pos.y) * 0.13 + sin(dx * 0.055 - time_val * 11.0) * 2.2)",
+			"float half_h = (16.0 + dxs * 0.21) * cone_scale;", "uniform float cone_scale = 1.0;",
+			"sin(dxs * 0.095 - time_val * 19.0 + sin(c.y * 0.1 + time_val * 9.0) * 2.3)",
+			"cos(((c.y - mouth_pos.y) / cone_scale) * 0.13 + sin(dxs * 0.055 - time_val * 11.0) * 2.2)",
 			"thr = 0.22;", "hi_v = 1.55;", "mid_v = 0.78;", "ak = 1.55;", "acap = 0.95;"]:
 		check(src.contains(token), "moire source carries: %s" % token)
 	var wsrc := warp.code

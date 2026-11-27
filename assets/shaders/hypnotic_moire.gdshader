@@ -12,7 +12,8 @@ uniform vec2 rect_size = vec2(100.0, 100.0);   // tamanho do retangulo coberto
 uniform vec2 rect_origin = vec2(0.0, 0.0);     // canto superior esquerdo do retangulo
 uniform vec2 mouth_pos = vec2(0.0, 0.0);       // modo 1: garganta
 uniform float reach = 0.0;                     // modo 1: alcance do cone
-uniform float dir_x = 1.0;                     // modo 1: +1 direita / -1 esquerda (espelhamento)
+uniform float dir_x = 1.0;
+uniform float cone_scale = 1.0;                // modo 1: escala da cena (1 = HTML 1:1)                     // modo 1: +1 direita / -1 esquerda (espelhamento)
 // Perfil de limiares da versao canonica do HTML de cada ataque (v2: 0.30/1.28; v3: 0.26/1.30; v4: 0.30/1.30).
 uniform float threshold = 0.30;
 uniform float hi_t = 1.30;
@@ -53,15 +54,16 @@ void fragment() {
 		float dx = (c.x - mouth_pos.x) * dir_x;
 		if (dx < 0.0 || dx >= reach) { discard; }
 		float frac = dx / max(1.0, reach);
-		float half_h = 16.0 + dx * 0.21;
+		float dxs = dx / cone_scale;
+		float half_h = (16.0 + dxs * 0.21) * cone_scale;
 		float dy = abs(c.y - mouth_pos.y);
 		if (dy > half_h) { discard; }
 		float edge_x = frac < 0.08 ? frac / 0.08 : (frac > 0.78 ? max(0.0, 1.0 - (frac - 0.78) / 0.22) : 1.0);
 		float edge_y = max(0.0, 1.0 - dy / half_h);
 		fall = edge_x * edge_y;
 		if (fall <= 0.04) { discard; }
-		v = sin(dx * 0.095 - time_val * 19.0 + sin(c.y * 0.1 + time_val * 9.0) * 2.3)
-			+ cos((c.y - mouth_pos.y) * 0.13 + sin(dx * 0.055 - time_val * 11.0) * 2.2);
+		v = sin(dxs * 0.095 - time_val * 19.0 + sin(c.y * 0.1 + time_val * 9.0) * 2.3)
+			+ cos(((c.y - mouth_pos.y) / cone_scale) * 0.13 + sin(dxs * 0.055 - time_val * 11.0) * 2.2);
 		thr = 0.22;      // drawBreathConeMoire (v4): limiares proprios
 		hi_v = 1.55;
 		mid_v = 0.78;

@@ -1,7 +1,7 @@
 # Skills Canônicas Revisadas do Survival + Regras Globais de Combate (D-124)
 
 **Decisão:** D-124 · 2026-11-27 (decisão do criador)  
-**Estado:** **CANÔNICO — DESIGN E VISUAIS (8/8) APROVADOS; IMPLEMENTAÇÃO EM FASES PRONTA**  
+**Estado:** **CANÔNICO — IMPLEMENTADO (MECÂNICA E VFX; AGUARDANDO VALIDAÇÃO VISUAL FINAL DO CRIADOR NO GODOT; ATIVAÇÃO ZAHAV, IA DE ESCOLHA DAS NOVAS SKILLS E DISTRIBUIÇÃO NA CAMPANHA PENDENTES)**  
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md) · **Estilo VFX Não-Reza (D-125):** [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) · **Prompts Faseados:** [`docs/CLAUDE_PROMPTS_D124_D125.md`](CLAUDE_PROMPTS_D124_D125.md)
 
 > [!IMPORTANT]

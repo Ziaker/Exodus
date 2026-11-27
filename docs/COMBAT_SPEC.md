@@ -1661,7 +1661,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 - Exigir **avaliador temporal mecânico testável com tempos injetados** para fronteiras, t=0, t=1 s, timeout e primeiro input, **mais testes de integração reais de `RhythmBar`/`BattleController`** com eventos e FPS controlados **30/60/120**. Mesmos timestamps, parâmetros e seeds exigem mesmas classificações e estados mecânicos; não exigir reprodução visual pixel a pixel.
 - Verificar a infraestrutura Godot/testes do repositório antes de escolher harness ou arquivos. Fase 1 segue portões D-039/D-040: parse real, testes unitários/integração pertinentes, diff e evidência verificável; Fase 2 de múltiplas zonas e IA especial depende de liberação adequada da Fase 1. **Nenhum teste, código ou recurso foi executado/alterado nesta rodada documental.**
 
-## Regras globais de ataques e status — D-124 (criador, 2026-11-27; DESIGN CONFIRMADO, NÃO IMPLEMENTADO)
+## Regras globais de ataques e status — D-124 (criador, 2026-11-27; DESIGN CONFIRMADO; IMPLEMENTADO, aguardando validação visual final do criador)
 Especificação completa das 6 skills canônicas (+ 2 evoluções `ZAHAV`: `Mazz Bite`, `Fang Sting`/`Fang Spine`, `Vuln Pierce`, `Dark Breath`, `Umbral Gaze`, `Ignoma`/`Ignoma Esh`) em `docs/CANON_SKILLS_D124.md`.
 
 - **`HIGH SPEED` attacks:** ataques com "alta velocidade" no texto usam ponteiro **20% mais rápido** do que o normal (mais difíceis de bloquear) e também são **mais rápidos do que o ponteiro do oponente no contra-ataque** (D-049).

@@ -2306,6 +2306,12 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		_second_target = null
 		return
 	var roll := _ai_roll(unit, targets[0])
+	if skill == &"dark_breath":
+		var enemy_timings := {}
+		for target in targets:
+			enemy_timings[target] = roll if bool(declared.get(target, false)) else BattleMath.RhythmResult.POINT
+		await _dark_breath_flow(unit, targets, enemy_timings, paid, false)
+		return
 	if skill == PrayerBook.CHEREV and prayer != null:
 		await prayer.fx.play_cherev(false)
 		if not is_inside_tree(): return
@@ -2319,6 +2325,64 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		var timing: int = roll if bool(declared.get(target, false)) else BattleMath.RhythmResult.POINT
 		var defense: Array[int] = await _skill_defense_timing(target, unit, [0.5], bool(paid.get(target, false)))
 		_magic_hit(unit, target, skill, false, timing, defense[0])
+
+
+## D-125: starts the grotesque choreography of `skill` on `victims` and returns its start time (-1 = none).
+func _gfx_start(attacker: BattleUnit, skill: StringName, victims: Array) -> float:
+	if grotesque_fx == null or victims.is_empty() or not bool(SkillBook.def(skill).get("grotesque", false)):
+		return -1.0
+	var first: BattleUnit = victims[0]
+	match skill:
+		&"mazz_bite": return grotesque_fx.play_mazz_bite(attacker, first)
+		&"fang_sting": return grotesque_fx.play_fang_sting(attacker, first)
+		&"fang_spine": return grotesque_fx.play_fang_spine(attacker, victims)
+		&"vuln_pierce": return grotesque_fx.play_vuln_pierce(attacker, first, first.passive_stance or _defender_defending)
+		&"umbral_gaze": return grotesque_fx.play_umbral_gaze(attacker, first)
+		&"ignoma": return grotesque_fx.play_ignoma(attacker, first)
+		&"ignoma_esh": return grotesque_fx.play_ignoma_esh(attacker, victims)
+	return -1.0
+
+
+## Waits for the impact moment of hit `index` of the choreography started at `start`, then the hit lands.
+func _gfx_wait(start: float, skill: StringName, index: int) -> void:
+	if start < 0.0:
+		return
+	var age := 0.0
+	match skill:
+		&"mazz_bite": age = grotesque_fx.HIT_MAZZ
+		&"fang_sting": age = grotesque_fx.HIT_STING
+		&"fang_spine": age = grotesque_fx.HIT_SPINE[mini(index, 1)]
+		&"vuln_pierce": age = grotesque_fx.HIT_VULN
+		&"umbral_gaze": age = grotesque_fx.HIT_UMBRAL
+		&"ignoma": age = grotesque_fx.HIT_IGNOMA
+		&"ignoma_esh": age = grotesque_fx.HIT_ESH[mini(index, 1)]
+	await grotesque_fx.wait_age(start, age)
+
+
+## D-125 DARK BREATH: every target defends first (a perfect dodge keeps its eyes open and loses nothing), then the
+## breath reaches each target in turn and its effects land at that moment. `timings`: target -> attack timing.
+func _dark_breath_flow(caster: BattleUnit, targets: Array, timings: Dictionary, paid: Dictionary, reacting: bool,
+		no_rail: BattleUnit = null) -> void:
+	var live: Array = []
+	var defs := {}
+	for t in targets:
+		if not t.is_alive(): continue
+		live.append(t)
+		if t == no_rail:
+			defs[t] = BattleMath.RhythmResult.MISS
+		else:
+			var rolled: Array[int] = await _skill_defense_timing(t, caster, [0.5], bool(paid.get(t, false)))
+			defs[t] = rolled[0]
+	if live.is_empty(): return
+	var dodged: Array = []
+	for t in live:
+		if not BattleMath.has_contact(int(timings.get(t, BattleMath.RhythmResult.POINT)), int(defs[t])):
+			dodged.append(t.id)
+	var start: float = grotesque_fx.play_dark_breath(caster, live, dodged) if grotesque_fx != null else -1.0
+	for t in live:
+		if start >= 0.0:
+			await grotesque_fx.wait_age(start, grotesque_fx.breath_hit_age(caster, t))
+		_magic_hit(caster, t, &"dark_breath", reacting, int(timings.get(t, BattleMath.RhythmResult.POINT)), int(defs[t]))
 
 
 ## D-124: the second target of a dual skill (FANG SPINE / IGNOMA ESH); null = the same target.
@@ -2360,12 +2424,14 @@ func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		second = null
 		defense = await _skill_defense_timing(defender, attacker, marks, defense_paid)
 	_defender_defending = defense_paid
+	var gstart := _gfx_start(attacker, skill, [defender, second if second != null else defender])
 	var prev := -1
 	for i in marks.size():
 		var victim: BattleUnit = second if (second != null and i == 1) else defender
 		if not victim.is_alive():
 			if i > 0 or second == null: break
 			continue
+		await _gfx_wait(gstart, skill, i)
 		cross_hit = true
 		next_hit = i > 0
 		prev = _skill_hit_fx(attacker, victim, skill, i, reacting, attack[i], defense[i], magic, prev)
@@ -2389,6 +2455,11 @@ func _hero_magic(attacker: BattleUnit, skill: StringName, reacting: bool) -> voi
 	action_attacker = attacker
 	action_defender = targets[0]
 	var attack := await _skill_attack_timing(attacker, targets[0], [0.5], false)
+	if skill == &"dark_breath":
+		var all_timings := {}
+		for foe in targets: all_timings[foe] = attack[0]
+		await _dark_breath_flow(attacker, targets, all_timings, {}, reacting)
+		return
 	if skill == PrayerBook.CHEREV and prayer != null:
 		await prayer.fx.play_cherev(true)
 		if not is_inside_tree(): return
@@ -2409,13 +2480,20 @@ func _hero_skill_lands(hero: BattleUnit, counterer: BattleUnit, skill: StringNam
 	var d := SkillBook.def(skill)
 	if d.kind == "strike":
 		var prev := -1
+		var gstart := _gfx_start(hero, skill, [counterer, counterer])
 		for i in d.marks.size():
 			if not counterer.is_alive(): break
+			await _gfx_wait(gstart, skill, i)
 			cross_hit = true
 			next_hit = i > 0
 			prev = _skill_hit_fx(hero, counterer, skill, i, false, timing, BattleMath.RhythmResult.MISS, bool(d.get("magic", false)), prev)
 			cross_hit = false
 			next_hit = false
+		return
+	if skill == &"dark_breath":
+		var landed := {}
+		for foe in hud.opponents: landed[foe] = timing
+		await _dark_breath_flow(hero, hud.opponents.duplicate(), landed, {}, false, counterer)
 		return
 	var first := true
 	for foe in hud.opponents.duplicate():
@@ -2437,13 +2515,20 @@ func _enemy_skill_lands(enemy: BattleUnit, target: BattleUnit, skill: StringName
 	var d := SkillBook.def(skill)
 	if d.kind == "strike":
 		var prev := -1
+		var gstart := _gfx_start(enemy, skill, [target, target])
 		for i in d.marks.size():
 			if not target.is_alive(): break
+			await _gfx_wait(gstart, skill, i)
 			cross_hit = true
 			next_hit = i > 0
 			prev = _skill_hit_fx(enemy, target, skill, i, false, timing, BattleMath.RhythmResult.MISS, bool(d.get("magic", false)), prev)
 			cross_hit = false
 			next_hit = false
+		return
+	if skill == &"dark_breath":
+		var landed_on := {}
+		for hero in hud.players: landed_on[hero] = timing
+		await _dark_breath_flow(enemy, hud.players.duplicate(), landed_on, {}, false, target)
 		return
 	var first := true
 	for hero in hud.players.duplicate():
@@ -2488,7 +2573,7 @@ func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, i
 		if PrayerBook.is_prayer(skill):
 			if prayer != null and not prayer.fx.cherev_busy():
 				prayer.fx.play_cherev(not defender.is_player)
-		else:
+		elif not bool(d.get("grotesque", false)):
 			letter_fx.heat_hit(attacker, defender)
 		# D-106 STORM: a second bolt on the same foe, 50% of the time, with the same timing.
 		if bool(SkillFx.fx_of(skill).get("storm", false)) and defender.is_alive() and _fx_roll(50):

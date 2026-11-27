@@ -154,3 +154,14 @@ Qualquer novo ataque não-reza adicionado ao jogo só é considerado entregue ap
 - **Warp do alvo:** inimigo ganha um sprite sobreposto com o shader (o HUD esconde a silhueta preta enquanto isso); o cartão do herói ondula pela mesma equação.
 - **Paletas:** `palette_for(família, is_zahav)`; o ouro `#ffd84a` só sai com `is_zahav == true`. Leitura adotada, a confirmar: `abyss` + ZAHAV (sem paleta definida no guia) troca só a crista para ouro.
 - **Limite conhecido:** o motor não desenha as formas dos ataques (mandíbula, ferrão, vértebras, olhos de cada skill); isso entra nas Fases 4 e 5.
+
+## 8. Fases 4 e 5 implementadas (2026-11-27) — as 8 coreografias
+
+`play_mazz_bite`, `play_fang_sting`, `play_fang_spine`, `play_vuln_pierce`, `play_dark_breath`, `play_umbral_gaze`, `play_ignoma` e `play_ignoma_esh` em `scripts/battle/skill_grotesque_fx.gd`, ligadas ao `playable_controller.gd` (herói e inimigo, inclusive depois de contra-ataque). A mecânica só é aplicada no **momento de impacto** da coreografia (`HIT_*`). Teste `tests/verify_d124_vfx.gd` (102 checks); quadros em `tools/capture_d124_skills.gd`; vídeos reais com `tools/record_d124_skill.gd`. Validação visual: do criador. Leituras adotadas, a confirmar:
+
+- **Escala:** as formas do HTML são multiplicadas por `k` = altura do sprite do alvo / 100 (o inimigo do HTML tem 100 px; os sprites do jogo são ~2× maiores). Tempos, envelopes e a grade de 5 px do Moiré são os do HTML.
+- **Alvo herói:** o §2.5 proíbe cobrir cartões e Battle Log, mas o §3.4 manda os projéteis irem "até o cartão do herói". Adotei: o efeito acontece na coluna do cartão, na borda de baixo do palco (nunca sobre o cartão); o cartão ondula no warp.
+- **Dark Breath inimigo:** a boca de perfil fica na direita, no meio do palco, soprando para a esquerda; o olho riscado em X de quem não desviou aparece na borda de baixo do palco.
+- **Mini barra HIGH SPEED do HTML** não foi duplicada (a barra real de ritmo já cumpre esse papel).
+- **Ignoma Esh em 1 alvo:** as duas bolas usam arcos de 52 e 82 px; as letras hebraicas do impacto ficam presas ao palco.
+- O impacto ainda mostra o número de dano padrão do jogo por cima da coreografia.
