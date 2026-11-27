@@ -1576,7 +1576,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     na D-049 (teto 4, D-005).
 - **Itens abençoados:** consumíveis que dão efeitos e PP quando usados no aliado (Yoch).
 - **PENDENTES:** lista, efeitos e PP dos itens abençoados (não implementados); sistema de
-  condições de status bloqueadas pelo Haganah; efeitos de raça e classificação dos anjos.
+  condições de status bloqueadas pelo Haganah; efeitos mecânicos de raça (classificação de lore dos anjos definida pela D-126, GDD §15).
   A fórmula do Ra'am foi definida pelo criador em 2026-11-23 (abaixo).
 - **Implementação (D-048 / D-112 / D-113 / D-115):** IMPLEMENTADO no `BattlePlayable` (só nele; a cena antiga
   `Battle.tscn` não conta, por decisão do criador). Regras em `scripts/core/prayer_book.gd`,
@@ -1595,7 +1595,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     disponível.
   - **Ra'am:** dano = **10 + MAK + 10 por PP extra − MEF do alvo**, com barra de ritmo como o
     ATTACK (D-109: marco 50/80/100%, desvio só com defesa no centro, defesa na lateral = metade), crítico, rolagem de SP, variação, e o mesmo
-    tratamento de ato do ATTACK (sem afinidade, D-119). Anjo: sem efeito (nenhum anjo existe ainda).
+    tratamento de ato do ATTACK (sem afinidade, D-119). Anjo: sem efeito (a observação histórica de ausência de anjos no protótipo não implica ausência de anjos na lore; D-126, GDD §15).
   - **IA:** cada inimigo com ato de reação ataca o PRAY com **33%**; o inimigo atingido pelo
     Ra'am contra-ataca com **33%** (barra dupla da D-049). Vários inimigos: **todos atacam**;
     qualquer contato (POINT ou **BEAM**) interrompe; só o **primeiro** que acertou ganha os atos
@@ -1623,9 +1623,9 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     (hoje: sem efeito, ato gasto, PP voltam).
 
 ## Raças — D-048; DESIGN, NÃO IMPLEMENTADO
-- Em **Maesto** (mundo): humanos, animais, monstros e demônios. No jogo, também a
+- Em **Maesto**: humanos, animais, monstros e demônios (classificação do universo, D-048). Na época de EXODUS, animais ainda não estão presentes (D-126, GDD §15). No jogo, também a
   "raça" mecânica **Mazik** (inimigos mais genéricos).
-- Fallen: demônio. Yoch: humano. Efeitos de raça além da Reza: **PENDENTE**.
+- Fallen (Deviron/Samael): Daema, primeiro devilman. Todos os anjos são Daemas na lore (D-126), sem mudança de classificação mecânica. Yoch: humano. Efeitos de raça além da Reza: **PENDENTE**.
 
 ## IA
 - Inimigos: aleatório ponderado entre ataque e habilidades.

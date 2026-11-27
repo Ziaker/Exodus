@@ -6,7 +6,7 @@ Guia de referência para ambientação do dungeon crawler e geração procedural
 
 ## 1. Norte estético
 
-Maesto deve evocar desolação metafísica, monumentalidade mineral, silêncio e inquietação espiritual. O mundo parece envelhecido por sua própria existência, não necessariamente por uma catástrofe tecnológica. Um caminho de terra ocre atravessa grandes massas rochosas sob um firmamento rubro escuro. O ambiente é hostil, mas legível.
+Na época retratada em EXODUS, Maesto deve evocar desolação metafísica, monumentalidade mineral, silêncio e inquietação espiritual. Conforme D-126 (GDD §15), o restante do universo possui tom de fantasia alto-astral; a raça dos animais ainda não está presente nessa época. O mundo parece envelhecido por sua própria existência, não necessariamente por uma catástrofe tecnológica. Um caminho de terra ocre atravessa grandes massas rochosas sob um firmamento rubro escuro. O ambiente é hostil, mas legível.
 
 Referências máximas indicadas pelo diretor:
 - **Zdzisław Beksiński:** linguagem de formas erodidas, paisagens mortas, monumentalidade inquietante, organicidade fossilizada e atmosfera fúnebre. Extrair princípios de composição, não copiar pinturas.

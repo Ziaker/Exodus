@@ -35,7 +35,8 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
   * **3 regras globais canônicas (`D-124`):** `HIGH SPEED` (ponteiro 20% mais rápido e vantagem no contra-ataque), `BLEED` canônico (−20% cura recebida até o fim do próximo turno, acumula 4×) e `Temporização de ação` (dura X ações após o efeito; aprisionamento age como `PASS` automático perdendo a fila atual).
 
 ### 1.4 Personagens, raças, lore e mundo
-* **Personagens e raças (`D-048`, `D-050`):** **Fallen / Deviron** (demônio), **Yoch** (humano), **Maziks** (inimigos de silhueta com simetria perfeita), **Anjos** (imunes a Ra'am; classificação pendente).
+* **Personagens e raças (`D-048`, `D-050`, `D-126`):** **Fallen / Deviron / Samael** (Daema, primeiro devilman), **Yoch** (humano), **Maziks** (inimigos de silhueta com simetria perfeita), **Anjos** (todos Daemas; imunes a Ra'am).
+* **Cosmologia (`D-126`):** Maesto é o universo e o criador desconhecido nessa época; Daemas são únicos e imortais e originam espécies com capacidades herdadas mais fracas; Deviron absorve e se funde com outros seres. Humanos, anjos e Deviron fazem parte dos experimentos descritos no [GDD §15](GDD.md#15-cosmologia-e-teologia--confirmado--pendente); animais ainda não estão presentes. O tom sombrio é restrito à época de EXODUS.
 * **Locais e exploração (`D-050`, `D-054`, `D-062`, `D-063`):** Prólogo ([`docs/PROLOGUE_SCRIPT.md`](PROLOGUE_SCRIPT.md)), abertura na **cratera de areia branca** (`D-063`), **Cafarnaum** em vista superior com saída para mapa-múndi (`D-062`), overworld em dungeon crawler 1ª pessoa (`D-054`).
 
 ---

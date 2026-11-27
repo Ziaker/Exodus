@@ -81,7 +81,7 @@ EXODUS é um RPG autoral de fantasia sombria com referências visuais e conceitu
 Shin Megami Tensei I e II. As referências não devem ser reproduzidas integralmente;
 a identidade do projeto depende de seus próprios sistemas, narrativa, atmosfera e conflitos.
 
-O protagonista, **Fallen**, é um demônio cujo nome verdadeiro ainda não foi revelado.
+O protagonista, **Fallen**, é **Deviron**, também chamado de **Samael**, o primeiro devilman (D-126). O momento de revelação de seu nome na narrativa permanece pendente.
 Ele cai do céu e afunda em um mar de areia branca, sob um céu vermelho-escuro, em um
 mundo fantasioso e desolado. Sua existência é marcada por uma vontade insaciável de se
 tornar superior. Fallen promete a **THÉOS** que absorverá todos os anjos e retornará ao céu.
@@ -89,6 +89,8 @@ tornar superior. Fallen promete a **THÉOS** que absorverá todos os anjos e ret
 A narrativa utiliza releituras fantasiosas, caóticas e autorais dos três reis magos,
 de Herodes e de uma figura equivalente a Jesus. Definições definitivas dessas entidades
 **não** foram aprovadas.
+
+O tom de fantasia sombria pertence especificamente à época de EXODUS, não a todo o universo de Maesto; o restante do universo tem tom de fantasia alto-astral (D-126). A cosmologia autoral está no §15.
 
 ### 1.2 Identidade mecânica — **CONFIRMADO**
 
@@ -1502,22 +1504,18 @@ regras definitivas pendentes. Inventário, moeda e drop rules: **PENDENTE**.
 
 ## 13. Personagens, criaturas e facções — **PENDENTE**
 
-Nomeados sem definição oficial: Fallen, THÉOS. Não há nomes, papéis ou hierarquias
-aprovados para os três reis magos, Herodes, a figura equivalente a Jesus, anjos
-ou demônios específicos. Nenhuma facção foi formalizada.
+Fallen tem identidade definida pela D-126 (§15); a natureza de THÉOS permanece pendente. As definições narrativas definitivas dos três reis magos, Herodes e da figura equivalente a Jesus permanecem pendentes. Nenhuma facção foi formalizada.
 
 ### 13.1 D-048 — raças e o aliado Yoch — **CONFIRMADO**
 
 - **Yoch** é o nome do aliado jogável a partir de 2026-11-22 (antes "Ally"/"aliado
   placeholder"). Raça: **humano**. Usa o sistema de Reza (§9.1).
-- **Fallen** é **demônio**.
-- Em **Maesto** (nome do mundo/cenário) existem **4 raças**: humanos, animais,
-  monstros e demônios.
+- **Fallen (Deviron/Samael)** é um Daema, o primeiro devilman (D-126).
+- A classificação de Maesto em quatro raças (humanos, animais, monstros e demônios) é a definição anterior D-048 para o universo; animais ainda não estão presentes na época de EXODUS (D-126).
+- Todos os anjos de Maesto são Daemas (D-126; §15). Essa classificação de lore não altera categorias mecânicas.
 - No jogo existe ainda a "raça" mecânica dos **Maziks**, os inimigos mais genéricos.
   A raça Mazik é uma categoria de mecânica.
-- **PENDENTE:** efeitos mecânicos de cada raça (exceto a Reza dos humanos), a serem
-  discutidos depois; também a classificação dos anjos, citados pela restrição do
-  Ra'am, em relação às raças.
+- **PENDENTE:** efeitos mecânicos de cada raça (exceto a Reza dos humanos), a serem discutidos depois.
 
 ---
 
@@ -1553,15 +1551,24 @@ A história de **EXODUS** aborda **simetria**, **perfeição** e **falsos Messia
 
 **Maziks:** os Maziks são os **inimigos de silhueta** e possuem **simetria perfeita**. A perfeição simétrica dos Maziks deve ser distinguida do sentido de perfeição acima estabelecido. Essa definição descreve sua característica visual/temática; **não** determina origem, natureza espiritual, comportamento, hierarquia ou novas regras de combate.
 
-**PENDENTE:** identidade, origem, função e relação do falso Jesus com outras figuras ou THÉOS; natureza, origem e relação dos anjos caídos com as raças existentes; explicação cosmológica da simetria dos Maziks; consequências narrativas ou mecânicas desses temas. Não converter interpretações editoriais anteriores (por exemplo, Maziks sem alma, produto de uma força criadora ou falso Messias necessariamente simétrico) em cânone sem aprovação explícita.
+**PENDENTE:** identidade, origem, função e relação do falso Jesus com outras figuras ou THÉOS; natureza específica, origem e relação dos anjos caídos com as raças existentes, respeitando a classificação dos anjos como Daemas (D-126); explicação cosmológica da simetria dos Maziks; consequências narrativas ou mecânicas desses temas. Não converter interpretações editoriais anteriores (por exemplo, Maziks sem alma, produto de uma força criadora ou falso Messias necessariamente simétrico) em cânone sem aprovação explícita.
 
 ---
 
-## 15. Cosmologia e teologia — **PENDENTE**
+## 15. Cosmologia e teologia — **CONFIRMADO / PENDENTE**
 
-THÉOS existe como entidade citada na promessa de Fallen. Atributos, hierarquia
-celestial, natureza dos anjos, relação entre céu, areia e superioridade: **PENDENTE**.
-Nenhuma definição foi inventada neste GDD.
+### 15.1 D-126 — Cosmologia e identidade de Deviron — **CONFIRMADO PELO DIRETOR (2026-11-25)**
+
+- **Maesto** é tanto o nome do universo quanto o de seu criador. Na época de EXODUS, sua existência ainda é desconhecida. Maesto estava testando a criação dos humanos em seu próprio universo, por serem uma raça nova em experimentação. Os anjos também são experimentos.
+- **Daemas** são os demônios reais de Maesto: seres únicos e imortais. O termo Daema ainda não existe na época de EXODUS. Todos os anjos de Maesto também são Daemas.
+- Os Daemas dão origem a espécies de outras raças ao procriarem. Essas espécies herdam uma versão mais fraca da capacidade do Daema original, denominada capacidade de espécie em épocas posteriores. O termo capacidade de espécie ainda não existe na época de EXODUS.
+- **Deviron**, também chamado **Samael** (Fallen), é o primeiro devilman, um Daema e o primeiro teste de Maesto de um demônio baseado em humano. Normalmente os demônios são baseados em animais. A capacidade de Deviron é a absorção e o fundimento/fusão com outros seres.
+- A raça dos animais ainda não está presente nessa época, pois o foco era unicamente o teste de criação de humanos.
+- Somente a época retratada em EXODUS é sombria; o restante do universo de Maesto possui tom de fantasia alto-astral.
+
+### 15.2 Questões não definidas — **PENDENTE**
+
+THÉOS existe como entidade citada na promessa de Fallen. Sua identidade, relação com Maesto, atributos, hierarquia celestial e relação entre céu, areia e superioridade permanecem pendentes. Também permanecem indefinidos o momento de revelação dos nomes de Deviron, o mecanismo detalhado de procriação dos Daemas e o destino de um Daema imortal após a absorção/fusão. Esta decisão não altera as regras de combate ou de absorção existentes.
 
 ---
 
@@ -2177,7 +2184,7 @@ rodada.
 28. **D-048:** Reza de Yoch (PP) e renome do aliado **IMPLEMENTADOS** no
     BattlePlayable em 2026-11-23 (raças: só a marca `race`). Pendentes: lista,
     efeitos e PP dos itens abençoados; sistema de condições de status bloqueadas
-    pelo Haganah; efeitos mecânicos das raças e classificação dos anjos; como
+    pelo Haganah; efeitos mecânicos das raças (classificação de lore dos anjos confirmada pela D-126); como
     Fallen obtém magias; efeito visual do Ra'am (o criador pediu 3 opções em
     protótipo: raio de letras hebraicas + duas originais, no lugar do Zio), marca
     da Haganah e VFX de PRAY/Refuah/Haganah (protótipos em `prototypes/pray-vfx`);
@@ -3295,3 +3302,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
 - **D-125 · 2026-11-27 (decisão do criador) — estética visual canônica dos ataques não-reza (Anatômico Grotesco de Rabisco + Interferência Hipnótica) e regra de outline dourado `ZAHAV`.**
   Todo ataque não-reza adota como linguagem visual unificada o **Anatômico Grotesco de Rabisco (12 FPS, silhueta negra + traço orgânico)** combinado com **Interferência Hipnótica (Moiré / ondas febris)** em paleta sombria (sem neon). O **outline dourado só existe quando o ataque é realizado através de `ZAHAV`**; ataques normais usam suas cores naturais. Apenas ataques híbridos com palavra hebraica (ex.: `Ignoma Esh`) usam letras hebraicas (`אש`). A estética de **Geometria** fica reservada para alguns outros anjos. Aprovados visualmente na rodada v2: `Mazz Bite`, `Fang Sting`, `Vuln Pierce` (sem dourado) e `Umbral Gaze` (versão mais escura).
   Impacto: `docs/CANON_SKILLS_D124.md`, `docs/DECISIONS.md`, `docs/GDD.md`.
+
+- **D-126 · 2026-11-25 (lore do criador; registro em 2026-11-27) — identidade de Deviron e cosmologia de Maesto.**
+  **CONFIRMADO:** Deviron (Fallen), também chamado Samael, é o primeiro devilman e um Daema; sua capacidade é absorção e fundimento com outros seres. Daemas são demônios reais, únicos e imortais; todos os anjos também são Daemas. Ao procriar, dão origem a espécies de outras raças, que herdam uma versão mais fraca de sua capacidade original. Os termos Daema e capacidade de espécie ainda não existem na época de EXODUS. Maesto é o universo e seu criador, cuja existência é desconhecida nessa época. Humanos são uma raça nova em teste; anjos também são experimentos; Deviron é o primeiro teste de demônio de humano, enquanto normalmente demônios são baseados em animais. A raça dos animais não está presente nessa época, pois o foco era unicamente o teste de criação de humanos. Apenas essa época é sombria; o restante do universo é fantasia alto-astral.
+  **PENDENTE:** relação de THÉOS com Maesto, revelação dos nomes ao jogador e detalhes não especificados da procriação e imortalidade diante da absorção. Nenhuma proposta editorial do estudo bíblico é canonizada por esta decisão. Impacto: `docs/GDD.md` (§§1.1, 13, 15 e Apêndice A), `docs/DECISIONS.md`, `docs/CANON_BOUNDARY.md`, `docs/ART_DIRECTION.md`, `docs/COMBAT_SPEC.md` (apenas remissões de lore).
