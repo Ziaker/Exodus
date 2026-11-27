@@ -21,6 +21,11 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
   * Criadas em `D-107` e confirmadas canônicas (`D-115`): **Sanverim**, **Nechamah**, **Cherev**.
   * Criadas em `D-112` e confirmadas canônicas (`D-115`): **Tahorah**, **Magen**, **Gevurah**, **Mishpat**, **Zohar**.
   * *(Forma e momento de desbloqueio das 8 rezas além das 3 iniciais na campanha: **PENDENTE**.)*
+* **Expansão canônica em design (`D-118`, [`docs/ANGEL_PRAYERS_AND_ZAHAV.md`](ANGEL_PRAYERS_AND_ZAHAV.md) — NÃO IMPLEMENTADO):**
+  * **8 novas rezas (PP):** `Esh`, `Shalhevet`, `Lehavah`, `Nogah`, `Chaki`, `Lior`, `Meir`, `Shachar`.
+  * **6 magias de Anjos** (EN para anjos; Yoch aprende em PP ao derrotar um anjo): `Ur Esh`, `Seraf`, `Nitzotz`, `Esh Ochelet`, `Esh Sinai`, `Gever`.
+  * **6 skills de Gabriel:** `Angel Hug`, `God's Message`, `Hasneh Habo'er`, `Adin` → `Adina` → `Adinut`.
+  * **Regra `IMEDIATO`** (resolve ao anunciar, sem reação) e **sistema `ZAHAV`** (metade do jogo; botão `A`; +2 estágios de dano e +20% chance de efeito por 20 SP após concluir; evolução com nome dourado; acessível a Anjos e elites).
 * **VFX canônicos (`D-052`, `D-113`):** absorção em letras hebraicas (`absorb_vfx.gd`) e **regra obrigatória de VFX 100% letras hebraicas** para todas as rezas ([`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md), `pray_fx.gd`).
 
 ### 1.3 Skills canônicas do Prólogo (`D-050`, `D-117`)

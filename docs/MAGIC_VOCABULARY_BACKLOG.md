@@ -12,11 +12,12 @@
 
 A filosofia central é nomear magias não apenas pelo fenômeno físico que produzem, mas pelo **significado daquilo que realizam**, construindo um vocabulário reconhecível próprio de EXODUS (análogo a *Agi/Bufu/Zio/Recarm* em SMT, mas com identidade hebraica).
 
-### 0.1 Rezas já canônicas no projeto (11 — D-048 / D-107 / D-112 / D-115)
-Qualquer adição futura deve respeitar estas 11 rezas já implementadas em `scripts/core/prayer_book.gd` (todas sujeitas a VFX 100% letras hebraicas pela D-113):
-- **D-048:** `Refuah` (רְפוּאָה), `Haganah` (הֲגָנָה), `Ra'am` (רַעַם).
-- **D-107 / D-115:** `Sanverim` (סַנְוֵרִים), `Nechamah` (נֶחָמָה), `Cherev` (חֶרֶב).
-- **D-112 / D-115:** `Tahorah` (טָהֳרָה), `Magen` (מָגֵן), `Gevurah` (גְּבוּרָה), `Mishpat` (מִשְׁפָּט), `Zohar` (זֹהַר).
+### 0.1 Rezas já canônicas no projeto (D-048 / D-107 / D-112 / D-115 / D-118)
+Qualquer adição futura deve respeitar as rezas já implementadas em `scripts/core/prayer_book.gd` (11) e as confirmadas em design na **D-118** (`docs/ANGEL_PRAYERS_AND_ZAHAV.md`), todas sujeitas a VFX 100% letras hebraicas pela D-113:
+- **D-048 (implementadas):** `Refuah` (רְפוּאָה), `Haganah` (הֲגָנָה), `Ra'am` (רַעַם).
+- **D-107 / D-115 (implementadas):** `Sanverim` (סַנְוֵרִים), `Nechamah` (נֶחָמָה), `Cherev` (חֶרֶב).
+- **D-112 / D-115 (implementadas):** `Tahorah` (טָהֳרָה), `Magen` (מָגֵן), `Gevurah` (גְּבוּרָה), `Mishpat` (מִשְׁפָּט), `Zohar` (זֹהַר).
+- **D-118 (confirmadas em design):** `Esh`, `Shalhevet`, `Lehavah`, `Nogah`, `Chaki`, `Lior`, `Meir`, `Shachar` + angelicais (`Ur Esh`, `Seraf`, `Nitzotz`, `Esh Ochelet`, `Esh Sinai`, `Gever`) e Gabriel (`Hasneh Habo'er`, `Adin`→`Adina`→`Adinut`).
 
 ---
 
@@ -52,15 +53,13 @@ Voltadas a dar identidade própria ao dungeon crawler além do combate.
 
 ---
 
-## 3. Magias ofensivas elementais (14 candidatos)
+## 3. Magias ofensivas elementais (12 candidatos)
 
-*(Exclui `Ra'am`, já canônica na §0.1, e `Nogah`, removida por sobreposição com `Zohar`/`Cherev`.)*
+*(Exclui `Ra'am` [D-048] e `Esh`, `Lehavah`, `Nogah` [promovidas a canônicas em D-118].)*
 
 | Nome | Hebraico | Significado | Efeito proposto | Status / Observação |
 |---|---|---|---|---|
-| **Esh** | אֵשׁ | Fogo | Combustão. | Candidato |
 | **Lahav** | לַהַב | Chama, lâmina | Chama cortante. | Candidato |
-| **Lehavah** | לֶהָבָה | Labareda | Explosão de fogo. | Candidato |
 | **Barak** | בָּרָק | Relâmpago | Descarga elétrica. | Candidato |
 | **Sheleg** | שֶׁלֶג | Neve | Congelamento. | Candidato |
 | **Kerach** | קֶרַח | Gelo | Formação de cristais de gelo. | Candidato |
