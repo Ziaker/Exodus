@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-1.5 select-none">
+    <!-- Barra 1: Mark of Sun v2 em destaque + 6 aprovados -->
+    <div class="flex flex-wrap items-center justify-between gap-1.5 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex flex-wrap items-center gap-1">
+        <button data-skill="mark_of_sun" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">5 Mark of Sun <span class="opacity-75">v2</span></button>
+        <span class="mx-0.5 text-[var(--border)]">|</span>
+        <button data-skill="stone_crush" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">1 Stone Crush ✓</button>
+        <button data-skill="energy_blow" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">2 Energy Blow ✓</button>
+        <button data-skill="drain_claw" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">3 Drain Claw ✓</button>
+        <button data-skill="vital_claws" data-zahav="1" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">✦ Vital Claws ✓</button>
+        <button data-skill="weaken" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">4 Weaken ✓</button>
+        <button data-skill="weakenen" data-zahav="1" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">✦ Weakenen ✓</button>
+      </div>
+    </div>
+
+    <!-- Barra 2: Modo de Alvo (Inimigos vs 3 Aliados Survival — D-137) + Controles -->
+    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-1">
+        <span class="text-[var(--muted-foreground)] mr-0.5">Alvo:</span>
+        <button data-side="allies" class="side-btn px-2 py-0.5 rounded font-medium border border-[var(--border)] transition">Aliados Survival (3 cartões)</button>
+        <button data-side="foes" class="side-btn px-2 py-0.5 rounded font-medium border border-[var(--border)] transition">Inimigos (3)</button>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="btn-replay" class="px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">↻ Replay</button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">1.0×</button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS (3 cartões Survival na base) -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="360" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda -->
+    <div class="flex items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text" class="truncate"></span>
+      <span id="badge-text" class="font-mono text-[11px] opacity-80 shrink-0"></span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const BAYER = [
+      [0,  8,  2, 10],
+      [12, 4, 14,  6],
+      [3, 11,  1,  9],
+      [15, 7, 13,  5]
+    ];
+
+    // Paletas D-125 estritas: ZERO dourado em normais; #ffd84a EXCLUSIVO em ZAHAV
+    const PALS = {
+      stone:      { accent: '#6d5e52', hi: '#d9cfc2', deep: '#16110e' },
+      energy:     { accent: '#553675', hi: '#c9bde0', deep: '#0b0514' },
+      blood:      { accent: '#a81c2e', hi: '#efe6d5', deep: '#24050a' },
+      zahavBlood: { accent: '#a81c2e', hi: '#ffd84a', deep: '#26080d' },
+      blueStat:   { accent: '#25568a', hi: '#9fc9ec', deep: '#061124' },
+      zahavBlue:  { accent: '#2b669e', hi: '#ffd84a', deep: '#08162b' },
+      sunNormal:  { accent: '#c94c14', hi: '#f2d9b6', deep: '#240903' }
+    };
+
+    const SKILLS = {
+      mark_of_sun: {
+        label: 'MARK OF SUN',
+        title: 'MARK OF SUN v2 · 4ACT / 20EN / STAT / 1T · SOL NO CANTO DO CARTÃO (LOG LIVRE) · SEM TRIÂNGULOS · CLARÃO SOLAR AO LEVAR DANO',
+        badge: 'V2 AJUSTADO · NORMAL · 3 HITS',
+        logFoe:  ['A scorching sketched sun ignites above the foe!', 'MARK OF SUN (3 HITS): +20 MAGI per hit until next round end!'],
+        logAlly: ['A scorching sketched sun marks YOCH without covering the log!', 'YOCH marked (3 HITS): +20 MAGI per hit until next round end!'],
+        duration: 2.95,
+        zahav: false
+      },
+      stone_crush: {
+        label: 'STONE CRUSH',
+        title: 'STONE CRUSH ✓ · 4ACT / 0EN / PHYS / 1T · ARREMESSO DE ROCHA · 30 PHYS (+ATK)',
+        badge: 'APROVADO · PHYS · 1T',
+        logFoe:  ['FALLEN hurls a massive jagged monolith at the foe!', 'Foe is crushed: 38 PHYS damage!'],
+        logAlly: ['The foe hurls a massive jagged monolith onto YOCH!', 'YOCH is crushed: 38 PHYS damage!'],
+        duration: 2.55,
+        zahav: false
+      },
+      energy_blow: {
+        label: 'ENERGY BLOW',
+        title: 'ENERGY BLOW ✓ · 3ACT / 0EN / MAGI / 1T · COND: VULNERÁVEL / ≤1/4 HP · 25 DMG + MAK + 50% EN MÁX.',
+        badge: 'APROVADO · MAGI · DMG',
+        logFoe:  ['COND met (VULNERABLE)! Raw untyped force erupts inside the foe!', '33 DMG dealt — 50% MAX EN stolen until battle end!'],
+        logAlly: ['COND met (VULNERABLE)! Raw untyped force erupts inside YOCH!', 'YOCH takes 33 DMG — 50% MAX EN stolen until battle end!'],
+        duration: 2.65,
+        zahav: false
+      },
+      drain_claw: {
+        label: 'DRAIN CLAW',
+        title: 'DRAIN CLAW ✓ · 2ACT / 15EN / PHYS / 1T · 1 GARRA FINCA NO ALVO + DRENO LIMPO (80% CURA)',
+        badge: 'APROVADO · NORMAL · PHYS',
+        logFoe:  ['A sharp claw drives into the foe!', '35 HP drained — FALLEN recovers +28 HP (80%)!'],
+        logAlly: ['A sharp claw drives into YOCH!', 'YOCH loses 35 HP — the foe recovers +28 HP (80%)!'],
+        duration: 2.25,
+        zahav: false
+      },
+      vital_claws: {
+        label: 'VITAL CLAWS',
+        title: 'VITAL CLAWS ✓ [ZAHAV] · 3ACT / 25EN / PHYS / 1T · 2 GARRAS FINCAM NO ALVO + DRENO (HP + 15 EN)',
+        badge: 'APROVADO · ZAHAV · OURO',
+        logFoe:  ['ZAHAV! Two golden-etched claws pierce into the foe!', '50 HP & 15 EN drained!'],
+        logAlly: ['ZAHAV! Two golden-etched claws pierce into YOCH!', 'YOCH loses 50 HP & 15 EN!'],
+        duration: 2.40,
+        zahav: true
+      },
+      weaken: {
+        label: 'WEAKEN',
+        title: 'WEAKEN ✓ · 1ACT / 10EN / STAT / 1T · ESFERA AZUL · -MEF (5 + 50% MAK, TETO -50%, DISPELL)',
+        badge: 'APROVADO · STAT · 1T',
+        logFoe:  ['A feverish blue orb collapses into the foe!', 'MEF reduced (-9, stacks up to -50% base, dispellable)!'],
+        logAlly: ['A feverish blue orb collapses onto YOCH!', 'YOCH MEF reduced (-9, stacks up to -50% base, dispellable)!'],
+        duration: 2.45,
+        zahav: false
+      },
+      weakenen: {
+        label: 'WEAKENEN',
+        title: 'WEAKENEN ✓ [ZAHAV] · 2ACT / 15EN / STAT / 2T · ESFERA MAIOR DISPARA 2 ESFERAS',
+        badge: 'APROVADO · ZAHAV · 2T',
+        logFoe:  ['ZAHAV! A larger blue-gold orb fires at two targets!', 'Both targets lose MAK & MEF (-14, cap -50%, dispellable)!'],
+        logAlly: ['ZAHAV! A larger blue-gold orb fires at FALLEN & PIXIE!', 'Both allies lose MAK & MEF (-14, cap -50%, dispellable)!'],
+        duration: 2.50,
+        zahav: true
+      }
+    };
+
+    const FOES = [
+      { id: 'A', x: 224, y: 146, w: 62, h: 100 },
+      { id: 'B', x: 408, y: 138, w: 70, h: 110 },
+      { id: 'C', x: 592, y: 146, w: 62, h: 100 }
+    ];
+
+    const ALLIES = [
+      { id: 'FALLEN', name: '▸ FALLEN', rx: 14,  ry: 298, rw: 256, rh: 52, hp: 72, maxHp: 100, resLabel: 'EN', res: 28, maxRes: 40, resCol: '#8ad8ff', x: 142, y: 324, w: 70, h: 52 },
+      { id: 'YOCH',   name: 'YOCH',     rx: 280, ry: 298, rw: 256, rh: 52, hp: 74, maxHp: 74,  resLabel: 'PP', res: 6,  maxRes: 8,  resCol: '#f5f58c', x: 408, y: 324, w: 70, h: 52 },
+      { id: 'PIXIE',  name: 'PIXIE',    rx: 546, ry: 298, rw: 256, rh: 52, hp: 56, maxHp: 56,  resLabel: 'EN', res: 32, maxRes: 36, resCol: '#8ad8ff', x: 674, y: 324, w: 70, h: 52 }
+    ];
+
+    let activeSkill = 'mark_of_sun';
+    let targetSide = 'allies'; // abre direto no modo Aliados para inspecionar o Mark of Sun com o log livre!
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function hash(n) {
+      const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+      return s - Math.floor(s);
+    }
+
+    function getScene() {
+      if (targetSide === 'foes') {
+        return { isAllyTarget: false, caster: { x: ALLIES[0].x, y: 248 }, t1: FOES[1], t2List: [FOES[0], FOES[2]], t1Idx: 1 };
+      }
+      return { isAllyTarget: true, caster: { x: FOES[1].x, y: FOES[1].y + 8 }, t1: ALLIES[1], t2List: [ALLIES[0], ALLIES[2]], t1Idx: 1 };
+    }
+
+    function initSkill(id) {
+      activeSkill = id;
+      t = 0;
+      fx = {};
+      if (id === 'stone_crush') {
+        fx.debris = Array.from({ length: 14 }, (_, i) => {
+          const a = -Math.PI * 0.92 + (i / 13) * Math.PI * 0.84 + (hash(i * 17) - 0.5) * 0.18;
+          const sp = 110 + hash(i * 31) * 195;
+          return { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 45, r: 5 + hash(i * 19) * 10, rot: hash(i * 13) * Math.PI * 2, vr: (hash(i * 23) - 0.5) * 8 };
+        });
+        fx.cracks = Array.from({ length: 7 }, (_, i) => ({ a: (i / 7) * Math.PI * 2 + hash(i * 11) * 0.4, len: 38 + hash(i * 29) * 56 }));
+      } else if (id === 'energy_blow') {
+        fx.strands = Array.from({ length: 16 }, (_, i) => ({
+          delay: 0.64 + (i / 16) * 0.48, arc: (hash(i * 19) - 0.5) * 110, ox: (hash(i * 7) - 0.5) * 40, oy: (hash(i * 13) - 0.5) * 52, life: 0.72 + hash(i * 29) * 0.32
+        }));
+      } else if (id === 'drain_claw') {
+        fx.drops = Array.from({ length: 6 }, (_, i) => ({
+          delay: 0.44 + i * 0.12, arc: -20 - hash(i * 19) * 34, sz: 4.5 + hash(i * 13) * 3, life: 0.58
+        }));
+      } else if (id === 'vital_claws') {
+        fx.hpDrops = Array.from({ length: 6 }, (_, i) => ({
+          delay: 0.54 + i * 0.12, arc: -22 - hash(i * 19) * 38, sz: 4.5 + hash(i * 13) * 3, life: 0.60
+        }));
+        fx.enDrops = Array.from({ length: 5 }, (_, i) => ({
+          delay: 0.60 + i * 0.13, arc: 22 + hash(i * 29) * 36, sz: 4.0 + hash(i * 7) * 2.5, life: 0.60
+        }));
+      } else if (id === 'weaken' || id === 'weakenen') {
+        fx.arrows = Array.from({ length: 7 }, (_, i) => ({
+          ox: (hash(i * 17) - 0.5) * 66, delay: (i / 7) * 0.55, spd: 44 + hash(i * 29) * 32, len: 13 + hash(i * 11) * 11
+        }));
+      }
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.sk-btn').forEach(btn => {
+        const on = btn.dataset.skill === activeSkill;
+        const zahav = btn.dataset.zahav === '1';
+        if (on) {
+          btn.style.backgroundColor = zahav ? '#a16207' : 'var(--primary)';
+          btn.style.color = '#ffffff';
+          btn.style.borderColor = zahav ? '#ffd84a' : 'var(--primary)';
+        } else {
+          btn.style.backgroundColor = 'var(--card)';
+          btn.style.color = zahav ? '#eab308' : 'var(--foreground)';
+          btn.style.borderColor = 'var(--border)';
+        }
+      });
+      document.querySelectorAll('.side-btn').forEach(btn => {
+        const on = btn.dataset.side === targetSide;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? '#ffffff' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SKILLS[activeSkill].title;
+      document.getElementById('badge-text').textContent = (targetSide === 'allies' ? 'ALVO: 3 ALIADOS · ' : 'ALVO: INIMIGOS · ') + SKILLS[activeSkill].badge;
+    }
+
+    function drawExodusBg(time, darken = 0) {
+      ctx.fillStyle = '#240d19';
+      ctx.fillRect(0, 22, W, 152);
+      ctx.fillStyle = '#381425';
+      const step = 6;
+      for (let y = 22; y < 174; y += step) {
+        const thresh = (((y - 22) / 152) * 10) | 0;
+        for (let x = 0; x < W; x += step) {
+          if (BAYER[((y / step) | 0) & 3][((x / step + ((time * 2) | 0)) | 0) & 3] < thresh) {
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.fillStyle = '#2b1d15';
+      ctx.fillRect(0, 174, W, 74);
+      ctx.fillStyle = '#18100b';
+      for (let i = 0; i < 6; i++) ctx.fillRect(0, 178 + i * 12, W, 2);
+      if (darken > 0.01) {
+        ctx.fillStyle = `rgba(4, 1, 8, ${darken})`;
+        ctx.fillRect(0, 22, W, 226);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.08)';
+      ctx.fillRect(0, 246, W, 2);
+    }
+
+    function drawFoe(foe, inv, warpAmp, tags, dmgLabel, roleText = null) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + foe.h * 0.54, foe.w * 0.52, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const parts = [
+        [-foe.w * 0.24, -foe.h * 0.52, foe.w * 0.48, foe.h * 0.22],
+        [-foe.w * 0.30, -foe.h * 0.62, foe.w * 0.12, foe.h * 0.16],
+        [ foe.w * 0.18, -foe.h * 0.62, foe.w * 0.12, foe.h * 0.16],
+        [-foe.w * 0.44, -foe.h * 0.26, foe.w * 0.88, foe.h * 0.46],
+        [-foe.w * 0.56, -foe.h * 0.16, foe.w * 0.12, foe.h * 0.28],
+        [ foe.w * 0.44, -foe.h * 0.16, foe.w * 0.12, foe.h * 0.28],
+        [-foe.w * 0.18,  foe.h * 0.20, foe.w * 0.36, foe.h * 0.32]
+      ];
+      ctx.fillStyle = inv ? '#e8ddd0' : '#050208';
+      if (warpAmp > 0.3) {
+        for (let sy = -foe.h * 0.62; sy < foe.h * 0.54; sy += 3.5) {
+          const wx = Math.sin(sy * 0.18 + t * 20) * warpAmp + Math.cos(sy * 0.09 - t * 12) * warpAmp * 0.5;
+          parts.forEach(([px, py, pw, ph]) => {
+            if (sy >= py && sy < py + ph) ctx.fillRect(x + px + wx, y + sy, pw, 4);
+          });
+        }
+      } else {
+        parts.forEach(([px, py, pw, ph]) => ctx.fillRect(x + px, y + py, pw, ph));
+      }
+
+      if (roleText) {
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = roleText.col;
+        ctx.fillText(roleText.text, x, y - foe.h * 0.68);
+      }
+      if (tags && tags.length) {
+        ctx.textAlign = 'center';
+        tags.forEach((tg, idx) => {
+          ctx.font = 'bold 10px monospace';
+          ctx.fillStyle = tg.col;
+          ctx.fillText(tg.text, x, y + foe.h * 0.68 + idx * 12);
+        });
+      }
+      if (dmgLabel) {
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = dmgLabel.col || '#e8ddd0';
+        ctx.fillText(dmgLabel.text, x, y - 28 - dmgLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawHypnoticField(cx, cy, rx, ry, env, time, pal, darkBias = false, allowOverCards = false, minY = 22) {
+      if (env <= 0.02 || rx <= 2 || ry <= 2) return;
+      ctx.save();
+      const step = 5;
+      const maxY = allowOverCards ? H : 246;
+      const x0 = Math.max(0, ((cx - rx) / step | 0) * step);
+      const y0 = Math.max(minY, ((cy - ry) / step | 0) * step);
+      const x1 = Math.min(W, ((cx + rx) / step | 0) * step);
+      const y1 = Math.min(maxY, ((cy + ry) / step | 0) * step);
+      const irx2 = 1 / (rx * rx + 1), iry2 = 1 / (ry * ry + 1);
+      const thr = darkBias ? 0.26 : 0.30;
+      const hiThr = darkBias ? 1.55 : 1.30;
+      const accThr = darkBias ? 0.85 : 0.72;
+      for (let y = y0; y < y1; y += step) {
+        const dy = y - cy;
+        for (let x = x0; x < x1; x += step) {
+          const dx = x - cx;
+          const norm = dx * dx * irx2 + dy * dy * iry2;
+          if (norm > 1) continue;
+          const fall = 1 - Math.sqrt(norm);
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const ang = Math.atan2(dy, dx);
+          const v = Math.sin(dist * 0.21 - time * 14 + Math.sin(ang * 4 + time * 5) * 2.1)
+                  + Math.cos((dx * 0.1 - dy * 0.08) + Math.sin(y * 0.08 + time * 8) * 1.9);
+          if (v * fall * env > thr) {
+            ctx.fillStyle = v > hiThr ? pal.hi : (v > accThr ? pal.accent : (darkBias ? '#030106' : '#050208'));
+            ctx.globalAlpha = Math.min(0.92, env * fall * 1.42);
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function sketchyPoly(pts, fIdx, jitter = 2.4, close = true) {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => {
+        const jx = (hash(fIdx * 31 + i * 7) - 0.5) * jitter * 2;
+        const jy = (hash(fIdx * 47 + i * 13) - 0.5) * jitter * 2;
+        if (i === 0) ctx.moveTo(x + jx, y + jy); else ctx.lineTo(x + jx, y + jy);
+      });
+      if (close) ctx.closePath();
+    }
+
+    function drawSketchShape(pts, fIdx, pal, jitter = 2.4, fillCol = '#050208', lineW = 2.0) {
+      sketchyPoly(pts, fIdx, jitter, true);
+      if (fillCol) { ctx.fillStyle = fillCol; ctx.fill(); }
+      ctx.strokeStyle = pal.hi;
+      ctx.lineWidth = lineW;
+      ctx.stroke();
+      sketchyPoly(pts, fIdx + 77, jitter * 1.45, true);
+      ctx.strokeStyle = pal.accent;
+      ctx.lineWidth = Math.max(1.1, lineW * 0.65);
+      ctx.stroke();
+    }
+
+    function drawSketchLine(pts, fIdx, col, lineW = 2.0, jitter = 2.0) {
+      sketchyPoly(pts, fIdx, jitter, false);
+      ctx.strokeStyle = col;
+      ctx.lineWidth = lineW;
+      ctx.stroke();
+    }
+
+    function drawSketchEye(cx, cy, rx, ry, fIdx, pal, closed = false, darkIris = false) {
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * (closed ? ry * 0.18 : ry)]);
+      }
+      drawSketchShape(pts, fIdx, pal, 1.4, closed ? '#040108' : (darkIris ? '#261838' : '#b8abc9'));
+      if (!closed) {
+        const px = cx + (hash(fIdx * 13 + 5) - 0.5) * rx * 0.35;
+        const py = cy + (hash(fIdx * 19 + 9) - 0.5) * ry * 0.25;
+        const pr = Math.max(2.5, Math.min(rx, ry) * 0.42);
+        const pPts = [];
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          pPts.push([px + Math.cos(a) * pr, py + Math.sin(a) * pr]);
+        }
+        sketchyPoly(pPts, fIdx + 5, 0.9, true);
+        ctx.fillStyle = '#030106';
+        ctx.fill();
+      }
+    }
+
+    function drawSingleImpaleClaw(tipX, tipY, angle, len, fIdx, pal, alpha = 1) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(tipX, tipY);
+      ctx.rotate(angle);
+      const claw = [
+        [0, 0], [-len * 0.28, -len * 0.14], [-len * 0.65, -len * 0.18], [-len, -len * 0.08],
+        [-len * 0.92, len * 0.12], [-len * 0.52, len * 0.06], [-len * 0.22, len * 0.04]
+      ];
+      drawSketchShape(claw, fIdx, pal, 1.9, '#050208', 2.2);
+      ctx.restore();
+    }
+
+    function drawSketchOrb(cx, cy, r, fIdx, pal) {
+      for (let k = 1; k >= 0; k--) {
+        const rr = r * (0.62 + k * 0.38);
+        const pts = [];
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2 + fIdx * (k === 1 ? 0.18 : -0.16);
+          const wob = 1 + (hash(fIdx * 17 + i * 11 + k * 53) - 0.5) * 0.24;
+          pts.push([cx + Math.cos(a) * rr * wob, cy + Math.sin(a) * rr * wob]);
+        }
+        drawSketchShape(pts, fIdx + k * 23, pal, 2.0 + k * 0.6, k === 0 ? pal.deep : null, k === 1 ? 2.3 : 1.6);
+      }
+      const core = [];
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2;
+        core.push([cx + Math.cos(a) * r * 0.32, cy + Math.sin(a) * r * 0.32]);
+      }
+      sketchyPoly(core, fIdx + 91, 1.2, true);
+      ctx.fillStyle = '#030106';
+      ctx.fill();
+    }
+
+    function drawHud(logLine, topTag, isZahav, allyState = {}) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.88)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   PARTY SP 178   FOES SP 172', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+        ctx.fillText(topTag, W - 14, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.92)';
+      ctx.fillRect(14, 252, W - 28, 38);
+      ctx.fillStyle = isZahav ? 'rgba(255, 216, 74, 0.5)' : 'rgba(232, 221, 208, 0.26)';
+      ctx.fillRect(14, 252, W - 28, 1);
+      ctx.fillRect(14, 289, W - 28, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+      ctx.fillText('* ' + logLine, 26, 275);
+
+      ALLIES.forEach((al, idx) => {
+        const st = allyState[idx] || {};
+        const warp = st.warp || 0;
+        const inv = !!st.inv;
+        const ox = warp > 0.3 ? Math.sin(t * 42 + idx) * warp * 0.75 : 0;
+        const oy = warp > 0.3 ? Math.cos(t * 36 + idx) * warp * 0.40 : 0;
+        const x = al.rx + ox, y = al.ry + oy;
+
+        ctx.save();
+        ctx.fillStyle = inv ? 'rgba(232, 221, 208, 0.85)' : 'rgba(14, 10, 26, 0.94)';
+        ctx.fillRect(x, y, al.rw, al.rh);
+        ctx.strokeStyle = st.isTarget ? (isZahav ? '#ffd84a' : '#e8b954') : (idx === 0 && targetSide === 'foes' ? '#7de08b' : 'rgba(220, 214, 232, 0.28)');
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, al.rw - 1, al.rh - 1);
+
+        const roleCol = st.isTarget ? '#f2c94c' : (idx === 0 && targetSide === 'foes' ? '#e55353' : null);
+        if (roleCol && !inv) {
+          ctx.fillStyle = roleCol;
+          ctx.fillRect(x + 1, y + 1, 3, al.rh - 2);
+          const grad = ctx.createLinearGradient(x + 4, y, x + al.rw * 0.4, y);
+          grad.addColorStop(0, roleCol + '26');
+          grad.addColorStop(1, roleCol + '00');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x + 4, y + 1, al.rw * 0.38, al.rh - 2);
+        }
+
+        const hpVal = Math.max(1, Math.min(al.maxHp, al.hp + (st.hpDelta || 0)));
+        const maxRes = al.maxRes + (st.maxResDelta || 0);
+        const resVal = Math.max(0, Math.min(maxRes, al.res + (st.resDelta || 0)));
+
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = inv ? '#090512' : '#f2eefc';
+        ctx.fillText(al.name, x + 12, y + 20);
+        ctx.font = '11px monospace';
+        ctx.fillStyle = inv ? '#090512' : '#9b93b0';
+        ctx.textAlign = 'right';
+        ctx.fillText('ACT ●●○○', x + al.rw - 10, y + 20);
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = inv ? '#090512' : ((st.hpDelta || 0) > 0 ? '#9fe29f' : ((st.hpDelta || 0) < 0 ? '#ff6b6b' : '#f09494'));
+        ctx.fillText(`HP ${hpVal}/${al.maxHp}`, x + 12, y + 40);
+        ctx.fillStyle = inv ? '#090512' : al.resCol;
+        ctx.fillText(`${al.resLabel} ${resVal}/${maxRes}`, x + 132, y + 40);
+        ctx.restore();
+      });
+    }
+
+    function drawAllyOverlays(overlays) {
+      overlays.forEach(ov => {
+        ctx.save();
+        ctx.textAlign = 'center';
+        if (ov.dmg) {
+          ctx.font = 'bold 16px monospace';
+          ctx.fillStyle = '#050208';
+          ctx.fillText(ov.dmg.text, ov.x + 1, ov.y - 10 - ov.dmg.rise + 1);
+          ctx.fillStyle = ov.dmg.col;
+          ctx.fillText(ov.dmg.text, ov.x, ov.y - 10 - ov.dmg.rise);
+        }
+        if (ov.tags && ov.tags.length) {
+          ov.tags.forEach((tg, idx) => {
+            ctx.font = 'bold 10px monospace';
+            ctx.fillStyle = '#050208';
+            ctx.fillText(tg.text, ov.x + 1, ov.y + 4 + idx * 12 + 1);
+            ctx.fillStyle = tg.col;
+            ctx.fillText(tg.text, ov.x, ov.y + 4 + idx * 12);
+          });
+        }
+        ctx.restore();
+      });
+    }
+
+    // ===================== 5. MARK OF SUN v2 (SEM TRIÂNGULOS, LOG LIVRE NO ALIADO, CLARÃO SOLAR NOVO) =====================
+    function renderMarkOfSun() {
+      const pal = PALS.sunNormal;
+      const fIdx = Math.floor(t * 12);
+      const sc = getScene();
+      const tgt = sc.t1;
+
+      // Posição persistente do sol:
+      // - Inimigo: acima da cabeça (y=58, abaixo do HUD y=22)
+      // - Aliado: encaixado no canto inferior-direito livre do cartão (y=335, 100% ABAIXO do Battle Log y=252..290 e sem cobrir nome/HP/PP/ACT!)
+      const sunX = sc.isAllyTarget ? (tgt.rx + tgt.rw - 24) : tgt.x;
+      const sunY = sc.isAllyTarget ? (tgt.ry + 36) : (tgt.y - 80);
+      const baseSr = sc.isAllyTarget ? 8.5 : 15;
+      const rayMin = sc.isAllyTarget ? 4.5 : 10;
+      const rayVar = sc.isAllyTarget ? 4.5 : 10;
+
+      const igniteT = 0.65;
+      const trigT = 1.65; // gatilho de +20 MAGI (3 -> 2 hits)
+      const grow = Math.min(1, t / igniteT);
+      const fadeOut = t > 2.58 ? Math.max(0, 1 - (t - 2.58) / 0.37) : 1;
+      const trigPost = Math.max(0, t - trigT);
+      const trigDur = 0.48;
+      const trigProg = trigPost > 0 && trigPost < trigDur ? trigPost / trigDur : 0;
+      const trigEnv = trigProg > 0 ? Math.pow(1 - trigProg, 1.3) : 0;
+      const inv = trigPost > 0 && trigPost < 0.09;
+
+      const logLine = trigPost > 0.04
+        ? 'Hit triggers MARK OF SUN: +20 MAGI extra! (2 hits remaining)'
+        : (t > igniteT ? (sc.isAllyTarget ? SKILLS.mark_of_sun.logAlly[1] : SKILLS.mark_of_sun.logFoe[1])
+                       : (sc.isAllyTarget ? SKILLS.mark_of_sun.logAlly[0] : SKILLS.mark_of_sun.logFoe[0]));
+
+      // Novo efeito de luz solar ao levar dano (em ambos os lados: anel de queimadura + clarão em estrela de 8 raios finos + pulso Moiré, SEM cone trapezoide e SEM triângulos!)
+      const drawSolarHitFlare = (cx, cy, minY) => {
+        if (trigEnv <= 0.02) return;
+        ctx.save();
+        // Pulso curto de Moiré térmico no ponto atingido (nunca invade o Battle Log no aliado: minY=294)
+        drawHypnoticField(cx, cy, 56 + trigProg * 36, 42 + trigProg * 24, trigEnv * 0.92, t, pal, false, sc.isAllyTarget, minY);
+
+        ctx.globalAlpha = trigEnv;
+        // 1) Anel solar rabiscado expandindo rapidamente ao redor do impacto
+        const ringR = 14 + trigProg * 56;
+        const ringPts = [];
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2 + fIdx * 0.14;
+          const ryScale = sc.isAllyTarget ? 0.56 : 0.88;
+          ringPts.push([cx + Math.cos(a) * ringR, Math.max(minY, cy + Math.sin(a) * ringR * ryScale)]);
+        }
+        drawSketchShape(ringPts, fIdx + 17, pal, 2.4, null, 2.2);
+
+        // 2) Estrela de luz/calor fina (4 raios longos em cruz + 4 diagonais curtos, sem preenchimento pesado)
+        const mainLen = 30 + (1 - trigProg) * 44;
+        const diagLen = mainLen * 0.58;
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2 + (i % 2 === 0 ? 0 : 0.08);
+          const L = i % 2 === 0 ? mainLen : diagLen;
+          const ryScale = sc.isAllyTarget ? 0.58 : 0.95;
+          const x1 = cx + Math.cos(a) * 6;
+          const y1 = Math.max(minY, cy + Math.sin(a) * 6 * ryScale);
+          const x2 = cx + Math.cos(a) * L;
+          const y2 = Math.max(minY, cy + Math.sin(a) * L * ryScale);
+          drawSketchLine([[x1, y1], [x2, y2]], fIdx + i * 9, pal.hi, i % 2 === 0 ? 2.6 : 1.6, 1.8);
+          drawSketchLine([[x1, y1], [x2, y2]], fIdx + i * 9 + 41, pal.accent, 1.2, 2.2);
+        }
+
+        // 3) Núcleo breve de clarão osso-quente (#f2d9b6) no instante do impacto (0..0.20s)
+        if (trigProg < 0.42) {
+          const coreR = (1 - trigProg / 0.42) * 18;
+          const corePts = [];
+          for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2;
+            corePts.push([cx + Math.cos(a) * coreR, Math.max(minY, cy + Math.sin(a) * coreR * (sc.isAllyTarget ? 0.7 : 1))]);
+          }
+          sketchyPoly(corePts, fIdx + 61, 1.6, true);
+          ctx.fillStyle = pal.hi;
+          ctx.fill();
+        }
+        ctx.restore();
+      };
+
+      const drawPersistentSun = () => {
+        // Halo Moiré contido no próprio sol (no aliado, minY=294 garante 0 px sobre o Battle Log!)
+        const minY = sc.isAllyTarget ? 294 : 22;
+        drawHypnoticField(sunX, sunY, (sc.isAllyTarget ? 24 : 52) * grow, (sc.isAllyTarget ? 18 : 36) * grow, (0.72 + trigEnv * 0.25) * fadeOut, t, pal, false, sc.isAllyTarget, minY);
+
+        ctx.save();
+        ctx.globalAlpha = fadeOut;
+        const sunPulse = 1 + Math.sin(t * 9) * 0.05 + trigEnv * 0.28;
+        const sr = baseSr * grow * sunPulse;
+
+        // 12 raios tortos rabiscados do sol (SEM triângulos caindo!)
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2 + Math.floor(t * 12) * 0.04;
+          const len = (rayMin + hash(i * 19 + 5) * rayVar) * grow * sunPulse;
+          const rIn = sr * 0.90, rOut = sr + len, spread = 0.14;
+          drawSketchShape([
+            [sunX + Math.cos(a - spread) * rIn, sunY + Math.sin(a - spread) * rIn],
+            [sunX + Math.cos(a) * rOut, sunY + Math.sin(a) * rOut],
+            [sunX + Math.cos(a + spread) * rIn, sunY + Math.sin(a + spread) * rIn]
+          ], fIdx + i * 7, pal, sc.isAllyTarget ? 1.1 : 1.9, pal.deep, sc.isAllyTarget ? 1.4 : 1.8);
+        }
+        const disc = [];
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2;
+          disc.push([sunX + Math.cos(a) * sr, sunY + Math.sin(a) * sr]);
+        }
+        drawSketchShape(disc, fIdx, pal, sc.isAllyTarget ? 1.3 : 2.2, pal.deep, sc.isAllyTarget ? 1.8 : 2.4);
+        const inner = disc.map(([x, y]) => [sunX + (x - sunX) * 0.48, sunY + (y - sunY) * 0.48]);
+        sketchyPoly(inner, fIdx + 31, 1.1, true);
+        ctx.fillStyle = trigEnv > 0.2 ? pal.hi : pal.accent;
+        ctx.fill();
+
+        // Contador compacto de cargas (3 -> 2) ao lado do sol no cartão do aliado (limpo, zero sobreposição)
+        if (sc.isAllyTarget && t > igniteT * 0.7) {
+          const hitsLeft = trigPost > 0.04 ? 2 : 3;
+          ctx.font = 'bold 10px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillStyle = pal.hi;
+          ctx.fillText('×' + hitsLeft, sunX - 16, sunY + 4);
+        }
+        ctx.restore();
+      };
+
+      drawExodusBg(t, 0.24 * grow * fadeOut);
+      if (!sc.isAllyTarget) {
+        FOES.forEach((f, i) => {
+          const isT = i === sc.t1Idx, hitsLeft = trigPost > 0.04 ? 2 : 3;
+          const tags = isT && t > igniteT * 0.8 ? [{ text: `MARK OF SUN (×${hitsLeft})`, col: pal.hi }] : [];
+          drawFoe(f, isT && inv, isT ? (grow * 3.5 + trigEnv * 9) * fadeOut : 0, tags, isT && trigPost > 0.03 ? { text: '+20 MAGI', col: pal.hi, rise: Math.min(30, trigPost * 42) } : null);
+        });
+        drawPersistentSun();
+        drawSolarHitFlare(tgt.x, tgt.y, 22);
+      } else {
+        FOES.forEach((f, i) => drawFoe(f, false, 0, [], null, i === 1 ? { text: 'STAT', col: pal.hi } : null));
+      }
+
+      const allyState = sc.isAllyTarget
+        ? { 1: { isTarget: true, inv, warp: trigEnv * 8.5 * fadeOut, hpDelta: trigPost > 0.03 ? -20 : 0 } }
+        : {};
+      drawHud(logLine, '4ACT / 20EN / STAT / 1T', false, allyState);
+      if (sc.isAllyTarget) {
+        drawPersistentSun();
+        drawSolarHitFlare(tgt.x, tgt.y, 294);
+        if (trigPost > 0.03) {
+          drawAllyOverlays([{ x: tgt.x, y: tgt.y, dmg: { text: '+20 MAGI', col: pal.hi, rise: Math.min(18, trigPost * 30) } }]);
+        }
+      }
+    }
+
+    // ===================== 3. DRAIN CLAW ✓ =====================
+    function renderDrainClaw() {
+      const pal = PALS.blood;
+      const fIdx = Math.floor(t * 12);
+      const sc = getScene();
+      const tgt = sc.t1;
+      const hitT = 0.36;
+      const post = Math.max(0, t - hitT);
+      const env = post > 0 ? Math.max(0, 1 - Math.max(0, post - 0.95) / 0.72) : 0;
+      const inv = post > 0 && post < 0.12;
+      const shake = post > 0 && post < 0.28 ? (1 - post / 0.28) * 6.5 : 0;
+
+      let healAccum = 0;
+      if (post > 0.06) fx.drops.forEach(d => { if (t - d.delay >= d.life * 0.72) healAccum = Math.min(28, healAccum + 5); });
+      const logLine = post > 0.05 ? (sc.isAllyTarget ? SKILLS.drain_claw.logAlly[1] : SKILLS.drain_claw.logFoe[1])
+                                  : (sc.isAllyTarget ? SKILLS.drain_claw.logAlly[0] : SKILLS.drain_claw.logFoe[0]);
+
+      const drawVfx = () => {
+        if (post > 0) drawHypnoticField(tgt.x, tgt.y, 70, 56, env * 0.80, t, pal, false, sc.isAllyTarget);
+        if (t < 1.38) {
+          let tipX, tipY, alpha = 1;
+          if (t < hitT) {
+            const p = t / hitT, ease = p * p;
+            tipX = tgt.x - 105 * (1 - ease); tipY = tgt.y + 42 * (1 - ease);
+          } else if (t < 1.05) {
+            tipX = tgt.x + (hash(fIdx * 11) - 0.5) * 3; tipY = tgt.y + (hash(fIdx * 17) - 0.5) * 3;
+          } else {
+            const out = (t - 1.05) / 0.33;
+            tipX = tgt.x - out * 75; tipY = tgt.y + out * 30; alpha = Math.max(0, 1 - out);
+          }
+          drawSingleImpaleClaw(tipX, tipY, -0.36, 86, fIdx, pal, alpha);
+        }
+        if (post > 0.05) {
+          fx.drops.forEach((d, idx) => {
+            const lt = t - d.delay;
+            if (lt < 0 || lt > d.life) return;
+            const u = lt / d.life;
+            const x = tgt.x + (sc.caster.x - tgt.x) * u;
+            const y = tgt.y + (sc.caster.y - tgt.y) * u + Math.sin(u * Math.PI) * d.arc;
+            drawSketchShape([[x + d.sz * 1.3, y], [x, y - d.sz], [x - d.sz * 1.1, y], [x, y + d.sz]], fIdx + idx * 7, pal, 1.1, pal.accent, 1.5);
+          });
+        }
+      };
+
+      ctx.save();
+      ctx.translate(shake ? (hash(fIdx * 13) - 0.5) * shake * 2 : 0, shake ? (hash(fIdx * 29) - 0.5) * shake * 2 : 0);
+      drawExodusBg(t, env * 0.16);
+      if (!sc.isAllyTarget) {
+        FOES.forEach((f, i) => {
+          const isT = i === sc.t1Idx;
+          drawFoe(f, isT && inv, isT ? env * 7.5 : 0, [], isT && post > 0.04 ? { text: '-35 HP', col: pal.accent, rise: Math.min(30, post * 32) } : null);
+        });
+        drawVfx();
+      } else {
+        FOES.forEach((f, i) => drawFoe(f, false, 0, [], null, i === 1 ? { text: 'ATTACK', col: '#e55353' } : null));
+      }
+      ctx.restore();
+
+      const allyState = sc.isAllyTarget ? { 1: { isTarget: true, inv, warp: env * 7.5, hpDelta: post > 0.04 ? -35 : 0 } } : { 0: { hpDelta: healAccum } };
+      drawHud(logLine, '2ACT / 15EN / PHYS / 1T', false, allyState);
+      if (sc.isAllyTarget) {
+        drawVfx();
+        if (post > 0.04) drawAllyOverlays([{ x: tgt.x, y: tgt.y, dmg: { text: '-35 HP', col: pal.accent, rise: Math.min(30, post * 32) } }]);
+      }
+    }
+
+    // ===================== 3Z. VITAL CLAWS ✓ [ZAHAV] =====================
+    function renderVitalClaws() {
+      const pal = PALS.zahavBlood;
+      const fIdx = Math.floor(t * 12);
+      const sc = getScene();
+      const tgt = sc.t1;
+      const hit1 = 0.34, hit2 = 0.48;
+      const post1 = Math.max(0, t - hit1), post2 = Math.max(0, t - hit2);
+      const env = post1 > 0 ? Math.max(0, 1 - Math.max(0, post1 - 1.05) / 0.75) : 0;
+      const inv = (post1 > 0 && post1 < 0.08) || (post2 > 0 && post2 < 0.12);
+      const shake = (post1 > 0 && post1 < 0.42) ? (1 - post1 / 0.42) * 8 : 0;
+
+      let healAccum = 0, enAccum = 0;
+      if (post2 > 0.04) {
+        fx.hpDrops.forEach(d => { if (t - d.delay >= d.life * 0.72) healAccum = Math.min(28, healAccum + 5); });
+        fx.enDrops.forEach(d => { if (t - d.delay >= d.life * 0.72) enAccum = 12; });
+      }
+      const logLine = post2 > 0.04 ? (sc.isAllyTarget ? SKILLS.vital_claws.logAlly[1] : SKILLS.vital_claws.logFoe[1])
+                                   : (sc.isAllyTarget ? SKILLS.vital_claws.logAlly[0] : SKILLS.vital_claws.logFoe[0]);
+
+      const drawVfx = () => {
+        if (post1 > 0) drawHypnoticField(tgt.x, tgt.y, 82, 66, env * 0.86, t, pal, false, sc.isAllyTarget);
+        if (t < 1.50) {
+          let x1, y1, a1 = 1;
+          if (t < hit1) { const p = t / hit1, e = p * p; x1 = tgt.x - 10 - 95 * (1 - e); y1 = tgt.y + 38 * (1 - e); }
+          else if (t < 1.16) { x1 = tgt.x - 10 + (hash(fIdx * 11) - 0.5) * 3; y1 = tgt.y; }
+          else { const out = (t - 1.16) / 0.34; x1 = tgt.x - 10 - out * 72; y1 = tgt.y + out * 28; a1 = Math.max(0, 1 - out); }
+          drawSingleImpaleClaw(x1, y1, -0.34, 92, fIdx, pal, a1);
+        }
+        if (t > 0.12 && t < 1.56) {
+          let x2, y2, a2 = 1;
+          if (t < hit2) { const p = (t - 0.12) / (hit2 - 0.12), e = p * p; x2 = tgt.x + 10 + 95 * (1 - e); y2 = tgt.y - 34 * (1 - e); }
+          else if (t < 1.22) { x2 = tgt.x + 10 + (hash(fIdx * 19) - 0.5) * 3; y2 = tgt.y; }
+          else { const out = (t - 1.22) / 0.34; x2 = tgt.x + 10 + out * 72; y2 = tgt.y - out * 28; a2 = Math.max(0, 1 - out); }
+          drawSingleImpaleClaw(x2, y2, Math.PI - 0.34, 92, fIdx + 37, pal, a2);
+        }
+        if (post2 > 0.04) {
+          fx.hpDrops.forEach((d, idx) => {
+            const lt = t - d.delay; if (lt < 0 || lt > d.life) return;
+            const u = lt / d.life, x = tgt.x + (sc.caster.x - tgt.x) * u, y = tgt.y + (sc.caster.y - tgt.y) * u + Math.sin(u * Math.PI) * d.arc;
+            drawSketchShape([[x + d.sz * 1.3, y], [x, y - d.sz], [x - d.sz * 1.1, y], [x, y + d.sz]], fIdx + idx * 7, pal, 1.1, '#a81c2e', 1.6);
+          });
+          const enPal = { accent: '#2b669e', hi: '#ffd84a' };
+          fx.enDrops.forEach((d, idx) => {
+            const lt = t - d.delay; if (lt < 0 || lt > d.life) return;
+            const u = lt / d.life, x = tgt.x + (sc.caster.x - tgt.x) * u, y = tgt.y + (sc.caster.y - tgt.y) * u + Math.sin(u * Math.PI) * d.arc;
+            drawSketchShape([[x, y - d.sz * 1.2], [x + d.sz, y], [x, y + d.sz * 1.2], [x - d.sz, y]], fIdx + idx * 11, enPal, 1.1, '#5d98c9', 1.5);
+          });
+        }
+      };
+
+      ctx.save();
+      ctx.translate(shake ? (hash(fIdx * 17) - 0.5) * shake * 2 : 0, shake ? (hash(fIdx * 31) - 0.5) * shake * 2 : 0);
+      drawExodusBg(t, 0.20 * (t < 1.9 ? 1 : Math.max(0, 1 - (t - 1.9) / 0.5)));
+      if (!sc.isAllyTarget) {
+        FOES.forEach((f, i) => {
+          const isT = i === sc.t1Idx;
+          drawFoe(f, isT && inv, isT ? env * 9.5 : 0, [], isT && post2 > 0.03 ? { text: '-50 HP  -15 EN', col: '#ffd84a', rise: Math.min(32, post2 * 30) } : null);
+        });
+        drawVfx();
+      } else {
+        FOES.forEach((f, i) => drawFoe(f, false, 0, [], null, i === 1 ? { text: 'ZAHAV', col: '#ffd84a' } : null));
+      }
+      ctx.restore();
+
+      const allyState = sc.isAllyTarget ? { 1: { isTarget: true, inv, warp: env * 9.5, hpDelta: post2 > 0.03 ? -50 : 0, resDelta: post2 > 0.03 ? -4 : 0 } } : { 0: { hpDelta: healAccum, resDelta: enAccum } };
+      drawHud(logLine, '✦ ZAHAV · 3ACT / 25EN / PHYS / 1T', true, allyState);
+      if (sc.isAllyTarget) {
+        drawVfx();
+        if (post2 > 0.03) drawAllyOverlays([{ x: tgt.x, y: tgt.y, dmg: { text: '-50 HP  -15 EN', col: '#ffd84a', rise: Math.min(32, post2 * 30) } }]);
+      }
+    }
+
+    // ===================== 4Z. WEAKENEN ✓ [ZAHAV] =====================
+    function renderWeakenen() {
+      const pal = PALS.zahavBlue;
+      const fIdx = Math.floor(t * 12);
+      const sc = getScene();
+      const [t1, t2] = sc.t2List;
+      const chargeEnd = 0.36, hit1 = 0.78, hit2 = 0.90;
+      const post1 = Math.max(0, t - hit1), post2 = Math.max(0, t - hit2);
+      const env1 = post1 > 0 ? Math.max(0, 1 - Math.max(0, post1 - 0.95) / 0.65) : 0;
+      const env2 = post2 > 0 ? Math.max(0, 1 - Math.max(0, post2 - 0.88) / 0.65) : 0;
+      const originX = sc.caster.x, originY = sc.isAllyTarget ? sc.caster.y + 10 : sc.caster.y - 36;
+      const logLine = post1 > 0.06 ? (sc.isAllyTarget ? SKILLS.weakenen.logAlly[1] : SKILLS.weakenen.logFoe[1])
+                                   : (sc.isAllyTarget ? SKILLS.weakenen.logAlly[0] : SKILLS.weakenen.logFoe[0]);
+
+      const drawVfx = () => {
+        if (t < chargeEnd + 0.06) {
+          const p = Math.min(1, t / chargeEnd);
+          drawHypnoticField(originX, originY, 44 * p + 12, 44 * p + 12, 0.70, t, pal, false, sc.isAllyTarget);
+          drawSketchOrb(originX, originY, 14 + p * 18, fIdx, pal);
+        }
+        [{ tgt: t1, start: chargeEnd, hit: hit1, post: post1, env: env1, arc: 42 },
+         { tgt: t2, start: chargeEnd + 0.06, hit: hit2, post: post2, env: env2, arc: 62 }].forEach((o, oi) => {
+          if (t >= o.start && t < o.hit + 0.15) {
+            const p = Math.min(1, (t - o.start) / (o.hit - o.start));
+            const ox = originX + (o.tgt.x - originX) * p, oy = originY + (o.tgt.y - originY) * p - Math.sin(p * Math.PI) * o.arc;
+            const r = t < o.hit ? 24 : 24 * (1 + ((t - o.hit) / 0.15) * 1.35);
+            ctx.save();
+            if (t > o.hit) ctx.globalAlpha = Math.max(0, 1 - (t - o.hit) / 0.15);
+            if (t < o.hit) drawHypnoticField(ox, oy, 38, 38, 0.65, t, pal, false, sc.isAllyTarget);
+            drawSketchOrb(ox, oy, r, fIdx + oi * 19, pal);
+            ctx.restore();
+          }
+          if (o.post > 0.03 && o.env > 0.04) {
+            drawHypnoticField(o.tgt.x, o.tgt.y, 84, 76, o.env * 0.88, t, pal, false, sc.isAllyTarget);
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, o.env * 1.25);
+            fx.arrows.forEach((ar, idx) => {
+              const lt = (o.post + ar.delay) % 0.85, ax = o.tgt.x + ar.ox, ay = o.tgt.y - 40 + lt * ar.spd * 1.45;
+              drawSketchLine([[ax, ay - ar.len], [ax, ay]], fIdx + idx * 7 + oi * 29, '#ffd84a', 1.9, 1.3);
+              drawSketchLine([[ax - 4.5, ay - 5.5], [ax, ay], [ax + 4.5, ay - 5.5]], fIdx + idx * 7 + oi * 29 + 3, pal.accent, 1.8, 1.0);
+            });
+            ctx.restore();
+          }
+        });
+      };
+
+      drawExodusBg(t, 0.22 * (t < 2.0 ? 1 : Math.max(0, 1 - (t - 2.0) / 0.5)));
+      if (!sc.isAllyTarget) {
+        FOES.forEach((f, i) => {
+          const is1 = i === 0, is2 = i === 2, p = is1 ? post1 : (is2 ? post2 : 0), e = is1 ? env1 : (is2 ? env2 : 0);
+          drawFoe(f, false, e * 7.5, (is1 || is2) && p > 0.06 ? [{ text: 'MAK & MEF -14', col: '#ffd84a' }, { text: 'DISPELLABLE', col: '#9fc9ec' }] : [], null);
+        });
+        drawVfx();
+      } else {
+        FOES.forEach((f, i) => drawFoe(f, false, 0, [], null, i === 1 ? { text: 'ZAHAV 2T', col: '#ffd84a' } : null));
+      }
+
+      const allyState = sc.isAllyTarget ? { 0: { isTarget: true, warp: env1 * 7.5 }, 2: { isTarget: true, warp: env2 * 7.5 } } : {};
+      drawHud(logLine, '✦ ZAHAV · 2ACT / 15EN / STAT / 2T', true, allyState);
+      if (sc.isAllyTarget) {
+        drawVfx();
+        const ovs = [];
+        if (post1 > 0.06) ovs.push({ x: t1.x, y: t1.y, tags: [{ text: 'MAK & MEF -14', col: '#ffd84a' }] });
+        if (post2 > 0.06) ovs.push({ x: t2.x, y: t2.y, tags: [{ text: 'MAK & MEF -14', col: '#ffd84a' }] });
+        drawAllyOverlays(ovs);
+      }
+    }
+
+    // ===================== 1. STONE CRUSH ✓ =====================
+    function renderStoneCrush() {
+      const pal = PALS.stone;
+      const fIdx = Math.floor(t * 12);
+      const sc = getScene(), tgt = sc.t1, hitT = 0.62, post = Math.max(0, t - hitT);
+      const impactEnv = post > 0 ? Math.max(0, 1 - post / 1.15) : 0;
+      const inv = post > 0 && post < 0.16, shake = post > 0 && post < 0.42 ? (1 - post / 0.42) * 11 : 0;
+      const logLine = post > 0.04 ? (sc.isAllyTarget ? SKILLS.stone_crush.logAlly[1] : SKILLS.stone_crush.logFoe[1])
+                                  : (sc.isAllyTarget ? SKILLS.stone_crush.logAlly[0] : SKILLS.stone_crush.logFoe[0]);
+
+      const drawVfx = () => {
+        if (post > 0) drawHypnoticField(tgt.x, tgt.y + (sc.isAllyTarget ? 0 : 22), 132, 68, impactEnv * 0.95, t, pal, false, sc.isAllyTarget);
+        else {
+          const p = Math.min(1, t / hitT);
+          drawHypnoticField(sc.caster.x + (tgt.x - sc.caster.x) * p, sc.caster.y + (tgt.y - 8 - sc.caster.y) * p - Math.sin(p * Math.PI) * (sc.isAllyTarget ? 85 : 118), 54, 48, 0.55, t, pal, false, sc.isAllyTarget);
+        }
+        if (post > 0 && impactEnv > 0.05) {
+          ctx.save(); ctx.globalAlpha = Math.min(1, impactEnv * 1.4);
+          const grow = Math.min(1, post / 0.18), gx = tgt.x, gy = sc.isAllyTarget ? tgt.y + 18 : tgt.y + tgt.h * 0.52;
+          fx.cracks.forEach((c, idx) => {
+            const mx = gx + Math.cos(c.a) * c.len * 0.5 * grow, my = gy + Math.sin(c.a) * c.len * 0.2 * grow;
+            const ex = gx + Math.cos(c.a) * c.len * grow, ey = gy + Math.sin(c.a) * c.len * 0.32 * grow;
+            drawSketchLine([[gx, gy], [mx, my], [ex, ey]], fIdx + idx * 7, '#050208', 4.5, 1.8);
+            drawSketchLine([[gx, gy], [mx, my], [ex, ey]], fIdx + idx * 7 + 3, pal.hi, 1.4, 1.5);
+          });
+          ctx.restore();
+        }
+        if (t < hitT + 0.14) {
+          const p = Math.min(1, t / hitT), ease = p * p * (1.25 - 0.25 * p);
+          const bx = sc.caster.x + (tgt.x - sc.caster.x) * Math.min(1, ease);
+          const by = sc.caster.y + (tgt.y - 6 - sc.caster.y) * Math.min(1, ease) - Math.sin(Math.min(1, p) * Math.PI) * (sc.isAllyTarget ? 85 : 118);
+          const radiusScale = 0.65 + Math.min(1, p) * 0.55, rot = t * 5.2, boulder = [];
+          for (let i = 0; i < 13; i++) {
+            const a = (i / 13) * Math.PI * 2 + rot, rad = (26 + hash(i * 19 + 3) * 15) * radiusScale;
+            boulder.push([bx + Math.cos(a) * rad, by + Math.sin(a) * rad * 0.88]);
+          }
+          drawSketchShape(boulder, fIdx, pal, 3.0, '#050208', 2.6);
+          drawSketchLine([boulder[1], [bx, by], boulder[7]], fIdx + 5, pal.accent, 1.8, 1.6);
+          drawSketchLine([boulder[4], [bx + 4, by - 2], boulder[10]], fIdx + 9, pal.hi, 1.2, 1.4);
+        }
+        if (post > 0 && post < 1.35) {
+          ctx.save(); ctx.globalAlpha = Math.max(0, 1 - post / 1.35);
+          const floorY = sc.isAllyTarget ? H - 10 : tgt.y + tgt.h * 0.52;
+          fx.debris.forEach((d, idx) => {
+            const dx = tgt.x + d.vx * post;
+            let dy = tgt.y + d.vy * post + 0.5 * 520 * post * post;
+            if (dy > floorY) dy = floorY - Math.abs(dy - floorY) * 0.32;
+            const ang = d.rot + d.vr * post, poly = [];
+            for (let k = 0; k < 5; k++) {
+              const a = ang + (k / 5) * Math.PI * 2, r = d.r * (0.7 + hash(idx * 7 + k * 13) * 0.55);
+              poly.push([dx + Math.cos(a) * r, dy + Math.sin(a) * r]);
+            }
+            drawSketchShape(poly, fIdx + idx * 5, pal, 1.4, '#050208', 1.6);
+          });
+          ctx.restore();
+        }
+      };
+
+      ctx.save();
+      ctx.translate(shake ? (hash(fIdx * 17) - 0.5) * shake * 2 : 0, shake ? (hash(fIdx * 29) - 0.5) * shake * 2 : 0);
+      drawExodusBg(t, impactEnv * 0.24);
+      if (!sc.isAllyTarget) {
+        FOES.forEach((f, i) => { const isT = i === sc.t1Idx; drawFoe(f, isT && inv, isT ? impactEnv * 13 : 0, [], isT && post > 0.04 ? { text: '-38 PHYS', col: pal.hi, rise: Math.min(34, post * 38) } : null); });
+        drawVfx();
+      } else {
+        FOES.forEach((f, i) => drawFoe(f, false, 0, [], null, i === 1 ? { text: 'ATTACK', col: '#e55353' } : null));
+      }
+      ctx.restore();
+
+      const allyState = sc.isAllyTarget ? { 1: { isTarget: true, inv, warp: impactEnv * 13, hpDelta: post > 0.04 ? -38 : 0 } } : {};
+      drawHud(logLine, '4ACT / 0EN / PHYS / 1T', false, allyState);
+      if (sc.isAllyTarget) { drawVfx(); if (post > 0.04) drawAllyOverlays([{ x: tgt.x, y: tgt.y, dmg: { text: '-38 PHYS', col: pal.hi, rise: Math.min(34, post * 38) } }]); }
+    }
+
+    // ===================== 2. ENERGY BLOW ✓ =====================
+    function renderEnergyBlow() {
+      const pal = PALS.energy, fIdx = Math.floor(t * 12), sc = getScene(), tgt = sc.t1, hitT = 0.56, post = Math.max(0, t - hitT);
+      const chargeEnv = t < hitT ? t / hitT : 0, blastEnv = post > 0 ? Math.max(0, 1 - post / 1.25) : 0;
+      const inv = post > 0 && post < 0.15, shake = post > 0 && post < 0.36 ? (1 - post / 0.36) * 9 : 0;
+      let stolenEn = 0; if (post > 0.08) fx.strands.forEach(st => { if (t - st.delay >= st.life * 0.72) stolenEn = 12; });
+      const logLine = post > 0.05 ? (sc.isAllyTarget ? SKILLS.energy_blow.logAlly[1] : SKILLS.energy_blow.logFoe[1])
+                                  : (sc.isAllyTarget ? SKILLS.energy_blow.logAlly[0] : SKILLS.energy_blow.logFoe[0]);
+
+      const drawVfx = () => {
+        if (t < hitT) {
+          const r = 110 * (1 - chargeEnv * 0.72) + 18;
+          drawHypnoticField(tgt.x, tgt.y, r, r * 0.85, 0.85, t, pal, true, sc.isAllyTarget);
+          const s = 1.0 - chargeEnv * 0.35;
+          drawSketchEye(tgt.x, tgt.y - 4, 30 * s, 16 * s, fIdx, pal, false, true);
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 + t * 2.2, r1 = 92 * (1 - chargeEnv * 0.75) + 16, r2 = r1 + 24;
+            drawSketchLine([[tgt.x + Math.cos(a) * r1, tgt.y + Math.sin(a) * r1], [tgt.x + Math.cos(a) * r2, tgt.y + Math.sin(a) * r2]], fIdx + i * 5, pal.hi, 1.8, 1.6);
+          }
+        } else {
+          drawHypnoticField(tgt.x, tgt.y, 122 * (0.7 + (1 - blastEnv) * 0.4), 96, blastEnv, t, pal, true, sc.isAllyTarget);
+        }
+        if (post > 0 && post < 0.72) {
+          const p = post / 0.72, bScale = 0.45 + p * 1.15, burst = [];
+          for (let i = 0; i < 24; i++) {
+            const a = (i / 24) * Math.PI * 2 + fIdx * 0.06, rad = (i % 2 === 0 ? 58 + hash(i * 19) * 32 : 22 + hash(i * 7) * 10) * bScale;
+            burst.push([tgt.x + Math.cos(a) * rad, tgt.y + Math.sin(a) * rad * 0.85]);
+          }
+          ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p);
+          drawSketchShape(burst, fIdx, pal, 3.4, p < 0.35 ? '#050208' : null, 2.5);
+          ctx.restore();
+        }
+        if (post > 0.08) {
+          const enPal = { accent: '#2c5078', hi: '#9fc9ec' };
+          fx.strands.forEach((st, idx) => {
+            const lt = t - st.delay; if (lt < 0 || lt > st.life) return;
+            const u = lt / st.life, sx = tgt.x + st.ox, sy = tgt.y + st.oy, pts = [];
+            for (let k = 0; k <= 5; k++) {
+              const ku = Math.max(0, Math.min(1, u - 0.24 + (k / 5) * 0.30));
+              pts.push([sx + (sc.caster.x - sx) * ku, sy + (sc.caster.y - sy) * ku + Math.sin(ku * Math.PI) * st.arc]);
+            }
+            ctx.save(); ctx.globalAlpha = Math.sin(u * Math.PI);
+            drawSketchLine(pts, fIdx + idx * 7, enPal.hi, 2.2, 2.0);
+            drawSketchLine(pts, fIdx + idx * 7 + 31, enPal.accent, 1.3, 2.6);
+            ctx.restore();
+          });
+        }
+      };
+
+      ctx.save();
+      ctx.translate(shake ? (hash(fIdx * 11) - 0.5) * shake * 2 : 0, shake ? (hash(fIdx * 23) - 0.5) * shake * 2 : 0);
+      drawExodusBg(t, Math.max(chargeEnv * 0.34, blastEnv * 0.40));
+      if (!sc.isAllyTarget) {
+        FOES.forEach((f, i) => {
+          const isT = i === sc.t1Idx, tags = [];
+          if (isT && t < hitT + 0.15) tags.push({ text: 'COND: VULNERABLE', col: '#c9bde0' });
+          if (isT && post > 0.25) tags.push({ text: '-50% MAX EN (BATTLE)', col: '#84b4d8' });
+          drawFoe(f, isT && inv, isT ? (t < hitT ? chargeEnv * 5 : blastEnv * 12) : 0, tags, isT && post > 0.04 ? { text: '-33 DMG', col: '#e8ddd0', rise: Math.min(34, post * 38) } : null);
+        });
+        drawVfx();
+      } else {
+        FOES.forEach((f, i) => drawFoe(f, false, 0, [], null, i === 1 ? { text: 'ATTACK', col: '#e55353' } : null));
+      }
+      ctx.restore();
+
+      const allyState = sc.isAllyTarget ? { 1: { isTarget: true, inv, warp: t < hitT ? chargeEnv * 5 : blastEnv * 12, hpDelta: post > 0.04 ? -33 : 0 } } : { 0: { resDelta: stolenEn, maxResDelta: stolenEn } };
+      drawHud(logLine, '3ACT / 0EN / MAGI / 1T', false, allyState);
+      if (sc.isAllyTarget) { drawVfx(); drawAllyOverlays([{ x: tgt.x, y: tgt.y, dmg: post > 0.04 ? { text: '-33 DMG', col: '#e8ddd0', rise: Math.min(34, post * 38) } : null }]); }
+    }
+
+    // ===================== 4. WEAKEN ✓ =====================
+    function renderWeaken() {
+      const pal = PALS.blueStat, fIdx = Math.floor(t * 12), sc = getScene(), tgt = sc.t1, hitT = 0.58, post = Math.max(0, t - hitT);
+      const env = post > 0 ? Math.max(0, 1 - Math.max(0, post - 1.0) / 0.78) : 0;
+      const logLine = post > 0.08 ? (sc.isAllyTarget ? SKILLS.weaken.logAlly[1] : SKILLS.weaken.logFoe[1])
+                                  : (sc.isAllyTarget ? SKILLS.weaken.logAlly[0] : SKILLS.weaken.logFoe[0]);
+
+      const drawVfx = () => {
+        if (t < hitT) {
+          const p = t / hitT;
+          drawHypnoticField(sc.caster.x + (tgt.x - sc.caster.x) * p, sc.caster.y + (tgt.y - sc.caster.y) * p - Math.sin(p * Math.PI) * 44, 46, 46, 0.75, t, pal, false, sc.isAllyTarget);
+        } else {
+          drawHypnoticField(tgt.x, tgt.y, 92, 84, env * 0.90, t, pal, false, sc.isAllyTarget);
+        }
+        if (t < hitT + 0.16) {
+          const p = Math.min(1, t / hitT), ox = sc.caster.x + (tgt.x - sc.caster.x) * p, oy = sc.caster.y + (tgt.y - sc.caster.y) * p - Math.sin(p * Math.PI) * 44;
+          const r = t < hitT ? 22 + Math.sin(t * 16) * 2.5 : 22 * (1 + ((t - hitT) / 0.16) * 1.4);
+          ctx.save(); if (t > hitT) ctx.globalAlpha = Math.max(0, 1 - (t - hitT) / 0.16);
+          drawSketchOrb(ox, oy, r, fIdx, pal);
+          ctx.restore();
+        }
+        if (post > 0.04 && env > 0.05) {
+          ctx.save(); ctx.globalAlpha = Math.min(1, env * 1.25);
+          fx.arrows.forEach((ar, idx) => {
+            const lt = (post + ar.delay) % 0.85, ax = tgt.x + ar.ox, ay = tgt.y - 42 + lt * ar.spd * 1.5;
+            drawSketchLine([[ax, ay - ar.len], [ax, ay]], fIdx + idx * 7, pal.hi, 2.0, 1.4);
+            drawSketchLine([[ax - 5, ay - 6], [ax, ay], [ax + 5, ay - 6]], fIdx + idx * 7 + 3, pal.accent, 1.8, 1.1);
+          });
+          ctx.restore();
+        }
+      };
+
+      drawExodusBg(t, env * 0.24);
+      if (!sc.isAllyTarget) {
+        FOES.forEach((f, i) => {
+          const isT = i === sc.t1Idx;
+          drawFoe(f, false, isT ? env * 7.5 : 0, isT && post > 0.08 ? [{ text: 'MEF -9 (CAP -50%)', col: '#9fc9ec' }, { text: 'DISPELLABLE', col: '#6999c4' }] : [], null);
+        });
+        drawVfx();
+      } else {
+        FOES.forEach((f, i) => drawFoe(f, false, 0, [], null, i === 1 ? { text: 'STAT', col: '#9fc9ec' } : null));
+      }
+
+      const allyState = sc.isAllyTarget ? { 1: { isTarget: true, warp: env * 7.5 } } : {};
+      drawHud(logLine, '1ACT / 10EN / STAT / 1T', false, allyState);
+      if (sc.isAllyTarget) { drawVfx(); if (post > 0.08) drawAllyOverlays([{ x: tgt.x, y: tgt.y, tags: [{ text: 'MEF -9 (CAP -50%)', col: '#9fc9ec' }] }]); }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+      if (activeSkill === 'stone_crush') renderStoneCrush();
+      else if (activeSkill === 'energy_blow') renderEnergyBlow();
+      else if (activeSkill === 'drain_claw') renderDrainClaw();
+      else if (activeSkill === 'vital_claws') renderVitalClaws();
+      else if (activeSkill === 'weaken') renderWeaken();
+      else if (activeSkill === 'weakenen') renderWeakenen();
+      else if (activeSkill === 'mark_of_sun') renderMarkOfSun();
+    }
+
+    function frame(ts) {
+      const dt = Math.min(0.05, (ts - lastTs) / 1000);
+      lastTs = ts;
+      t += dt * speed;
+      const dur = SKILLS[activeSkill].duration;
+      if (t >= dur) {
+        if (loop) { t = 0; initSkill(activeSkill); }
+        else t = dur;
+      }
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.sk-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSkill(btn.dataset.skill));
+    });
+    document.querySelectorAll('.side-btn').forEach(btn => {
+      btn.addEventListener('click', () => { targetSide = btn.dataset.side; initSkill(activeSkill); });
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSkill(activeSkill));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : (speed === 0.5 ? 1.5 : 1.0);
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+
+    initSkill('mark_of_sun');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

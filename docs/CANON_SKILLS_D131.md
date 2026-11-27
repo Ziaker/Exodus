@@ -1,8 +1,8 @@
 # Skills Canônicas Revisadas — Lote 2 + Taxonomia Oficial (`PHYS/MAGI/STAT`, `DMG`, `1T–3T`) e Alvo Vulnerável (D-131)
 
 **Decisão:** D-131 · 2026-11-27 (decisão do criador)  
-**Estado:** **CANÔNICO — DESIGN 100% FECHADO; NÃO IMPLEMENTADO (aguardando aprovação visual D-125 e implementação em código)**  
-**Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md) · **Lote 1 (D-124):** [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) · **Estilo VFX Não-Reza (D-125):** [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md)
+**Estado:** **CANÔNICO — DESIGN E VISUAIS (7/7) APROVADOS; IMPLEMENTAÇÃO EM 3 FASES PRONTA**  
+**Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md) · **Lote 1 (D-124):** [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) · **Estilo VFX Não-Reza (D-125):** [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) · **HTML Canônico (7/7):** [`docs/vfx_refs/d131/README.md`](vfx_refs/d131/README.md) · **Validação do Criador:** [`docs/VALIDATION_LOG_D131.md`](VALIDATION_LOG_D131.md) · **Prompts Faseados:** [`docs/CLAUDE_PROMPTS_D131.md`](CLAUDE_PROMPTS_D131.md)
 
 > [!IMPORTANT]
 > A partir da **D-131**, toda habilidade canônica adota a taxonomia oficial de **categoria** (`PHYS`, `MAGI`, `STAT`), **tipo de dano** (`PHYS`, `MAGI`, `DMG`) e **quantidade de alvos** (`1T`, `2T`, `3T`). As **5 novas skills** (mais **2 evoluções `ZAHAV`**) promovidas do pool do Survival, a definição unificada de **Alvo Vulnerável** e todas as regras complementares abaixo estão **100% fechadas** pelo criador.
@@ -47,12 +47,14 @@
 
 ---
 
-## 4. Diretrizes de VFX (D-125 & D-137)
+## 4. Diretrizes de VFX e Status de Aprovação (D-125 & D-137)
 
-Todas as 7 entradas acima (5 base + 2 `ZAHAV`) são ataques não-reza e seguem estritamente [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) (*Rabisco Anatômico Grotesco 12 FPS + Interferência Hipnótica Moiré* em paleta sombria, sem neon; **outline dourado exclusivo em `Vital Claws` e `Weakenen`**; sem letras hebraicas), com protótipo obrigatório funcionando tanto em inimigos quanto nos **3 cartões de aliados do Survival** (**D-137**).
+Todas as 7 entradas acima (5 base + 2 `ZAHAV`) são ataques não-reza canônicos e seguem estritamente [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) (*Rabisco Anatômico Grotesco 12 FPS + Interferência Hipnótica Moiré* em paleta sombria, sem neon; **outline dourado exclusivo em `Vital Claws` e `Weakenen`**; zero letras hebraicas), validados nos modos **Inimigos** e **3 cartões de Aliados Survival** (**D-137**).
 
-* **Aprovados visualmente (4/7 — 2026-11-27):** **`Stone Crush`**, **`Energy Blow`**, **`Weaken`** e **`Mark of Sun`**.
-* **Em revisão visual v2 (3/7):** **`Drain Claw`**, **`Vital Claws [ZAHAV]`** e **`Weakenen [ZAHAV]`**.
+* **Status de aprovação visual (2026-11-27):** **TODOS APROVADOS (7/7)** — **`Stone Crush`**, **`Energy Blow`**, **`Drain Claw`** *(contido: 1 garra + 6 gotas)*, **`Vital Claws [ZAHAV]`** *(contido: 2 garras douradas + HP/EN)*, **`Weaken`**, **`Weakenen [ZAHAV]`** *(contido: esfera maior disparando 2 esferas)* e **`Mark of Sun`** *(sol no canto livre do cartão nos aliados sem invadir Battle Log, zero triângulos, clarão solar em estrela + anel)*.
+* **Referência HTML canônica salva:** [`docs/vfx_refs/d131/d131_skills_vfx_canon.html`](vfx_refs/d131/d131_skills_vfx_canon.html) ([`README.md`](vfx_refs/d131/README.md)).
+* **Processo completo de validação por ataque:** [`docs/VALIDATION_LOG_D131.md`](VALIDATION_LOG_D131.md).
+* **Plano/prompts faseados de implementação:** [`docs/CLAUDE_PROMPTS_D131.md`](CLAUDE_PROMPTS_D131.md).
 
 ---
 

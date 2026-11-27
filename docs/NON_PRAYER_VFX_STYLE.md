@@ -116,6 +116,11 @@ Nos HTMLs de referência, o campo Moiré é desenhado em grade pixel-crisp de **
 | `fireNormal` (Normal) | `#c94c14` | `#f2d9b6` | `#240903` | `Ignoma`, ataques de fogo não-reza normais |
 | `zahavFire` (**ZAHAV**) | `#d95b16` | **`#ffd84a`** *(dourado)* | `#290d04` | `Ignoma Esh [ZAHAV]`, ataques de fogo não-reza via ZAHAV |
 | `FIRE_HEBREW` (Exceção `Esh`) | `#ff7a1f` | `#ffd84a` | `#ffffff` *(3ª cor)* | **EXCLUSIVO** de letras hebraicas em `Ignoma Esh` (`אש`) |
+| `stone` (Normal · D-131) | `#6d5e52` | `#d9cfc2` | `#16110e` (corpo `#050208`) | `Stone Crush`, ataques físicos de rocha/terra normais |
+| `energy` (Normal · D-131) | `#553675` | `#c9bde0` | `#0b0514` (corpo `#050208`) | `Energy Blow`, ataques de energia bruta / `DMG` sem tipagem |
+| `blueStat` (Normal · D-131) | `#25568a` | `#9fc9ec` | `#061124` | `Weaken`, debuffs/status arcanos azuis normais |
+| `zahavBlue` (**ZAHAV** · D-131) | `#2b669e` | **`#ffd84a`** *(dourado)* | `#08162b` | `Weakenen [ZAHAV]`, status arcanos azuis via ZAHAV |
+| `sunNormal` (Normal · D-131) | `#c94c14` | `#f2d9b6` | `#240903` | `Mark of Sun` *(idêntica a `fireNormal` — ZERO dourado ZAHAV)* |
 
 ---
 
@@ -131,6 +136,23 @@ Nos HTMLs de referência, o campo Moiré é desenhado em grade pixel-crisp de **
 | **Umbral Gaze** | `v3` · `renderUmbralGaze()` | `2.85s` · hit `0.62s` | `abyssDark` *(darkBias)* | Escurece `0.56 * env` → Moiré radial escuro (`darkBias=true`) + olho abissal gigante (`rx=76, ry=17`, `darkIris=true`) abrindo sob os pés do alvo → 5 espinhos/dedos curvos erguendo do olho (`92–130px`) e aprisionando o alvo |
 | **Ignoma** | `v3` · `renderIgnoma()` | `2.45s` · hit `0.62s` | `fireNormal` | Arco parabólico (`52px`) com rastro de chama rabiscada menor (`scale=0.55`) + chama principal (`scale=1.0`, **sem olho**) + Moiré térmico → explosão de 3 línguas de chama rabiscadas subindo sobre o alvo |
 | **Ignoma Esh [ZAHAV]** | `v4` · `renderIgnomaEsh()` | `2.85s` · hits `0.62s`, `1.04s` | `zahavFire` + `FIRE_HEBREW` | Escurece `0.22` → 2 projéteis `drawSketchFlame` com **outline dourado `#ffd84a`** e palavra `אש` dentro, em arcos parabólicos (`52px` e `82px`) com Moiré sincronizado exatamente ao mesmo arco → no impacto, chama expande sem preenchimento e rompe em **38 letras hebraicas tricolores** com gravidade + `אש` (`32px`) subindo |
+
+### 5.2 Catálogo Aprovado — Coreografia 1:1 dos 7 Ataques da D-131 (7/7 Aprovados)
+
+Referência HTML única aprovada (modos **Inimigos** e **3 Aliados Survival**): [`docs/vfx_refs/d131/d131_skills_vfx_canon.html`](vfx_refs/d131/d131_skills_vfx_canon.html) ([`README`](vfx_refs/d131/README.md) · [`VALIDATION_LOG_D131.md`](VALIDATION_LOG_D131.md)).
+
+| Ataque | Função HTML | Duração / Hit | Paleta | Coreografia Canônica Aprovada |
+|---|---|---|---|---|
+| **Stone Crush** | `renderStoneCrush()` | `2.55s` · hit `0.62s` | `stone` | Rocha monolítica rabiscada de 13 vértices arremessada em arco alto → esmagamento com shake `±11px`, inversão `0.16s`, Moiré sísmico (`132×68`), 7 fendas no piso e 14 estilhaços quicando |
+| **Energy Blow** | `renderEnergyBlow()` | `2.65s` · hit `0.56s` | `energy` | Olho `VULNERABLE` + Moiré escuro implodindo no alvo → estouro radial rabiscado (`25 DMG + MAK`) + 16 filamentos azuis arrancados do alvo até o conjurador (`-50% MAX EN`) |
+| **Drain Claw** | `renderDrainClaw()` | `2.25s` · hit `0.36s` | `blood` | **Contido:** 1 única garra afiada (`drawSingleImpaleClaw`) finca reto no alvo, treme brevemente e recua limpa + Moiré discreto (`70×56`) + 6 gotas simples de sangue até o conjurador |
+| **Vital Claws [ZAHAV]** | `renderVitalClaws()` | `2.40s` · hits `0.34s`, `0.48s` | `zahavBlood` | **Contido:** exatamente 2 garras afiadas com **outline `#ffd84a`** fincam em pinça (esq./dir.) e recuam limpas + Moiré (`82×66`) + 6 gotas HP (sangue/ouro) + 5 partículas EN (azul/ouro) |
+| **Weaken** | `renderWeaken()` | `2.45s` · hit `0.58s` | `blueStat` | Esfera azul rabiscada (`drawSketchOrb`, 2 anéis) voa ao alvo → colapso Moiré azul (`92×84`) + 7 setas descendentes + warp febril (`STAT`, sem flash de inversão) |
+| **Weakenen [ZAHAV]** | `renderWeakenen()` | `2.50s` · hits `0.78s`, `0.90s` | `zahavBlue` | **Contido:** 1 esfera azul maior com **outline `#ffd84a`** surge no conjurador e dispara 2 esferas em arco sobre **2 alvos distintos (`2T`)** → colapso Moiré limpo (`84×76`) + 7 setas dourado/azul |
+| **Mark of Sun** | `renderMarkOfSun()` | `2.95s` · marca `0.65s` · disparo `0.48s` | `sunNormal` *(zero ouro)* | Sol grotesco rabiscado de 12 raios (acima da cabeça em inimigos; **no canto inferior-direito livre do cartão em aliados**, com `×3`/`×2` ao lado e **0 px sobre o Battle Log**), **zero triângulos**; ao levar dano em ambos os lados, clarão solar limpo (anel expandindo + estrela de 8 raios finos + núcleo `#f2d9b6` + pulso Moiré contido) |
+
+> [!IMPORTANT]
+> **Regra de contenção e marcas persistentes (D-137 / D-131):** ataques devem manter contenção visual fiel à descrição (sem camadas supérfluas). Marcas persistentes que permanecem ativas por várias ações/rodadas (ex.: `Mark of Sun`) **nunca podem obstruir o Battle Log** quando aplicadas em cartões de aliados — ficam encaixadas na área livre do próprio cartão com recorte `min_y` abaixo do log.
 
 ---
 
