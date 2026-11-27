@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Seletor dos 2 ataques finais -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-skill="dark_breath" class="sk-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">Dark Breath (v2 · ar saindo da boca)</button>
+        <button data-skill="ignoma_esh" data-zahav="1" class="sk-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">✦ Ignoma Esh <span class="opacity-85">אש</span></button>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">↻ Replay</button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-1.5 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">1.0×</button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="360" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda -->
+    <div class="flex items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text" class="truncate"></span>
+      <span id="badge-text" class="font-mono text-[11px] opacity-80 shrink-0"></span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+    const FIRE_HEBREW = ['#ff7a1f', '#ffd84a', '#ffffff'];
+
+    const BAYER = [
+      [0,  8,  2, 10],
+      [12, 4, 14,  6],
+      [3, 11,  1,  9],
+      [15, 7, 13,  5]
+    ];
+
+    const PALS = {
+      abyssDark: { accent: '#361c52', hi: '#a997bd', deep: '#07020c' },
+      zahavFire: { accent: '#d95b16', hi: '#ffd84a', deep: '#290d04' }
+    };
+
+    const SKILLS = {
+      dark_breath: {
+        title: 'DARK BREATH v2 · 3 ACT / 15 EN · JATO DE AR ABISSAL EXALADO DA BOCA · 0 DMG · -3 PP + BLIND',
+        badge: 'NORMAL · SOPRO DA BOCA + MOIRÉ',
+        log: ['A grotesque jaw unhinges and exhales a cone of abyssal breath!', '0 DMG — -3 PP drained & all unblocked targets BLINDED!'],
+        duration: 2.95
+      },
+      ignoma_esh: {
+        title: 'IGNOMA ESH [ZAHAV] · 3 ACT / 12 EN · 2 ALVOS ALTERNÁVEIS · RABISCO DOURADO + LETRAS אש',
+        badge: 'ZAHAV · OUTLINE DOURADO + אש',
+        log: ['ZAHAV! Twin grotesque flames rupture into Hebrew fire אש!', 'MAZIK A & MAZIK C scorched: 10 + MAK each + BURN!'],
+        duration: 2.85
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 258, y: 150, w: 62, h: 100 },
+      { id: 'B', name: 'MAZIK B', x: 452, y: 142, w: 70, h: 110 },
+      { id: 'C', name: 'MAZIK C', x: 646, y: 150, w: 62, h: 100 }
+    ];
+
+    let activeSkill = 'dark_breath';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function hash(n) {
+      const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+      return s - Math.floor(s);
+    }
+
+    function initSkill(id) {
+      activeSkill = id;
+      t = 0;
+      fx = {};
+      if (id === 'dark_breath') {
+        // Linhas/correntes de ar e fiapos rabiscados soprados diretamente de dentro da boca
+        fx.streams = Array.from({ length: 28 }, (_, i) => ({
+          delay: 0.28 + (i / 28) * 0.95,
+          spread: (hash(i * 19 + 3) - 0.5) * 0.44, // ângulo do leque saindo da boca
+          spd: 360 + hash(i * 23) * 260,
+          waveFreq: 0.04 + hash(i * 7) * 0.05,
+          waveAmp: 8 + hash(i * 11) * 18,
+          life: 0.65 + hash(i * 13) * 0.55,
+          thick: 1.4 + hash(i * 5) * 2.2
+        }));
+        fx.puffs = Array.from({ length: 22 }, (_, i) => ({
+          delay: 0.30 + (i / 22) * 1.05,
+          spread: (hash(i * 31 + 1) - 0.5) * 0.42,
+          spd: 290 + hash(i * 41) * 210,
+          baseR: 9 + hash(i * 17) * 14,
+          life: 0.7 + hash(i * 29) * 0.55
+        }));
+      } else if (id === 'ignoma_esh') {
+        fx.orbs = [
+          { foeIdx: 0, startT: 0.08, hitT: 0.62, sx: 140, sy: 248 },
+          { foeIdx: 2, startT: 0.44, hitT: 1.04, sx: 140, sy: 248 }
+        ].map(o => ({
+          ...o,
+          burst: Array.from({ length: 38 }, (_, i) => {
+            const a = (i / 38) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+            const s = 68 + Math.random() * 185;
+            return { vx: Math.cos(a) * s, vy: Math.sin(a) * s - 22, ch: i % 3 === 0 ? 'אש'[i % 2] : randGlyph(), sz: 12 + Math.random() * 11, ci: i % 3, life: 0.54 + Math.random() * 0.48 };
+          })
+        }));
+      }
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.sk-btn').forEach(btn => {
+        const on = btn.dataset.skill === activeSkill;
+        const zahav = btn.dataset.zahav === '1';
+        if (on) {
+          btn.style.backgroundColor = zahav ? '#a16207' : 'var(--primary)';
+          btn.style.color = '#ffffff';
+          btn.style.borderColor = zahav ? '#ffd84a' : 'var(--primary)';
+        } else {
+          btn.style.backgroundColor = 'var(--card)';
+          btn.style.color = zahav ? '#eab308' : 'var(--foreground)';
+          btn.style.borderColor = 'var(--border)';
+        }
+      });
+      document.getElementById('caption-text').textContent = SKILLS[activeSkill].title;
+      document.getElementById('badge-text').textContent = SKILLS[activeSkill].badge;
+    }
+
+    function drawExodusBg(time, darken = 0) {
+      ctx.fillStyle = '#240d19';
+      ctx.fillRect(0, 22, W, 152);
+      ctx.fillStyle = '#381425';
+      const step = 6;
+      for (let y = 22; y < 174; y += step) {
+        const thresh = (((y - 22) / 152) * 10) | 0;
+        for (let x = 0; x < W; x += step) {
+          if (BAYER[((y / step) | 0) & 3][((x / step + ((time * 2) | 0)) | 0) & 3] < thresh) {
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.fillStyle = '#2b1d15';
+      ctx.fillRect(0, 174, W, 74);
+      ctx.fillStyle = '#18100b';
+      for (let i = 0; i < 6; i++) ctx.fillRect(0, 178 + i * 12, W, 2);
+      if (darken > 0.01) {
+        ctx.fillStyle = `rgba(4, 1, 8, ${darken})`;
+        ctx.fillRect(0, 22, W, 226);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.08)';
+      ctx.fillRect(0, 246, W, 2);
+    }
+
+    function drawFoe(foe, inv, warpAmp, tags, dmgLabel) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + foe.h * 0.54, foe.w * 0.52, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const parts = [
+        [-foe.w * 0.24, -foe.h * 0.52, foe.w * 0.48, foe.h * 0.22],
+        [-foe.w * 0.30, -foe.h * 0.62, foe.w * 0.12, foe.h * 0.16],
+        [ foe.w * 0.18, -foe.h * 0.62, foe.w * 0.12, foe.h * 0.16],
+        [-foe.w * 0.44, -foe.h * 0.26, foe.w * 0.88, foe.h * 0.46],
+        [-foe.w * 0.56, -foe.h * 0.16, foe.w * 0.12, foe.h * 0.28],
+        [ foe.w * 0.44, -foe.h * 0.16, foe.w * 0.12, foe.h * 0.28],
+        [-foe.w * 0.18,  foe.h * 0.20, foe.w * 0.36, foe.h * 0.32]
+      ];
+      ctx.fillStyle = inv ? '#e8ddd0' : '#050208';
+      if (warpAmp > 0.3) {
+        for (let sy = -foe.h * 0.62; sy < foe.h * 0.54; sy += 3.5) {
+          const wx = Math.sin(sy * 0.18 + t * 20) * warpAmp + Math.cos(sy * 0.09 - t * 12) * warpAmp * 0.5;
+          parts.forEach(([px, py, pw, ph]) => {
+            if (sy >= py && sy < py + ph) ctx.fillRect(x + px + wx, y + sy, pw, 4);
+          });
+        }
+      } else {
+        parts.forEach(([px, py, pw, ph]) => ctx.fillRect(x + px, y + py, pw, ph));
+      }
+
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.68);
+      if (tags && tags.length) {
+        tags.forEach((tg, idx) => {
+          ctx.font = 'bold 10px monospace';
+          ctx.fillStyle = tg.col;
+          ctx.fillText(tg.text, x, y + foe.h * 0.68 + idx * 13);
+        });
+      }
+      if (dmgLabel) {
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = dmgLabel.col || '#e8ddd0';
+        ctx.fillText(dmgLabel.text, x, y - 24 - dmgLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    // Campo de interferência hipnótica em formato de CONE saindo diretamente da boca (mouthX, mouthY)!
+    function drawBreathConeMoire(mouthX, mouthY, reach, env, time, pal) {
+      if (env <= 0.02 || reach <= 8) return;
+      ctx.save();
+      const step = 5;
+      const x0 = Math.max(0, (mouthX / step | 0) * step);
+      const x1 = Math.min(W, ((mouthX + reach) / step | 0) * step);
+      for (let x = x0; x < x1; x += step) {
+        const dx = x - mouthX;
+        const frac = dx / Math.max(1, reach);
+        // O cone começa estreito na boca (16px) e abre em leque até ~110px
+        const halfH = 16 + dx * 0.21;
+        const y0 = Math.max(24, ((mouthY - halfH) / step | 0) * step);
+        const y1 = Math.min(244, ((mouthY + halfH) / step | 0) * step);
+        const edgeFadeX = frac < 0.08 ? frac / 0.08 : (frac > 0.78 ? Math.max(0, 1 - (frac - 0.78) / 0.22) : 1);
+        for (let y = y0; y < y1; y += step) {
+          const dy = Math.abs(y - mouthY);
+          const edgeFadeY = Math.max(0, 1 - dy / halfH);
+          const fall = edgeFadeX * edgeFadeY;
+          if (fall <= 0.04) continue;
+          const v = Math.sin(dx * 0.095 - time * 19 + Math.sin(y * 0.1 + time * 9) * 2.3)
+                  + Math.cos((y - mouthY) * 0.13 + Math.sin(dx * 0.055 - time * 11) * 2.2);
+          if (v * fall * env > 0.22) {
+            ctx.fillStyle = v > 1.55 ? pal.hi : (v > 0.78 ? pal.accent : '#030106');
+            ctx.globalAlpha = Math.min(0.95, env * fall * 1.55);
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawHypnoticField(cx, cy, rx, ry, env, time, pal) {
+      if (env <= 0.02 || rx <= 2 || ry <= 2) return;
+      ctx.save();
+      const step = 5;
+      const x0 = Math.max(0, ((cx - rx) / step | 0) * step);
+      const y0 = Math.max(22, ((cy - ry) / step | 0) * step);
+      const x1 = Math.min(W, ((cx + rx) / step | 0) * step);
+      const y1 = Math.min(246, ((cy + ry) / step | 0) * step);
+      const irx2 = 1 / (rx * rx + 1), iry2 = 1 / (ry * ry + 1);
+      for (let y = y0; y < y1; y += step) {
+        const dy = y - cy;
+        for (let x = x0; x < x1; x += step) {
+          const dx = x - cx;
+          const norm = dx * dx * irx2 + dy * dy * iry2;
+          if (norm > 1) continue;
+          const fall = 1 - Math.sqrt(norm);
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const ang = Math.atan2(dy, dx);
+          const v = Math.sin(dist * 0.21 - time * 14 + Math.sin(ang * 4 + time * 5) * 2.1)
+                  + Math.cos((dx * 0.1 - dy * 0.08) + Math.sin(y * 0.08 + time * 8) * 1.9);
+          if (v * fall * env > 0.30) {
+            ctx.fillStyle = v > 1.3 ? pal.hi : (v > 0.72 ? pal.accent : '#050208');
+            ctx.globalAlpha = Math.min(0.92, env * fall * 1.45);
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function sketchyPoly(pts, fIdx, jitter = 2.4, close = true) {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => {
+        const jx = (hash(fIdx * 31 + i * 7) - 0.5) * jitter * 2;
+        const jy = (hash(fIdx * 47 + i * 13) - 0.5) * jitter * 2;
+        if (i === 0) ctx.moveTo(x + jx, y + jy); else ctx.lineTo(x + jx, y + jy);
+      });
+      if (close) ctx.closePath();
+    }
+
+    function drawSketchShape(pts, fIdx, pal, jitter = 2.4, fillCol = '#050208', lineW = 2.0) {
+      sketchyPoly(pts, fIdx, jitter, true);
+      if (fillCol) { ctx.fillStyle = fillCol; ctx.fill(); }
+      ctx.strokeStyle = pal.hi;
+      ctx.lineWidth = lineW;
+      ctx.stroke();
+      sketchyPoly(pts, fIdx + 77, jitter * 1.45, true);
+      ctx.strokeStyle = pal.accent;
+      ctx.lineWidth = Math.max(1.1, lineW * 0.65);
+      ctx.stroke();
+    }
+
+    function drawSketchEye(cx, cy, rx, ry, fIdx, pal, closed = false) {
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * (closed ? ry * 0.18 : ry)]);
+      }
+      drawSketchShape(pts, fIdx, pal, 1.4, closed ? '#040108' : '#b8abc9');
+      if (closed) {
+        ctx.strokeStyle = pal.hi;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(cx - rx * 1.15, cy - ry * 0.95); ctx.lineTo(cx + rx * 1.15, cy + ry * 0.95);
+        ctx.moveTo(cx + rx * 1.15, cy - ry * 0.95); ctx.lineTo(cx - rx * 1.15, cy + ry * 0.95);
+        ctx.stroke();
+      }
+    }
+
+    function drawSketchFlame(cx, cy, scale, fIdx, pal, fillCol) {
+      const pts = [
+        [cx - 14 * scale, cy + 16 * scale], [cx - 24 * scale, cy + 2 * scale], [cx - 19 * scale, cy - 16 * scale],
+        [cx - 10 * scale, cy - 6 * scale],  [cx - 7 * scale, cy - 36 * scale], [cx, cy - 16 * scale],
+        [cx + 3 * scale, cy - 44 * scale],  [cx + 8 * scale, cy - 14 * scale], [cx + 16 * scale, cy - 28 * scale],
+        [cx + 22 * scale, cy + 4 * scale],  [cx + 13 * scale, cy + 18 * scale]
+      ];
+      drawSketchShape(pts, fIdx, pal, 3.2 * Math.min(1.4, scale), fillCol, 2.2);
+      const inner = pts.map(([x, y]) => [cx + (x - cx) * 0.52, cy + 4 * scale + (y - cy) * 0.55]);
+      sketchyPoly(inner, fIdx + 19, 2.0, true);
+      ctx.fillStyle = pal.accent;
+      ctx.fill();
+    }
+
+    function drawHebrewTriWord(word, cx, cy, px, alpha) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const sx = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        ctx.fillStyle = FIRE_HEBREW[i % 3];
+        ctx.fillText(ch, sx - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, isZahav) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.86)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+        ctx.fillText(topTag, W - 14, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.92)';
+      ctx.fillRect(14, 254, W - 28, 40);
+      ctx.fillStyle = isZahav ? 'rgba(255, 216, 74, 0.5)' : 'rgba(232, 221, 208, 0.26)';
+      ctx.fillRect(14, 254, W - 28, 1);
+      ctx.fillRect(14, 293, W - 28, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+      ctx.fillText('* ' + logLine, 26, 278);
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.92)';
+      ctx.fillRect(14, 302, 260, 46);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f2eefc';
+      ctx.fillText('▸ FALLEN', 26, 320);
+      ctx.fillStyle = '#ff7b7b';
+      ctx.fillText('HP 100/100', 26, 338);
+      ctx.fillStyle = '#8ad8ff';
+      ctx.fillText('EN 28/40', 148, 338);
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.92)';
+      ctx.fillRect(284, 302, 232, 46);
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText('YOCH', 296, 320);
+      ctx.fillStyle = '#9fe29f';
+      ctx.fillText('HP 74/74', 296, 338);
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('PP 6/8', 410, 338);
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.92)';
+      ctx.fillRect(526, 302, 276, 46);
+      ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+      ctx.fillText((isZahav ? 'ZAHAV ▸ ' : 'SKILL ▸ ') + activeSkill.toUpperCase().replace('_', ' '), 538, 330);
+    }
+
+    // ===================== DARK BREATH v2 (AR SAINDO DE DENTRO DA BOCA!) =====================
+    function renderDarkBreath() {
+      const pal = PALS.abyssDark;
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+
+      // Posição da boca grotesca de perfil à esquerda
+      const mx = 104, my = 152;
+      const open = t < 0.28 ? t / 0.28 : (t < 1.95 ? 1 : Math.max(0, 1 - (t - 1.95) / 0.5));
+      const breathStart = 0.26;
+      const bAge = Math.max(0, t - breathStart);
+      const reach = bAge > 0 ? Math.min(W - mx + 40, bAge * 640) : 0;
+      const breathEnv = t < 2.0 ? Math.min(1, bAge / 0.25) : Math.max(0, 1 - (t - 2.0) / 0.75);
+      const darkScreen = 0.48 * Math.min(1, t / 0.3) * (t < 2.15 ? 1 : Math.max(0, 1 - (t - 2.15) / 0.75));
+
+      ctx.save();
+      drawExodusBg(t, darkScreen);
+
+      // 0) Garganta negra funda da boca (ATRÁS do sopro, para o ar sair literalmente de dentro!)
+      const jawPulse = bAge > 0 && t < 1.95 ? Math.sin(t * 26) * 2.6 : 0;
+      const jaw = 44 * open + jawPulse;
+      if (open > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, open * 1.2);
+        drawSketchShape([
+          [mx - 46, my - 10], [mx - 18, my - jaw - 10], [mx + 18, my - jaw + 6],
+          [mx + 22, my], [mx + 18, my + jaw - 6], [mx - 18, my + jaw + 10], [mx - 46, my + 10]
+        ], fIdx, pal, 2.2, '#020005', 1.6);
+        ctx.restore();
+      }
+
+      // 1) Cone de interferência hipnótica saindo de dentro da garganta (mx - 6, my)
+      if (bAge > 0) {
+        drawBreathConeMoire(mx - 6, my, reach, breathEnv * 0.92, t, pal);
+      }
+
+      // 2) Inimigos atingidos sequencialmente conforme o sopro chega neles
+      FOES.forEach((f, i) => {
+        const hitT = breathStart + (f.x - mx) / 640;
+        const age = qt - hitT;
+        const env = age >= 0 && age < 1.2 ? 1 - age / 1.2 : 0;
+        const tags = age >= 0 ? [{ text: 'BLIND (ROUND)', col: '#a997bd' }] : null;
+        const dmg = age >= 0 && age < 1.15 ? { text: '-3 PP · BLIND', rise: age * 22, col: '#d8cde6' } : null;
+        drawFoe(f, false, env * 11, tags, dmg);
+
+        // Olho riscado + faixa sombria quando o sopro bate
+        if (age >= 0 && age < 1.5) {
+          const fa = Math.max(0, 1 - Math.max(0, age - 0.8) / 0.7);
+          ctx.save();
+          ctx.globalAlpha = fa;
+          drawSketchEye(f.x, f.y - 34, 17, 7, fIdx + i * 9, pal, true);
+          ctx.restore();
+        }
+      });
+
+      // 3) Correntes de ar rabiscadas + nuvens de sopro saindo literalmente de dentro da garganta!
+      if (bAge > 0) {
+        ctx.save();
+        // Fiapos/correntes de vento ondulantes
+        fx.streams.forEach((s, si) => {
+          const sa = t - s.delay;
+          if (sa < 0 || sa > s.life) return;
+          const k = sa / s.life;
+          const a = (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85) * 0.88;
+          const distHead = sa * s.spd;
+          const distTail = Math.max(0, distHead - (78 + k * 92));
+          ctx.globalAlpha = a;
+          ctx.strokeStyle = si % 3 === 0 ? pal.hi : pal.accent;
+          ctx.lineWidth = s.thick * (1 - k * 0.4);
+          ctx.beginPath();
+          for (let j = 0; j <= 8; j++) {
+            const d = distTail + (distHead - distTail) * (j / 8);
+            const px = mx - 4 + Math.cos(s.spread) * d;
+            const py = my + Math.sin(s.spread) * d + Math.sin(d * s.waveFreq - t * 18 + si) * s.waveAmp * (d / 320);
+            if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        });
+        // Nuvens rabiscadas negras expelidas da boca
+        fx.puffs.forEach((p, pi) => {
+          const pa = qt - p.delay;
+          if (pa < 0 || pa > p.life) return;
+          const k = pa / p.life;
+          const a = (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85) * 0.80;
+          const d = pa * p.spd;
+          const px = mx + 2 + Math.cos(p.spread) * d;
+          const py = my + Math.sin(p.spread) * d + Math.sin(d * 0.04 + pi) * 14;
+          const rad = p.baseR * (0.45 + k * 1.45);
+          const pts = [];
+          for (let v = 0; v < 9; v++) {
+            const ang = (v / 9) * Math.PI * 2;
+            const rr = rad * (0.75 + hash(pi * 13 + v * 5) * 0.5);
+            pts.push([px + Math.cos(ang) * rr, py + Math.sin(ang) * rr]);
+          }
+          ctx.globalAlpha = a;
+          drawSketchShape(pts, fIdx + pi * 3, pal, 2.2, '#040108', 1.4);
+        });
+        ctx.restore();
+      }
+
+      // 4) MAXILARES + DENTES TORTOS POR CIMA (enquadrando o sopro que sai da garganta!)
+      if (open > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, open * 1.2);
+
+        // Maxilar superior de perfil (voltado para a direita, com presas/dentes tortos)
+        const upper = [
+          [mx - 44, my - 6], [mx - 16, my - jaw - 18], [mx + 34, my - jaw - 4],
+          [mx + 22, my - jaw + 16], [mx + 14, my - jaw + 4], [mx + 6, my - jaw + 18],
+          [mx - 2, my - jaw + 5], [mx - 12, my - jaw + 14], [mx - 24, my - 4]
+        ];
+        drawSketchShape(upper, fIdx + 5, pal, 2.0, '#050208', 2.0);
+
+        // Maxilar inferior de perfil (escancarado para baixo)
+        const lower = [
+          [mx - 44, my + 6], [mx - 24, my + 4], [mx - 10, my + jaw - 14],
+          [mx - 2, my + jaw - 5], [mx + 8, my + jaw - 18], [mx + 16, my + jaw - 5],
+          [mx + 26, my + jaw - 15], [mx + 32, my + jaw + 6], [mx - 16, my + jaw + 18]
+        ];
+        drawSketchShape(lower, fIdx + 11, pal, 2.0, '#050208', 2.0);
+        ctx.restore();
+      }
+
+      ctx.restore();
+      drawHud(SKILLS.dark_breath.log[t > 0.65 ? 1 : 0], '0 DMG · -3 PP · BLIND', false);
+    }
+
+    // ===================== IGNOMA ESH [ZAHAV · DOURADO + אש] =====================
+    function renderIgnomaEsh() {
+      const pal = PALS.zahavFire;
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+
+      ctx.save();
+      drawExodusBg(t, 0.22);
+
+      fx.orbs.forEach((o, oi) => {
+        const foe = FOES[o.foeIdx];
+        if (qt >= o.startT && qt < o.hitT) {
+          const p = (qt - o.startT) / (o.hitT - o.startT);
+          const bx = o.sx + (foe.x - o.sx) * p;
+          const by = o.sy + (foe.y - o.sy) * p - Math.sin(p * Math.PI) * (oi === 0 ? 52 : 82);
+          drawHypnoticField(bx, by, 42, 36, 0.55, t, pal);
+        } else if (qt >= o.hitT) {
+          const age = qt - o.hitT;
+          if (age < 0.95) {
+            const env = 1 - age / 0.95;
+            drawHypnoticField(foe.x, foe.y, 46 + (1 - env) * 88, 40 + (1 - env) * 74, env, t, pal);
+          }
+        }
+      });
+
+      FOES.forEach((f, i) => {
+        const o = fx.orbs.find(x => x.foeIdx === i);
+        const age = o ? qt - o.hitT : -1;
+        const env = age >= 0 && age < 0.9 ? 1 - age / 0.9 : 0;
+        const tags = age >= 0 ? [{ text: 'BURN (35%)', col: '#ff7a1f' }] : null;
+        const dmg = age >= 0 && age < 1.05 ? { text: '10 + MAK', rise: age * 26, col: '#ffd84a' } : null;
+        drawFoe(f, age >= 0 && age < 0.14, env * 9, tags, dmg);
+      });
+
+      ctx.textAlign = 'center';
+      fx.orbs.forEach((o, oi) => {
+        const foe = FOES[o.foeIdx];
+        if (qt >= o.startT && qt < o.hitT) {
+          const p = (qt - o.startT) / (o.hitT - o.startT);
+          const bx = o.sx + (foe.x - o.sx) * p;
+          const by = o.sy + (foe.y - o.sy) * p - Math.sin(p * Math.PI) * (oi === 0 ? 52 : 82);
+          drawSketchFlame(bx, by, 0.95, fIdx + oi * 5, pal, pal.deep);
+          drawHebrewTriWord('אש', bx, by + 4, 18, 0.95);
+        } else if (t >= o.hitT) {
+          const age = t - o.hitT;
+          if (age < 0.55) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, 1 - age / 0.55);
+            drawSketchFlame(foe.x, foe.y + 8 - age * 24, 1.35 + age * 1.1, fIdx + oi * 7, pal, null);
+            ctx.restore();
+          }
+          o.burst.forEach(b => {
+            if (age > b.life) return;
+            const a = Math.max(0, 1 - age / b.life);
+            ctx.save();
+            ctx.globalAlpha = a;
+            ctx.font = `bold ${b.sz | 0}px "Times New Roman", serif`;
+            ctx.fillStyle = FIRE_HEBREW[b.ci];
+            ctx.fillText(b.ch, foe.x + b.vx * age, foe.y + b.vy * age + 85 * age * age);
+            ctx.restore();
+          });
+          if (age < 0.95) drawHebrewTriWord('אש', foe.x, foe.y - 26 - age * 20, 32, 1 - age / 0.95);
+        }
+      });
+
+      ctx.restore();
+      drawHud(SKILLS.ignoma_esh.log[t > 0.65 ? 1 : 0], 'ZAHAV · GOLDEN SKETCH + MOIRÉ + אש', true);
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      if (t > SKILLS[activeSkill].duration) {
+        if (loop) initSkill(activeSkill);
+        else t = SKILLS[activeSkill].duration;
+      }
+      if (activeSkill === 'dark_breath') renderDarkBreath();
+      else renderIgnomaEsh();
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.sk-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSkill(btn.dataset.skill));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSkill(activeSkill));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    initSkill('dark_breath');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

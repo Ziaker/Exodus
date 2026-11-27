@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra dos 4 em iteração + 2 corrigidos para conferência -->
+    <div class="flex flex-wrap items-center justify-between gap-1.5 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex flex-wrap items-center gap-1">
+        <button data-skill="fang_spine" data-zahav="1" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">✦ Fang Spine</button>
+        <button data-skill="dark_breath" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">Dark Breath</button>
+        <button data-skill="ignoma" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">Ignoma</button>
+        <button data-skill="ignoma_esh" data-zahav="1" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">✦ Ignoma Esh <span class="opacity-85">אש</span></button>
+        <span class="mx-1 text-[var(--border)]">|</span>
+        <button data-skill="umbral_gaze" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">✓ Umbral Gaze (escuro)</button>
+        <button data-skill="vuln_pierce" class="sk-btn px-2 py-1 rounded font-medium border border-[var(--border)] transition">✓ Vuln Pierce (normal)</button>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">↻</button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-1.5 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">1.0×</button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="360" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda -->
+    <div class="flex items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text" class="truncate"></span>
+      <span id="badge-text" class="font-mono text-[11px] opacity-80 shrink-0"></span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+    const FIRE_HEBREW = ['#ff7a1f', '#ffd84a', '#ffffff'];
+
+    const BAYER = [
+      [0,  8,  2, 10],
+      [12, 4, 14,  6],
+      [3, 11,  1,  9],
+      [15, 7, 13,  5]
+    ];
+
+    // D-125: Outline dourado SOMENTE em ZAHAV; ataques normais usam paleta natural (sem dourado)
+    const PALS = {
+      blood:      { accent: '#a81c2e', hi: '#e8ddd0', deep: '#24050a' },
+      zahavBlood: { accent: '#a81c2e', hi: '#ffd84a', deep: '#26080d' }, // outline dourado exclusivo ZAHAV
+      abyssDark:  { accent: '#361c52', hi: '#9b8ab0', deep: '#09030f' }, // bem mais escuro!
+      fireNormal: { accent: '#c94c14', hi: '#f2d9b6', deep: '#240903' }, // fogo natural sem dourado Zahav
+      zahavFire:  { accent: '#d95b16', hi: '#ffd84a', deep: '#290d04' }  // outline dourado exclusivo ZAHAV
+    };
+
+    const SKILLS = {
+      fang_spine: {
+        title: 'FANG SPINE [ZAHAV] · 3 ACT / 10 EN · ESPINHA DORSAL E COSTELAS RASGANDO 2 ALVOS · BLEED ×2',
+        badge: 'ZAHAV · OUTLINE DOURADO',
+        log: ['ZAHAV! A grotesque spine arches from MAZIK A to MAZIK B!', 'Ribs & fangs erupt in both targets — 15 + ATK & BLEED x2!'],
+        duration: 2.7
+      },
+      dark_breath: {
+        title: 'DARK BREATH · 3 ACT / 15 EN · TODOS INIMIGOS · 0 DMG · -3 PP + CEGUEIRA (CORES NORMAIS)',
+        badge: 'NORMAL · ABISMO ESCURO + OLHOS',
+        log: ['A dark rift breathes hypnotic shadow across all foes!', '0 DMG — -3 PP drained & eyes sealed (BLIND until round end)!'],
+        duration: 2.85
+      },
+      ignoma: {
+        title: 'IGNOMA · 2 ACT / 8 EN · 1 ALVO · 10 + MAK · 35% BURN (CHAMA RABISCADA SEM OLHO / SEM DOURADO)',
+        badge: 'NORMAL · CHAMA RABISCADA + MOIRÉ',
+        log: ['FALLEN hurls IGNOMA — jagged tongues of sketched fire surge!', 'IGNOMA erupts on MAZIK B: 10 + MAK DMG + BURN!'],
+        duration: 2.45
+      },
+      ignoma_esh: {
+        title: 'IGNOMA ESH [ZAHAV] · 3 ACT / 12 EN · 2 ALVOS ALTERNÁVEIS · RABISCO DOURADO ROMPENDO EM אש',
+        badge: 'ZAHAV · OUTLINE DOURADO + אש',
+        log: ['ZAHAV! Twin sketched flames rupture into Hebrew fire אש!', 'MAZIK A & MAZIK C burned: 10 + MAK each + BURN!'],
+        duration: 2.85
+      },
+      umbral_gaze: {
+        title: 'UMBRAL GAZE (AJUSTADO MAIS ESCURO) · 3 ACT / 15 EN · 15 + MAK · PRISÃO 2 AÇÕES',
+        badge: 'APROVADO · MAIS ESCURO',
+        log: ['A pitch-black eye opens beneath MAZIK B — dark limbs rise!', 'UMBRAL GAZE: 15 + MAK! TRAPPED for 2 global actions!'],
+        duration: 2.85
+      },
+      vuln_pierce: {
+        title: 'VULN PIERCE (CORRIGIDO SEM DOURADO) · 1 ACT / 8 EN · 15 + ATK · 2× VS NÃO-OFENSIVA',
+        badge: 'APROVADO · CORES NORMAIS',
+        log: ['MAZIK B exposes an unguarded eye during a non-offensive action!', 'VULN PIERCE tears straight through: 2x DMG (30 + 2x ATK)!'],
+        duration: 2.45
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 214, y: 150, w: 64, h: 102 },
+      { id: 'B', name: 'MAZIK B', x: 408, y: 142, w: 72, h: 112 },
+      { id: 'C', name: 'MAZIK C', x: 602, y: 150, w: 64, h: 102 }
+    ];
+
+    let activeSkill = 'fang_spine';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function hash(n) {
+      const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+      return s - Math.floor(s);
+    }
+
+    function initSkill(id) {
+      activeSkill = id;
+      t = 0;
+      fx = {};
+      if (id === 'ignoma_esh') {
+        fx.orbs = [
+          { foeIdx: 0, startT: 0.08, hitT: 0.62, sx: 145, sy: 248 },
+          { foeIdx: 2, startT: 0.44, hitT: 1.04, sx: 145, sy: 248 }
+        ].map(o => ({
+          ...o,
+          burst: Array.from({ length: 38 }, (_, i) => {
+            const a = (i / 38) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+            const s = 68 + Math.random() * 185;
+            return { vx: Math.cos(a) * s, vy: Math.sin(a) * s - 22, ch: i % 3 === 0 ? 'אש'[i % 2] : randGlyph(), sz: 12 + Math.random() * 11, ci: i % 3, life: 0.54 + Math.random() * 0.48 };
+          })
+        }));
+      }
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.sk-btn').forEach(btn => {
+        const on = btn.dataset.skill === activeSkill;
+        const zahav = btn.dataset.zahav === '1';
+        if (on) {
+          btn.style.backgroundColor = zahav ? '#a16207' : 'var(--primary)';
+          btn.style.color = '#ffffff';
+          btn.style.borderColor = zahav ? '#ffd84a' : 'var(--primary)';
+        } else {
+          btn.style.backgroundColor = 'var(--card)';
+          btn.style.color = zahav ? '#eab308' : 'var(--foreground)';
+          btn.style.borderColor = 'var(--border)';
+        }
+      });
+      document.getElementById('caption-text').textContent = SKILLS[activeSkill].title;
+      document.getElementById('badge-text').textContent = SKILLS[activeSkill].badge;
+    }
+
+    function drawExodusBg(time, darken = 0) {
+      ctx.fillStyle = '#240d19';
+      ctx.fillRect(0, 22, W, 152);
+      ctx.fillStyle = '#381425';
+      const step = 6;
+      for (let y = 22; y < 174; y += step) {
+        const thresh = (((y - 22) / 152) * 10) | 0;
+        for (let x = 0; x < W; x += step) {
+          if (BAYER[((y / step) | 0) & 3][((x / step + ((time * 2) | 0)) | 0) & 3] < thresh) {
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.fillStyle = '#2b1d15';
+      ctx.fillRect(0, 174, W, 74);
+      ctx.fillStyle = '#18100b';
+      for (let i = 0; i < 6; i++) ctx.fillRect(0, 178 + i * 12, W, 2);
+      if (darken > 0.01) {
+        ctx.fillStyle = `rgba(4, 1, 8, ${darken})`;
+        ctx.fillRect(0, 22, W, 226);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.08)';
+      ctx.fillRect(0, 246, W, 2);
+    }
+
+    function drawFoe(foe, inv, warpAmp, tags, dmgLabel) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + foe.h * 0.54, foe.w * 0.52, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const parts = [
+        [-foe.w * 0.24, -foe.h * 0.52, foe.w * 0.48, foe.h * 0.22],
+        [-foe.w * 0.30, -foe.h * 0.62, foe.w * 0.12, foe.h * 0.16],
+        [ foe.w * 0.18, -foe.h * 0.62, foe.w * 0.12, foe.h * 0.16],
+        [-foe.w * 0.44, -foe.h * 0.26, foe.w * 0.88, foe.h * 0.46],
+        [-foe.w * 0.56, -foe.h * 0.16, foe.w * 0.12, foe.h * 0.28],
+        [ foe.w * 0.44, -foe.h * 0.16, foe.w * 0.12, foe.h * 0.28],
+        [-foe.w * 0.18,  foe.h * 0.20, foe.w * 0.36, foe.h * 0.32]
+      ];
+      ctx.fillStyle = inv ? '#e8ddd0' : '#050208';
+      if (warpAmp > 0.3) {
+        for (let sy = -foe.h * 0.62; sy < foe.h * 0.54; sy += 3.5) {
+          const wx = Math.sin(sy * 0.18 + t * 20) * warpAmp + Math.cos(sy * 0.09 - t * 12) * warpAmp * 0.5;
+          parts.forEach(([px, py, pw, ph]) => {
+            if (sy >= py && sy < py + ph) ctx.fillRect(x + px + wx, y + sy, pw, 4);
+          });
+        }
+      } else {
+        parts.forEach(([px, py, pw, ph]) => ctx.fillRect(x + px, y + py, pw, ph));
+      }
+
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.68);
+      if (tags && tags.length) {
+        tags.forEach((tg, idx) => {
+          ctx.font = 'bold 10px monospace';
+          ctx.fillStyle = tg.col;
+          ctx.fillText(tg.text, x, y + foe.h * 0.68 + idx * 13);
+        });
+      }
+      if (dmgLabel) {
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = dmgLabel.col || '#e8ddd0';
+        ctx.fillText(dmgLabel.text, x, y - 24 - dmgLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawHypnoticField(cx, cy, rx, ry, env, time, pal, mode = 'radial', darkBias = false) {
+      if (env <= 0.02 || rx <= 2 || ry <= 2) return;
+      ctx.save();
+      const step = 5;
+      const x0 = Math.max(0, ((cx - rx) / step | 0) * step);
+      const y0 = Math.max(22, ((cy - ry) / step | 0) * step);
+      const x1 = Math.min(W, ((cx + rx) / step | 0) * step);
+      const y1 = Math.min(246, ((cy + ry) / step | 0) * step);
+      const irx2 = 1 / (rx * rx + 1), iry2 = 1 / (ry * ry + 1);
+
+      for (let y = y0; y < y1; y += step) {
+        const dy = y - cy;
+        for (let x = x0; x < x1; x += step) {
+          const dx = x - cx;
+          const norm = dx * dx * irx2 + dy * dy * iry2;
+          if (norm > 1) continue;
+          const fall = 1 - Math.sqrt(norm);
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          let v;
+          if (mode === 'wave') {
+            v = Math.sin(x * 0.085 - time * 15 + Math.sin(y * 0.095 + time * 8) * 2.5)
+              + Math.cos(y * 0.13 + Math.sin(x * 0.055 - time * 6) * 2.1);
+          } else {
+            const ang = Math.atan2(dy, dx);
+            v = Math.sin(dist * 0.21 - time * 14 + Math.sin(ang * 4 + time * 5) * 2.1)
+              + Math.cos((dx * 0.1 - dy * 0.08) + Math.sin(y * 0.08 + time * 8) * 1.9);
+          }
+          if (v * fall * env > 0.26) {
+            if (darkBias) {
+              ctx.fillStyle = v > 1.55 ? pal.hi : (v > 0.85 ? pal.accent : '#030106');
+            } else {
+              ctx.fillStyle = v > 1.3 ? pal.hi : (v > 0.72 ? pal.accent : '#050208');
+            }
+            ctx.globalAlpha = Math.min(0.95, env * fall * 1.5);
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function sketchyPoly(pts, fIdx, jitter = 2.4, close = true) {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => {
+        const jx = (hash(fIdx * 31 + i * 7) - 0.5) * jitter * 2;
+        const jy = (hash(fIdx * 47 + i * 13) - 0.5) * jitter * 2;
+        if (i === 0) ctx.moveTo(x + jx, y + jy); else ctx.lineTo(x + jx, y + jy);
+      });
+      if (close) ctx.closePath();
+    }
+
+    function drawSketchShape(pts, fIdx, pal, jitter = 2.4, fillCol = '#050208', lineW = 2.0) {
+      sketchyPoly(pts, fIdx, jitter, true);
+      if (fillCol) { ctx.fillStyle = fillCol; ctx.fill(); }
+      ctx.strokeStyle = pal.hi;
+      ctx.lineWidth = lineW;
+      ctx.stroke();
+      sketchyPoly(pts, fIdx + 77, jitter * 1.45, true);
+      ctx.strokeStyle = pal.accent;
+      ctx.lineWidth = Math.max(1.1, lineW * 0.65);
+      ctx.stroke();
+    }
+
+    function drawSketchEye(cx, cy, rx, ry, fIdx, pal, closed = false, darkIris = false) {
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * (closed ? ry * 0.18 : ry)]);
+      }
+      drawSketchShape(pts, fIdx, pal, 1.4, closed ? '#040108' : (darkIris ? '#b8abc9' : pal.hi));
+      if (!closed) {
+        ctx.fillStyle = '#030106';
+        ctx.beginPath();
+        ctx.arc(cx + (hash(fIdx * 13) - 0.5) * rx * 0.25, cy, Math.min(rx, ry) * 0.58, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = pal.hi;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(cx - rx * 1.15, cy - ry * 0.95); ctx.lineTo(cx + rx * 1.15, cy + ry * 0.95);
+        ctx.moveTo(cx + rx * 1.15, cy - ry * 0.95); ctx.lineTo(cx - rx * 1.15, cy + ry * 0.95);
+        ctx.stroke();
+      }
+    }
+
+    // Chama rabiscada orgânica (várias línguas de fogo nervosas, SEM olho no meio)
+    function drawSketchFlame(cx, cy, scale, fIdx, pal, fillCol) {
+      const pts = [];
+      const baseW = 24 * scale;
+      // Base arredondada à esquerda -> línguas irregulares subindo no topo -> volta à direita
+      pts.push([cx - baseW * 0.6, cy + 16 * scale]);
+      pts.push([cx - baseW, cy + 2 * scale]);
+      pts.push([cx - baseW * 0.78, cy - 16 * scale]);
+      pts.push([cx - baseW * 0.42, cy - 6 * scale]);
+      pts.push([cx - baseW * 0.28, cy - 36 * scale]);
+      pts.push([cx, cy - 16 * scale]);
+      pts.push([cx + baseW * 0.14, cy - 44 * scale]); // ponta central alta
+      pts.push([cx + baseW * 0.34, cy - 14 * scale]);
+      pts.push([cx + baseW * 0.68, cy - 28 * scale]);
+      pts.push([cx + baseW * 0.92, cy + 4 * scale]);
+      pts.push([cx + baseW * 0.55, cy + 18 * scale]);
+      drawSketchShape(pts, fIdx, pal, 3.2 * Math.min(1.4, scale), fillCol, 2.2);
+      // Língua interna mais brilhante
+      const inner = pts.map(([x, y]) => [cx + (x - cx) * 0.52, cy + 4 * scale + (y - cy) * 0.55]);
+      sketchyPoly(inner, fIdx + 19, 2.0, true);
+      ctx.fillStyle = pal.accent;
+      ctx.fill();
+    }
+
+    function drawHebrewTriWord(word, cx, cy, px, alpha) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const sx = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        ctx.fillStyle = FIRE_HEBREW[i % 3];
+        ctx.fillText(ch, sx - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, isZahav) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.86)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+        ctx.fillText(topTag, W - 14, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.92)';
+      ctx.fillRect(14, 254, W - 28, 40);
+      ctx.fillStyle = isZahav ? 'rgba(255, 216, 74, 0.5)' : 'rgba(232, 221, 208, 0.26)';
+      ctx.fillRect(14, 254, W - 28, 1);
+      ctx.fillRect(14, 293, W - 28, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+      ctx.fillText('* ' + logLine, 26, 278);
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.92)';
+      ctx.fillRect(14, 302, 260, 46);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f2eefc';
+      ctx.fillText('▸ FALLEN', 26, 320);
+      ctx.fillStyle = '#ff7b7b';
+      ctx.fillText('HP 100/100', 26, 338);
+      ctx.fillStyle = '#8ad8ff';
+      ctx.fillText('EN 28/40', 148, 338);
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.92)';
+      ctx.fillRect(284, 302, 232, 46);
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText('YOCH', 296, 320);
+      ctx.fillStyle = '#9fe29f';
+      ctx.fillText('HP 74/74', 296, 338);
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('PP 6/8', 410, 338);
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.92)';
+      ctx.fillRect(526, 302, 276, 46);
+      ctx.fillStyle = isZahav ? '#ffd84a' : '#e8ddd0';
+      ctx.fillText((isZahav ? 'ZAHAV ▸ ' : 'SKILL ▸ ') + activeSkill.toUpperCase().replace('_', ' '), 538, 330);
+    }
+
+    // ===================== FANG SPINE [ZAHAV · VERTEBRAS + COSTELAS] =====================
+    function renderFangSpine() {
+      const pal = PALS.zahavBlood; // ZAHAV -> outline dourado permitido!
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+      const hits = [{ foeIdx: 0, hitT: 0.44 }, { foeIdx: 1, hitT: 1.04 }];
+
+      ctx.save();
+      drawExodusBg(t, 0.16);
+
+      hits.forEach(h => {
+        const age = qt - h.hitT;
+        if (age >= 0 && age < 0.95) {
+          const env = 1 - age / 0.95;
+          drawHypnoticField(FOES[h.foeIdx].x, FOES[h.foeIdx].y, 76 * env + 18, 60 * env + 14, env, t, pal);
+        }
+      });
+
+      FOES.forEach((f, i) => {
+        const h = hits.find(x => x.foeIdx === i);
+        const age = h ? qt - h.hitT : -1;
+        const env = age >= 0 && age < 0.9 ? 1 - age / 0.9 : 0;
+        const tags = age >= 0 ? [{ text: 'BLEED x2 (-40% HEAL)', col: '#e05a6b' }] : null;
+        const dmg = age >= 0 && age < 1.05 ? { text: '15 + ATK', rise: age * 26, col: '#ffd84a' } : null;
+        drawFoe(f, age >= 0 && age < 0.14, env * 9, tags, dmg);
+      });
+
+      // Coluna vertebral grotesca articulada arqueando de MAZIK A até MAZIK B
+      if (qt >= 0.42 && qt <= 1.38) {
+        const prog = Math.min(1, (qt - 0.42) / 0.62);
+        const fade = qt < 1.08 ? 1 : Math.max(0, 1 - (qt - 1.08) / 0.3);
+        ctx.save();
+        ctx.globalAlpha = fade;
+        const segs = Math.max(1, Math.floor(prog * 10));
+        for (let i = 0; i < segs; i++) {
+          const p = i / 9;
+          const vx = FOES[0].x + (FOES[1].x - FOES[0].x) * p;
+          const vy = 152 - Math.sin(p * Math.PI) * 72;
+          // Cada vértebra com apófise espinhosa
+          drawSketchShape([
+            [vx - 8, vy - 5], [vx, vy - 17], [vx + 8, vy - 5],
+            [vx + 6, vy + 7], [vx - 6, vy + 7]
+          ], fIdx + i * 3, pal, 1.8, '#050208', 2.0);
+        }
+        ctx.restore();
+      }
+
+      // Costelas curvadas + presas rasgando para fora em cada alvo
+      hits.forEach((h, hi) => {
+        const age = qt - h.hitT;
+        if (age < 0 || age > 0.88) return;
+        const foe = FOES[h.foeIdx];
+        const a = Math.max(0, 1 - age / 0.88);
+        const open = Math.min(1, age / 0.14);
+        ctx.save();
+        ctx.globalAlpha = a;
+        // 4 pares de costelas curvadas se abrindo como uma gaiola que perfura o alvo
+        for (let k = -1.5; k <= 1.5; k += 1) {
+          const y0 = foe.y + k * 22;
+          [-1, 1].forEach(side => {
+            const reach = (56 + (2 - Math.abs(k)) * 12) * open;
+            drawSketchShape([
+              [foe.x + side * 6, y0 - 5],
+              [foe.x + side * (reach * 0.65), y0 - 16 * open],
+              [foe.x + side * reach, y0 + 6 * open],
+              [foe.x + side * (reach * 0.58), y0 - 4 * open],
+              [foe.x + side * 4, y0 + 5]
+            ], fIdx + Math.round(k * 7) + side * 5 + hi * 13, pal, 2.0, '#050208', 2.0);
+          });
+        }
+        // Gotas de sangue rabiscadas (BLEED x2)
+        for (let d = 0; d < 8; d++) {
+          const ang = (d / 8) * Math.PI * 2 + 0.2;
+          const dist = 16 + age * 115;
+          const bx = foe.x + Math.cos(ang) * dist;
+          const by = foe.y + Math.sin(ang) * dist + 70 * age * age;
+          drawSketchShape([[bx - 3, by - 3], [bx + 5, by], [bx - 1, by + 5]], fIdx + d, pal, 1.2, pal.accent, 1.3);
+        }
+        ctx.restore();
+      });
+
+      ctx.restore();
+      drawHud(SKILLS.fang_spine.log[qt > 0.5 ? 1 : 0], 'ZAHAV · VERTEBRAE & RIBS (2 TARGETS)', true);
+    }
+
+    // ===================== DARK BREATH (ESCURO · SEM DOURADO) =====================
+    function renderDarkBreath() {
+      const pal = PALS.abyssDark;
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+      const waveStart = 0.25;
+      const wp = Math.max(0, Math.min(1, (t - waveStart) / 1.5));
+      const headX = 60 + wp * (W + 140);
+      const darkScreen = t < 2.1 ? 0.52 * Math.min(1, t / 0.35) : Math.max(0, 0.52 * (1 - (t - 2.1) / 0.7));
+
+      ctx.save();
+      drawExodusBg(t, darkScreen);
+
+      // Maré irregular de interferência abissal bem escura varrendo os 3 alvos
+      if (t >= waveStart && t < 2.65) {
+        const fade = t < 1.95 ? 0.96 : Math.max(0, 0.96 * (1 - (t - 1.95) / 0.7));
+        drawHypnoticField(headX - 170, 146, 225, 96, fade, t, pal, 'wave', true);
+      }
+
+      FOES.forEach((f, i) => {
+        const hitT = 0.60 + i * 0.24;
+        const age = qt - hitT;
+        const env = age >= 0 && age < 1.05 ? 1 - age / 1.05 : 0;
+        const tags = age >= 0 ? [{ text: 'BLIND (ROUND)', col: '#a896bd' }] : null;
+        const dmg = age >= 0 && age < 1.1 ? { text: '-3 PP · BLIND', rise: age * 22, col: '#cfc3de' } : null;
+        drawFoe(f, false, env * 10, tags, dmg);
+        if (age >= 0 && age < 1.45) {
+          const fa = Math.max(0, 1 - Math.max(0, age - 0.75) / 0.7);
+          ctx.save();
+          ctx.globalAlpha = fa;
+          // Mãos sombrias cobrindo o rosto + olho riscado em X
+          drawSketchShape([
+            [f.x - 42, f.y - 46], [f.x - 12, f.y - 42], [f.x + 12, f.y - 44], [f.x + 42, f.y - 36],
+            [f.x + 36, f.y - 24], [f.x - 38, f.y - 26]
+          ], fIdx + i * 5, pal, 2.2, '#030106', 1.6);
+          drawSketchEye(f.x, f.y - 34, 17, 7, fIdx + i * 9, pal, true, true);
+          ctx.restore();
+        }
+      });
+
+      // Fenda/mandíbula orgânica flutuando na nuvem à esquerda (sem colar reto na borda)
+      if (t < 2.0) {
+        const open = t < 0.35 ? t / 0.35 : (t < 1.45 ? 1 : Math.max(0, 1 - (t - 1.45) / 0.55));
+        ctx.save();
+        ctx.globalAlpha = open;
+        const mx = 68, my = 148;
+        drawSketchShape([
+          [mx - 42, my - 58 * open], [mx + 12, my - 46 * open], [mx + 38 * open, my - 18],
+          [mx + 10, my - 24 * open], [mx + 26 * open, my], [mx + 10, my + 24 * open],
+          [mx + 36 * open, my + 20], [mx + 12, my + 48 * open], [mx - 42, my + 58 * open],
+          [mx - 22, my]
+        ], fIdx, pal, 3.0, '#030106', 1.8);
+        ctx.restore();
+      }
+      ctx.restore();
+      drawHud(SKILLS.dark_breath.log[t > 0.72 ? 1 : 0], '0 DMG · -3 PP · BLIND', false);
+    }
+
+    // ===================== IGNOMA (CHAMA RABISCADA PURA · SEM OLHO · SEM DOURADO) =====================
+    function renderIgnoma() {
+      const pal = PALS.fireNormal;
+      const target = FOES[1];
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+      const hitT = 0.62;
+      const hit = qt >= hitT;
+      const age = Math.max(0, qt - hitT);
+      const env = !hit ? 0.55 : Math.max(0, 1 - age / 0.95);
+      const sx = 148, sy = 242;
+      const p = Math.min(1, qt / hitT);
+      const bx = !hit ? sx + (target.x - sx) * p : target.x;
+      const by = !hit ? sy + (target.y - sy) * p - Math.sin(p * Math.PI) * 52 : target.y;
+
+      ctx.save();
+      drawExodusBg(t, hit ? env * 0.22 : 0.1);
+      drawHypnoticField(bx, by, !hit ? 44 : 44 + (1 - env) * 96, !hit ? 38 : 38 + (1 - env) * 78, env, t, pal);
+
+      const tags = hit ? [{ text: 'BURN (35%)', col: '#e87835' }] : null;
+      const dmg = hit && age < 1.05 ? { text: '10 + MAK', rise: age * 26, col: '#f2d9b6' } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 && hit && age < 0.14, i === 1 && hit ? env * 10 : 0, i === 1 ? tags : null, i === 1 ? dmg : null));
+
+      if (!hit) {
+        // Rastro de 2 pequenas línguas rabiscadas + chama principal voando
+        const p2 = Math.max(0, p - 0.12);
+        const tx = sx + (target.x - sx) * p2;
+        const ty = sy + (target.y - sy) * p2 - Math.sin(p2 * Math.PI) * 52;
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        drawSketchFlame(tx, ty, 0.55, fIdx + 5, pal, pal.deep);
+        ctx.globalAlpha = 0.96;
+        drawSketchFlame(bx, by, 1.0, fIdx, pal, pal.deep);
+        ctx.restore();
+      } else if (age < 0.95) {
+        const k = age / 0.95;
+        ctx.save();
+        ctx.globalAlpha = 1 - k;
+        // Explosão de 3 línguas de chama rabiscadas erguendo sobre o alvo
+        drawSketchFlame(target.x, target.y + 12 - k * 24, 1.45 + k * 0.7, fIdx, pal, pal.deep);
+        drawSketchFlame(target.x - 36 - k * 24, target.y + 18 - k * 14, 0.85, fIdx + 7, pal, pal.deep);
+        drawSketchFlame(target.x + 36 + k * 24, target.y + 18 - k * 14, 0.85, fIdx + 13, pal, pal.deep);
+        ctx.restore();
+      }
+      ctx.restore();
+      drawHud(SKILLS.ignoma.log[hit ? 1 : 0], 'SKETCHED FIRE · 35% BURN', false);
+    }
+
+    // ===================== IGNOMA ESH [ZAHAV · DOURADO + אש] =====================
+    function renderIgnomaEsh() {
+      const pal = PALS.zahavFire; // ZAHAV -> outline dourado permitido!
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+
+      ctx.save();
+      drawExodusBg(t, 0.22);
+
+      fx.orbs.forEach(o => {
+        const foe = FOES[o.foeIdx];
+        if (qt >= o.startT && qt < o.hitT) {
+          const p = (qt - o.startT) / (o.hitT - o.startT);
+          const bx = o.sx + (foe.x - o.sx) * p;
+          const by = o.sy + (foe.y - o.sy) * p - Math.sin(p * Math.PI) * 64;
+          drawHypnoticField(bx, by, 42, 36, 0.55, t, pal);
+        } else if (qt >= o.hitT) {
+          const age = qt - o.hitT;
+          if (age < 0.95) {
+            const env = 1 - age / 0.95;
+            drawHypnoticField(foe.x, foe.y, 46 + (1 - env) * 88, 40 + (1 - env) * 74, env, t, pal);
+          }
+        }
+      });
+
+      FOES.forEach((f, i) => {
+        const o = fx.orbs.find(x => x.foeIdx === i);
+        const age = o ? qt - o.hitT : -1;
+        const env = age >= 0 && age < 0.9 ? 1 - age / 0.9 : 0;
+        const tags = age >= 0 ? [{ text: 'BURN (35%)', col: '#ff7a1f' }] : null;
+        const dmg = age >= 0 && age < 1.05 ? { text: '10 + MAK', rise: age * 26, col: '#ffd84a' } : null;
+        drawFoe(f, age >= 0 && age < 0.14, env * 9, tags, dmg);
+      });
+
+      ctx.textAlign = 'center';
+      fx.orbs.forEach((o, oi) => {
+        const foe = FOES[o.foeIdx];
+        if (qt >= o.startT && qt < o.hitT) {
+          const p = (qt - o.startT) / (o.hitT - o.startT);
+          const bx = o.sx + (foe.x - o.sx) * p;
+          const by = o.sy + (foe.y - o.sy) * p - Math.sin(p * Math.PI) * (oi === 0 ? 52 : 82);
+          drawSketchFlame(bx, by, 0.95, fIdx + oi * 5, pal, pal.deep);
+          drawHebrewTriWord('אש', bx, by + 4, 18, 0.95);
+        } else if (t >= o.hitT) {
+          const age = t - o.hitT;
+          if (age < 0.55) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, 1 - age / 0.55);
+            drawSketchFlame(foe.x, foe.y + 8 - age * 24, 1.35 + age * 1.1, fIdx + oi * 7, pal, null);
+            ctx.restore();
+          }
+          o.burst.forEach(b => {
+            if (age > b.life) return;
+            const a = Math.max(0, 1 - age / b.life);
+            ctx.save();
+            ctx.globalAlpha = a;
+            ctx.font = `bold ${b.sz | 0}px "Times New Roman", serif`;
+            ctx.fillStyle = FIRE_HEBREW[b.ci];
+            ctx.fillText(b.ch, foe.x + b.vx * age, foe.y + b.vy * age + 85 * age * age);
+            ctx.restore();
+          });
+          if (age < 0.95) drawHebrewTriWord('אש', foe.x, foe.y - 26 - age * 20, 32, 1 - age / 0.95);
+        }
+      });
+
+      ctx.restore();
+      drawHud(SKILLS.ignoma_esh.log[t > 0.65 ? 1 : 0], 'ZAHAV · GOLDEN SKETCH + MOIRÉ + אש', true);
+    }
+
+    // ===================== UMBRAL GAZE (AJUSTADO MAIS ESCURO) =====================
+    function renderUmbralGaze() {
+      const pal = PALS.abyssDark;
+      const target = FOES[1];
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+      const hitT = 0.62;
+      const hit = qt >= hitT;
+      const age = Math.max(0, qt - hitT);
+      const fade = qt < 2.25 ? 1 : Math.max(0, 1 - (qt - 2.25) / 0.6);
+      const env = Math.min(0.95, qt / 0.45) * fade;
+      const fy = target.y + target.h * 0.54;
+
+      ctx.save();
+      drawExodusBg(t, 0.56 * env);
+      drawHypnoticField(target.x, target.y + 18, 96 * env, 78 * env, env * 0.92, t, pal, 'radial', true);
+
+      ctx.save();
+      ctx.globalAlpha = fade;
+      const g = Math.min(1, qt / 0.42);
+      drawSketchEye(target.x, fy, 76 * g, 17 * g, fIdx, pal, false, true);
+      ctx.restore();
+
+      const tags = hit ? [{ text: 'TRAPPED (2 ACTS · AUTO-PASS)', col: '#b8abc9' }] : null;
+      const dmg = hit && age < 1.05 ? { text: '15 + MAK', rise: age * 24, col: '#cfc3de' } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 && hit && age < 0.12, i === 1 ? env * 8 : 0, i === 1 ? tags : null, i === 1 ? dmg : null));
+
+      if (hit) {
+        const r = Math.min(1, age / 0.16);
+        ctx.save();
+        ctx.globalAlpha = fade;
+        [-48, -24, 0, 24, 48].forEach((ox, i) => {
+          const sh = (92 + (i % 2) * 38) * r;
+          const bend = (i - 2) * -10;
+          drawSketchShape([
+            [target.x + ox - 6, fy],
+            [target.x + ox + bend * 0.5 - 4, fy - sh * 0.55],
+            [target.x + ox + bend, fy - sh],
+            [target.x + ox + bend * 0.5 + 5, fy - sh * 0.55],
+            [target.x + ox + 6, fy]
+          ], fIdx + i * 7, pal, 2.5, '#030106', 1.6);
+        });
+        ctx.restore();
+      }
+      ctx.restore();
+      drawHud(SKILLS.umbral_gaze.log[hit ? 1 : 0], 'DARKER ABYSS · TRAPPED 2 ACTS', false);
+    }
+
+    // ===================== VULN PIERCE (CORRIGIDO SEM DOURADO) =====================
+    function renderVulnPierce() {
+      const pal = PALS.blood; // Normal -> ZERO dourado!
+      const target = FOES[1];
+      const qt = Math.floor(t * 12) / 12;
+      const fIdx = Math.floor(t * 12);
+      const hitT = 0.64;
+      const hit = qt >= hitT;
+      const age = Math.max(0, qt - hitT);
+      const env = !hit ? (qt / hitT) * 0.45 : Math.max(0, 1 - age / 0.95);
+
+      ctx.save();
+      drawExodusBg(t, 0.14);
+      drawHypnoticField(target.x, target.y, 44 + env * 86, 36 + env * 66, env, t, pal);
+
+      const tags = !hit ? [{ text: 'NON-OFFENSIVE ACTION', col: '#a8c6df' }] : [{ text: '2x VULN SHATTERED!', col: '#e8ddd0' }];
+      const dmg = hit && age < 1.05 ? { text: '2x! (30 + 2x ATK)', rise: age * 28, col: '#ff8a96' } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 && hit && age < 0.16, i === 1 ? env * 12 : 0, i === 1 ? tags : null, i === 1 ? dmg : null));
+
+      if (!hit) {
+        const g = Math.min(1, qt / 0.45);
+        drawSketchEye(target.x, target.y, 26 * g, 12 * g, fIdx, pal, false);
+      } else if (age < 0.72) {
+        const a = Math.max(0, 1 - age / 0.72);
+        ctx.save();
+        ctx.globalAlpha = a;
+        drawSketchShape([
+          [target.x - 190, target.y - 10], [target.x + 195, target.y], [target.x - 190, target.y + 10]
+        ], fIdx, pal, 2.8, '#050208', 2.2);
+        for (let i = 0; i < 10; i++) {
+          const ang = (i / 10) * Math.PI * 2 + 0.3;
+          const d = 16 + age * 150;
+          const sx = target.x + Math.cos(ang) * d, sy = target.y + Math.sin(ang) * d * 0.7;
+          drawSketchShape([[sx - 6, sy - 4], [sx + 7, sy], [sx - 2, sy + 6]], fIdx + i * 5, pal, 1.8);
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+      drawHud(SKILLS.vuln_pierce.log[hit ? 1 : 0], 'NORMAL COLORS (NO ZAHAV GOLD)', false);
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      if (t > SKILLS[activeSkill].duration) {
+        if (loop) initSkill(activeSkill);
+        else t = SKILLS[activeSkill].duration;
+      }
+
+      switch (activeSkill) {
+        case 'fang_spine':  renderFangSpine(); break;
+        case 'dark_breath': renderDarkBreath(); break;
+        case 'ignoma':      renderIgnoma(); break;
+        case 'ignoma_esh':  renderIgnomaEsh(); break;
+        case 'umbral_gaze': renderUmbralGaze(); break;
+        case 'vuln_pierce': renderVulnPierce(); break;
+      }
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.sk-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSkill(btn.dataset.skill));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSkill(activeSkill));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    initSkill('fang_spine');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

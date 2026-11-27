@@ -1,8 +1,8 @@
 # Skills Canônicas Revisadas do Survival + Regras Globais de Combate (D-124)
 
 **Decisão:** D-124 · 2026-11-27 (decisão do criador)  
-**Estado:** **CANÔNICO — DESIGN CONFIRMADO; NÃO IMPLEMENTADO**  
-**Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md)
+**Estado:** **CANÔNICO — DESIGN E VISUAIS (8/8) APROVADOS; IMPLEMENTAÇÃO EM FASES PRONTA**  
+**Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md) · **Estilo VFX Não-Reza (D-125):** [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) · **Prompts Faseados:** [`docs/CLAUDE_PROMPTS_D124_D125.md`](CLAUDE_PROMPTS_D124_D125.md)
 
 > [!IMPORTANT]
 > Após as correções definidas pelo criador em 2026-11-27, os **6 ataques abaixo** (mais suas **2 evoluções `ZAHAV`**) passam a ser **canônicos** e eventualmente presentes no jogo principal, acompanhados de **3 regras globais de combate** (`HIGH SPEED`, `BLEED` canônico e `Temporização de ação`).
@@ -64,6 +64,6 @@
    * **Regra de outline `ZAHAV`:** o **outline dourado só existe quando o ataque é realizado através de `ZAHAV`**; ataques normais sempre usam suas cores naturais.
    * **Hebraico:** **apenas `Ignoma Esh` usa letras hebraicas** (por conter `Esh` no nome — `אש`).
    * **Geometria:** reservada para **alguns outros anjos** (não usada em ataques demoníacos/não-reza comuns).
-   * **Status de aprovação visual (2026-11-27):** **Aprovados (6/8):** `Mazz Bite`, `Fang Sting`, `Fang Spine [ZAHAV]`, `Vuln Pierce` *(sem outline dourado)*, `Umbral Gaze` *(versão mais escura)*, `Ignoma`. **Em iteração (2/8):** `Dark Breath` *(jato saindo diretamente da boca)*, `Ignoma Esh [ZAHAV]`.
+   * **Status de aprovação visual (2026-11-27):** **TODOS APROVADOS (8/8):** `Mazz Bite`, `Fang Sting`, `Fang Spine [ZAHAV]`, `Vuln Pierce` *(sem outline dourado)*, `Dark Breath v2` *(ar saindo diretamente da boca grotesca de perfil)*, `Umbral Gaze` *(versão mais escura)*, `Ignoma` *(chamas rabiscadas sem olho)*, `Ignoma Esh [ZAHAV]` *(outline dourado + `אש`)*. Referências HTML salvas em [`docs/vfx_refs/d124_d125/`](vfx_refs/d124_d125/README.md) e estilo documentado em [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md).
 
 *Única pendência menor:* confirmar se `Vuln Pierce` dobra o dano apenas em reação contra ação não-ofensiva anunciada ou também contra alvo com estado/postura não-ofensiva ativa no round.
