@@ -2363,8 +2363,6 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 func _gfx_start(attacker: BattleUnit, skill: StringName, victims: Array) -> float:
 	if grotesque_fx == null or victims.is_empty() or not bool(SkillBook.def(skill).get("grotesque", false)):
 		return -1.0
-	# PROTOTIPO: aliado atingido => close-up com a figura-substituta no tamanho de um inimigo
-	await grotesque_fx.closeup_begin(victims)
 	var first: BattleUnit = victims[0]
 	match skill:
 		&"mazz_bite": return grotesque_fx.play_mazz_bite(attacker, first)
@@ -2412,8 +2410,6 @@ func _dark_breath_flow(caster: BattleUnit, targets: Array, timings: Dictionary, 
 	for t in live:
 		if not BattleMath.has_contact(int(timings.get(t, BattleMath.RhythmResult.POINT)), int(defs[t])):
 			dodged.append(t.id)
-	if grotesque_fx != null:
-		await grotesque_fx.closeup_begin(live)
 	var start: float = grotesque_fx.play_dark_breath(caster, live, dodged) if grotesque_fx != null else -1.0
 	for t in live:
 		if start >= 0.0:
@@ -2460,7 +2456,7 @@ func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		second = null
 		defense = await _skill_defense_timing(defender, attacker, marks, defense_paid)
 	_defender_defending = defense_paid
-	var gstart := await _gfx_start(attacker, skill, [defender, second if second != null else defender])
+	var gstart := _gfx_start(attacker, skill, [defender, second if second != null else defender])
 	var prev := -1
 	for i in marks.size():
 		var victim: BattleUnit = second if (second != null and i == 1) else defender
@@ -2516,7 +2512,7 @@ func _hero_skill_lands(hero: BattleUnit, counterer: BattleUnit, skill: StringNam
 	var d := SkillBook.def(skill)
 	if d.kind == "strike":
 		var prev := -1
-		var gstart := await _gfx_start(hero, skill, [counterer, counterer])
+		var gstart := _gfx_start(hero, skill, [counterer, counterer])
 		for i in d.marks.size():
 			if not counterer.is_alive(): break
 			await _gfx_wait(gstart, skill, i)
@@ -2551,7 +2547,7 @@ func _enemy_skill_lands(enemy: BattleUnit, target: BattleUnit, skill: StringName
 	var d := SkillBook.def(skill)
 	if d.kind == "strike":
 		var prev := -1
-		var gstart := await _gfx_start(enemy, skill, [target, target])
+		var gstart := _gfx_start(enemy, skill, [target, target])
 		for i in d.marks.size():
 			if not target.is_alive(): break
 			await _gfx_wait(gstart, skill, i)

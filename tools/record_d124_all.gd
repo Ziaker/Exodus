@@ -93,7 +93,7 @@ func _settle() -> void:
 		await process_frame
 	if guard >= 1200:
 		var g := b.grotesque_fx
-		print("  BUSY? effects=", g.effect_count(), " fields=", g.field_count(), " warps=", g.warp_count(), " dark=", g.darken(), " closeup=", g.closeup_active(), " opening=", g._closeup_opening, " closing=", g._closeup_closing, " fx=", b.fx.is_busy())
+		print("  BUSY? effects=", g.effect_count(), " fields=", g.field_count(), " warps=", g.warp_count(), " dark=", g.darken(), " fx=", b.fx.is_busy())
 	await _secs(0.9)
 
 

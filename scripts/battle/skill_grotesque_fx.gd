@@ -87,16 +87,6 @@ var _back_layer: Node2D
 ## Sprites do warp dos inimigos: ficam na camada MAIS BAIXA do motor (z 47), atrás de qualquer efeito (regra do criador:
 ## nenhum efeito aparece atrás da figura).
 var _warp_layer: Node2D
-## PROTOTIPO (ordem do criador: o efeito num aliado tem EXATAMENTE o tamanho do efeito num inimigo). O aliado nao tem
-## figura no palco, entao, quando um aliado e atingido, rola um close-up: o palco escurece, as figuras dos inimigos somem
-## e uma figura-substituta do aliado aparece NO LUGAR e NO TAMANHO de um inimigo (mesmo retangulo de sprite, mesma sombra,
-## mesmo warp), e o efeito roda nela como roda num inimigo. A arte da figura-substituta e PROVISORIA (placeholder).
-const STANDIN_ART := "res://assets/graphics/battlers/Zealot Masakado.png"
-const CLOSEUP_FADE := 0.18
-var _closeup: Dictionary = {}          # unit.id -> {"slot", "rect" (logico, retangulo do inimigo), "fit" (logico), "sprite", "shadow"}
-var _closeup_closing := false
-var _closeup_opening := false
-var _standin_tex: ImageTexture
 var _shake_until := -1.0
 var _shake_px := 0.0
 var _shaking := false
@@ -332,11 +322,7 @@ func trigger_target_warp(unit: BattleUnit, amp: float, dur: float, invert_dur: f
 	_stop_warp(unit.id)
 	var entry := {"unit": unit, "at": time, "dur": dur, "amp": amp, "invert": invert_dur, "sprite": null}
 	var index: int = hud.opponents.find(unit)
-	if _closeup.has(unit.id) and _closeup[unit.id].sprite != null:
-		entry.sprite = _closeup[unit.id].sprite
-		entry["fit"] = _closeup[unit.id].fit
-		entry["standin"] = true
-	elif index >= 0 and not unit.is_player:
+	if index >= 0 and not unit.is_player:
 		var sprite := Sprite2D.new()
 		sprite.centered = false
 		sprite.texture = hud.silhouettes[index % hud.silhouettes.size()]
@@ -371,11 +357,7 @@ func _stop_warp(unit_id: StringName) -> void:
 	if not _warps.has(unit_id):
 		return
 	var entry: Dictionary = _warps[unit_id]
-	if entry.sprite != null and bool(entry.get("standin", false)):
-		var smat: ShaderMaterial = (entry.sprite as Sprite2D).material
-		smat.set_shader_parameter("warp_amp", 0.0)
-		smat.set_shader_parameter("invert_mix", 0.0)
-	elif entry.sprite != null:
+	if entry.sprite != null:
 		(entry.sprite as Sprite2D).queue_free()
 	if hud != null:
 		hud.warp_hidden.erase(unit_id)
@@ -407,12 +389,11 @@ func _warp_step() -> void:
 		var unit: BattleUnit = entry.unit
 		if entry.sprite != null:
 			var index: int = hud.opponents.find(unit)
-			if index < 0 and not bool(entry.get("standin", false)):
+			if index < 0:
 				_stop_warp(id)
 				continue
-			var art: Rect2 = entry.fit if bool(entry.get("standin", false)) else hud.enemy_sprite_rect(index)
-			if not bool(entry.get("standin", false)):
-				art.position += hud.shake_offset(unit)
+			var art: Rect2 = hud.enemy_sprite_rect(index)
+			art.position += hud.shake_offset(unit)
 			var sprite: Sprite2D = entry.sprite
 			var tex_size := sprite.texture.get_size()
 			sprite.position = art.position
@@ -443,7 +424,7 @@ func effect_count() -> int:
 
 
 func is_busy() -> bool:
-	return _closeup_opening or _closeup_closing or not _closeup.is_empty() or not _effects.is_empty() or not _fields.is_empty() or not _warps.is_empty() or _darken > 0.01 or time < _shake_until
+	return not _effects.is_empty() or not _fields.is_empty() or not _warps.is_empty() or _darken > 0.01 or time < _shake_until
 
 
 func clear_all() -> void:
@@ -628,20 +609,11 @@ func unit_geom(u: BattleUnit) -> Dictionary:
 	if u.is_player:
 		var idx: int = hud.players.find(u)
 		var card: Rect2 = hud.status_rect(maxi(0, idx))
-		if _closeup.has(u.id):
-			var rc: Rect2 = _closeup[u.id].rect
-			var cc: Vector2 = to_design(rc.get_center())
-			var hd: float = rc.size.y * DESIGN_SCALE
-			return {"c": cc, "k": clampf(hd / 100.0, 1.0, 2.6), "h": hd, "feet": to_design(Vector2(0, rc.end.y)).y, "origin": cc,
-				"card": Rect2(to_design(card.position), to_design(card.size))}
-		# Ordem do criador: o efeito num ALIADO é EXATAMENTE o do inimigo (mesmo tamanho, mesma posição vertical, mesmas
-		# formas). O aliado não tem figura no palco, então usa a geometria de um inimigo (escala `k`, altura e linha do
-		# centro) e só troca a coluna horizontal pela do cartão dele.
+		# Ordem do criador: o herói não tem figura no palco, então o efeito acontece NO CARTÃO dele (centro do cartão), com o
+		# MESMO tamanho (k, altura) do efeito num inimigo. Pode cobrir o texto do cartão: isso é aceito.
 		var ref := _enemy_reference()
-		var half_w := 90.0 * float(ref.k)
-		var cx := clampf(card.get_center().x * DESIGN_SCALE, half_w, 816.0 - half_w)
-		var c := Vector2(cx, float(ref.c.y))
-		return {"c": c, "k": ref.k, "h": ref.h, "feet": ref.feet, "origin": c,
+		var c: Vector2 = to_design(card.get_center())
+		return {"c": c, "k": ref.k, "h": ref.h, "feet": c.y + float(ref.h) * 0.5, "origin": c,
 			"card": Rect2(to_design(card.position), to_design(card.size))}
 	var index: int = maxi(0, hud.opponents.find(u))
 	var rect: Rect2 = hud.enemy_sprite_rect(index)
@@ -650,7 +622,7 @@ func unit_geom(u: BattleUnit) -> Dictionary:
 	return {"c": cc, "k": clampf(hd / 100.0, 1.0, 2.6), "h": hd, "feet": to_design(Vector2(0, rect.end.y)).y, "origin": cc}
 
 
-## Geometria do inimigo que serve de referência de tamanho e altura para os aliados atingidos.
+## Tamanho do efeito num inimigo (referência para o efeito nos cartões dos aliados).
 func _enemy_reference() -> Dictionary:
 	for u in hud.opponents:
 		if u.is_alive():
@@ -661,8 +633,6 @@ func _enemy_reference() -> Dictionary:
 func _origin_of(caster: BattleUnit) -> Vector2:
 	if caster == null:
 		return Vector2(140.0, 420.0)
-	if not caster.is_player and not _closeup.is_empty():
-		return Vector2(816.0 + 70.0, float(_enemy_reference().c.y))  # as figuras dos inimigos somem no close-up
 	return unit_geom(caster).origin
 
 
@@ -708,8 +678,6 @@ func _release_all(units: Array) -> void:
 		release_target_warp(u)
 	clear_fields()
 	set_darken(0.0)
-	if not _closeup.is_empty():
-		_closeup_end()
 
 
 # ---- 1. MAZZ BITE (v2 renderMazzBite) -------------------------------------------------------------------------
@@ -1233,108 +1201,3 @@ func play_ignoma_esh(caster: BattleUnit, targets: Array) -> float:
 				drive_target_warp(units[oi], amp, inv),
 		func(_fx: Node2D) -> void: _release_all(units))
 
-
-# ------------------------------------------------------------------ PROTOTIPO: close-up do aliado atingido
-func _ramp_veil(from_v: float, to_v: float, dur: float) -> void:
-	var t0 := time
-	while is_inside_tree() and time - t0 < dur:
-		set_darken(lerpf(from_v, to_v, clampf((time - t0) / dur, 0.0, 1.0)))
-		await get_tree().process_frame
-	set_darken(to_v)
-
-
-func _standin_texture() -> ImageTexture:
-	if _standin_tex == null:
-		# mesma receita do HUD para as artes de batalha do VX (fundo sólido + moldura): recorta o fundo, faz a silhueta
-		var texture := load(STANDIN_ART) as Texture2D
-		var image: Image
-		if texture != null:
-			image = texture.get_image()
-			image.convert(Image.FORMAT_RGBA8)
-		else:
-			image = Image.create(64, 128, false, Image.FORMAT_RGBA8)
-			image.fill(Color.WHITE)
-		var w := image.get_width()
-		var h := image.get_height()
-		var framed := image.get_pixel(0, 0).a > 0.15 or image.get_pixel(w - 1, h - 1).a > 0.15
-		var interior: Image = image.get_region(Rect2i(2, 2, maxi(1, w - 4), maxi(1, h - 4))) if (framed and w > 8 and h > 8) else image.duplicate() as Image
-		hud._strip_opaque_bg(interior)
-		var used: Rect2i = interior.get_used_rect()
-		if used.size.x <= 0 or used.size.y <= 0:
-			used = Rect2i(0, 0, interior.get_width(), interior.get_height())
-		var cropped: Image = interior.get_region(used)
-		var sil: Image = hud.make_silhouette(cropped)
-		if framed:
-			hud.strip_frame_lines(sil)
-		var visible: Rect2i = hud.alpha_used_rect(sil)
-		if visible.size.x > 0 and visible.size.y > 0:
-			sil = sil.get_region(visible)
-		_standin_tex = ImageTexture.create_from_image(sil)
-	return _standin_tex
-
-
-## Sombra do chão como a do HUD (elipse), na posição dos pés da figura-substituta.
-class StandinShadow extends Node2D:
-	var center := Vector2.ZERO
-	var radius := 40.0
-	func _draw() -> void:
-		draw_set_transform(center + Vector2(0, 8), 0.0, Vector2(1.0, 6.0 / 44.0))
-		draw_circle(Vector2.ZERO, radius, Color(24.0 / 255.0, 17.0 / 255.0, 26.0 / 255.0, 0.45))
-		draw_set_transform(center, 0.0, Vector2(1.0, 6.0 / 44.0))
-		draw_circle(Vector2.ZERO, radius, Color.BLACK)
-
-
-## Liga o close-up para `units` (aliados que serao atingidos): escurece, esconde os inimigos e poe a figura-substituta de
-## cada aliado no retangulo de um inimigo (slot = posicao do aliado no grupo).
-func closeup_begin(units: Array) -> void:
-	var heroes: Array = []
-	for u in units:
-		if u != null and u.is_player and not heroes.has(u):
-			heroes.append(u)
-	if heroes.is_empty() or hud == null or not _closeup.is_empty() or _closeup_opening or _closeup_closing:
-		return
-	_closeup_opening = true
-	await _ramp_veil(0.0, 0.92, CLOSEUP_FADE)
-	hud.closeup_hide = true
-	var tex := _standin_texture()
-	for u in heroes:
-		var slot := clampi(hud.players.find(u), 0, maxi(0, hud.opponents.size() - 1))
-		var rc: Rect2 = hud.enemy_sprite_rect(slot)
-		var sc := minf(rc.size.x / tex.get_width(), rc.size.y / tex.get_height())
-		var fit := Rect2(Vector2(rc.get_center().x - tex.get_width() * sc * 0.5, rc.end.y - tex.get_height() * sc), tex.get_size() * sc)
-		var sprite := Sprite2D.new()
-		sprite.centered = false
-		sprite.texture = tex
-		var mat := ShaderMaterial.new()
-		mat.shader = WARP_SHADER
-		sprite.material = mat
-		sprite.position = fit.position
-		sprite.scale = fit.size / tex.get_size()
-		var shadow := StandinShadow.new()
-		shadow.center = Vector2(rc.get_center().x, rc.end.y)
-		shadow.radius = 44.0 * (156.0 / 112.0) * hud.enemy_depth
-		_warp_layer.add_child(shadow)
-		_warp_layer.add_child(sprite)
-		_closeup[u.id] = {"slot": slot, "rect": rc, "fit": fit, "sprite": sprite, "shadow": shadow}
-	await _ramp_veil(0.92, 0.0, CLOSEUP_FADE)
-	_closeup_opening = false
-
-
-func closeup_active() -> bool:
-	return not _closeup.is_empty()
-
-
-## Desliga o close-up (escurece, devolve os inimigos, remove as figuras-substitutas, clareia).
-func _closeup_end() -> void:
-	if _closeup.is_empty() or _closeup_closing:
-		return
-	_closeup_closing = true
-	await _ramp_veil(0.0, 0.92, CLOSEUP_FADE)
-	for id in _closeup.keys():
-		_stop_warp(id)
-		(_closeup[id].sprite as Sprite2D).queue_free()
-		(_closeup[id].shadow as Node2D).queue_free()
-	_closeup.clear()
-	hud.closeup_hide = false
-	await _ramp_veil(0.92, 0.0, CLOSEUP_FADE)
-	_closeup_closing = false
