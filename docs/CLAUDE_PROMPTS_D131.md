@@ -1,7 +1,7 @@
 # Guia e Prompts Faseados de Implementação — D-131 (Claude / Agentes)
 
 **Decisões:** D-131 · D-125 · D-137 · 2026-11-27  
-**Status:** **CANÔNICO — DESIGN E VISUAIS (7/7) APROVADOS; PRONTO PARA IMPLEMENTAÇÃO EM 3 FASES**  
+**Status:** **CANÔNICO — DESIGN E VISUAIS (7/7) APROVADOS; IMPLEMENTADO NAS 3 FASES (motor, catálogo e VFX no jogo; aguarda a validação visual do criador no Godot)**  
 **Referências obrigatórias antes de codar:**
 - Regras canônicas e mecânica fechada: [`docs/CANON_SKILLS_D131.md`](CANON_SKILLS_D131.md)
 - Estilo visual oficial não-reza: [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md)

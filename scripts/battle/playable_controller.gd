@@ -145,8 +145,12 @@ func _build_ui() -> void:
 	add_child(stage)
 	hud = HUD_SCRIPT.new()
 	hud.battle = self
-	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hud.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	add_child(hud)
+	# O pai tem tamanho 0, então o HUD ficava com tamanho 0 e SUMIA inteiro enquanto o canvas tremia (camera_shake):
+	# o corte de visibilidade usa o retângulo do nó. Com o tamanho da tela o HUD acompanha o tremor.
+	hud.size = hud.SCREEN
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.stage_backdrop = false
 	hud.enemy_horizon = hud.enemy_sprite_rect(0).end.y
 	hud.enemy_depth = ENEMY_DEPTH
@@ -2494,6 +2498,14 @@ func _gfx_start(attacker: BattleUnit, skill: StringName, victims: Array) -> floa
 		&"umbral_gaze": return grotesque_fx.play_umbral_gaze(attacker, first)
 		&"ignoma": return grotesque_fx.play_ignoma(attacker, first)
 		&"ignoma_esh": return grotesque_fx.play_ignoma_esh(attacker, victims)
+		# D-131 (Lote 2)
+		&"stone_crush": return grotesque_fx.play_stone_crush(attacker, first)
+		&"energy_blow": return grotesque_fx.play_energy_blow(attacker, first)
+		&"drain_claw": return grotesque_fx.play_drain_claw(attacker, first)
+		&"vital_claws": return grotesque_fx.play_vital_claws(attacker, first)
+		&"weaken": return grotesque_fx.play_weaken(attacker, first)
+		&"weakenen": return grotesque_fx.play_weakenen(attacker, victims)
+		&"mark_of_sun": return grotesque_fx.play_mark_of_sun(attacker, first)
 	return -1.0
 
 
@@ -2510,6 +2522,13 @@ func _gfx_wait(start: float, skill: StringName, index: int) -> void:
 		&"umbral_gaze": age = grotesque_fx.HIT_UMBRAL
 		&"ignoma": age = grotesque_fx.HIT_IGNOMA
 		&"ignoma_esh": age = grotesque_fx.HIT_ESH[mini(index, 1)]
+		&"stone_crush": age = grotesque_fx.HIT_STONE
+		&"energy_blow": age = grotesque_fx.HIT_ENERGY
+		&"drain_claw": age = grotesque_fx.HIT_DRAIN
+		&"vital_claws": age = grotesque_fx.HIT_VITAL
+		&"weaken": age = grotesque_fx.HIT_WEAKEN
+		&"weakenen": age = grotesque_fx.HIT_WEAKENEN[mini(index, 1)]
+		&"mark_of_sun": age = grotesque_fx.HIT_SUN
 	await grotesque_fx.wait_age(start, age)
 
 
@@ -2735,6 +2754,8 @@ func _sun_mark_trigger(attacker: BattleUnit, defender: BattleUnit, damage_done: 
 	var extra := defender.take_damage(SkillFx.sun_mark_damage(defender))
 	defender.sun_mark_hits -= 1
 	_append_log("%s: Mark of Sun burns %d (%d hit(s) left)." % [defender.display_name, extra, defender.sun_mark_hits])
+	if grotesque_fx != null:
+		grotesque_fx.play_mark_of_sun_trigger(defender)
 	var line := "%s  SUN %d" % [short_name(defender), extra]
 	if defender.sun_mark_hits <= 0:
 		defender.remove_status(&"mark_of_sun")

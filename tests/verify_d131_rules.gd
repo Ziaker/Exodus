@@ -150,6 +150,12 @@ func _dmg() -> void:
 	foe.current_sp = 100
 	var adv := h(hero, foe, &"energy_blow")
 	check(adv > even, "DMG keeps the SP advantage bonus (%d > %d)" % [adv, even])
+	# "25 DMG + MAK": poder + MAK (nao multiplica), variacao de +-10% e sem DEF
+	reset()
+	hero.current_sp = 100
+	foe.current_sp = 100
+	var amount := h(hero, foe, &"energy_blow")
+	check(amount >= int(round(0.9 * 45.0)) - 1 and amount <= int(round(1.1 * 45.0)) + 2 + 50, "ENERGY BLOW is 25 + MAK(20) = 45 +-10%% (plus a possible crit), got %d" % amount)
 	reset()
 	var untouched := hero.stats.mak
 	h(hero, foe, &"energy_blow")

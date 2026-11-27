@@ -491,7 +491,7 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 	else:
 		result = BattleMath.physical_damage(power,
 			attacker.effective_mak() if magic else attacker.effective_atk(), attacker.effective_agi(),
-			defence_stat, attacker.current_sp, defender.current_sp, rng)
+			defence_stat, attacker.current_sp, defender.current_sp, rng, bool(_hit_mods.get("untyped", false)))
 
 	# D-109: the attack mark scales the hit (white 50%, grey 80%, yellow 100%; side defence halves).
 	var amount := BattleMath.scaled_damage(int(result.amount), attack_timing, defense_timing)

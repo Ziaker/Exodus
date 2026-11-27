@@ -223,9 +223,12 @@ static func extra_block_rolls(advantage: int) -> int:
 ## attacker_atk is a float so ATK stages (+25% each) keep their fraction.
 static func physical_damage(power: int, attacker_atk: float, attacker_agi: int,
 		defender_defense: int, attacker_sp: int, defender_sp: int,
-		rng: RandomNumberGenerator) -> Dictionary:
+		rng: RandomNumberGenerator, untyped: bool = false) -> Dictionary:
 	var difference := attacker_sp - defender_sp
 	var base := float(power) * float(attacker_atk) / maxf(float(defender_defense), 1.0)
+	if untyped:
+		# D-131 DMG ("25 DMG + MAK"): sem tipagem = poder + atributo, sem DEF/MEF (ritmo, SP e variacao continuam).
+		base = float(power) + float(attacker_atk)
 
 	var sp_roll := sp_bonus_roll(difference, rng)
 	var variation := rng.randf_range(-BASE_VARIATION, BASE_VARIATION)

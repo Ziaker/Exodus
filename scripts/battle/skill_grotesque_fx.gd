@@ -29,6 +29,12 @@ const PAL_ZAHAV_BLOOD := {"accent": Color("a81c2e"), "hi": Color("ffd84a"), "dee
 const PAL_ABYSS_DARK := {"accent": Color("361c52"), "hi": Color("9b8ab0"), "hi_breath": Color("a997bd"), "deep": Color("09030f")}
 const PAL_FIRE_NORMAL := {"accent": Color("c94c14"), "hi": Color("f2d9b6"), "deep": Color("240903")}
 const PAL_ZAHAV_FIRE := {"accent": Color("d95b16"), "hi": Color("ffd84a"), "deep": Color("290d04")}
+## D-131 (Lote 2): paletas dos 7 ataques (zero ouro nas normais; `#ffd84a` só no ZAHAV).
+const PAL_STONE := {"accent": Color("6d5e52"), "hi": Color("d9cfc2"), "deep": Color("16110e")}
+const PAL_ENERGY := {"accent": Color("553675"), "hi": Color("c9bde0"), "deep": Color("0b0514")}
+const PAL_BLUE_STAT := {"accent": Color("25568a"), "hi": Color("9fc9ec"), "deep": Color("061124")}
+const PAL_ZAHAV_BLUE := {"accent": Color("2b669e"), "hi": Color("ffd84a"), "deep": Color("08162b")}
+const PAL_SUN_NORMAL := {"accent": Color("c94c14"), "hi": Color("f2d9b6"), "deep": Color("240903")}
 ## Preenchimentos de corpo (negro abissal) usados pelos rabiscos.
 const FILL_BODY := Color("050208")
 const FILL_BODY_DARK := Color("030106")
@@ -129,6 +135,7 @@ static func palette_for(family: StringName, is_zahav: bool) -> Dictionary:
 	if is_zahav:
 		match family:
 			&"blood": return PAL_ZAHAV_BLOOD.duplicate()
+			&"blue": return PAL_ZAHAV_BLUE.duplicate()
 			&"fire": return PAL_ZAHAV_FIRE.duplicate()
 			_:
 				var p: Dictionary = PAL_ABYSS_DARK.duplicate()
@@ -137,6 +144,10 @@ static func palette_for(family: StringName, is_zahav: bool) -> Dictionary:
 	match family:
 		&"blood": return PAL_BLOOD.duplicate()
 		&"fire": return PAL_FIRE_NORMAL.duplicate()
+		&"stone": return PAL_STONE.duplicate()
+		&"energy": return PAL_ENERGY.duplicate()
+		&"blue": return PAL_BLUE_STAT.duplicate()
+		&"sun": return PAL_SUN_NORMAL.duplicate()
 		_: return PAL_ABYSS_DARK.duplicate()
 
 
@@ -225,6 +236,14 @@ func set_field(key: StringName, spec: Dictionary) -> void:
 		area_d = Rect2(x0, mouth.y - half, reach, half * 2.0)
 	# o retângulo coberto é recortado ao palco (o Moiré nunca passa do HUD superior nem do Battle Log)
 	var stage_d := Rect2(stage_rect().position * DESIGN_SCALE, stage_rect().size * DESIGN_SCALE)
+	# D-131: no cartão do aliado o Moiré é "livre" (HTML allowOverCards: passa do palco); `min_y` segura a borda de cima
+	# (a marca de Mark of Sun nunca invade o Battle Log).
+	if bool(spec.get("free", false)):
+		var screen: Vector2 = hud.SCREEN if hud != null else Vector2(544.0, 416.0)
+		stage_d = Rect2(0.0, STAGE_TOP * DESIGN_SCALE, screen.x * DESIGN_SCALE, (screen.y - STAGE_TOP) * DESIGN_SCALE)
+	if spec.has("min_y"):
+		var top := maxf(stage_d.position.y, float(spec.min_y))
+		stage_d = Rect2(stage_d.position.x, top, stage_d.size.x, maxf(0.0, stage_d.end.y - top))
 	var clipped := area_d.intersection(stage_d)
 	if clipped.size.x <= 0.0 or clipped.size.y <= 0.0 or float(spec.get("env", 1.0)) <= 0.02:
 		rect.visible = false
@@ -261,13 +280,20 @@ func clear_field(key: StringName) -> void:
 		_fields.erase(key)
 
 
-func clear_fields() -> void:
+## `include_sun` false: a marca persistente de Mark of Sun (campo `sunm_*`) sobrevive ao fim de um efeito.
+func clear_fields(include_sun: bool = false) -> void:
 	for key in _fields.keys():
-		clear_field(key)
+		if include_sun or not _is_sun_key(key):
+			clear_field(key)
 
 
+## Campos de efeito vivos (a marca persistente de Mark of Sun não conta como efeito em andamento).
 func field_count() -> int:
-	return _fields.size()
+	var n := 0
+	for key in _fields.keys():
+		if not _is_sun_key(key):
+			n += 1
+	return n
 
 
 ## Véu `rgba(4,1,8,darken)` só sobre o palco (entre o HUD superior e o Battle Log).
@@ -424,7 +450,7 @@ func effect_count() -> int:
 
 
 func is_busy() -> bool:
-	return not _effects.is_empty() or not _fields.is_empty() or not _warps.is_empty() or _darken > 0.01 or time < _shake_until
+	return not _effects.is_empty() or field_count() > 0 or not _warps.is_empty() or _darken > 0.01 or time < _shake_until
 
 
 func clear_all() -> void:
@@ -433,7 +459,8 @@ func clear_all() -> void:
 		if on_end.is_valid():
 			on_end.call(self)
 	_effects.clear()
-	clear_fields()
+	clear_fields(true)
+	_sun_pulse.clear()
 	_clear_warps()
 	set_darken(0.0)
 	_shake_until = -1.0
@@ -455,6 +482,7 @@ func _process(delta: float) -> void:
 				upd.call(self, age)
 	_warp_step()
 	_shake_step()
+	_sun_step()
 	for key in _fields.keys():
 		var spec: Dictionary = _fields[key].spec
 		set_field(key, spec)  # atualiza time_val do shader
@@ -462,13 +490,12 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	if _effects.is_empty():
-		return
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE / DESIGN_SCALE)
 	for e in _effects:
 		var drawer: Callable = e.draw
 		if drawer.is_valid():
 			drawer.call(self, time - float(e.at))
+	_draw_suns()
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -598,7 +625,10 @@ const HIT_UMBRAL := 0.62
 const HIT_IGNOMA := 0.62
 const HIT_ESH: Array[float] = [0.62, 1.04]
 const DURATIONS := {&"mazz_bite": 2.35, &"fang_sting": 2.35, &"fang_spine": 2.70, &"vuln_pierce": 2.45,
-	&"dark_breath": 2.95, &"umbral_gaze": 2.85, &"ignoma": 2.45, &"ignoma_esh": 2.85}
+	&"dark_breath": 2.95, &"umbral_gaze": 2.85, &"ignoma": 2.45, &"ignoma_esh": 2.85,
+	# D-131 (README do canônico). Mark of Sun: só o ACENDER (0,65 s); depois vale a marca persistente.
+	&"stone_crush": 2.55, &"energy_blow": 2.65, &"drain_claw": 2.25, &"vital_claws": 2.40, &"weaken": 2.45, &"weakenen": 2.50,
+	&"mark_of_sun": 0.67}
 const HEBREW_ALPHABET := "אבגדהוזחטיכלמנסעפצקרשת"
 const BREATH_SPEED := 640.0
 const BREATH_START := 0.26
@@ -1205,3 +1235,661 @@ func play_ignoma_esh(caster: BattleUnit, targets: Array) -> float:
 				drive_target_warp(units[oi], amp, inv),
 		func(_fx: Node2D) -> void: _release_all(units))
 
+
+# ====================================================================================================================
+# D-131 (criador 2026-11-27): Lote 2 — Stone Crush, Energy Blow, Drain Claw, Vital Claws [ZAHAV], Weaken, Weakenen [ZAHAV]
+# e Mark of Sun. Porte 1:1 de docs/vfx_refs/d131/d131_skills_vfx_canon.html (README: tempos, camadas, paletas). O alvo é
+# sempre o referencial local (centro `c`, escala `k`): num inimigo é a figura; num aliado é o CARTÃO, com o MESMO k.
+# Em aliados o Moiré é "livre" (pode passar do palco, HTML `allowOverCards`) e a marca persistente de Mark of Sun nunca
+# invade o Battle Log (`min_y`).
+# ====================================================================================================================
+
+const HIT_STONE := 0.62
+const HIT_ENERGY := 0.56
+const HIT_DRAIN := 0.36
+const HIT_VITAL_CLAWS: Array[float] = [0.34, 0.48]
+const HIT_VITAL := 0.48              # a mecânica fecha com a 2ª garra (o número aparece nesse instante)
+const HIT_WEAKEN := 0.58
+const HIT_WEAKENEN: Array[float] = [0.78, 0.90]
+const HIT_SUN := 0.65                # a marca acende
+const SUN_TRIGGER_DUR := 0.48
+const INK_DEEP := Color("050208")
+const EN_PAL := {"accent": Color("2c5078"), "hi": Color("9fc9ec")}
+const EN_DROP_PAL := {"accent": Color("2b669e"), "hi": Color("ffd84a")}
+
+## id da unidade -> intensidade (0..1) do pulso do sol enquanto o clarão de um golpe dura.
+var _sun_pulse: Dictionary = {}
+
+
+# ---- primitivas novas (porte de drawSketchLine / drawSketchOrb / drawSingleImpaleClaw / drawSolarHitFlare) -------
+
+## drawSketchLine: traço aberto sujo (um só traço de `col`).
+func draw_sketch_line(pts: PackedVector2Array, f_idx: int, col: Color, line_w: float = 2.0, jitter: float = 2.0, alpha: float = 1.0) -> void:
+	if pts.size() < 2:
+		return
+	draw_polyline(sketchy_pts(pts, f_idx, jitter), Color(col, col.a * alpha), line_w, false)
+
+
+## drawSketchOrb: esfera rabiscada (2 anéis tortos girando em sentidos opostos + núcleo escuro).
+func _draw_sketch_orb(center: Vector2, radius: float, f_idx: int, pal: Dictionary, alpha: float = 1.0) -> void:
+	for kk in [1, 0]:
+		var rr: float = radius * (0.62 + float(kk) * 0.38)
+		var pts := PackedVector2Array()
+		for i in 14:
+			var a := (float(i) / 14.0) * TAU + float(f_idx) * (0.18 if kk == 1 else -0.16)
+			var wob := 1.0 + (sketch_hash(float(f_idx * 17 + i * 11 + kk * 53)) - 0.5) * 0.24
+			pts.append(center + Vector2(cos(a), sin(a)) * rr * wob)
+		var fill_col: Color = pal.deep if kk == 0 else Color(0, 0, 0, 0)
+		draw_sketch_shape(pts, f_idx + kk * 23, pal, 2.0 + float(kk) * 0.6, fill_col, 2.3 if kk == 1 else 1.6, alpha)
+	var core := PackedVector2Array()
+	for i in 9:
+		var a2 := (float(i) / 9.0) * TAU
+		core.append(center + Vector2(cos(a2), sin(a2)) * radius * 0.32)
+	_fill_poly(sketchy_pts(core, f_idx + 91, 1.2), Color(FILL_BODY_DARK, alpha))
+
+
+## drawSingleImpaleClaw: UMA garra afiada com a ponta em `tip` (px de design absolutos), `angle` e comprimento `length`
+## (unidades locais, escaladas por `k`). Desenha no próprio transform (rotação) e devolve ao de design.
+func _draw_single_impale_claw(tip: Vector2, angle: float, length: float, k: float, f_idx: int, pal: Dictionary, alpha: float = 1.0) -> void:
+	if alpha <= 0.01:
+		return
+	var claw := PackedVector2Array([
+		Vector2(0, 0), Vector2(-length * 0.28, -length * 0.14), Vector2(-length * 0.65, -length * 0.18), Vector2(-length, -length * 0.08),
+		Vector2(-length * 0.92, length * 0.12), Vector2(-length * 0.52, length * 0.06), Vector2(-length * 0.22, length * 0.04)])
+	draw_set_transform(tip / DESIGN_SCALE, angle, Vector2(k, k) / DESIGN_SCALE)
+	draw_sketch_shape(claw, f_idx, pal, 1.9, FILL_BODY, 2.2, alpha)
+	_unlocal()
+
+
+## drawSolarHitFlare: anel solar rabiscado + estrela de 8 raios finos + núcleo breve de clarão osso-quente. SEM triângulos,
+## SEM cone trapezoide. `min_y` (design) segura os pontos acima do limite (aliado: logo abaixo do Battle Log).
+func _draw_solar_hit_flare(center: Vector2, trig_prog: float, trig_env: float, f_idx: int, pal: Dictionary, min_y: float, ally_mode: bool, k: float = 1.0) -> void:
+	if trig_env <= 0.02:
+		return
+	var ring_r := (14.0 + trig_prog * 56.0) * k
+	var ring := PackedVector2Array()
+	for i in 14:
+		var a := (float(i) / 14.0) * TAU + float(f_idx) * 0.14
+		ring.append(Vector2(center.x + cos(a) * ring_r, maxf(min_y, center.y + sin(a) * ring_r * (0.56 if ally_mode else 0.88))))
+	draw_sketch_shape(ring, f_idx + 17, pal, 2.4, Color(0, 0, 0, 0), 2.2, trig_env)
+	var main_len := (30.0 + (1.0 - trig_prog) * 44.0) * k
+	var diag_len := main_len * 0.58
+	for i in 8:
+		var a2 := (float(i) / 8.0) * TAU + (0.0 if i % 2 == 0 else 0.08)
+		var len := main_len if i % 2 == 0 else diag_len
+		var ry_scale := 0.58 if ally_mode else 0.95
+		var p1 := Vector2(center.x + cos(a2) * 6.0 * k, maxf(min_y, center.y + sin(a2) * 6.0 * ry_scale * k))
+		var p2 := Vector2(center.x + cos(a2) * len, maxf(min_y, center.y + sin(a2) * len * ry_scale))
+		draw_sketch_line(PackedVector2Array([p1, p2]), f_idx + i * 9, pal.hi, 2.6 if i % 2 == 0 else 1.6, 1.8, trig_env)
+		draw_sketch_line(PackedVector2Array([p1, p2]), f_idx + i * 9 + 41, pal.accent, 1.2, 2.2, trig_env)
+	if trig_prog < 0.42:
+		var core_r := (1.0 - trig_prog / 0.42) * 18.0 * k
+		var core := PackedVector2Array()
+		for i in 10:
+			var a3 := (float(i) / 10.0) * TAU
+			core.append(Vector2(center.x + cos(a3) * core_r, maxf(min_y, center.y + sin(a3) * core_r * (0.7 if ally_mode else 1.0))))
+		var hi: Color = pal.hi
+		_fill_poly(sketchy_pts(core, f_idx + 61, 1.6), Color(hi, hi.a * trig_env))
+
+
+## Olho de Energy Blow (a íris escura `#261838` do HTML D-131; a claro é `#b8abc9`).
+func _draw_eye_d131(cx: float, cy: float, rx: float, ry: float, f_idx: int, pal: Dictionary, dark_iris: bool, alpha: float = 1.0) -> void:
+	var pts := PackedVector2Array()
+	for i in 12:
+		var a := (float(i) / 12.0) * TAU
+		pts.append(Vector2(cx + cos(a) * rx, cy + sin(a) * ry))
+	draw_sketch_shape(pts, f_idx, pal, 1.4, Color("261838") if dark_iris else Color("b8abc9"), 2.0, alpha)
+	var pupil := Vector2(cx + (sketch_hash(float(f_idx * 13 + 5)) - 0.5) * rx * 0.35, cy + (sketch_hash(float(f_idx * 19 + 9)) - 0.5) * ry * 0.25)
+	var pr := maxf(2.5, minf(rx, ry) * 0.42)
+	var pp := PackedVector2Array()
+	for i in 8:
+		var a2 := (float(i) / 8.0) * TAU
+		pp.append(pupil + Vector2(cos(a2), sin(a2)) * pr)
+	_fill_poly(sketchy_pts(pp, f_idx + 5, 0.9), Color(FILL_BODY_DARK, alpha))
+
+
+## Gota (losango) de Drain Claw / Vital Claws que sobe do alvo ao conjurador.
+func _draw_drop(p: Vector2, sz: float, f_idx: int, pal: Dictionary, fill_col: Color, diamond_en: bool = false) -> void:
+	var pts: PackedVector2Array
+	if diamond_en:
+		pts = PackedVector2Array([Vector2(p.x, p.y - sz * 1.2), Vector2(p.x + sz, p.y), Vector2(p.x, p.y + sz * 1.2), Vector2(p.x - sz, p.y)])
+	else:
+		pts = PackedVector2Array([Vector2(p.x + sz * 1.3, p.y), Vector2(p.x, p.y - sz), Vector2(p.x - sz * 1.1, p.y), Vector2(p.x, p.y + sz)])
+	draw_sketch_shape(pts, f_idx, pal, 1.1, fill_col, 1.5)
+
+
+## Seta descendente de Weaken / Weakenen: haste (traço) + ponta em V.
+func _draw_weak_arrow(ax: float, ay: float, ln: float, f_idx: int, hi_col: Color, accent: Color, big: bool, alpha: float) -> void:
+	draw_sketch_line(PackedVector2Array([Vector2(ax, ay - ln), Vector2(ax, ay)]), f_idx, hi_col, 2.0 if big else 1.9, 1.4 if big else 1.3, alpha)
+	var wing := 5.0 if big else 4.5
+	var up := 6.0 if big else 5.5
+	draw_sketch_line(PackedVector2Array([Vector2(ax - wing, ay - up), Vector2(ax, ay), Vector2(ax + wing, ay - up)]), f_idx + 3, accent, 1.8, 1.1 if big else 1.0, alpha)
+
+
+# ---- 1. STONE CRUSH (renderStoneCrush) -----------------------------------------------------------------------------
+func play_stone_crush(caster: BattleUnit, target: BattleUnit) -> float:
+	var g := unit_geom(target)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var ally := target.is_player
+	var cv := (_origin_of(caster) - c) / k
+	var pal := palette_for(&"stone", false)
+	var arc := 85.0 if ally else 118.0
+	var floor_y := 26.0 if ally else 52.0
+	var debris: Array = []
+	for i in 14:
+		var a := -PI * 0.92 + (float(i) / 13.0) * PI * 0.84 + (sketch_hash(float(i * 17)) - 0.5) * 0.18
+		var sp := 110.0 + sketch_hash(float(i * 31)) * 195.0
+		debris.append({"vx": cos(a) * sp, "vy": sin(a) * sp - 45.0, "r": 5.0 + sketch_hash(float(i * 19)) * 10.0,
+			"rot": sketch_hash(float(i * 13)) * TAU, "vr": (sketch_hash(float(i * 23)) - 0.5) * 8.0})
+	var cracks: Array = []
+	for i in 7:
+		cracks.append({"a": (float(i) / 7.0) * TAU + sketch_hash(float(i * 11)) * 0.4, "len": 38.0 + sketch_hash(float(i * 29)) * 56.0})
+	return add_effect(DURATIONS[&"stone_crush"], func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		var post := maxf(0.0, t - HIT_STONE)
+		var impact_env := maxf(0.0, 1.0 - post / 1.15) if post > 0.0 else 0.0
+		_local(c, k)
+		if post > 0.0 and impact_env > 0.05:
+			var grow := minf(1.0, post / 0.18)
+			var gy := 18.0 if ally else floor_y
+			for idx in cracks.size():
+				var cr: Dictionary = cracks[idx]
+				var m := Vector2(cos(cr.a) * cr.len * 0.5 * grow, gy + sin(cr.a) * cr.len * 0.2 * grow)
+				var e := Vector2(cos(cr.a) * cr.len * grow, gy + sin(cr.a) * cr.len * 0.32 * grow)
+				var line := PackedVector2Array([Vector2(0, gy), m, e])
+				var al := minf(1.0, impact_env * 1.4)
+				draw_sketch_line(line, f_idx + idx * 7, INK_DEEP, 4.5, 1.8, al)
+				draw_sketch_line(line, f_idx + idx * 7 + 3, pal.hi, 1.4, 1.5, al)
+		if t < HIT_STONE + 0.14:
+			var p := minf(1.0, t / HIT_STONE)
+			var ease := p * p * (1.25 - 0.25 * p)
+			var e1 := minf(1.0, ease)
+			var b := Vector2(cv.x * (1.0 - e1), cv.y + (-6.0 - cv.y) * e1 - sin(p * PI) * arc)
+			var rscale := 0.65 + p * 0.55
+			var rot := t * 5.2
+			var boulder := PackedVector2Array()
+			for i in 13:
+				var ang := (float(i) / 13.0) * TAU + rot
+				var rad := (26.0 + sketch_hash(float(i * 19 + 3)) * 15.0) * rscale
+				boulder.append(Vector2(b.x + cos(ang) * rad, b.y + sin(ang) * rad * 0.88))
+			draw_sketch_shape(boulder, f_idx, pal, 3.0, FILL_BODY, 2.6)
+			draw_sketch_line(PackedVector2Array([boulder[1], b, boulder[7]]), f_idx + 5, pal.accent, 1.8, 1.6)
+			draw_sketch_line(PackedVector2Array([boulder[4], b + Vector2(4, -2), boulder[10]]), f_idx + 9, pal.hi, 1.2, 1.4)
+		if post > 0.0 and post < 1.35:
+			var da := maxf(0.0, 1.0 - post / 1.35)
+			for idx in debris.size():
+				var d: Dictionary = debris[idx]
+				var dx: float = d.vx * post
+				var dy: float = d.vy * post + 0.5 * 520.0 * post * post
+				if dy > floor_y:
+					dy = floor_y - absf(dy - floor_y) * 0.32
+				var ang2: float = d.rot + d.vr * post
+				var poly := PackedVector2Array()
+				for kk in 5:
+					var a2 := ang2 + (float(kk) / 5.0) * TAU
+					var r: float = d.r * (0.7 + sketch_hash(float(idx * 7 + kk * 13)) * 0.55)
+					poly.append(Vector2(dx + cos(a2) * r, dy + sin(a2) * r))
+				draw_sketch_shape(poly, f_idx + idx * 5, pal, 1.4, FILL_BODY, 1.6, da)
+		_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var post := maxf(0.0, t - HIT_STONE)
+			var impact_env := maxf(0.0, 1.0 - post / 1.15) if post > 0.0 else 0.0
+			if post > 0.0:
+				set_field(&"stone", {"mode": 0, "cx": c.x, "cy": c.y + (0.0 if ally else 22.0 * k), "rx": 132.0 * k, "ry": 68.0 * k,
+					"env": impact_env * 0.95, "pal": pal, "profile": &"v4", "free": ally})
+			else:
+				var p := minf(1.0, t / HIT_STONE)
+				var bp := Vector2(cv.x * (1.0 - p), cv.y + (-8.0 - cv.y) * p - sin(p * PI) * arc)
+				set_field(&"stone", {"mode": 0, "cx": c.x + bp.x * k, "cy": c.y + bp.y * k, "rx": 54.0 * k, "ry": 48.0 * k,
+					"env": 0.55, "pal": pal, "profile": &"v4", "free": ally})
+			drive_target_warp(target, impact_env * 13.0 * k, 1.0 if (post > 0.0 and post < 0.16) else 0.0)
+			set_darken(impact_env * 0.24)
+			if post > 0.0 and post < 0.42:
+				camera_shake((1.0 - post / 0.42) * 11.0, 0.06),
+		func(_fx: Node2D) -> void: _release_all([target]))
+
+
+# ---- 2. ENERGY BLOW (renderEnergyBlow) -----------------------------------------------------------------------------
+func play_energy_blow(caster: BattleUnit, target: BattleUnit) -> float:
+	var g := unit_geom(target)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var ally := target.is_player
+	var cv := (_origin_of(caster) - c) / k
+	var pal := palette_for(&"energy", false)
+	var strands: Array = []
+	for i in 16:
+		strands.append({"delay": 0.64 + (float(i) / 16.0) * 0.48, "arc": (sketch_hash(float(i * 19)) - 0.5) * 110.0,
+			"ox": (sketch_hash(float(i * 7)) - 0.5) * 40.0, "oy": (sketch_hash(float(i * 13)) - 0.5) * 52.0, "life": 0.72 + sketch_hash(float(i * 29)) * 0.32})
+	return add_effect(DURATIONS[&"energy_blow"], func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		var post := maxf(0.0, t - HIT_ENERGY)
+		var charge_env := t / HIT_ENERGY if t < HIT_ENERGY else 0.0
+		_local(c, k)
+		if t < HIT_ENERGY:
+			var s := 1.0 - charge_env * 0.35
+			_draw_eye_d131(0.0, -4.0, 30.0 * s, 16.0 * s, f_idx, pal, true)
+			for i in 8:
+				var a := (float(i) / 8.0) * TAU + t * 2.2
+				var r1 := 92.0 * (1.0 - charge_env * 0.75) + 16.0
+				var r2 := r1 + 24.0
+				draw_sketch_line(PackedVector2Array([Vector2(cos(a) * r1, sin(a) * r1), Vector2(cos(a) * r2, sin(a) * r2)]), f_idx + i * 5, pal.hi, 1.8, 1.6)
+		if post > 0.0 and post < 0.72:
+			var p := post / 0.72
+			var b_scale := 0.45 + p * 1.15
+			var burst := PackedVector2Array()
+			for i in 24:
+				var a2 := (float(i) / 24.0) * TAU + float(f_idx) * 0.06
+				var rad := (58.0 + sketch_hash(float(i * 19)) * 32.0 if i % 2 == 0 else 22.0 + sketch_hash(float(i * 7)) * 10.0) * b_scale
+				burst.append(Vector2(cos(a2) * rad, sin(a2) * rad * 0.85))
+			draw_sketch_shape(burst, f_idx, pal, 3.4, FILL_BODY if p < 0.35 else Color(0, 0, 0, 0), 2.5, maxf(0.0, 1.0 - p))
+		if post > 0.08:
+			for idx in strands.size():
+				var st: Dictionary = strands[idx]
+				var lt: float = t - st.delay
+				if lt < 0.0 or lt > st.life:
+					continue
+				var u: float = lt / st.life
+				var sx: float = st.ox
+				var sy: float = st.oy
+				var pts := PackedVector2Array()
+				for kk in 6:
+					var ku := clampf(u - 0.24 + (float(kk) / 5.0) * 0.30, 0.0, 1.0)
+					pts.append(Vector2(sx + (cv.x - sx) * ku, sy + (cv.y - sy) * ku + sin(ku * PI) * st.arc))
+				var al := sin(u * PI)
+				draw_sketch_line(pts, f_idx + idx * 7, EN_PAL.hi, 2.2, 2.0, al)
+				draw_sketch_line(pts, f_idx + idx * 7 + 31, EN_PAL.accent, 1.3, 2.6, al)
+		_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var post := maxf(0.0, t - HIT_ENERGY)
+			var charge_env := t / HIT_ENERGY if t < HIT_ENERGY else 0.0
+			var blast_env := maxf(0.0, 1.0 - post / 1.25) if post > 0.0 else 0.0
+			if t < HIT_ENERGY:
+				var r := (110.0 * (1.0 - charge_env * 0.72) + 18.0) * k
+				set_field(&"energy", {"mode": 0, "cx": c.x, "cy": c.y, "rx": r, "ry": r * 0.85, "env": 0.85, "pal": pal, "profile": &"v3", "dark_bias": true, "free": ally})
+			else:
+				set_field(&"energy", {"mode": 0, "cx": c.x, "cy": c.y, "rx": 122.0 * (0.7 + (1.0 - blast_env) * 0.4) * k, "ry": 96.0 * k,
+					"env": blast_env, "pal": pal, "profile": &"v3", "dark_bias": true, "free": ally})
+			drive_target_warp(target, (charge_env * 5.0 if t < HIT_ENERGY else blast_env * 12.0) * k, 1.0 if (post > 0.0 and post < 0.15) else 0.0)
+			set_darken(maxf(charge_env * 0.34, blast_env * 0.40))
+			if post > 0.0 and post < 0.36:
+				camera_shake((1.0 - post / 0.36) * 9.0, 0.06),
+		func(_fx: Node2D) -> void: _release_all([target]))
+
+
+# ---- 3. DRAIN CLAW / 3Z. VITAL CLAWS -------------------------------------------------------------------------------
+func play_drain_claw(caster: BattleUnit, target: BattleUnit) -> float:
+	var g := unit_geom(target)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var cv := (_origin_of(caster) - c) / k
+	var pal := palette_for(&"blood", false)
+	var drops: Array = []
+	for i in 6:
+		drops.append({"delay": 0.44 + float(i) * 0.12, "arc": -20.0 - sketch_hash(float(i * 19)) * 34.0, "sz": 4.5 + sketch_hash(float(i * 13)) * 3.0, "life": 0.58})
+	return add_effect(DURATIONS[&"drain_claw"], func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		var post := maxf(0.0, t - HIT_DRAIN)
+		if t < 1.38:
+			var tip: Vector2
+			var alpha := 1.0
+			if t < HIT_DRAIN:
+				var p := t / HIT_DRAIN
+				var ease := p * p
+				tip = Vector2(-105.0 * (1.0 - ease), 42.0 * (1.0 - ease))
+			elif t < 1.05:
+				tip = Vector2((sketch_hash(float(f_idx * 11)) - 0.5) * 3.0, (sketch_hash(float(f_idx * 17)) - 0.5) * 3.0)
+			else:
+				var out := (t - 1.05) / 0.33
+				tip = Vector2(-out * 75.0, out * 30.0)
+				alpha = maxf(0.0, 1.0 - out)
+			_draw_single_impale_claw(c + tip * k, -0.36, 86.0, k, f_idx, pal, alpha)
+		if post > 0.05:
+			_local(c, k)
+			for idx in drops.size():
+				var d: Dictionary = drops[idx]
+				var lt: float = t - d.delay
+				if lt < 0.0 or lt > d.life:
+					continue
+				var u: float = lt / d.life
+				var p2 := Vector2(cv.x * u, cv.y * u + sin(u * PI) * d.arc)
+				_draw_drop(p2, d.sz, f_idx + idx * 7, pal, pal.accent)
+			_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var post := maxf(0.0, t - HIT_DRAIN)
+			var env := maxf(0.0, 1.0 - maxf(0.0, post - 0.95) / 0.72) if post > 0.0 else 0.0
+			if post > 0.0:
+				set_field(&"drain", {"mode": 0, "cx": c.x, "cy": c.y, "rx": 70.0 * k, "ry": 56.0 * k, "env": env * 0.80, "pal": pal, "profile": &"v4", "free": target.is_player})
+			drive_target_warp(target, env * 7.5 * k, 1.0 if (post > 0.0 and post < 0.12) else 0.0)
+			set_darken(env * 0.16)
+			if post > 0.0 and post < 0.28:
+				camera_shake((1.0 - post / 0.28) * 6.5, 0.06),
+		func(_fx: Node2D) -> void: _release_all([target]))
+
+
+func play_vital_claws(caster: BattleUnit, target: BattleUnit) -> float:
+	var g := unit_geom(target)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var cv := (_origin_of(caster) - c) / k
+	var pal := palette_for(&"blood", true)
+	var hp_drops: Array = []
+	for i in 6:
+		hp_drops.append({"delay": 0.54 + float(i) * 0.12, "arc": -22.0 - sketch_hash(float(i * 19)) * 38.0, "sz": 4.5 + sketch_hash(float(i * 13)) * 3.0, "life": 0.60})
+	var en_drops: Array = []
+	for i in 5:
+		en_drops.append({"delay": 0.60 + float(i) * 0.13, "arc": 22.0 + sketch_hash(float(i * 29)) * 36.0, "sz": 4.0 + sketch_hash(float(i * 7)) * 2.5, "life": 0.60})
+	return add_effect(DURATIONS[&"vital_claws"], func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		var post2 := maxf(0.0, t - HIT_VITAL_CLAWS[1])
+		if t < 1.50:
+			var tip1: Vector2
+			var a1 := 1.0
+			if t < HIT_VITAL_CLAWS[0]:
+				var p := t / HIT_VITAL_CLAWS[0]
+				var e := p * p
+				tip1 = Vector2(-10.0 - 95.0 * (1.0 - e), 38.0 * (1.0 - e))
+			elif t < 1.16:
+				tip1 = Vector2(-10.0 + (sketch_hash(float(f_idx * 11)) - 0.5) * 3.0, 0.0)
+			else:
+				var out := (t - 1.16) / 0.34
+				tip1 = Vector2(-10.0 - out * 72.0, out * 28.0)
+				a1 = maxf(0.0, 1.0 - out)
+			_draw_single_impale_claw(c + tip1 * k, -0.34, 92.0, k, f_idx, pal, a1)
+		if t > 0.12 and t < 1.56:
+			var tip2: Vector2
+			var a2 := 1.0
+			if t < HIT_VITAL_CLAWS[1]:
+				var p2 := (t - 0.12) / (HIT_VITAL_CLAWS[1] - 0.12)
+				var e2 := p2 * p2
+				tip2 = Vector2(10.0 + 95.0 * (1.0 - e2), -34.0 * (1.0 - e2))
+			elif t < 1.22:
+				tip2 = Vector2(10.0 + (sketch_hash(float(f_idx * 19)) - 0.5) * 3.0, 0.0)
+			else:
+				var out2 := (t - 1.22) / 0.34
+				tip2 = Vector2(10.0 + out2 * 72.0, -out2 * 28.0)
+				a2 = maxf(0.0, 1.0 - out2)
+			_draw_single_impale_claw(c + tip2 * k, PI - 0.34, 92.0, k, f_idx + 37, pal, a2)
+		if post2 > 0.04:
+			_local(c, k)
+			for idx in hp_drops.size():
+				var d: Dictionary = hp_drops[idx]
+				var lt: float = t - d.delay
+				if lt < 0.0 or lt > d.life:
+					continue
+				var u: float = lt / d.life
+				_draw_drop(Vector2(cv.x * u, cv.y * u + sin(u * PI) * d.arc), d.sz, f_idx + idx * 7, pal, Color("a81c2e"))
+			for idx in en_drops.size():
+				var d2: Dictionary = en_drops[idx]
+				var lt2: float = t - d2.delay
+				if lt2 < 0.0 or lt2 > d2.life:
+					continue
+				var u2: float = lt2 / d2.life
+				_draw_drop(Vector2(cv.x * u2, cv.y * u2 + sin(u2 * PI) * d2.arc), d2.sz, f_idx + idx * 11, EN_DROP_PAL, Color("5d98c9"), true)
+			_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var post1 := maxf(0.0, t - HIT_VITAL_CLAWS[0])
+			var post2 := maxf(0.0, t - HIT_VITAL_CLAWS[1])
+			var env := maxf(0.0, 1.0 - maxf(0.0, post1 - 1.05) / 0.75) if post1 > 0.0 else 0.0
+			var inv := (post1 > 0.0 and post1 < 0.08) or (post2 > 0.0 and post2 < 0.12)
+			if post1 > 0.0:
+				set_field(&"vital", {"mode": 0, "cx": c.x, "cy": c.y, "rx": 82.0 * k, "ry": 66.0 * k, "env": env * 0.86, "pal": pal, "profile": &"v4", "free": target.is_player})
+			drive_target_warp(target, env * 9.5 * k, 1.0 if inv else 0.0)
+			set_darken(0.20 * (1.0 if t < 1.9 else maxf(0.0, 1.0 - (t - 1.9) / 0.5)))
+			if post1 > 0.0 and post1 < 0.42:
+				camera_shake((1.0 - post1 / 0.42) * 8.0, 0.06),
+		func(_fx: Node2D) -> void: _release_all([target]))
+
+
+# ---- 4. WEAKEN / 4Z. WEAKENEN ----------------------------------------------------------------------------------------
+func _weak_arrows() -> Array:
+	var out: Array = []
+	for i in 7:
+		out.append({"ox": (sketch_hash(float(i * 17)) - 0.5) * 66.0, "delay": (float(i) / 7.0) * 0.55, "spd": 44.0 + sketch_hash(float(i * 29)) * 32.0, "len": 13.0 + sketch_hash(float(i * 11)) * 11.0})
+	return out
+
+
+func play_weaken(caster: BattleUnit, target: BattleUnit) -> float:
+	var g := unit_geom(target)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var cv := (_origin_of(caster) - c) / k
+	var pal := palette_for(&"blue", false)
+	var arrows := _weak_arrows()
+	return add_effect(DURATIONS[&"weaken"], func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		var post := maxf(0.0, t - HIT_WEAKEN)
+		var env := maxf(0.0, 1.0 - maxf(0.0, post - 1.0) / 0.78) if post > 0.0 else 0.0
+		_local(c, k)
+		if t < HIT_WEAKEN + 0.16:
+			var p := minf(1.0, t / HIT_WEAKEN)
+			var o := Vector2(cv.x * (1.0 - p), cv.y * (1.0 - p) - sin(p * PI) * 44.0)
+			var r := 22.0 + sin(t * 16.0) * 2.5 if t < HIT_WEAKEN else 22.0 * (1.0 + ((t - HIT_WEAKEN) / 0.16) * 1.4)
+			_draw_sketch_orb(o, r, f_idx, pal, 1.0 if t < HIT_WEAKEN else maxf(0.0, 1.0 - (t - HIT_WEAKEN) / 0.16))
+		if post > 0.04 and env > 0.05:
+			for idx in arrows.size():
+				var ar: Dictionary = arrows[idx]
+				var lt := fmod(post + ar.delay, 0.85)
+				_draw_weak_arrow(ar.ox, -42.0 + lt * ar.spd * 1.5, ar.len, f_idx + idx * 7, pal.hi, pal.accent, true, minf(1.0, env * 1.25))
+		_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var post := maxf(0.0, t - HIT_WEAKEN)
+			var env := maxf(0.0, 1.0 - maxf(0.0, post - 1.0) / 0.78) if post > 0.0 else 0.0
+			if t < HIT_WEAKEN:
+				var p := t / HIT_WEAKEN
+				set_field(&"weaken", {"mode": 0, "cx": c.x + cv.x * (1.0 - p) * k, "cy": c.y + (cv.y * (1.0 - p) - sin(p * PI) * 44.0) * k,
+					"rx": 46.0 * k, "ry": 46.0 * k, "env": 0.75, "pal": pal, "profile": &"v4", "free": target.is_player})
+			else:
+				set_field(&"weaken", {"mode": 0, "cx": c.x, "cy": c.y, "rx": 92.0 * k, "ry": 84.0 * k, "env": env * 0.90, "pal": pal, "profile": &"v4", "free": target.is_player})
+			drive_target_warp(target, env * 7.5 * k, 0.0)
+			set_darken(env * 0.24),
+		func(_fx: Node2D) -> void: _release_all([target]))
+
+
+func play_weakenen(caster: BattleUnit, victims: Array) -> float:
+	var t1: BattleUnit = victims[0]
+	var t2: BattleUnit = victims[1] if victims.size() > 1 else victims[0]
+	var single := t1 == t2
+	var g1 := unit_geom(t1)
+	var g2 := unit_geom(t2)
+	var pal := palette_for(&"blue", true)
+	var arrows := _weak_arrows()
+	var kk: float = (float(g1.k) + float(g2.k)) * 0.5
+	var origin := _origin_of(caster) + Vector2(0.0, (10.0 if t1.is_player else -36.0) * kk)
+	var geoms: Array = [g1, g2]
+	var units: Array = [t1, t2]
+	var hits: Array[float] = [HIT_WEAKENEN[0], HIT_WEAKENEN[1]]
+	var starts: Array[float] = [0.36, 0.42]
+	var arcs: Array[float] = [42.0, 62.0]
+	var ally := t1.is_player
+	var all_units: Array = [t1] if single else [t1, t2]
+	return add_effect(DURATIONS[&"weakenen"], func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		if t < 0.42:
+			var p := minf(1.0, t / 0.36)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE / DESIGN_SCALE)
+			_draw_sketch_orb(origin, (14.0 + p * 18.0) * kk, f_idx, pal)
+		for oi in (1 if single else 2):
+			var gg: Dictionary = geoms[oi]
+			var tc: Vector2 = gg.c
+			var hit: float = hits[oi]
+			var post := maxf(0.0, t - hit)
+			var env := maxf(0.0, 1.0 - maxf(0.0, post - (0.95 if oi == 0 else 0.88)) / 0.65) if post > 0.0 else 0.0
+			if t >= starts[oi] and t < hit + 0.15:
+				var p2 := minf(1.0, (t - starts[oi]) / (hit - starts[oi]))
+				var o := origin.lerp(tc, p2) - Vector2(0.0, sin(p2 * PI) * arcs[oi] * kk)
+				var r := 24.0 * kk if t < hit else 24.0 * kk * (1.0 + ((t - hit) / 0.15) * 1.35)
+				_draw_sketch_orb(o, r, f_idx + oi * 19, pal, 1.0 if t < hit else maxf(0.0, 1.0 - (t - hit) / 0.15))
+			if post > 0.03 and env > 0.04:
+				_local(tc, gg.k)
+				for idx in arrows.size():
+					var ar: Dictionary = arrows[idx]
+					var lt := fmod(post + ar.delay, 0.85)
+					_draw_weak_arrow(ar.ox, -40.0 + lt * ar.spd * 1.45, ar.len, f_idx + idx * 7 + oi * 29, GOLD, pal.accent, false, minf(1.0, env * 1.25))
+				_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var any_env := 0.0
+			for oi in (1 if single else 2):
+				var gg: Dictionary = geoms[oi]
+				var hit: float = hits[oi]
+				var post := maxf(0.0, t - hit)
+				var env := maxf(0.0, 1.0 - maxf(0.0, post - (0.95 if oi == 0 else 0.88)) / 0.65) if post > 0.0 else 0.0
+				any_env = maxf(any_env, env)
+				var key := StringName("weakenen%d" % oi)
+				if t >= starts[oi] and t < hit:
+					var p2 := minf(1.0, (t - starts[oi]) / (hit - starts[oi]))
+					var o: Vector2 = origin.lerp(gg.c, p2) - Vector2(0.0, sin(p2 * PI) * arcs[oi] * kk)
+					set_field(key, {"mode": 0, "cx": o.x, "cy": o.y, "rx": 38.0 * kk, "ry": 38.0 * kk, "env": 0.65, "pal": pal, "profile": &"v4", "free": ally})
+				elif post > 0.03 and env > 0.04:
+					set_field(key, {"mode": 0, "cx": gg.c.x, "cy": gg.c.y, "rx": 84.0 * gg.k, "ry": 76.0 * gg.k, "env": env * 0.88, "pal": pal, "profile": &"v4", "free": ally})
+				else:
+					clear_field(key)
+				drive_target_warp(units[oi], env * 7.5 * gg.k, 0.0)
+			if t < 0.42:
+				var p := minf(1.0, t / 0.36)
+				set_field(&"weakenen_src", {"mode": 0, "cx": origin.x, "cy": origin.y, "rx": (44.0 * p + 12.0) * kk, "ry": (44.0 * p + 12.0) * kk, "env": 0.70, "pal": pal, "profile": &"v4", "free": ally})
+			else:
+				clear_field(&"weakenen_src")
+			set_darken(0.22 * (1.0 if t < 2.0 else maxf(0.0, 1.0 - (t - 2.0) / 0.5))),
+		func(_fx: Node2D) -> void: _release_all(all_units))
+
+
+# ---- 5. MARK OF SUN: acender, marca persistente e disparo -------------------------------------------------------------
+
+func _is_sun_key(key: StringName) -> bool:
+	return String(key).begins_with("sunm_")
+
+
+## Onde o sol de `u` fica. Inimigo: acima da cabeça (abaixo do HUD superior), escalado por k. Aliado: canto inferior-direito
+## LIVRE do cartão (sem cobrir nome/HP/PP/EN/ACT) e `min_y` logo abaixo do Battle Log.
+func sun_spot(u: BattleUnit) -> Dictionary:
+	var g := unit_geom(u)
+	if u.is_player:
+		var card: Rect2 = g.card
+		var log_bottom: float = hud.BATTLE_LOG_RECT.end.y * DESIGN_SCALE
+		return {"p": Vector2(card.end.x - 24.0, card.position.y + card.size.y * 0.69), "r": 8.5, "ray_min": 4.5, "ray_var": 4.5, "ray_jit": 1.1, "ray_w": 1.4,
+			"disc_jit": 1.3, "disc_w": 1.8, "halo": Vector2(24.0, 18.0), "ally": true, "min_y": log_bottom + 2.0, "k": 1.0, "card": card}
+	var k: float = g.k
+	var top := maxf(float(g.c.y) - 80.0 * k, STAGE_TOP * DESIGN_SCALE + 34.0 * k)
+	return {"p": Vector2(g.c.x, top), "r": 15.0 * k, "ray_min": 10.0 * k, "ray_var": 10.0 * k, "ray_jit": 1.9, "ray_w": 1.8,
+		"disc_jit": 2.2, "disc_w": 2.4, "halo": Vector2(52.0 * k, 36.0 * k), "ally": false, "min_y": STAGE_TOP * DESIGN_SCALE, "k": k}
+
+
+## O sol (12 raios tortos + disco + miolo): SEM triângulos soltos. `hits` = cargas restantes (contador só no aliado).
+func _draw_sun_body(spot: Dictionary, grow: float, pulse_env: float, hits: int, f_idx: int, t: float, alpha: float = 1.0) -> void:
+	var pal := palette_for(&"sun", false)
+	var p: Vector2 = spot.p
+	var pulse := 1.0 + sin(t * 9.0) * 0.05 + pulse_env * 0.28
+	var sr: float = float(spot.r) * grow * pulse
+	var ally: bool = spot.ally
+	for i in 12:
+		var a := (float(i) / 12.0) * TAU + floorf(t * 12.0) * 0.04
+		var ln: float = (float(spot.ray_min) + sketch_hash(float(i * 19 + 5)) * float(spot.ray_var)) * grow * pulse
+		var r_in := sr * 0.90
+		var r_out := sr + ln
+		var spread := 0.14
+		draw_sketch_shape(PackedVector2Array([
+			p + Vector2(cos(a - spread), sin(a - spread)) * r_in, p + Vector2(cos(a), sin(a)) * r_out, p + Vector2(cos(a + spread), sin(a + spread)) * r_in]),
+			f_idx + i * 7, pal, float(spot.ray_jit), pal.deep, float(spot.ray_w), alpha)
+	var disc := PackedVector2Array()
+	for i in 14:
+		var a2 := (float(i) / 14.0) * TAU
+		disc.append(p + Vector2(cos(a2), sin(a2)) * sr)
+	draw_sketch_shape(disc, f_idx, pal, float(spot.disc_jit), pal.deep, float(spot.disc_w), alpha)
+	var inner := PackedVector2Array()
+	for q in disc:
+		inner.append(p + (q - p) * 0.48)
+	var core_col: Color = pal.hi if pulse_env > 0.2 else pal.accent
+	_fill_poly(sketchy_pts(inner, f_idx + 31, 1.1), Color(core_col, core_col.a * alpha))
+	if ally and grow > 0.45:
+		var hi: Color = pal.hi
+		draw_string(font, p + Vector2(-16.0 - 30.0, 4.0), "×%d" % hits, HORIZONTAL_ALIGNMENT_RIGHT, 30.0, 10, Color(hi, hi.a * alpha))
+
+
+func _sun_field_spec(spot: Dictionary, grow: float, env: float) -> Dictionary:
+	var halo: Vector2 = spot.halo
+	var spec := {"mode": 0, "cx": spot.p.x, "cy": spot.p.y, "rx": halo.x * grow, "ry": halo.y * grow, "env": env, "pal": palette_for(&"sun", false), "profile": &"v4"}
+	if bool(spot.ally):
+		spec["free"] = true
+		spec["min_y"] = spot.min_y
+	return spec
+
+
+## Marca persistente: todo quadro, para cada unidade viva com `sun_mark_hits > 0` o sol fica no lugar dela (campo Moiré contido).
+func _sun_step() -> void:
+	if hud == null or hud.get("players") == null:
+		return
+	var live := {}
+	for list in [hud.players, hud.opponents]:
+		for u in list:
+			if u.is_alive() and u.sun_mark_hits > 0:
+				var key := StringName("sunm_%s" % u.id)
+				live[key] = true
+				var pulse := float(_sun_pulse.get(u.id, 0.0))
+				set_field(key, _sun_field_spec(sun_spot(u), 1.0, minf(1.0, 0.72 + pulse * 0.25)))
+	for key in _fields.keys():
+		if _is_sun_key(key) and not live.has(key):
+			clear_field(key)
+
+
+func _draw_suns() -> void:
+	if hud == null or hud.get("players") == null:
+		return
+	var f_idx := boil_index(time)
+	for list in [hud.players, hud.opponents]:
+		for u in list:
+			if u.is_alive() and u.sun_mark_hits > 0:
+				_draw_sun_body(sun_spot(u), 1.0, float(_sun_pulse.get(u.id, 0.0)), u.sun_mark_hits, f_idx, time)
+
+
+func has_sun(u: BattleUnit) -> bool:
+	return _fields.has(StringName("sunm_%s" % u.id))
+
+
+## O sol cresce sobre o alvo (grow 0..1 em 0,65 s) e passa para a marca persistente quando a mecânica a acende.
+func play_mark_of_sun(caster: BattleUnit, target: BattleUnit) -> float:
+	var spot := sun_spot(target)
+	var g := unit_geom(target)
+	var k: float = g.k
+	return add_effect(DURATIONS[&"mark_of_sun"], func(_fx: Node2D, t: float) -> void:
+		var grow := minf(1.0, t / HIT_SUN)
+		_draw_sun_body(spot, grow, 0.0, 3, boil_index(t), t),
+		func(_fx: Node2D, t: float) -> void:
+			var grow := minf(1.0, t / HIT_SUN)
+			set_field(&"sunc_cast", _sun_field_spec(spot, grow, 0.72 * grow))
+			drive_target_warp(target, grow * 3.5 * k, 0.0)
+			set_darken(0.24 * grow),
+		func(_fx: Node2D) -> void:
+			clear_field(&"sunc_cast")
+			_release_all([target]))
+
+
+## +20 MAGI: clarão solar (anel + estrela fina + núcleo breve + pulso Moiré contido) sobre o alvo, em ambos os lados.
+func play_mark_of_sun_trigger(target: BattleUnit) -> float:
+	var g := unit_geom(target)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var ally := target.is_player
+	var pal := palette_for(&"sun", false)
+	var min_y: float = hud.BATTLE_LOG_RECT.end.y * DESIGN_SCALE + 2.0 if ally else STAGE_TOP * DESIGN_SCALE
+	var kf: float = 1.0 if ally else k
+	var key := StringName("sunc_flare%d" % int(time * 1000.0))
+	return add_effect(SUN_TRIGGER_DUR, func(_fx: Node2D, t: float) -> void:
+		var prog := minf(1.0, t / SUN_TRIGGER_DUR)
+		var env := pow(1.0 - prog, 1.3)
+		_draw_solar_hit_flare(c, prog, env, boil_index(t), pal, min_y, ally, kf),
+		func(_fx: Node2D, t: float) -> void:
+			var prog := minf(1.0, t / SUN_TRIGGER_DUR)
+			var env := pow(1.0 - prog, 1.3)
+			_sun_pulse[target.id] = env
+			var spec := {"mode": 0, "cx": c.x, "cy": c.y, "rx": (56.0 + prog * 36.0) * kf, "ry": (42.0 + prog * 24.0) * kf, "env": env * 0.92, "pal": pal, "profile": &"v4"}
+			if ally:
+				spec["free"] = true
+				spec["min_y"] = min_y
+			set_field(key, spec)
+			drive_target_warp(target, env * (8.5 if ally else 9.0) * (1.0 if ally else k), 1.0 if t < 0.09 else 0.0),
+		func(_fx: Node2D) -> void:
+			clear_field(key)
+			_sun_pulse.erase(target.id)
+			release_target_warp(target))

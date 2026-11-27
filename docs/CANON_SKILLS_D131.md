@@ -1,7 +1,7 @@
 # Skills Canônicas Revisadas — Lote 2 + Taxonomia Oficial (`PHYS/MAGI/STAT`, `DMG`, `1T–3T`) e Alvo Vulnerável (D-131)
 
 **Decisão:** D-131 · 2026-11-27 (decisão do criador)  
-**Estado:** **CANÔNICO — DESIGN E VISUAIS (7/7) APROVADOS; IMPLEMENTAÇÃO EM 3 FASES PRONTA**  
+**Estado:** **CANÔNICO — DESIGN E VISUAIS (7/7) APROVADOS; IMPLEMENTADO NAS 3 FASES (motor, catálogo e VFX no jogo; aguarda a validação visual do criador no Godot)**  
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md) · **Lote 1 (D-124):** [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) · **Estilo VFX Não-Reza (D-125):** [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) · **HTML Canônico (7/7):** [`docs/vfx_refs/d131/README.md`](vfx_refs/d131/README.md) · **Validação do Criador:** [`docs/VALIDATION_LOG_D131.md`](VALIDATION_LOG_D131.md) · **Prompts Faseados:** [`docs/CLAUDE_PROMPTS_D131.md`](CLAUDE_PROMPTS_D131.md)
 
 > [!IMPORTANT]
@@ -77,3 +77,18 @@ Todas as 7 entradas acima (5 base + 2 `ZAHAV`) são ataques não-reza canônicos
 7. **Padronização documental e requisitos de 4 ACT:**
    - [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) padronizado para a taxonomia `PHYS`/`MAGI`/`STAT`, `PHYS`/`MAGI`/`DMG` e `1T`/`2T`/`3T`.
    - Skills de `4 ACT` (`Stone Crush`, `Mark of Sun`) devem exibir claramente o requisito `4 ACT` no menu/descrição e respeitar o teto de 4 atos estocados (`PASS`/`REST`).
+
+---
+
+## 6. Notas de implementação (2026-11-27)
+
+Código: `scripts/core/{battle_unit,skill_fx,skill_book}.gd`, `scripts/battle/{battle_controller,playable_controller,skill_grotesque_fx}.gd`; testes `tests/verify_d131_rules.gd` (motor), `tests/verify_d131_skills.gd` (catálogo, migração, fluxo real) e `tests/verify_d131_vfx.gd` (coreografias); gravador `tools/record_d131_all.gd`.
+
+* **Status do motor.** `Weaken`/`Weakenen` registram os status `&"weaken_mef"` e `&"weaken_mak"` (o id `&"weaken"` já pertence ao `VENOM CLOUD`, que reduz 20% do dano causado). `Mark of Sun` usa `&"mark_of_sun"`. `Tahorah` (`SkillFx.cleanse_all`) limpa os três e os acumuladores.
+* **`Energy Blow` e o roubo de EN.** Só ocorre quando o alvo e o usuário têm EN (quem reza, como Yoch, não rouba nem perde EN). O EN máximo temporário (`BattleUnit.battle_max_en_delta`, `effective_max_en()`) nunca toca `stats.max_en`, `sp_base()` nem o save.
+* **`Drain Claw`/`Vital Claws`.** Chefe/Guardião/Anjo = `BattleUnit.is_boss_class()` (`boss_class` ou raça Anjo). A parcela de 1/4 do HP máx. é direta (sem DEF e sem barra); a parcela fixa passa por DEF e barra.
+* **`2T`.** `targets: "2T"` pede dois alvos distintos (herói) e a IA sorteia dois distintos; com um só vivo o efeito cai uma vez.
+* **`COND` de `Energy Blow`.** `SkillFx.cond_met`; o menu marca `NO VULNERABLE FOE` e a IA só escolhe a skill quando algum herói cumpre a condição.
+* **Migração.** As 5 skills antigas viram as canônicas (`SkillBook.LEGACY_IDS`), também em saves do Survival (`SurvivalState.load_from_file`) e no aprendizado por absorção (`ProgressStore.load_skills`).
+* **VFX.** Porte 1:1 do HTML canônico em `SkillGrotesqueFX` (`play_stone_crush`, `play_energy_blow`, `play_drain_claw`, `play_vital_claws`, `play_weaken`, `play_weakenen`, `play_mark_of_sun`, `play_mark_of_sun_trigger`). Em cartões de aliados o Moiré é "livre" (`free`, passa do palco) e a marca persistente de `Mark of Sun` fica no canto inferior-direito livre do cartão com `min_y` logo abaixo do Battle Log. A marca persiste enquanto `sun_mark_hits > 0` (`SkillGrotesqueFX._sun_step`/`_draw_suns`); o `+20 MAGI` chama `play_mark_of_sun_trigger` em cada gatilho.
+* **Correção colateral.** O HUD do combate tinha tamanho 0 (o pai também) e SUMIA inteiro enquanto `camera_shake` mexia no canvas; agora recebe o tamanho da tela (`hud.size = hud.SCREEN`).
