@@ -317,6 +317,34 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 		_event("%s summons the Burning Bush (%d HP)!" % [battle.short_name(unit), int(bush.hp)])
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	elif id == PrayerBook.SHALHEVET:
+		var foes: Array[BattleUnit] = []
+		for foe in battle.hud.opponents.duplicate():
+			if (foe as BattleUnit).is_alive():
+				foes.append(foe)
+		if foes.is_empty():
+			_release(unit, d, "no foe left")
+		else:
+			await _shalhevet(unit, foes, d, reacting)
+	elif id == PrayerBook.NOGAH:
+		var foes: Array[BattleUnit] = []
+		for foe in battle.hud.opponents.duplicate():
+			if (foe as BattleUnit).is_alive():
+				foes.append(foe)
+		if foes.is_empty():
+			_release(unit, d, "no foe left")
+		else:
+			await _nogah(unit, foes, d, reacting)
+	elif id == PrayerBook.LIOR:
+		var total_pp := _cost(d)
+		var heal_amt := PrayerBook.lior_heal(total_pp)
+		_lior_states[unit] = {"actions": PrayerBook.LIOR_ACTIONS, "heal": heal_amt}
+		fx.play_lior(unit, PrayerBook.LIOR_ACTIONS)
+		_log("%s prays Lior: heals %d HP per action for the next %d actions (%d PP)." % [
+			unit.display_name, heal_amt, PrayerBook.LIOR_ACTIONS, total_pp])
+		_event("%s is wrapped in Lior (%d HP x%d)." % [battle.short_name(unit), heal_amt, PrayerBook.LIOR_ACTIONS])
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	else:
 		var target: BattleUnit = d.target
 		if not target.is_alive():
@@ -706,6 +734,80 @@ func rest(unit: BattleUnit, reacting: bool) -> bool:
 var _pending_shachar: Array[Dictionary] = []
 ## D-118 Hasneh Habo'er: living Burning Bushes summoned by Gabriel (10 HP each; BURN + 2x vs burning).
 var burning_bushes: Array[Dictionary] = []
+## D-118 Lior: unit -> {"actions": int, "heal": int} healing shroud over 5 actions.
+var _lior_states: Dictionary = {}
+
+
+## D-118 Shalhevet: sweeping fire wave dealing (30 + MAK - MEF) * affinity to all foes with 50% BURN.
+func _shalhevet(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting: bool) -> void:
+	await fx.play_shalhevet(foes)
+	if not battle.is_inside_tree():
+		return
+	var burned_count := 0
+	for foe in foes:
+		if not foe.is_alive():
+			continue
+		var dmg := PrayerBook.shalhevet_damage(unit.stats.mak, foe.stats.mef, foe.affinity)
+		var applied := foe.take_damage(dmg)
+		unit.last_damage_dealt = applied
+		var burned := false
+		if foe.is_alive() and foe.haganah.is_empty() and battle.rng.randi_range(0, 99) < PrayerBook.SHALHEVET_BURN_CHANCE:
+			foe.burns.append(SkillBook.BURN_ROUNDS)
+			burned = true
+			burned_count += 1
+		battle.fx.play("RAAM", foe, applied, unit)
+		_log("%s prays Shalhevet -> %s: %d damage%s (%d PP)." % [
+			unit.display_name, foe.display_name, applied, ", BURN" if burned else "", _cost(d)])
+		if not foe.is_alive():
+			_event("%s is down." % battle.short_name(foe))
+	_event("Shalhevet scorches all foes%s!" % (" (%d burned)" % burned_count if burned_count > 0 else ""))
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+## D-118 Nogah: blinding starlight across all foes until end of next round (respecting Haganah).
+func _nogah(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting: bool) -> void:
+	await fx.play_nogah(foes)
+	if not battle.is_inside_tree():
+		return
+	var blinded_count := 0
+	for foe in foes:
+		if not foe.is_alive():
+			continue
+		if foe.haganah.is_empty():
+			SkillFx.apply_status(foe, &"blind", SkillFx.BLIND_ROUNDS)
+			blinded_count += 1
+	_log("%s prays Nogah: %d foe(s) blinded until the end of the next round (%d PP)." % [
+		unit.display_name, blinded_count, _cost(d)])
+	_event("Nogah blinds all foes!" if blinded_count > 0 else "Nogah flashes across the stage.")
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+func lior_state(unit: BattleUnit) -> Dictionary:
+	return _lior_states.get(unit, {})
+
+
+## D-118 Lior: heals `unit` by 5 + 5/PP on action completion and decrements remaining actions.
+func tick_lior(unit: BattleUnit) -> int:
+	if unit == null or not unit.is_alive() or not _lior_states.has(unit):
+		return 0
+	var st: Dictionary = _lior_states[unit]
+	var actions := int(st.get("actions", 0))
+	if actions <= 0:
+		_lior_states.erase(unit)
+		fx.set_lior_actions(unit, 0)
+		return 0
+	var healed := unit.heal(int(st.get("heal", 0)))
+	actions -= 1
+	st.actions = actions
+	if actions <= 0:
+		_lior_states.erase(unit)
+	fx.play_lior_tick(unit, healed, actions)
+	_log("Lior heals %s: +%d HP (%d action(s) left)." % [unit.display_name, healed, actions])
+	_event("Lior heals %s: +%d HP." % [battle.short_name(unit), healed])
+	battle._refresh_all()
+	return healed
 
 
 ## D-118 Lehavah: (40 + MAK - MEF) * affinity light-and-fire explosion + blind (respecting Haganah).

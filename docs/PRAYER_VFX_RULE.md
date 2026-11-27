@@ -50,6 +50,9 @@ Esta regra aplica-se indistintamente a **todas** as rezas do jogo — da campanh
 | **Lehavah** | לֶהָבָה / `להבה` | D-118 | `play_lehavah(target)` | Convergência espiral tricolor (laranja/amarelo/branco) → explosão tricolor + anel branco-dourado de ofuscamento com `להבה` e flash único | `ס` (vermelho) |
 | **Esh Sinai** | אֵשׁ סִינַי / `אש סיני` | D-118 | `play_esh_sinai(target)` | 4 pilares de fogo em 3 cores (laranja/amarelo/branco) com `אש סיני` e brasas tricolores; piscada de tela **apenas no 1º impacto imediato** | — |
 | **Hasneh Habo'er** | הַסְּנֶה הַבֹּעֵר / `הסנה הבוער` | D-118 | `play_hasneh_haboer(caster, hp)` | Ramos verde-esmeralda vivos de letras brotando do solo entrelaçados com 42 chamas contínuas em 3 cores + título `הסנה הבוער` sem consumir os ramos | Sarça viva (`BUSH N HP`) |
+| **Shalhevet** | שַׁלְהֶבֶת / `שלהבת` | D-118 | `play_shalhevet(foes)` | Maré horizontal de 110 letras flamejantes em 3 cores (laranja/amarelo/branco) + erupções de brasas por inimigo e palavra `שלהבת` acompanhando a crista | — |
+| **Nogah** | נֹגַהּ / `נוגה` | D-118 | `play_nogah(foes)` | Clarão estelar central de 24 feixes radiais + anéis de 16 letras de ofuscamento fechando sobre cada inimigo e palavra `נוגה` | `ס` (vermelho) |
+| **Lior** | לִיאוֹר / `ליאור` | D-118 | `play_lior(unit, actions)` / `play_lior_tick(unit, healed, remaining)` | Manto ascendente de 34 letras dourado-verde sobre o cartão do usuário + 5 letras orbitais de `ליאור` + pulso de cura por ação | `ל` + `xN` (BiDi-safe) |
 
 ---
 

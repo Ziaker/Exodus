@@ -192,7 +192,7 @@ func _run() -> void:
 				return false
 		return true
 	check(is_hebrew.call(fx_node.ALPHABET) and fx_node.ALPHABET.length() == 22, "D-113: PrayFX.ALPHABET contains the 22 Hebrew letters")
-	for mark in [fx_node.MARK_GLYPH, fx_node.MARK_MAGEN, fx_node.MARK_GEVURAH, fx_node.MARK_ZOHAR, fx_node.MARK_SANVERIM, fx_node.MARK_NECHAMAH, fx_node.MARK_CHAKI, fx_node.MARK_SHACHAR]:
+	for mark in [fx_node.MARK_GLYPH, fx_node.MARK_MAGEN, fx_node.MARK_GEVURAH, fx_node.MARK_ZOHAR, fx_node.MARK_SANVERIM, fx_node.MARK_NECHAMAH, fx_node.MARK_CHAKI, fx_node.MARK_SHACHAR, fx_node.MARK_LIOR]:
 		check(is_hebrew.call(mark), "D-113: Persistent prayer mark '%s' is a valid Hebrew glyph" % mark)
 	var d113_methods := {
 		PrayerBook.REFUAH: &"play_refuah",
@@ -211,6 +211,9 @@ func _run() -> void:
 		PrayerBook.LEHAVAH: &"play_lehavah",
 		PrayerBook.ESH_SINAI: &"play_esh_sinai",
 		PrayerBook.HASNEH_HABOER: &"play_hasneh_haboer",
+		PrayerBook.SHALHEVET: &"play_shalhevet",
+		PrayerBook.NOGAH: &"play_nogah",
+		PrayerBook.LIOR: &"play_lior",
 	}
 	for spell_id in PrayerBook.SPELLS.keys():
 		check(d113_methods.has(spell_id), "D-113: Prayer '%s' must be registered in the Hebrew VFX coverage map" % spell_id)
@@ -320,6 +323,53 @@ func _run() -> void:
 	await b.prayer.execute(yoch, {"pray": PrayerBook.LEHAVAH, "target": foe, "extra": 0, "paid": 3, "owed": 0}, false)
 	check(foe.current_hp == 500 - expected_lehavah and not foe.has_status(&"blind"), "D-118 Lehavah respects Haganah shield (damage lands, blind blocked)")
 	foe.haganah = {}
+
+	# D-118 Shalhevet: 4 PP / 3 ACT, (30 + MAK - MEF) * affinity fire wave on all living foes + 50% BURN
+	check(PrayerBook.base_cost(PrayerBook.SHALHEVET) == 4 and PrayerBook.act_cost(PrayerBook.SHALHEVET) == 3, "D-118 Shalhevet: 4 PP / 3 ACT")
+	for f in b.hud.opponents:
+		(f as BattleUnit).stats.max_hp = 500
+		(f as BattleUnit).current_hp = 500
+		(f as BattleUnit).burns.clear()
+		(f as BattleUnit).haganah = {}
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.SHALHEVET, "target": yoch, "extra": 0, "paid": 4, "owed": 0}, false)
+	var expected_shalhevet := PrayerBook.shalhevet_damage(yoch.stats.mak, foe.stats.mef, foe.affinity)
+	check(500 - foe.current_hp == expected_shalhevet and yoch.acts_available == 1, "D-118 Shalhevet hits all foes for (30 + MAK - MEF) * affinity (%d) and spends 3 ACT" % expected_shalhevet)
+	check(fx_node.shalhevet_wave.size() == 110 and not fx_node.shalhevet_pillars.is_empty(), "D-118 Shalhevet builds 110-glyph fire wave and per-foe ember pillars")
+
+	# D-118 Nogah: 2 PP / 3 ACT, blinds all living foes (respecting Haganah) + 24 starlight rays
+	check(PrayerBook.base_cost(PrayerBook.NOGAH) == 2 and PrayerBook.act_cost(PrayerBook.NOGAH) == 3, "D-118 Nogah: 2 PP / 3 ACT")
+	for f in b.hud.opponents:
+		(f as BattleUnit).remove_status(&"blind")
+		(f as BattleUnit).haganah = {}
+	if b.hud.opponents.size() > 1:
+		(b.hud.opponents[1] as BattleUnit).haganah = {"round": b.state.round_number, "owner": yoch.id}
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.NOGAH, "target": yoch, "extra": 0, "paid": 2, "owed": 0}, false)
+	check(foe.has_status(&"blind") and yoch.acts_available == 1, "D-118 Nogah blinds unshielded foes and spends 3 ACT")
+	if b.hud.opponents.size() > 1:
+		check(not (b.hud.opponents[1] as BattleUnit).has_status(&"blind"), "D-118 Nogah respects Haganah shield on protected foe")
+		(b.hud.opponents[1] as BattleUnit).haganah = {}
+	check(fx_node.nogah_rays.size() == 24 and not fx_node.nogah_veils.is_empty(), "D-118 Nogah builds 24 starlight rays and per-foe blinding veils")
+	for f in b.hud.opponents:
+		(f as BattleUnit).remove_status(&"blind")
+
+	# D-118 Lior: 2 PP / 1 ACT (+extra PP), heals 5 + 5/PP over 5 actions + 5 orbiting ליאור letters + persistent mark ל xN
+	check(PrayerBook.base_cost(PrayerBook.LIOR) == 2 and PrayerBook.act_cost(PrayerBook.LIOR) == 1 and PrayerBook.accepts_extra_pp(PrayerBook.LIOR), "D-118 Lior: 2 PP / 1 ACT, accepts extra PP")
+	check(PrayerBook.lior_heal(2) == 15 and PrayerBook.lior_heal(3) == 20, "D-118 Lior heals 5 + 5 per PP (15 at 2 PP, 20 at 3 PP)")
+	yoch.stats.max_hp = 200
+	yoch.current_hp = 50
+	yoch.acts_available = 2
+	await b.prayer.execute(yoch, {"pray": PrayerBook.LIOR, "target": yoch, "extra": 1, "paid": 3, "owed": 0}, false)
+	var lior_st: Dictionary = b.prayer.lior_state(yoch)
+	check(yoch.acts_available == 1 and int(lior_st.get("actions", 0)) == 5 and int(lior_st.get("heal", 0)) == 20, "D-118 Lior registers 5 actions at 20 HP (3 PP total) and spends 1 ACT")
+	check(fx_node.lior_active.has(yoch) and (fx_node.lior_active[yoch].orbits as Array).size() == 5 and (fx_node.lior_active[yoch].shroud as Array).size() == 34, "D-118 Lior registers 34-letter shroud and 5 orbiting ליאור letters")
+	var total_lior_healed := 0
+	for _tick in 5:
+		total_lior_healed += int(b.prayer.tick_lior(yoch))
+	check(total_lior_healed == 100 and yoch.current_hp == 150, "D-118 Lior heals 20 HP across all 5 actions (100 HP total)")
+	check(b.prayer.lior_state(yoch).is_empty() and not fx_node.lior_active.has(yoch), "D-118 Lior expires and clears VFX after 5th action")
+	check(int(b.prayer.tick_lior(yoch)) == 0, "D-118 Lior does not heal after expiring")
 
 	fx_node.queue_redraw()
 	await process_frame

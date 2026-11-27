@@ -18,13 +18,16 @@ const MARK_SANVERIM := "ס"
 const MARK_NECHAMAH := "נ"
 const MARK_CHAKI := "ח"
 const MARK_SHACHAR := "ש"
+const MARK_LIOR := "ל"
 const MARK_PX := 13
 const PULSE_HZ := 2.6
 const INK_HOT := Color(1.0, 1.0, 0.88)
 const INK_DEBUFF := Color(0.88, 0.32, 0.32)
 const INK_HEAL := Color("b8f5a2")
-## D-118 sacred fire 3-color palette (orange, yellow, white) + living emerald bush green.
+## D-118 sacred fire 3-color palette (orange, yellow, white) + light/heal palettes + emerald bush.
 const FIRE_PALETTE: Array[Color] = [Color("ff7a1f"), Color("ffd84a"), Color("ffffff")]
+const LIGHT_PALETTE: Array[Color] = [Color("ffffff"), Color("fffce0"), Color("f5f58c")]
+const HEAL_PALETTE: Array[Color] = [Color("fffce0"), Color("f5f58c"), Color("b8f5a2")]
 const INK_BUSH := Color("5ee389")
 
 var hud: Control
@@ -69,7 +72,7 @@ func cast(unit: BattleUnit) -> void:
 
 
 func is_busy() -> bool:
-	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy() or chaki_busy() or shachar_busy() or esh_sinai_busy() or lehavah_busy() or hasneh_busy()
+	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy() or chaki_busy() or shachar_busy() or esh_sinai_busy() or lehavah_busy() or hasneh_busy() or shalhevet_busy() or nogah_busy() or lior_busy()
 
 
 func _draw() -> void:
@@ -84,6 +87,8 @@ func _draw() -> void:
 	_draw_shachar()
 	_draw_lehavah()
 	_draw_esh_sinai()
+	_draw_shalhevet()
+	_draw_nogah()
 	var pulse := 0.55 + 0.45 * absf(sin(time * PULSE_HZ))
 	if shachar_pending:
 		_glyph(MARK_SHACHAR, Vector2(hud.SCREEN.x - 20.0, 18.0), MARK_PX + 2, Color(INK_HOT, 0.72 + 0.28 * pulse), Color(INK_DARK, 0.9))
@@ -125,6 +130,9 @@ func _draw() -> void:
 		if not unit.mends.is_empty():
 			marks.append({"glyph": MARK_NECHAMAH, "color": Color(PrayerBook.INK, pulse), "jitter": 0.0,
 				"suffix": "x%d" % unit.mends.size() if unit.mends.size() > 1 else ""})
+		if lior_active.has(unit) and int(lior_active[unit].actions) > 0:
+			marks.append({"glyph": MARK_LIOR, "color": Color(INK_HEAL, 0.72 + 0.28 * pulse), "jitter": 0.0,
+				"suffix": "x%d" % int(lior_active[unit].actions)})
 		var x: float = card.position.x + 7 + hud._width(unit.display_name, 13, true) + 8
 		for m_idx in marks.size():
 			var mk: Dictionary = marks[m_idx]
@@ -143,6 +151,7 @@ func _draw() -> void:
 		draw_string_outline(font, pos, letter.glyph, HORIZONTAL_ALIGNMENT_CENTER, -1, LETTER_PX, 3, Color(0.15, 0.12, 0.0, 1.0 - k))
 		draw_string(font, pos, letter.glyph, HORIZONTAL_ALIGNMENT_CENTER, -1, LETTER_PX, Color(PrayerBook.INK, 1.0 - k))
 	_draw_card_fx()
+	_draw_lior()
 
 
 # ---------------------------------------------------------------- Ra'am (approved 2026-11-23)
@@ -292,6 +301,11 @@ func _shake_step() -> void:
 			if h_age >= 0.0 and h_age < 0.22:
 				var mag := (9.0 if int(h.idx) == 0 else 5.0) * (1.0 - h_age / 0.22)
 				amp = maxf(amp, mag)
+	var sh_age := time - shalhevet_at
+	if sh_age >= 0.58 and sh_age <= 1.45:
+		var sm := 6.0 * (1.0 - absf(sh_age - 1.0) / 0.55)
+		if sm > 0.0:
+			amp = maxf(amp, sm)
 	if amp > 0.0:
 		if not _shaking:
 			_shaking = true
@@ -1172,9 +1186,9 @@ func _draw_shachar() -> void:
 
 # ------------------------------------------------------------------ D-118 Esh Sinai, Lehavah & Hasneh Habo'er (100% Hebrew letters)
 
-## Draws a Hebrew word right-to-left with alternating 3-color sacred fire glyphs (orange, yellow, white).
-func _draw_tricolor_word(word: String, center: Vector2, px: int, alpha: float) -> void:
-	if alpha <= 0.01 or word.is_empty():
+## Draws a Hebrew word right-to-left cycling through `palette` per glyph.
+func _draw_palette_word(word: String, center: Vector2, px: int, alpha: float, palette: Array[Color]) -> void:
+	if alpha <= 0.01 or word.is_empty() or palette.is_empty():
 		return
 	var n := word.length()
 	var step := float(px) * 0.62
@@ -1183,8 +1197,13 @@ func _draw_tricolor_word(word: String, center: Vector2, px: int, alpha: float) -
 		var ch := word.substr(i, 1)
 		if ch == " ":
 			continue
-		var col: Color = FIRE_PALETTE[i % 3]
+		var col: Color = palette[i % palette.size()]
 		_glyph(ch, Vector2(start_x - float(i) * step, center.y), px, Color(col, alpha), Color(INK_DARK, alpha * 0.9))
+
+
+## Draws a Hebrew word right-to-left with alternating 3-color sacred fire glyphs (orange, yellow, white).
+func _draw_tricolor_word(word: String, center: Vector2, px: int, alpha: float) -> void:
+	_draw_palette_word(word, center, px, alpha, FIRE_PALETTE)
 
 
 ## Esh Sinai (אש סיני): 4 fiery Hebrew-letter pillars in 3 colors (orange, yellow, white);
@@ -1548,3 +1567,356 @@ func _draw_hasneh_haboer() -> void:
 		draw_rect(hud.STAGE_RECT, Color(1.0, 0.51, 0.14, warm_alpha * 0.35))
 	if flash_alpha > 0.01:
 		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.91, 0.63, flash_alpha))
+
+
+# ------------------------------------------------------------------ D-118 Shalhevet, Nogah & Lior (100% Hebrew letters)
+
+## Shalhevet (שלהבת): sweeping 3-color wave of Hebrew fire across all living foes + per-foe ember eruptions.
+const SHALHEVET_IMPACT := 0.58
+const SHALHEVET_END := 2.45
+var shalhevet_at := -99.0
+var shalhevet_wave: Array[Dictionary] = []
+var shalhevet_pillars: Array[Dictionary] = []
+
+
+func play_shalhevet(foes: Array) -> void:
+	if hud == null:
+		return
+	shalhevet_wave.clear()
+	var sh_word := "שלהבת"
+	var stage_bottom: float = hud.STAGE_RECT.end.y - 12.0
+	var stage_span: float = maxf(100.0, hud.STAGE_RECT.size.y - 44.0)
+	for i in 110:
+		var ch := sh_word.substr(i % sh_word.length(), 1) if i % 5 == 0 else _letter()
+		shalhevet_wave.append({
+			"frac": float(i) / 110.0,
+			"y_base": stage_bottom - rng.randf() * stage_span,
+			"amp": rng.randf_range(14.0, 42.0),
+			"rise": rng.randf_range(35.0, 110.0),
+			"glyph": ch,
+			"px": rng.randi_range(13, 25),
+			"color_idx": i % 3,
+			"phase": rng.randf_range(0.0, TAU),
+		})
+	shalhevet_pillars.clear()
+	var fi := 0
+	for f in foes:
+		var unit: BattleUnit = f
+		if unit == null or not unit.is_alive():
+			continue
+		var e_idx: int = hud.opponents.find(unit)
+		var rect := _unit_rect(unit)
+		if rect.size.x <= 0.0:
+			continue
+		var white: Texture2D = hud.silhouettes[e_idx] if (e_idx >= 0 and e_idx < hud.silhouettes.size()) else null
+		var parts: Array[Dictionary] = []
+		for i in 24:
+			parts.append({
+				"x_off": rng.randf_range(-31.0, 31.0),
+				"y_off": rng.randf_range(-45.0, 45.0),
+				"vx": rng.randf_range(-27.5, 27.5),
+				"vy": rng.randf_range(-165.0, -55.0),
+				"glyph": _letter(),
+				"px": rng.randi_range(12, 21),
+				"color_idx": i % 3,
+				"life": rng.randf_range(0.5, 1.05),
+			})
+		shalhevet_pillars.append({
+			"rect": rect,
+			"white": white,
+			"hit_t": 0.58 + float(fi) * 0.24,
+			"parts": parts,
+		})
+		fi += 1
+	shalhevet_at = time
+	await get_tree().create_timer(SHALHEVET_IMPACT).timeout
+
+
+func shalhevet_busy() -> bool:
+	return time - shalhevet_at < SHALHEVET_END
+
+
+func _draw_shalhevet() -> void:
+	var age := time - shalhevet_at
+	if age < 0.0 or age > SHALHEVET_END:
+		return
+	var stage_w: float = hud.SCREEN.x
+	var wave_start := 0.25
+	var wave_dur := 1.45
+	var wp := clampf((age - wave_start) / wave_dur, 0.0, 1.0)
+	var head_x := -60.0 + wp * (stage_w + 180.0)
+	var dark := 0.36 * minf(1.0, age / 0.3) if age < 1.9 else maxf(0.0, 0.36 * (1.0 - (age - 1.9) / 0.55))
+	if dark > 0.01:
+		draw_rect(hud.STAGE_RECT, Color(0.055, 0.016, 0.04, dark))
+	for p in shalhevet_pillars:
+		var p_age := age - float(p.hit_t)
+		if p_age >= 0.0 and p_age < 0.24 and p.white != null and int(p_age * 30.0) % 2 == 0:
+			draw_texture_rect(p.white, p.rect, false, Color(1.0, 0.98, 0.88, 0.9))
+	if age >= wave_start and age < 2.4:
+		for w in shalhevet_wave:
+			var wx := float(w.frac) * (stage_w + 80.0) - 40.0
+			var dist := head_x - wx
+			if dist < 0.0 or dist > 250.0:
+				continue
+			var local := dist / 250.0
+			var a := local / 0.2 if local < 0.2 else maxf(0.0, 1.0 - (local - 0.2) / 0.8)
+			var wy := float(w.y_base) - local * float(w.rise) + sin(age * 9.0 + float(w.phase)) * float(w.amp) * 0.4
+			_glyph(String(w.glyph), Vector2(wx, wy), int(w.px), Color(FIRE_PALETTE[int(w.color_idx)], a * 0.95), Color(INK_DARK, a * 0.8))
+	for p in shalhevet_pillars:
+		var p_age := age - float(p.hit_t)
+		if p_age < 0.0:
+			continue
+		var center: Vector2 = (p.rect as Rect2).get_center()
+		for pt in p.parts:
+			var life := float(pt.life)
+			if p_age > life:
+				continue
+			var a := maxf(0.0, 1.0 - p_age / life)
+			var pos := center + Vector2(float(pt.x_off) + float(pt.vx) * p_age, float(pt.y_off) + float(pt.vy) * p_age)
+			_glyph(String(pt.glyph), pos, int(pt.px), Color(FIRE_PALETTE[int(pt.color_idx)], a), Color(INK_DARK, a * 0.8))
+	if age >= 0.25 and age < 2.0:
+		var wa := (age - 0.25) / 0.3 if age < 0.55 else maxf(0.0, 1.0 - (age - 1.3) / 0.7)
+		var wx := minf(stage_w * 0.5, 140.0 + wp * 340.0)
+		_draw_tricolor_word("שלהבת", Vector2(wx, hud.STAGE_RECT.position.y + 58.0), 32, wa)
+	if age >= 0.82 and age < 0.90:
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.89, 0.67, (1.0 - (age - 0.82) / 0.08) * 0.42))
+
+
+## Nogah (נוגה): 24-ray starlight burst + blinding letter rings over every living foe (mark ס).
+const NOGAH_BURST := 0.72
+const NOGAH_END := 1.45
+var nogah_at := -99.0
+var nogah_rays: Array[Dictionary] = []
+var nogah_veils: Array[Dictionary] = []
+
+
+func play_nogah(foes: Array) -> void:
+	if hud == null:
+		return
+	nogah_rays.clear()
+	var n_word := "נוגה"
+	for r in 24:
+		var ang := (float(r) / 24.0) * TAU
+		var segs: Array[Dictionary] = []
+		for k in 6:
+			var ch := n_word.substr(k % n_word.length(), 1) if k % 3 == 0 else _letter()
+			segs.append({
+				"dist": 24.0 + float(k) * 42.0,
+				"glyph": ch,
+				"px": 16 - k,
+				"color_idx": k % 3,
+			})
+		nogah_rays.append({"ang": ang, "segs": segs})
+	nogah_veils.clear()
+	for f in foes:
+		var unit: BattleUnit = f
+		if unit == null or not unit.is_alive():
+			continue
+		var e_idx: int = hud.opponents.find(unit)
+		var rect := _unit_rect(unit)
+		if rect.size.x <= 0.0:
+			continue
+		var white: Texture2D = hud.silhouettes[e_idx] if (e_idx >= 0 and e_idx < hud.silhouettes.size()) else null
+		var glyphs: Array[Dictionary] = []
+		for i in 16:
+			glyphs.append({
+				"ang": (float(i) / 16.0) * TAU,
+				"glyph": _letter(),
+				"px": 12 + (i % 3) * 2,
+				"rad": 36.0 + float(i % 2) * 14.0,
+			})
+		nogah_veils.append({"rect": rect, "white": white, "glyphs": glyphs})
+	nogah_at = time + NOGAH_BURST
+	await get_tree().create_timer(NOGAH_BURST).timeout
+
+
+func nogah_busy() -> bool:
+	return time - nogah_at < NOGAH_END
+
+
+func _draw_nogah() -> void:
+	var age := time - nogah_at
+	if age < -NOGAH_BURST or age > NOGAH_END:
+		return
+	var star := Vector2(hud.SCREEN.x * 0.5, hud.STAGE_RECT.position.y + 56.0)
+	var dark := 0.4 * clampf((age + NOGAH_BURST) / NOGAH_BURST, 0.0, 1.0) if age < 0.0 else maxf(0.0, 0.4 * (1.0 - age / NOGAH_END))
+	if dark > 0.01:
+		draw_rect(hud.STAGE_RECT, Color(0.04, 0.024, 0.07, dark))
+	if age < 0.0:
+		var p := clampf((age + NOGAH_BURST) / NOGAH_BURST, 0.0, 1.0)
+		for ray in nogah_rays:
+			var ang := float(ray.ang) + p * 1.4
+			for s in ray.segs:
+				var dist := float(s.dist) * (1.2 - p * 0.85)
+				var pos := star + Vector2(cos(ang) * dist, sin(ang) * dist * 0.42)
+				_glyph(String(s.glyph), pos, int(s.px), Color(LIGHT_PALETTE[int(s.color_idx)], 0.25 + 0.75 * p), Color(INK_DARK, p * 0.8))
+		_draw_palette_word("נוגה", star + Vector2(0.0, 10.0), int(20.0 + p * 14.0), p, LIGHT_PALETTE)
+		return
+	if age < 0.26 and int(age * 30.0) % 2 == 0:
+		for v in nogah_veils:
+			if v.white != null:
+				draw_texture_rect(v.white, v.rect, false, Color(1.0, 0.99, 0.9, 0.9))
+	if age < 1.35:
+		var ra := maxf(0.0, 1.0 - age / 1.35)
+		var top_y: float = hud.STAGE_RECT.position.y + 4.0
+		var bot_y: float = hud.STAGE_RECT.end.y - 4.0
+		for ray in nogah_rays:
+			var ang := float(ray.ang)
+			for s in ray.segs:
+				var dist := float(s.dist) * (0.4 + age * 1.75)
+				var pos := star + Vector2(cos(ang) * dist * 1.45, sin(ang) * dist * 0.65)
+				if pos.y < top_y or pos.y > bot_y:
+					continue
+				_glyph(String(s.glyph), pos, int(s.px), Color(LIGHT_PALETTE[int(s.color_idx)], ra * 0.9), Color(INK_DARK, ra * 0.75))
+		_draw_palette_word("נוגה", star + Vector2(0.0, 12.0 - age * 12.0), 34, ra, LIGHT_PALETTE)
+	if age < 1.25:
+		var va := maxf(0.0, 1.0 - age / 1.25)
+		for v in nogah_veils:
+			var center: Vector2 = (v.rect as Rect2).get_center() + Vector2(0.0, -20.0)
+			for g in v.glyphs:
+				var r := float(g.rad) * (1.2 - minf(0.65, age * 0.8))
+				var ang := float(g.ang) + age * 2.2
+				var col := LIGHT_PALETTE[0] if age < 0.35 else PrayerBook.INK
+				_glyph(String(g.glyph), center + Vector2(cos(ang) * r, sin(ang) * r * 0.48), int(g.px), Color(col, va), Color(INK_DARK, va * 0.8))
+	if age < 0.085:
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.99, 0.91, (1.0 - age / 0.085) * 0.58))
+
+
+## Lior (ליאור): healing light shroud around the caster card with 5 orbiting letters of ליאור,
+## persistent mark ל + xN (BiDi-safe separate calls), and per-action heal burst.
+const LIOR_CAST_END := 1.55
+const LIOR_TICK_END := 1.2
+var lior_active: Dictionary = {}
+var lior_ticks: Array[Dictionary] = []
+var lior_cast_at := -99.0
+
+
+func play_lior(unit: BattleUnit, actions: int = PrayerBook.LIOR_ACTIONS) -> void:
+	if hud == null or unit == null:
+		return
+	var shroud: Array[Dictionary] = []
+	var l_word := "ליאור"
+	for i in 34:
+		var ch := l_word.substr(i % l_word.length(), 1) if i % 4 == 0 else _letter()
+		shroud.append({
+			"x_frac": rng.randf(),
+			"delay": rng.randf_range(0.0, 0.45),
+			"rise": rng.randf_range(58.0, 126.0),
+			"sway": rng.randf_range(6.0, 18.0),
+			"phase": rng.randf_range(0.0, TAU),
+			"glyph": ch,
+			"px": rng.randi_range(11, 17),
+			"color_idx": i % 3,
+		})
+	var orbits: Array[Dictionary] = []
+	for i in 5:
+		orbits.append({
+			"idx": i,
+			"ang": (float(i) / 5.0) * TAU,
+			"glyph": l_word.substr(i, 1),
+		})
+	lior_active[unit] = {
+		"born": time,
+		"actions": maxi(0, actions),
+		"shroud": shroud,
+		"orbits": orbits,
+	}
+	lior_cast_at = time
+
+
+func set_lior_actions(unit: BattleUnit, remaining: int) -> void:
+	if unit == null or not lior_active.has(unit):
+		return
+	if remaining <= 0:
+		lior_active.erase(unit)
+	else:
+		lior_active[unit].actions = remaining
+
+
+func play_lior_tick(unit: BattleUnit, healed: int, remaining: int) -> void:
+	if hud == null or unit == null:
+		return
+	set_lior_actions(unit, remaining)
+	var rect := _unit_rect(unit)
+	if rect.size.x <= 0.0:
+		return
+	var parts: Array[Dictionary] = []
+	var span_x := rect.size.x * 0.42
+	for _i in 18:
+		parts.append({
+			"x_off": rng.randf_range(-span_x, span_x),
+			"vy": rng.randf_range(-96.0, -42.0),
+			"glyph": _letter(),
+			"px": rng.randi_range(11, 16),
+			"delay": rng.randf_range(0.0, 0.18),
+		})
+	lior_ticks.append({
+		"born": time,
+		"rect": rect,
+		"healed": healed,
+		"parts": parts,
+	})
+
+
+func lior_busy() -> bool:
+	if time - lior_cast_at < LIOR_CAST_END:
+		return true
+	for tk in lior_ticks:
+		if time - float(tk.born) < LIOR_TICK_END:
+			return true
+	return false
+
+
+func _draw_lior() -> void:
+	for unit in lior_active.keys():
+		var u: BattleUnit = unit
+		if u == null or not u.is_alive():
+			continue
+		var st: Dictionary = lior_active[u]
+		var actions := int(st.actions)
+		if actions <= 0:
+			continue
+		var rect := _unit_rect(u)
+		if rect.size.x <= 0.0:
+			continue
+		var age := time - float(st.born)
+		var center := rect.get_center()
+		var glow := 0.12 + 0.06 * sin(time * 4.5)
+		draw_rect(rect, Color(PrayerBook.INK, glow))
+		for s in st.shroud:
+			var sa := age - float(s.delay)
+			if sa < 0.0:
+				continue
+			var cyc := fposmod(sa * 0.55, 1.0)
+			var px := rect.position.x + 12.0 + float(s.x_frac) * maxf(10.0, rect.size.x - 24.0) + sin(time * 3.5 + float(s.phase)) * float(s.sway)
+			var py := rect.end.y - 6.0 - cyc * float(s.rise)
+			var a := sin(cyc * PI) * 0.9
+			_glyph(String(s.glyph), Vector2(px, py), int(s.px), Color(HEAL_PALETTE[int(s.color_idx)], a), Color(INK_DARK, a * 0.75))
+		var orb_rx := rect.size.x * 0.44
+		for o in st.orbits:
+			if int(o.idx) >= actions:
+				continue
+			var ang := float(o.ang) + time * 1.9
+			var pos := Vector2(center.x + cos(ang) * orb_rx, center.y - 22.0 + sin(ang) * 18.0)
+			_glyph(String(o.glyph), pos, 14, Color(HEAL_PALETTE[0], 0.92), Color(INK_DARK, 0.85))
+		if age < LIOR_CAST_END:
+			var wa := age / 0.35 if age < 0.35 else maxf(0.0, 1.0 - (age - 0.9) / 0.65)
+			_draw_palette_word("ליאור", Vector2(center.x, rect.position.y - 22.0 - age * 10.0), 24, wa, HEAL_PALETTE)
+	for i in range(lior_ticks.size() - 1, -1, -1):
+		var tk: Dictionary = lior_ticks[i]
+		var ta := time - float(tk.born)
+		if ta > LIOR_TICK_END:
+			lior_ticks.remove_at(i)
+			continue
+		var rect: Rect2 = tk.rect
+		var cx := rect.get_center().x
+		for pt in tk.parts:
+			var ha := ta - float(pt.delay)
+			if ha < 0.0 or ha > 0.9:
+				continue
+			var a := maxf(0.0, 1.0 - ha / 0.9)
+			_glyph(String(pt.glyph), Vector2(cx + float(pt.x_off), rect.position.y + 10.0 + float(pt.vy) * ha),
+				int(pt.px), Color(INK_HEAL, a), Color(INK_DARK, a * 0.8))
+		var la := maxf(0.0, 1.0 - ta / 1.1)
+		if la > 0.01 and int(tk.healed) > 0:
+			_glyph("+%d HP" % int(tk.healed), Vector2(cx, rect.position.y - 12.0 - ta * 28.0), 15, Color(INK_HEAL, la), Color(INK_DARK, la * 0.9))

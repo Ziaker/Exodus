@@ -1,7 +1,7 @@
 # Novas Rezas, Magias Angelicais, Gabriel, IMEDIATO e ZAHAV (D-118)
 
 **Decisão:** D-118 · 2026-11-26 (decisão do criador)  
-**Estado:** **CANÔNICO — PARCIALMENTE IMPLEMENTADO (5/20: Chaki, Shachar, Lehavah, Esh Sinai, Hasneh Habo'er)**  
+**Estado:** **CANÔNICO — PARCIALMENTE IMPLEMENTADO (8/20: Chaki, Shachar, Lehavah, Esh Sinai, Hasneh Habo'er, Shalhevet, Nogah, Lior)**  
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (§9.1 e Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) (§Reza) · **Regra VFX:** [`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md) (D-113)
 
 > [!IMPORTANT]
@@ -14,11 +14,11 @@
 | Nome | Custo | Efeito |
 |---|---|---|
 | **Esh** | 2 ACT / 1 PP | Queima um alvo único causando **20 + MAK** de dano mágico, com **30% (+10% por PP extra alocado)** de chance de causar **BURN**. *(Ver evolução para **Ur Esh** na §2 e §5.)* |
-| **Shalhevet** | 3 ACT / 4 PP | Queima **todos os oponentes** causando **30 + MAK** de dano mágico, com **50%** de chance de causar **BURN**. |
+| **Shalhevet** *(IMPLEMENTADO)* | 3 ACT / 4 PP | Queima **todos os oponentes** causando **30 + MAK** de dano mágico (respeitando `MEF`/afinidade), com **50%** de chance de causar **BURN**. *(VFX 100% letras tricolor aprovado e portado em `pray_fx.gd`.)* |
 | **Lehavah** *(IMPLEMENTADO)* | 2 ACT / 3 PP | Causa uma explosão de luz e fogo em um alvo: **40 + MAK** de dano e o **cega** (reduzindo o limiar de acerto do ponteiro) até o fim do próximo round. *(VFX 100% letras tricolor aprovado e portado em `pray_fx.gd`.)* |
-| **Nogah** | 3 ACT / 2 PP | Causa **cegueira** em **todos os inimigos** até o fim do próximo round. |
+| **Nogah** *(IMPLEMENTADO)* | 3 ACT / 2 PP | Causa **cegueira** em **todos os inimigos** até o fim do próximo round (marca `ס`, respeitando `Haganah`). *(VFX 100% letras — clarão estelar 24 feixes + anéis — aprovado e portado em `pray_fx.gd`.)* |
 | **Chaki** *(IMPLEMENTADO)* | 3 ACT / 3 PP | Prende o alvo em um raio de luz, **impedindo-o de realizar ações** até o fim do round. *(VFX 100% letras aprovado e portado em `pray_fx.gd`.)* |
-| **Lior** | 1 ACT / 2 PP | Uma luz envolve o usuário, curando sua vida em **5 + 5 por PP** durante uma **sequência de 5 ações** após o uso. |
+| **Lior** *(IMPLEMENTADO)* | 1 ACT / 2 PP | Uma luz envolve o usuário, curando sua vida em **5 + 5 por PP** durante uma **sequência de 5 ações** após o uso. *(VFX 100% letras — manto + 5 letras orbitais de `ליאור` + marca `ל` `xN` BiDi-safe — aprovado e portado em `pray_fx.gd`.)* |
 | **Meir** | 1 ACT / 2 PP | Força os oponentes a **focarem o usuário** até o fim do round *(provocação / taunt)*. |
 | **Shachar** *(IMPLEMENTADO)* | 3 ACT / 3 PP | Uma luz poderosa irradia do céu: causa **30 + MAK** de dano a **todos os inimigos no início do próximo round**. *(VFX 100% letras aprovado e portado em `pray_fx.gd`.)* |
 

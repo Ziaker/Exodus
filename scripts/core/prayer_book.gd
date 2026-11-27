@@ -24,12 +24,17 @@ const SHACHAR := &"shachar"
 const LEHAVAH := &"lehavah"
 const ESH_SINAI := &"esh_sinai"
 const HASNEH_HABOER := &"hasneh_haboer"
+const SHALHEVET := &"shalhevet"
+const NOGAH := &"nogah"
+const LIOR := &"lior"
 
 const ESH_SINAI_HIT_DAMAGE := 30
 const ESH_SINAI_FOLLOWUP_HITS := 3
 const HASNEH_BUSH_HP := 10
-## Provisional attack damage of Hasneh Habo'er's Burning Bush (doubles vs already burning foes).
+## Canonical attack damage of Hasneh Habo'er's Burning Bush (12 base / 24 vs burning foes).
 const HASNEH_BUSH_BASE_DAMAGE := 12
+const SHALHEVET_BURN_CHANCE := 50
+const LIOR_ACTIONS := 5
 
 const MAX_PP := 8
 ## Every current PP is worth +2 SP to the one praying (8 PP = +16 SP).
@@ -81,6 +86,12 @@ const SPELLS := {
 		"info": "Esh Sinai (6 PP or 40 EN / 4 ACT, IMMEDIATE): immediately deals 30 magic damage, then 3 successive 30-damage hits (reactable)."},
 	&"hasneh_haboer": {"name": "Hasneh Habo'er", "hebrew": "הַסְּנֶה הַבֹּעֵר", "cost": 0, "en": 30, "acts": 4, "target": "self", "reactable": false, "extra": false, "gabriel": true,
 		"info": "Hasneh Habo'er (30 EN / 4 ACT, Gabriel): summons a living Burning Bush (10 HP) whose attacks inflict BURN and deal 2x damage to burning targets."},
+	&"shalhevet": {"name": "Shalhevet", "hebrew": "שַׁלְהֶבֶת", "cost": 4, "acts": 3, "target": "enemies", "reactable": false, "extra": false,
+		"info": "Shalhevet (4 PP / 3 ACT): sweeping wave of fire dealing 30 + MAK damage to all foes with 50% chance to inflict BURN."},
+	&"nogah": {"name": "Nogah", "hebrew": "נֹגַהּ", "cost": 2, "acts": 3, "target": "enemies", "reactable": false, "extra": false,
+		"info": "Nogah (2 PP / 3 ACT): blinding starlight that blinds all foes until the end of the next round."},
+	&"lior": {"name": "Lior", "hebrew": "לִיאוֹר", "cost": 2, "acts": 1, "target": "self", "reactable": false, "extra": true,
+		"info": "Lior (2 PP / 1 ACT): light shroud around the caster healing 5 + 5 per PP over the next 5 actions."},
 }
 ## Default campaign spells of Yoch (D-048).
 const SPELL_ORDER: Array[StringName] = [&"refuah", &"haganah", &"raam"]
@@ -90,6 +101,7 @@ const ALL_BOOK_ORDER: Array[StringName] = [
 	&"tahorah", &"magen", &"gevurah", &"mishpat", &"zohar",
 	&"sanverim", &"nechamah", &"cherav",
 	&"chaki", &"shachar", &"lehavah", &"esh_sinai", &"hasneh_haboer",
+	&"shalhevet", &"nogah", &"lior",
 ]
 ## D-107: subset of human prayers also mirrored in SkillBook for enemy human AI.
 const HUMAN_SPELLS := {
@@ -202,6 +214,18 @@ static func esh_sinai_hit_damage(target_mef: int = 0,
 static func hasneh_bush_damage(target_burning: bool, base_dmg: int = HASNEH_BUSH_BASE_DAMAGE) -> int:
 	var base := maxi(0, base_dmg)
 	return base * 2 if target_burning else base
+
+
+## D-118 Shalhevet: (30 + MAK - MEF) * affinity fire damage to every living foe (50% BURN).
+static func shalhevet_damage(caster_mak: int, target_mef: int = 0,
+		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+	var base := maxi(0, 30 + maxi(0, caster_mak) - maxi(0, target_mef))
+	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
+
+
+## D-118 Lior: heals 5 + 5 per PP allocated (base 2 PP = 15 HP) per action over 5 actions.
+static func lior_heal(total_pp: int) -> int:
+	return 5 + 5 * maxi(0, total_pp)
 
 
 ## Single source of truth bridge for SkillBook/SkillFx/AI lookups of prayers.
