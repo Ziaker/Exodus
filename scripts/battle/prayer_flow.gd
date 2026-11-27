@@ -139,7 +139,7 @@ func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 		if pick == PrayerBook.PRAY:
 			return {"pray": PrayerBook.PRAY}
 		var target: BattleUnit = unit
-		if not PrayerBook.targets_allies(pick) and not PrayerBook.targets_enemies(pick):
+		if not PrayerBook.targets_allies(pick) and not PrayerBook.targets_enemies(pick) and not PrayerBook.targets_self(pick):
 			var side := "enemy" if PrayerBook.targets_enemy(pick) else "player"
 			target = await battle._wait_target(side)
 			if target == null:
@@ -174,6 +174,8 @@ func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 			_say("%s queued on all allies: %d PP." % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
 		elif PrayerBook.targets_enemies(pick):
 			_say("%s queued on all foes: %d PP." % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
+		elif PrayerBook.targets_self(pick):
+			_say("%s queued." % PrayerBook.spell_name(pick))
 		else:
 			_say("%s queued on %s: %d PP." % [PrayerBook.spell_name(pick), target.display_name, PrayerBook.base_cost(pick)])
 		return {"pray": pick, "target": target, "extra": 0, "paid": 0, "owed": 0}
@@ -200,10 +202,14 @@ func _build_menu(avail: int, details: Array, acts_left: int, unit: BattleUnit = 
 			if (d as Dictionary).get("pray", &"") == id:
 				queued = true
 		var acts_needed := PrayerBook.act_cost(id)
-		var castable := acts_left >= acts_needed and PrayerBook.base_cost(id) <= avail
+		var pp_needed := PrayerBook.base_cost(id)
+		var en_needed := PrayerBook.en_cost(id)
+		var en_only := pp_needed == 0 and en_needed > 0
+		var has_resource := (unit != null and unit.current_en >= en_needed) if en_only else (pp_needed <= avail)
+		var castable := acts_left >= acts_needed and has_resource
 		var allocatable := queued and avail >= 1 and PrayerBook.accepts_extra_pp(id)
 		if castable or allocatable:
-			var label := "%s  %d PP" % [PrayerBook.spell_name(id), PrayerBook.base_cost(id)]
+			var label := "%s  %d EN" % [PrayerBook.spell_name(id), en_needed] if en_only else "%s  %d PP" % [PrayerBook.spell_name(id), pp_needed]
 			if acts_needed > 1:
 				label += " / %d ACT" % acts_needed
 			menu_rows.append(label)
@@ -296,6 +302,19 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 		_event("%s invokes Shachar: dawn gathers above." % battle.short_name(unit))
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	elif id == PrayerBook.HASNEH_HABOER:
+		var en_needed := PrayerBook.en_cost(id)
+		if unit.current_en < en_needed:
+			_release(unit, d, "not enough EN")
+		else:
+			unit.current_en -= en_needed
+			var bush := _summon_burning_bush(unit)
+			fx.play_hasneh_haboer(unit, int(bush.hp))
+			_log("%s invokes Hasneh Habo'er: Burning Bush (%d HP) manifests (%d EN)." % [
+				unit.display_name, int(bush.hp), en_needed])
+			_event("%s summons the Burning Bush (%d HP)!" % [battle.short_name(unit), int(bush.hp)])
+			if reacting:
+				unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	else:
 		var target: BattleUnit = d.target
 		if not target.is_alive():
@@ -367,6 +386,10 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			_log("%s prays Chaki on %s: bound in light, cannot act until round end (%d PP)." % [
 				unit.display_name, target.display_name, _cost(d)])
 			_event("%s binds %s with Chaki!" % [battle.short_name(unit), battle.short_name(target)])
+		elif id == PrayerBook.LEHAVAH:
+			await _lehavah(unit, target, d, reacting)
+		elif id == PrayerBook.ESH_SINAI:
+			await _esh_sinai(unit, target, d, reacting)
 		if reacting and id in [PrayerBook.REFUAH, PrayerBook.HAGANAH, PrayerBook.TAHORAH, PrayerBook.GEVURAH, PrayerBook.MISHPAT, PrayerBook.ZOHAR, PrayerBook.SANVERIM, PrayerBook.NECHAMAH, PrayerBook.CHAKI]:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	save(unit)
@@ -384,7 +407,7 @@ func _reaction_pick(unit: BattleUnit) -> Dictionary:
 		if pick == PrayerBook.PRAY:
 			return {"pray": PrayerBook.PRAY}
 		var target: BattleUnit = unit
-		if not PrayerBook.targets_allies(pick) and not PrayerBook.targets_enemies(pick):
+		if not PrayerBook.targets_allies(pick) and not PrayerBook.targets_enemies(pick) and not PrayerBook.targets_self(pick):
 			target = await battle._wait_target("enemy" if PrayerBook.targets_enemy(pick) else "player")
 			if target == null:
 				continue
@@ -679,6 +702,138 @@ func rest(unit: BattleUnit, reacting: bool) -> bool:
 
 ## D-118 Shachar: pending dawn casts that detonate at the start of the next round.
 var _pending_shachar: Array[Dictionary] = []
+## D-118 Hasneh Habo'er: living Burning Bushes summoned by Gabriel (10 HP each; BURN + 2x vs burning).
+var burning_bushes: Array[Dictionary] = []
+
+
+## D-118 Lehavah: 40 + MAK light-and-fire explosion + blind (respecting Haganah) on explosion frame.
+func _lehavah(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
+	await fx.play_lehavah(target)
+	if not battle.is_inside_tree() or not target.is_alive():
+		return
+	var dmg := PrayerBook.lehavah_damage(unit.stats.mak)
+	var applied := target.take_damage(dmg)
+	unit.last_damage_dealt = applied
+	var blinded := false
+	if target.is_alive() and target.haganah.is_empty():
+		SkillFx.apply_status(target, &"blind", SkillFx.BLIND_ROUNDS)
+		blinded = true
+	battle.fx.play("RAAM", target, applied, unit)
+	_log("%s prays Lehavah on %s: %d damage%s (%d PP)." % [
+		unit.display_name, target.display_name, applied, ", blinded" if blinded else "", _cost(d)])
+	_event("Lehavah explodes on %s: %d damage%s!" % [
+		battle.short_name(target), applied, " (BLIND)" if blinded else ""])
+	if not target.is_alive():
+		_event("%s is down." % battle.short_name(target))
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+## D-118 Esh Sinai: IMMEDIATE 30 magic damage, followed by 3 successive reactable 30-damage hits.
+## Angels pay 40 EN; Yoch pays 6 PP (handled by queue). Stops early if target falls.
+func _esh_sinai(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
+	if not unit.prays:
+		var en_needed := PrayerBook.en_cost(PrayerBook.ESH_SINAI)
+		if unit.current_en < en_needed:
+			_release(unit, d, "not enough EN")
+			return
+		unit.current_en -= en_needed
+	fx.play_esh_sinai(target)
+	# Hit 0: IMMEDIATE (no delay, no reaction window)
+	var applied0 := target.take_damage(PrayerBook.ESH_SINAI_HIT_DAMAGE)
+	unit.last_damage_dealt = applied0
+	battle.fx.play("RAAM", target, applied0, unit)
+	_log("%s casts Esh Sinai (IMMEDIATE) on %s: %d damage." % [unit.display_name, target.display_name, applied0])
+	_event("Esh Sinai (IMMEDIATE) strikes %s: %d damage!" % [battle.short_name(target), applied0])
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	battle._refresh_all()
+	if not target.is_alive():
+		fx.cancel_esh_sinai_after(0)
+		_event("%s is down." % battle.short_name(target))
+		return
+	# Hits 1..3: successive reactable strikes synchronized with PrayFX pillars
+	var delays: Array[float] = [0.72, 0.60, 0.60]
+	var tags: Array[String] = ["I", "II", "III"]
+	for idx in PrayerBook.ESH_SINAI_FOLLOWUP_HITS:
+		await battle.get_tree().create_timer(delays[idx]).timeout
+		if not battle.is_inside_tree():
+			return
+		if not target.is_alive():
+			fx.cancel_esh_sinai_after(idx)
+			return
+		var applied := target.take_damage(PrayerBook.ESH_SINAI_HIT_DAMAGE)
+		unit.last_damage_dealt = applied
+		battle.fx.play("RAAM", target, applied, unit)
+		_log("%s's Esh Sinai (%s) hits %s: %d damage." % [unit.display_name, tags[idx], target.display_name, applied])
+		_event("Esh Sinai (%s) strikes %s: %d damage!" % [tags[idx], battle.short_name(target), applied])
+		battle._refresh_all()
+		if not target.is_alive():
+			fx.cancel_esh_sinai_after(idx + 1)
+			_event("%s is down." % battle.short_name(target))
+			return
+
+
+## D-118 Hasneh Habo'er: summons a 10 HP Burning Bush linked to `caster`.
+func _summon_burning_bush(caster: BattleUnit) -> Dictionary:
+	var bush := {
+		"caster": caster,
+		"hp": PrayerBook.HASNEH_BUSH_HP,
+		"max_hp": PrayerBook.HASNEH_BUSH_HP,
+		"alive": true,
+	}
+	burning_bushes.append(bush)
+	return bush
+
+
+func living_burning_bushes() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for b in burning_bushes:
+		if bool(b.get("alive", false)) and int(b.get("hp", 0)) > 0:
+			out.append(b)
+	return out
+
+
+## Damages a summoned Burning Bush; clears visual presence when all bushes fall.
+func damage_burning_bush(index: int, amount: int) -> int:
+	if index < 0 or index >= burning_bushes.size():
+		return 0
+	var bush: Dictionary = burning_bushes[index]
+	if not bool(bush.get("alive", false)):
+		return 0
+	var applied := mini(int(bush.hp), maxi(0, amount))
+	bush.hp = int(bush.hp) - applied
+	if int(bush.hp) <= 0:
+		bush.alive = false
+		_log("The Burning Bush is extinguished.")
+		_event("The Burning Bush fades.")
+	var living := living_burning_bushes()
+	fx.set_hasneh_hp(int(living[0].hp) if not living.is_empty() else 0)
+	return applied
+
+
+## Executes a Burning Bush attack on `target`: 2x damage if target is already burning, then inflicts BURN.
+func burning_bush_attack(index: int, target: BattleUnit, base_dmg: int = PrayerBook.HASNEH_BUSH_BASE_DAMAGE) -> Dictionary:
+	if index < 0 or index >= burning_bushes.size() or target == null or not target.is_alive():
+		return {"damage": 0, "doubled": false, "burned": false}
+	var bush: Dictionary = burning_bushes[index]
+	if not bool(bush.get("alive", false)) or int(bush.get("hp", 0)) <= 0:
+		return {"damage": 0, "doubled": false, "burned": false}
+	var was_burning := not target.burns.is_empty()
+	var dmg := PrayerBook.hasneh_bush_damage(was_burning, base_dmg)
+	var applied := target.take_damage(dmg)
+	var burned := false
+	if target.is_alive() and target.haganah.is_empty():
+		target.burns.append(SkillBook.BURN_ROUNDS)
+		burned = true
+	_log("Burning Bush attacks %s: %d damage%s%s." % [
+		target.display_name, applied, " (2x BURNING)" if was_burning else "", ", BURN applied" if burned else ""])
+	_event("Burning Bush sears %s: %d damage%s!" % [
+		battle.short_name(target), applied, " (2x)" if was_burning else ""])
+	if not target.is_alive():
+		_event("%s is down." % battle.short_name(target))
+	battle._refresh_all()
+	return {"damage": applied, "doubled": was_burning, "burned": burned}
 
 
 ## Haganah lasts one full round: it ends when, in a later round, the turn of the unit that

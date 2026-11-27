@@ -23,6 +23,9 @@ const PULSE_HZ := 2.6
 const INK_HOT := Color(1.0, 1.0, 0.88)
 const INK_DEBUFF := Color(0.88, 0.32, 0.32)
 const INK_HEAL := Color("b8f5a2")
+## D-118 sacred fire 3-color palette (orange, yellow, white) + living emerald bush green.
+const FIRE_PALETTE: Array[Color] = [Color("ff7a1f"), Color("ffd84a"), Color("ffffff")]
+const INK_BUSH := Color("5ee389")
 
 var hud: Control
 var font: SystemFont
@@ -66,18 +69,21 @@ func cast(unit: BattleUnit) -> void:
 
 
 func is_busy() -> bool:
-	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy() or chaki_busy() or shachar_busy()
+	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy() or chaki_busy() or shachar_busy() or esh_sinai_busy() or lehavah_busy() or hasneh_busy()
 
 
 func _draw() -> void:
 	if hud == null:
 		return
+	_draw_hasneh_haboer()
 	_draw_raam()
 	_draw_mishpat()
 	_draw_cherev()
 	_draw_sanverim()
 	_draw_chaki()
 	_draw_shachar()
+	_draw_lehavah()
+	_draw_esh_sinai()
 	var pulse := 0.55 + 0.45 * absf(sin(time * PULSE_HZ))
 	if shachar_pending:
 		_glyph(MARK_SHACHAR, Vector2(hud.SCREEN.x - 20.0, 18.0), MARK_PX + 2, Color(INK_HOT, 0.72 + 0.28 * pulse), Color(INK_DARK, 0.9))
@@ -274,6 +280,18 @@ func _shake_step() -> void:
 	var sage := time - sanverim_at
 	if sage >= 0.0 and sage < S_SHAKE_TIME:
 		amp = maxf(amp, S_SHAKE_PX * pow(1.0 - sage / S_SHAKE_TIME, 2))
+	var lage := time - lehavah_at
+	if lage >= 0.0 and lage < LEHAVAH_SHAKE_TIME:
+		amp = maxf(amp, LEHAVAH_SHAKE_PX * pow(1.0 - lage / LEHAVAH_SHAKE_TIME, 2))
+	var es_age := time - esh_sinai_at
+	if es_age >= 0.0 and es_age < ESH_SINAI_END:
+		for h in esh_sinai_hits:
+			if int(h.idx) > esh_sinai_max_hit:
+				continue
+			var h_age := es_age - float(h.ht)
+			if h_age >= 0.0 and h_age < 0.22:
+				var mag := (9.0 if int(h.idx) == 0 else 5.0) * (1.0 - h_age / 0.22)
+				amp = maxf(amp, mag)
 	if amp > 0.0:
 		if not _shaking:
 			_shaking = true
@@ -1150,3 +1168,342 @@ func _draw_shachar() -> void:
 				Color(PrayerBook.INK, alpha * 0.85), Color(INK_DARK, alpha * 0.7))
 		if dawn_age < 0.095:
 			draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.98, 0.86, (1.0 - dawn_age / 0.095) * 0.72))
+
+
+# ------------------------------------------------------------------ D-118 Esh Sinai, Lehavah & Hasneh Habo'er (100% Hebrew letters)
+
+## Draws a Hebrew word right-to-left with alternating 3-color sacred fire glyphs (orange, yellow, white).
+func _draw_tricolor_word(word: String, center: Vector2, px: int, alpha: float) -> void:
+	if alpha <= 0.01 or word.is_empty():
+		return
+	var n := word.length()
+	var step := float(px) * 0.62
+	var start_x := center.x + (float(n - 1) * step) * 0.5
+	for i in n:
+		var ch := word.substr(i, 1)
+		if ch == " ":
+			continue
+		var col: Color = FIRE_PALETTE[i % 3]
+		_glyph(ch, Vector2(start_x - float(i) * step, center.y), px, Color(col, alpha), Color(INK_DARK, alpha * 0.9))
+
+
+## Esh Sinai (אש סיני): 4 fiery Hebrew-letter pillars in 3 colors (orange, yellow, white);
+## screen flash ONLY on the 1st immediate impact (hits I, II, III have no screen flash).
+const ESH_SINAI_HIT_TIMES: Array[float] = [0.0, 0.72, 1.32, 1.92]
+const ESH_SINAI_END := 2.75
+var esh_sinai_at := -99.0
+var esh_sinai_target: BattleUnit
+var esh_sinai_white: Texture2D
+var esh_sinai_hits: Array[Dictionary] = []
+var esh_sinai_max_hit := 3
+
+
+func play_esh_sinai(target: BattleUnit) -> void:
+	if hud == null or target == null:
+		return
+	esh_sinai_target = target
+	var e_idx: int = hud.opponents.find(target)
+	esh_sinai_white = hud.silhouettes[e_idx] if (e_idx >= 0 and e_idx < hud.silhouettes.size()) else null
+	esh_sinai_hits.clear()
+	esh_sinai_max_hit = ESH_SINAI_HIT_TIMES.size() - 1
+	var sinai_word := "אשסיני"
+	for idx in ESH_SINAI_HIT_TIMES.size():
+		var col: Array[Dictionary] = []
+		var count := 60 if idx == 0 else 44
+		var tilt := 0.0 if idx == 0 else (-18.0 if idx == 1 else (18.0 if idx == 2 else 0.0))
+		for i in count:
+			var ch := sinai_word.substr(i % sinai_word.length(), 1) if i % 5 == 0 else _letter()
+			col.append({
+				"frac": float(i) / float(count),
+				"jitter_x": rng.randf_range(-1.0, 1.0) * (27.0 if idx == 0 else 19.0),
+				"glyph": ch,
+				"px": rng.randi_range(15, 28) if idx == 0 else rng.randi_range(13, 23),
+				"color_idx": i % 3,
+			})
+		var embers: Array[Dictionary] = []
+		var ember_count := 34 if idx == 0 else 22
+		for i in ember_count:
+			var ang := -PI * 0.15 - rng.randf() * PI * 0.7
+			var spd := rng.randf_range(75.0, 260.0)
+			var side := 1.0 if rng.randf() < 0.5 else -1.0
+			embers.append({
+				"vx": cos(ang) * spd * side * 0.9,
+				"vy": sin(ang) * spd - 35.0,
+				"glyph": _letter(),
+				"px": rng.randi_range(11, 20),
+				"life": rng.randf_range(0.45, 1.0),
+				"color_idx": i % 3,
+			})
+		esh_sinai_hits.append({
+			"ht": ESH_SINAI_HIT_TIMES[idx],
+			"idx": idx,
+			"tilt": tilt,
+			"col": col,
+			"embers": embers,
+		})
+	esh_sinai_at = time
+
+
+func cancel_esh_sinai_after(last_idx: int) -> void:
+	esh_sinai_max_hit = mini(esh_sinai_max_hit, last_idx)
+
+
+func esh_sinai_busy() -> bool:
+	return time - esh_sinai_at < ESH_SINAI_END
+
+
+func _draw_esh_sinai() -> void:
+	var age := time - esh_sinai_at
+	if age < 0.0 or age > ESH_SINAI_END or esh_sinai_target == null:
+		return
+	var rect := _unit_rect(esh_sinai_target)
+	if rect.size.x <= 0.0:
+		return
+	var center := rect.get_center()
+	var dark := 0.44 if age < 2.2 else maxf(0.0, 0.44 * (1.0 - (age - 2.2) / 0.55))
+	if dark > 0.01:
+		draw_rect(hud.STAGE_RECT, Color(0.03, 0.01, 0.05, dark))
+	var top_y: float = hud.STAGE_RECT.position.y + 8.0
+	var span_h: float = maxf(120.0, hud.STAGE_RECT.size.y - 16.0)
+	var flash_foe := false
+	var screen_flash := 0.0
+	for h in esh_sinai_hits:
+		var idx := int(h.idx)
+		if idx > esh_sinai_max_hit:
+			continue
+		var h_age := age - float(h.ht)
+		if h_age < 0.0 or h_age > 0.72:
+			continue
+		if h_age < 0.22 and int(h_age * 30.0) % 2 == 0:
+			flash_foe = true
+		# Screen flash ONLY on the 1st immediate impact (idx == 0)
+		if idx == 0 and h_age < 0.085:
+			screen_flash = (1.0 - h_age / 0.085) * 0.62
+		var alpha := 1.0 if h_age < 0.08 else maxf(0.0, 1.0 - (h_age - 0.08) / 0.58)
+		var tilt := float(h.tilt)
+		for p in h.col:
+			var frac := float(p.frac)
+			var py := top_y + frac * span_h
+			var px := center.x + float(p.jitter_x) * (0.4 + frac * 0.7) + tilt * (1.0 - frac)
+			var ci := int(p.color_idx)
+			var ga := alpha * (1.0 if ci == 2 else 0.92)
+			_glyph(String(p.glyph), Vector2(px, py), int(p.px), Color(FIRE_PALETTE[ci], ga), Color(INK_DARK, ga * 0.85))
+		_draw_tricolor_word("אש סיני", Vector2(center.x + tilt * 0.4, top_y + span_h * 0.34 + h_age * 36.0),
+			32 if idx == 0 else 24, alpha)
+		for e in h.embers:
+			var elife := float(e.life)
+			if h_age > elife:
+				continue
+			var ea := maxf(0.0, 1.0 - h_age / elife)
+			var ex := center.x + float(e.vx) * h_age
+			var ey := rect.end.y - 12.0 + float(e.vy) * h_age + 130.0 * h_age * h_age
+			_glyph(String(e.glyph), Vector2(ex, ey), int(e.px), Color(FIRE_PALETTE[int(e.color_idx)], ea), Color(INK_DARK, ea * 0.8))
+	if flash_foe and esh_sinai_white != null:
+		draw_texture_rect(esh_sinai_white, rect, false, Color(1.0, 0.98, 0.88, 0.9))
+	if screen_flash > 0.01:
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.96, 0.82, screen_flash))
+
+
+## Lehavah (להבה): spiral convergence of 3-color light & fire letters -> 3-color explosion
+## + white-gold blinding letter ring + single flash (returns at boom instant).
+const LEHAVAH_BOOM := 0.62
+const LEHAVAH_SHAKE_PX := 7.5
+const LEHAVAH_SHAKE_TIME := 0.26
+const LEHAVAH_END := 1.45
+var lehavah_at := -99.0
+var lehavah_target: BattleUnit
+var lehavah_white: Texture2D
+var lehavah_inward: Array[Dictionary] = []
+var lehavah_blast: Array[Dictionary] = []
+var lehavah_ring: Array[Dictionary] = []
+
+
+func play_lehavah(target: BattleUnit) -> void:
+	if hud == null or target == null:
+		return
+	lehavah_target = target
+	var e_idx: int = hud.opponents.find(target)
+	lehavah_white = hud.silhouettes[e_idx] if (e_idx >= 0 and e_idx < hud.silhouettes.size()) else null
+	lehavah_inward.clear()
+	for i in 28:
+		lehavah_inward.append({
+			"a": (float(i) / 28.0) * TAU,
+			"rad": rng.randf_range(95.0, 160.0),
+			"glyph": _letter(),
+			"px": rng.randi_range(12, 18),
+			"color_idx": i % 3,
+		})
+	lehavah_blast.clear()
+	var leh_word := "להבה"
+	for i in 48:
+		var a := (float(i) / 48.0) * TAU + rng.randf_range(-0.15, 0.15)
+		var spd := rng.randf_range(95.0, 305.0)
+		var ch := leh_word.substr(i % leh_word.length(), 1) if i % 4 == 0 else _letter()
+		lehavah_blast.append({
+			"vx": cos(a) * spd,
+			"vy": sin(a) * spd * 0.78,
+			"glyph": ch,
+			"px": rng.randi_range(13, 24),
+			"color_idx": i % 3,
+			"life": rng.randf_range(0.55, 1.05),
+		})
+	lehavah_ring.clear()
+	for i in 20:
+		lehavah_ring.append({
+			"a": (float(i) / 20.0) * TAU,
+			"glyph": _letter(),
+			"px": 15 + (i % 2) * 3,
+		})
+	lehavah_at = time + LEHAVAH_BOOM
+	await get_tree().create_timer(LEHAVAH_BOOM).timeout
+
+
+func lehavah_busy() -> bool:
+	return time - lehavah_at < LEHAVAH_END
+
+
+func _draw_lehavah() -> void:
+	var age := time - lehavah_at
+	if age < -LEHAVAH_BOOM or age > LEHAVAH_END or lehavah_target == null:
+		return
+	var rect := _unit_rect(lehavah_target)
+	if rect.size.x <= 0.0:
+		return
+	var center := rect.get_center()
+	var dark := 0.36 * clampf((age + LEHAVAH_BOOM) / LEHAVAH_BOOM, 0.0, 1.0) if age < 0.0 else maxf(0.0, 0.36 * (1.0 - age / 1.4))
+	if dark > 0.01:
+		draw_rect(hud.STAGE_RECT, Color(0.04, 0.01, 0.05, dark))
+	if age < 0.0:
+		var p := clampf((age + LEHAVAH_BOOM) / LEHAVAH_BOOM, 0.0, 1.0)
+		for pt in lehavah_inward:
+			var r := float(pt.rad) * pow(1.0 - p, 1.4)
+			var ang := float(pt.a) + p * 3.2
+			var pos := center + Vector2(cos(ang) * r, sin(ang) * r * 0.72)
+			_glyph(String(pt.glyph), pos, int(pt.px), Color(FIRE_PALETTE[int(pt.color_idx)], 0.3 + 0.7 * p), Color(INK_DARK, p * 0.85))
+		_draw_tricolor_word("להבה", center + Vector2(0.0, -34.0), int(18.0 + p * 12.0), p)
+		return
+	if lehavah_white != null and age < 0.24 and int(age * 30.0) % 2 == 0:
+		draw_texture_rect(lehavah_white, rect, false, Color(1.0, 0.99, 0.9, 0.9))
+	for pt in lehavah_blast:
+		var life := float(pt.life)
+		if age > life:
+			continue
+		var a := maxf(0.0, 1.0 - age / life)
+		var pos := center + Vector2(float(pt.vx) * age, float(pt.vy) * age + 55.0 * age * age)
+		_glyph(String(pt.glyph), pos, int(pt.px), Color(FIRE_PALETTE[int(pt.color_idx)], a), Color(INK_DARK, a * 0.85))
+	if age < 0.85:
+		var ra := 1.0 - age / 0.85
+		var rad := 22.0 + age * 175.0
+		for b in lehavah_ring:
+			var ang := float(b.a) + age * 1.4
+			var pos := center + Vector2(cos(ang) * rad, sin(ang) * rad * 0.62)
+			_glyph(String(b.glyph), pos, int(b.px), Color(1.0, 0.99, 0.88, ra), Color(INK_DARK, ra * 0.8))
+	if age < 0.95:
+		_draw_tricolor_word("להבה", center + Vector2(0.0, -24.0 - age * 26.0), 34, 1.0 - age / 0.95)
+	if age < 0.08:
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.98, 0.86, (1.0 - age / 0.08) * 0.65))
+
+
+## Hasneh Habo'er (הסנה הבוער): Gabriel's Burning Bush (10 HP) — living emerald-green Hebrew-letter
+## branches interwoven with continuous 3-color flame letters that burn without consuming it.
+const HASNEH_BLOOM := 0.78
+const HASNEH_INTRO_END := 2.25
+var hasneh_at := -99.0
+var hasneh_hp := 0
+var hasneh_pos := Vector2.ZERO
+var hasneh_branches: Array[Dictionary] = []
+var hasneh_flames: Array[Dictionary] = []
+
+
+func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUSH_HP) -> void:
+	if hud == null:
+		return
+	hasneh_hp = maxi(0, bush_hp)
+	var rect := _unit_rect(caster)
+	if rect.size.x > 0.0 and not caster.is_player:
+		hasneh_pos = Vector2(clampf(rect.get_center().x + 120.0, 88.0, hud.SCREEN.x - 88.0), hud.STAGE_RECT.end.y - 26.0)
+	else:
+		hasneh_pos = Vector2(hud.SCREEN.x * 0.72, hud.STAGE_RECT.end.y - 26.0)
+	hasneh_branches.clear()
+	var branch_angles: Array[float] = [-1.15, -0.78, -0.42, -0.1, 0.22, 0.58, 0.96, 1.25]
+	for bi in branch_angles.size():
+		var ang := branch_angles[bi]
+		var segs := 7 + (bi % 3)
+		for s in segs:
+			var frac := float(s + 1) / float(segs)
+			var curve := sin(frac * 2.4 + float(bi)) * 14.0
+			hasneh_branches.append({
+				"x_off": sin(ang) * (frac * 56.0) + curve,
+				"y_off": -cos(ang * 0.7) * (frac * 74.0) - 6.0,
+				"glyph": _letter(),
+				"px": 12 + (s % 3) * 2,
+				"delay": frac * 0.55 + float(bi % 2) * 0.08,
+				"phase": rng.randf_range(0.0, TAU),
+			})
+	hasneh_flames.clear()
+	var bush_word := "הסנההבוער"
+	for i in 42:
+		var ch := bush_word.substr(i % bush_word.length(), 1) if i % 5 == 0 else _letter()
+		hasneh_flames.append({
+			"x_off": rng.randf_range(-52.0, 52.0),
+			"base_y": rng.randf_range(-74.0, -10.0),
+			"rise": rng.randf_range(26.0, 72.0),
+			"glyph": ch,
+			"px": rng.randi_range(12, 20),
+			"color_idx": i % 3,
+			"speed": rng.randf_range(1.4, 2.8),
+			"phase": rng.randf_range(0.0, TAU),
+		})
+	hasneh_at = time
+
+
+func set_hasneh_hp(hp: int) -> void:
+	hasneh_hp = maxi(0, hp)
+
+
+func hasneh_busy() -> bool:
+	return time - hasneh_at < HASNEH_INTRO_END
+
+
+func _draw_hasneh_haboer() -> void:
+	if hasneh_hp <= 0 and not hasneh_busy():
+		return
+	var age := time - hasneh_at
+	if age < 0.0:
+		return
+	if hasneh_hp <= 0:
+		return
+	var live := age >= HASNEH_BLOOM
+	var live_age := maxf(0.0, age - HASNEH_BLOOM)
+	var warm := minf(0.24, age * 0.25) if age < HASNEH_INTRO_END else 0.08
+	if warm > 0.01:
+		draw_rect(hud.STAGE_RECT, Color(1.0, 0.51, 0.14, warm * 0.35))
+	# 1) Living emerald-green Hebrew-letter branches (never consumed by the fire)
+	for br in hasneh_branches:
+		var ba := age - float(br.delay)
+		if ba < 0.0:
+			continue
+		var grow := minf(1.0, ba / 0.35)
+		var sway := sin(time * 2.6 + float(br.phase)) * 2.5 if live else 0.0
+		var pos := hasneh_pos + Vector2(float(br.x_off) * grow + sway, float(br.y_off) * grow)
+		_glyph(String(br.glyph), pos, int(br.px), Color(INK_BUSH, 0.35 + 0.65 * grow), Color(INK_DARK, 0.85))
+	# 2) Continuous 3-color flame letters (orange, yellow, white)
+	if age > 0.25:
+		var fire_a := minf(1.0, (age - 0.25) / 0.5)
+		for fl in hasneh_flames:
+			var cyc := fposmod(time * float(fl.speed) + float(fl.phase), 1.0)
+			var pos := hasneh_pos + Vector2(float(fl.x_off) + sin(time * 5.0 + float(fl.phase)) * 7.0,
+				float(fl.base_y) - cyc * float(fl.rise))
+			var a := fire_a * (1.0 - cyc) * 0.95
+			_glyph(String(fl.glyph), pos, int(fl.px), Color(FIRE_PALETTE[int(fl.color_idx)], a), Color(INK_DARK, a * 0.75))
+	# 3) Tri-color Hebrew title during manifestation
+	if age > 0.35 and age < 2.2:
+		var ta := (age - 0.35) / 0.5 if age < 0.85 else maxf(0.0, 1.0 - (age - 1.55) / 0.65)
+		_draw_tricolor_word("הסנה הבוער", hasneh_pos + Vector2(0.0, -112.0), 22, ta)
+	# 4) Living summon HP tag (ASCII only, separate from Hebrew glyphs)
+	if live:
+		var tag_a := minf(1.0, live_age * 2.5)
+		_glyph("BUSH %d HP" % hasneh_hp, hasneh_pos + Vector2(0.0, 14.0), 11, Color(FIRE_PALETTE[1], tag_a), Color(INK_DARK, tag_a * 0.9))
+	# 5) Single soft warm flash on manifestation
+	if live and live_age < 0.08:
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.91, 0.63, (1.0 - live_age / 0.08) * 0.45))

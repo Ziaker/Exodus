@@ -18,9 +18,18 @@ const MAGEN := &"magen"
 const GEVURAH := &"gevurah"
 const MISHPAT := &"mishpat"
 const ZOHAR := &"zohar"
-## D-118: approved prayers ported from prototype (2026-11-26).
+## D-118: approved prayers & skills ported from prototype (2026-11-26).
 const CHAKI := &"chaki"
 const SHACHAR := &"shachar"
+const LEHAVAH := &"lehavah"
+const ESH_SINAI := &"esh_sinai"
+const HASNEH_HABOER := &"hasneh_haboer"
+
+const ESH_SINAI_HIT_DAMAGE := 30
+const ESH_SINAI_FOLLOWUP_HITS := 3
+const HASNEH_BUSH_HP := 10
+## Provisional attack damage of Hasneh Habo'er's Burning Bush (doubles vs already burning foes).
+const HASNEH_BUSH_BASE_DAMAGE := 12
 
 const MAX_PP := 8
 ## Every current PP is worth +2 SP to the one praying (8 PP = +16 SP).
@@ -61,11 +70,17 @@ const SPELLS := {
 		"info": "NECHAMAH 1 PP: heals an ally 5 HP at the start of each of the next 3 rounds; mends stack."},
 	&"cherav": {"name": "CHEREV", "hebrew": "חֶרֶב", "cost": 3, "acts": 1, "target": "enemies", "reactable": false, "extra": false,
 		"info": "CHEREV 3 PP: a cut of light across every foe, 10 + MAK - MEF each."},
-	# D-118 (creator 2026-11-26): Chaki & Shachar (visually approved and implemented).
+	# D-118 (creator 2026-11-26): visually approved prayers & angel/Gabriel skills.
 	&"chaki": {"name": "Chaki", "hebrew": "חָכִי", "cost": 3, "acts": 3, "target": "enemy", "reactable": false, "extra": false,
 		"info": "Chaki (3 PP / 3 ACT): binds one foe in a pillar of light, preventing actions until the end of the round."},
 	&"shachar": {"name": "Shachar", "hebrew": "שַׁחַר", "cost": 3, "acts": 3, "target": "enemies", "reactable": false, "extra": false,
 		"info": "Shachar (3 PP / 3 ACT): radiant dawn deals 30 + MAK damage to all foes at the start of the next round."},
+	&"lehavah": {"name": "Lehavah", "hebrew": "לֶהָבָה", "cost": 3, "acts": 2, "target": "enemy", "reactable": false, "extra": false,
+		"info": "Lehavah (3 PP / 2 ACT): light and fire explosion dealing 40 + MAK damage and blinding the foe until the end of the next round."},
+	&"esh_sinai": {"name": "Esh Sinai", "hebrew": "אֵשׁ סִינַי", "cost": 6, "en": 40, "acts": 4, "target": "enemy", "reactable": false, "immediate": true, "extra": false, "angelic": true,
+		"info": "Esh Sinai (6 PP or 40 EN / 4 ACT, IMMEDIATE): immediately deals 30 magic damage, then 3 successive 30-damage hits (reactable)."},
+	&"hasneh_haboer": {"name": "Hasneh Habo'er", "hebrew": "הַסְּנֶה הַבֹּעֵר", "cost": 0, "en": 30, "acts": 4, "target": "self", "reactable": false, "extra": false, "gabriel": true,
+		"info": "Hasneh Habo'er (30 EN / 4 ACT, Gabriel): summons a living Burning Bush (10 HP) whose attacks inflict BURN and deal 2x damage to burning targets."},
 }
 ## Default campaign spells of Yoch (D-048).
 const SPELL_ORDER: Array[StringName] = [&"refuah", &"haganah", &"raam"]
@@ -74,7 +89,7 @@ const ALL_BOOK_ORDER: Array[StringName] = [
 	&"refuah", &"haganah", &"raam",
 	&"tahorah", &"magen", &"gevurah", &"mishpat", &"zohar",
 	&"sanverim", &"nechamah", &"cherav",
-	&"chaki", &"shachar",
+	&"chaki", &"shachar", &"lehavah", &"esh_sinai", &"hasneh_haboer",
 ]
 ## D-107: subset of human prayers also mirrored in SkillBook for enemy human AI.
 const HUMAN_SPELLS := {
@@ -139,6 +154,18 @@ static func targets_enemies(id: StringName) -> bool:
 	return String(entry(id).get("target", "")) == "enemies"
 
 
+static func targets_self(id: StringName) -> bool:
+	return String(entry(id).get("target", "")) == "self"
+
+
+static func en_cost(id: StringName) -> int:
+	return int(entry(id).get("en", 0))
+
+
+static func is_immediate(id: StringName) -> bool:
+	return bool(entry(id).get("immediate", false))
+
+
 ## D-112 Gevurah: +15% damage + 5% per extra PP on the ally's next attack.
 static func gevurah_bonus(extra_pp: int) -> float:
 	return 0.15 + 0.05 * float(maxi(0, extra_pp))
@@ -152,6 +179,17 @@ static func mishpat_damage(target_last_damage: int) -> int:
 ## D-118 Shachar: 30 + MAK damage to every living foe at the start of the next round.
 static func shachar_damage(caster_mak: int) -> int:
 	return 30 + maxi(0, caster_mak)
+
+
+## D-118 Lehavah: 40 + MAK light-and-fire explosion damage on one foe (+ blind).
+static func lehavah_damage(caster_mak: int) -> int:
+	return 40 + maxi(0, caster_mak)
+
+
+## D-118 Hasneh Habo'er: Burning Bush deals 2x damage against an already burning target.
+static func hasneh_bush_damage(target_burning: bool, base_dmg: int = HASNEH_BUSH_BASE_DAMAGE) -> int:
+	var base := maxi(0, base_dmg)
+	return base * 2 if target_burning else base
 
 
 ## Single source of truth bridge for SkillBook/SkillFx/AI lookups of prayers.
@@ -178,9 +216,10 @@ static func as_skill_def(id: StringName) -> Dictionary:
 		"name": String(e.get("name", String(id).to_upper())),
 		"hebrew": String(e.get("hebrew", "")),
 		"acts": int(e.get("acts", 1)),
-		"en": 0,
+		"en": int(e.get("en", 0)),
 		"hp": 0,
 		"pp": int(e.get("cost", 0)),
+		"immediate": bool(e.get("immediate", false)),
 		"kind": kind,
 		"power": power,
 		"burn_chance": 0,

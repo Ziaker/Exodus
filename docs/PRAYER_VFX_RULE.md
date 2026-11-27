@@ -47,6 +47,9 @@ Esta regra aplica-se indistintamente a **todas** as rezas do jogo — da campanh
 | **Zohar** | זֹהַר / `זוהר` | D-112 | `play_zohar(target)` | `זוהר` abrindo em dois feixes horizontais de luz sobre o aliado | `ז` |
 | **Chaki** | חָכִי / `חכי` | D-118 | `play_chaki(target)` | 6 colunas paralelas de letras em contracorrente + `חכי` travando com lock-in | `ח` |
 | **Shachar** | שַׁחַר / `שחר` | D-118 | `play_shachar()` / `play_shachar_dawn()` | Arco solar de letras no cast + 18 feixes radiais de letras varrendo todos os inimigos na virada de round | `ש` (pendente) |
+| **Lehavah** | לֶהָבָה / `להבה` | D-118 | `play_lehavah(target)` | Convergência espiral tricolor (laranja/amarelo/branco) → explosão tricolor + anel branco-dourado de ofuscamento com `להבה` e flash único | `ס` (vermelho) |
+| **Esh Sinai** | אֵשׁ סִינַי / `אש סיני` | D-118 | `play_esh_sinai(target)` | 4 pilares de fogo em 3 cores (laranja/amarelo/branco) com `אש סיני` e brasas tricolores; piscada de tela **apenas no 1º impacto imediato** | — |
+| **Hasneh Habo'er** | הַסְּנֶה הַבֹּעֵר / `הסנה הבוער` | D-118 | `play_hasneh_haboer(caster, hp)` | Ramos verde-esmeralda vivos de letras brotando do solo entrelaçados com 42 chamas contínuas em 3 cores + título `הסנה הבוער` sem consumir os ramos | Sarça viva (`BUSH N HP`) |
 
 ---
 

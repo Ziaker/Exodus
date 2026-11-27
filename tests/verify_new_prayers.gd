@@ -208,6 +208,9 @@ func _run() -> void:
 		PrayerBook.ZOHAR: &"play_zohar",
 		PrayerBook.CHAKI: &"play_chaki",
 		PrayerBook.SHACHAR: &"play_shachar",
+		PrayerBook.LEHAVAH: &"play_lehavah",
+		PrayerBook.ESH_SINAI: &"play_esh_sinai",
+		PrayerBook.HASNEH_HABOER: &"play_hasneh_haboer",
 	}
 	for spell_id in PrayerBook.SPELLS.keys():
 		check(d113_methods.has(spell_id), "D-113: Prayer '%s' must be registered in the Hebrew VFX coverage map" % spell_id)
@@ -241,6 +244,69 @@ func _run() -> void:
 	var expected_shachar := PrayerBook.shachar_damage(yoch.stats.mak)
 	check(foe.current_hp == hp_before_shachar - expected_shachar, "D-118 Shachar deals 30 + MAK (%d) at start of next round (got %d)" % [expected_shachar, hp_before_shachar - foe.current_hp])
 	check(not fx_node.shachar_pending and fx_node.shachar_rays.size() == 18, "D-118 Shachar clears pending mark and fires 18 Hebrew dawn rays")
+
+	# D-118 Lehavah: 3 PP / 2 ACT, 40 + MAK damage + blind until end of next round + 3-color Hebrew VFX
+	check(PrayerBook.base_cost(PrayerBook.LEHAVAH) == 3 and PrayerBook.act_cost(PrayerBook.LEHAVAH) == 2, "D-118 Lehavah: 3 PP / 2 ACT")
+	foe.stats.max_hp = 500
+	foe.current_hp = 500
+	foe.remove_status(&"blind")
+	foe.haganah = {}
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.LEHAVAH, "target": foe, "extra": 0, "paid": 3, "owed": 0}, false)
+	var expected_lehavah := PrayerBook.lehavah_damage(yoch.stats.mak)
+	check(500 - foe.current_hp == expected_lehavah, "D-118 Lehavah deals 40 + MAK (%d, got %d)" % [expected_lehavah, 500 - foe.current_hp])
+	check(foe.has_status(&"blind"), "D-118 Lehavah blinds target")
+	check(yoch.acts_available == 2, "D-118 Lehavah spends 2 ACT")
+	check(fx_node.lehavah_inward.size() == 28 and fx_node.lehavah_blast.size() == 48 and fx_node.lehavah_ring.size() == 20, "D-118 Lehavah builds spiral, 3-color blast, and blinding ring Hebrew VFX")
+	foe.remove_status(&"blind")
+
+	# D-118 Esh Sinai: 6 PP / 40 EN / 4 ACT, IMMEDIATE 30 dmg + 3 successive 30-dmg hits (120 total) + 3-color VFX
+	check(PrayerBook.base_cost(PrayerBook.ESH_SINAI) == 6 and PrayerBook.en_cost(PrayerBook.ESH_SINAI) == 40 and PrayerBook.act_cost(PrayerBook.ESH_SINAI) == 4, "D-118 Esh Sinai: 6 PP or 40 EN / 4 ACT")
+	check(PrayerBook.is_immediate(PrayerBook.ESH_SINAI), "D-118 Esh Sinai is marked IMMEDIATE")
+	check(fx_node.FIRE_PALETTE.size() == 3, "D-118 sacred fire uses 3-color palette (orange, yellow, white)")
+	foe.stats.max_hp = 500
+	foe.current_hp = 500
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.ESH_SINAI, "target": foe, "extra": 0, "paid": 6, "owed": 0}, false)
+	check(500 - foe.current_hp == 120, "D-118 Esh Sinai deals 30 immediate + 3x30 = 120 total damage (got %d)" % (500 - foe.current_hp))
+	check(yoch.acts_available == 0, "D-118 Esh Sinai spends 4 ACT")
+	check(fx_node.esh_sinai_hits.size() == 4, "D-118 Esh Sinai schedules 4 fiery Hebrew-letter pillars")
+	# Early stop when target dies on hit 0
+	foe.current_hp = 20
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.ESH_SINAI, "target": foe, "extra": 0, "paid": 6, "owed": 0}, false)
+	check(not foe.is_alive() and fx_node.esh_sinai_max_hit == 0, "D-118 Esh Sinai stops follow-up hits if target falls on immediate strike")
+	foe.current_hp = 500
+
+	# D-118 Hasneh Habo'er: Gabriel 4 ACT / 30 EN, summons 10 HP Burning Bush (BURN + 2x vs burning foes)
+	check(PrayerBook.en_cost(PrayerBook.HASNEH_HABOER) == 30 and PrayerBook.act_cost(PrayerBook.HASNEH_HABOER) == 4, "D-118 Hasneh Habo'er: 30 EN / 4 ACT")
+	fallen.stats.max_en = 60
+	fallen.current_en = 45
+	fallen.acts_available = 4
+	b.prayer.burning_bushes.clear()
+	await b.prayer.execute(fallen, {"pray": PrayerBook.HASNEH_HABOER, "target": fallen, "extra": 0, "paid": 0, "owed": 0}, false)
+	check(fallen.current_en == 15 and fallen.acts_available == 0, "D-118 Hasneh Habo'er spends 30 EN and 4 ACT")
+	check(b.prayer.living_burning_bushes().size() == 1 and int(b.prayer.living_burning_bushes()[0].hp) == 10, "D-118 Hasneh Habo'er summons a 10 HP Burning Bush")
+	check(fx_node.hasneh_hp == 10 and not fx_node.hasneh_branches.is_empty() and fx_node.hasneh_flames.size() == 42, "D-118 Hasneh Habo'er builds emerald branches + 42 3-color flame letters")
+	foe.burns.clear()
+	foe.haganah = {}
+	foe.current_hp = 500
+	var bush_hit1: Dictionary = b.prayer.burning_bush_attack(0, foe)
+	check(int(bush_hit1.damage) == PrayerBook.HASNEH_BUSH_BASE_DAMAGE and not bool(bush_hit1.doubled) and bool(bush_hit1.burned) and not foe.burns.is_empty(), "D-118 Burning Bush first attack deals base damage and inflicts BURN")
+	var bush_hit2: Dictionary = b.prayer.burning_bush_attack(0, foe)
+	check(int(bush_hit2.damage) == PrayerBook.HASNEH_BUSH_BASE_DAMAGE * 2 and bool(bush_hit2.doubled), "D-118 Burning Bush deals 2x damage against an already burning target")
+	var bush_dmg: int = b.prayer.damage_burning_bush(0, 10)
+	check(bush_dmg == 10 and b.prayer.living_burning_bushes().is_empty() and fx_node.hasneh_hp == 0, "D-118 Burning Bush is extinguished at 0 HP and clears VFX")
+	foe.burns.clear()
+	# Lehavah respects Haganah (still deals damage, does not blind shielded foe)
+	foe.haganah = {"round": b.state.round_number, "owner": yoch.id}
+	foe.remove_status(&"blind")
+	foe.current_hp = 500
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.LEHAVAH, "target": foe, "extra": 0, "paid": 3, "owed": 0}, false)
+	check(foe.current_hp == 500 - expected_lehavah and not foe.has_status(&"blind"), "D-118 Lehavah respects Haganah shield (damage lands, blind blocked)")
+	foe.haganah = {}
+
 	fx_node.queue_redraw()
 	await process_frame
 

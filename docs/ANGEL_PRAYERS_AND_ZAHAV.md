@@ -1,7 +1,7 @@
 # Novas Rezas, Magias Angelicais, Gabriel, IMEDIATO e ZAHAV (D-118)
 
 **Decisão:** D-118 · 2026-11-26 (decisão do criador)  
-**Estado:** **CANÔNICO — DESIGN CONFIRMADO; NÃO IMPLEMENTADO**  
+**Estado:** **CANÔNICO — PARCIALMENTE IMPLEMENTADO (5/20: Chaki, Shachar, Lehavah, Esh Sinai, Hasneh Habo'er)**  
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (§9.1 e Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) (§Reza) · **Regra VFX:** [`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md) (D-113)
 
 > [!IMPORTANT]
@@ -15,7 +15,7 @@
 |---|---|---|
 | **Esh** | 2 ACT / 1 PP | Queima um alvo único causando **20 + MAK** de dano mágico, com **30% (+10% por PP extra alocado)** de chance de causar **BURN**. *(Ver evolução para **Ur Esh** na §2 e §5.)* |
 | **Shalhevet** | 3 ACT / 4 PP | Queima **todos os oponentes** causando **30 + MAK** de dano mágico, com **50%** de chance de causar **BURN**. |
-| **Lehavah** | 2 ACT / 3 PP | Causa uma explosão de luz e fogo em um alvo: **40 + MAK** de dano e o **cega** (reduzindo o limiar de acerto do ponteiro) até o fim do próximo round. |
+| **Lehavah** *(IMPLEMENTADO)* | 2 ACT / 3 PP | Causa uma explosão de luz e fogo em um alvo: **40 + MAK** de dano e o **cega** (reduzindo o limiar de acerto do ponteiro) até o fim do próximo round. *(VFX 100% letras tricolor aprovado e portado em `pray_fx.gd`.)* |
 | **Nogah** | 3 ACT / 2 PP | Causa **cegueira** em **todos os inimigos** até o fim do próximo round. |
 | **Chaki** *(IMPLEMENTADO)* | 3 ACT / 3 PP | Prende o alvo em um raio de luz, **impedindo-o de realizar ações** até o fim do round. *(VFX 100% letras aprovado e portado em `pray_fx.gd`.)* |
 | **Lior** | 1 ACT / 2 PP | Uma luz envolve o usuário, curando sua vida em **5 + 5 por PP** durante uma **sequência de 5 ações** após o uso. |
@@ -34,7 +34,7 @@
 | **Seraf** | 2 ACT / 2 PP ou 10 EN | Cura o equivalente ao **MAK** do usuário e concede **+20 SP**. |
 | **Nitzotz** | 2 ACT / 3 PP ou 15 EN | Causa **20 de dano mágico** em um alvo já queimando e **aumenta a força da queimadura**, passando a causar **10 de dano por round**. |
 | **Esh Ochelet** | 4 ACT / 5 PP ou 30 EN | Escolhe um alvo e causa **30 de dano mágico por ação que ele realizar no turno**. Não interrompe e tem velocidade **IMEDIATA**. |
-| **Esh Sinai** | 4 ACT / 6 PP ou 40 EN | **IMEDIATAMENTE** causa **30 de dano mágico** em um alvo. Após isso, sucessivamente, causa **30 de dano** no mesmo alvo **mais 3 vezes** *(estas 3 repetições permitem reação)*. |
+| **Esh Sinai** *(IMPLEMENTADO)* | 4 ACT / 6 PP ou 40 EN | **IMEDIATAMENTE** causa **30 de dano mágico** em um alvo. Após isso, sucessivamente, causa **30 de dano** no mesmo alvo **mais 3 vezes** *(estas 3 repetições permitem reação)*. *(VFX 100% letras tricolor com flash apenas no 1º impacto aprovado e portado em `pray_fx.gd`.)* |
 | **Gever** | 3 ACT / 4 PP ou 20 EN | Ganha **+4 estágios de ATK** até o fim do próximo round. |
 
 ---
@@ -45,7 +45,7 @@
 |---|---|---|
 | **Angel Hug** | 2 ACT / 5 EN | **Paralisa** o alvo (quem está paralisado **não pode agir nem reagir** a ações) durante **3 atos**. **IMEDIATO**. |
 | **God's Message** | 1 ACT / 5 EN | No próximo turno, o alvo perderá **3 estágios de um status aleatório**. **IMEDIATO**. |
-| **Hasneh Habo'er** | 4 ACT / 30 EN | Invoca um **arbusto vivo** incandescido pelo fogo divino (**10 HP**). Todos os ataques do arbusto causam **BURN** em quem ataca. Ao atacar um alvo já queimado, causa o **dobro de dano**. |
+| **Hasneh Habo'er** *(IMPLEMENTADO)* | 4 ACT / 30 EN | Invoca um **arbusto vivo** incandescido pelo fogo divino (**10 HP**). Todos os ataques do arbusto causam **BURN** em quem ataca. Ao atacar um alvo já queimado, causa o **dobro de dano**. *(VFX 100% letras — ramos verdes + chamas tricolores — aprovado e portado em `pray_fx.gd`; dano base provisório `12` / `24` em alvo queimando.)* |
 | **Adin** | 2 ACT / 0 EN | Recupera **15 MP** *(EN)*. No próximo round, esta skill evolui para **Adina**. |
 | **Adina** | 2 ACT / 0 EN | Recupera **25 MP** *(EN)* e **25 HP**. No próximo round, esta skill evolui para **Adinut**. |
 | **Adinut** | 1 ACT / 0 EN | **IMEDIATAMENTE** recupera **30 MP** *(EN)* e **30 HP**. |
