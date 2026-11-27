@@ -298,8 +298,13 @@ func _run() -> void:
 	await b.prayer.execute(fallen, {"pray": PrayerBook.HASNEH_HABOER, "target": fallen, "extra": 0, "paid": 0, "owed": 0}, false)
 	check(fallen.acts_available == 4 and b.prayer.living_burning_bushes().is_empty(), "D-118 Hasneh Habo'er does NOT spend ACTs when EN is insufficient")
 	fallen.current_en = 75
+	var units_before: int = b.state.units.size()
+	var opps_before: int = b.hud.opponents.size()
 	await b.prayer.execute(fallen, {"pray": PrayerBook.HASNEH_HABOER, "target": fallen, "extra": 0, "paid": 0, "owed": 0}, false)
 	check(fallen.current_en == 45 and fallen.acts_available == 0, "D-118 Hasneh Habo'er spends 30 EN and 4 ACT")
+	check(b.state.units.size() == units_before + 1 and b.hud.opponents.size() == opps_before + 1, "D-118 Hasneh Habo'er adds Burning Bush as a real extra enemy BattleUnit in BattleState and HUD opponents")
+	var bush_u0: BattleUnit = b.hud.opponents[opps_before]
+	check(not bush_u0.is_player and bush_u0.stats.max_hp == 10 and bush_u0.kind == &"burning_bush", "D-118 Burning Bush BattleUnit is an enemy summon with 10 HP")
 	fallen.acts_available = 4
 	await b.prayer.execute(fallen, {"pray": PrayerBook.HASNEH_HABOER, "target": fallen, "extra": 0, "paid": 0, "owed": 0}, false)
 	check(b.prayer.living_burning_bushes().size() == 2 and fx_node.hasneh_bushes.size() == 2 and fx_node.hasneh_hp == 20, "D-118 Hasneh Habo'er tracks and renders multiple simultaneous 10 HP Burning Bushes")
@@ -310,10 +315,16 @@ func _run() -> void:
 	check(int(bush_hit1.damage) == PrayerBook.HASNEH_BUSH_BASE_DAMAGE and not bool(bush_hit1.doubled) and bool(bush_hit1.burned) and not foe.burns.is_empty(), "D-118 Burning Bush first attack deals base damage (12) and inflicts BURN")
 	var bush_hit2: Dictionary = b.prayer.burning_bush_attack(0, foe)
 	check(int(bush_hit2.damage) == PrayerBook.HASNEH_BUSH_BASE_DAMAGE * 2 and bool(bush_hit2.doubled), "D-118 Burning Bush deals 2x damage (24) against an already burning target")
-	var bush_dmg1: int = b.prayer.damage_burning_bush(0, 10)
-	check(bush_dmg1 == 10 and b.prayer.living_burning_bushes().size() == 1 and fx_node.hasneh_hp == 10, "Extinguishing bush 0 preserves living bush 1 in logic and VFX")
+	# Direct combat damage on the BattleUnit extinguishes it and syncs VFX
+	bush_u0.take_damage(10)
+	fx_node._sync_hasneh_hp()
+	check(not bush_u0.is_alive() and b.prayer.living_burning_bushes().size() == 1 and fx_node.hasneh_hp == 10, "Killing Burning Bush BattleUnit directly removes it from living bushes and updates VFX")
 	var bush_dmg2: int = b.prayer.damage_burning_bush(1, 10)
 	check(bush_dmg2 == 10 and b.prayer.living_burning_bushes().is_empty() and fx_node.hasneh_hp == 0, "Extinguishing all Burning Bushes clears VFX cleanly")
+	# Remove test summons so subsequent AoE tests only see original foes
+	b.hud.opponents.resize(opps_before)
+	b.hud.silhouettes.resize(opps_before)
+	b.state.units.resize(units_before)
 	foe.burns.clear()
 	# Lehavah respects Haganah (still deals damage, does not blind shielded foe)
 	foe.haganah = {"round": b.state.round_number, "owner": yoch.id}

@@ -1447,16 +1447,22 @@ var hasneh_flames: Array[Dictionary] = []
 var hasneh_bushes: Array[Dictionary] = []
 
 
-func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUSH_HP) -> void:
+func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUSH_HP, bush_unit: BattleUnit = null) -> void:
 	if hud == null:
 		return
 	var slot_idx := hasneh_bushes.size()
-	var rect := _unit_rect(caster)
-	var base_x: float = hud.SCREEN.x * 0.72
-	if rect.size.x > 0.0 and not caster.is_player:
-		base_x = rect.get_center().x + 120.0
-	var offset_x := float(slot_idx % 3) * -96.0 if slot_idx > 0 else 0.0
-	var pos := Vector2(clampf(base_x + offset_x, 88.0, hud.SCREEN.x - 88.0), hud.STAGE_RECT.end.y - 26.0)
+	var pos := Vector2(hud.SCREEN.x * 0.72, hud.STAGE_RECT.end.y - 26.0)
+	if bush_unit != null:
+		var u_rect := _unit_rect(bush_unit)
+		if u_rect.size.x > 0.0:
+			pos = Vector2(u_rect.get_center().x, u_rect.end.y - 12.0)
+	else:
+		var rect := _unit_rect(caster)
+		var base_x: float = hud.SCREEN.x * 0.72
+		if rect.size.x > 0.0 and not caster.is_player:
+			base_x = rect.get_center().x + 120.0
+		var offset_x := float(slot_idx % 3) * -96.0 if slot_idx > 0 else 0.0
+		pos = Vector2(clampf(base_x + offset_x, 88.0, hud.SCREEN.x - 88.0), hud.STAGE_RECT.end.y - 26.0)
 	var branches: Array[Dictionary] = []
 	var branch_angles: Array[float] = [-1.15, -0.78, -0.42, -0.1, 0.22, 0.58, 0.96, 1.25]
 	for bi in branch_angles.size():
@@ -1490,6 +1496,7 @@ func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUS
 	hasneh_bushes.append({
 		"born": time,
 		"hp": maxi(0, bush_hp),
+		"unit": bush_unit,
 		"pos": pos,
 		"branches": branches,
 		"flames": flames,
@@ -1518,10 +1525,17 @@ func clear_hasneh_bushes() -> void:
 	hasneh_hp = 0
 
 
+func _bush_live_hp(b: Dictionary) -> int:
+	var u: BattleUnit = b.get("unit", null)
+	if u != null:
+		return maxi(0, u.current_hp)
+	return maxi(0, int(b.hp))
+
+
 func _sync_hasneh_hp() -> void:
 	var total := 0
 	for b in hasneh_bushes:
-		total += maxi(0, int(b.hp))
+		total += _bush_live_hp(b)
 	hasneh_hp = total
 
 
@@ -1530,18 +1544,26 @@ func hasneh_busy() -> bool:
 
 
 func _draw_hasneh_haboer() -> void:
-	if hasneh_bushes.is_empty() or hasneh_hp <= 0:
+	if hasneh_bushes.is_empty():
+		return
+	_sync_hasneh_hp()
+	if hasneh_hp <= 0:
 		return
 	var flash_alpha := 0.0
 	var warm_alpha := 0.0
 	for bush in hasneh_bushes:
-		var hp := int(bush.hp)
+		var hp := _bush_live_hp(bush)
 		if hp <= 0:
 			continue
 		var age := time - float(bush.born)
 		if age < 0.0:
 			continue
 		var pos: Vector2 = bush.pos
+		var u: BattleUnit = bush.get("unit", null)
+		if u != null:
+			var u_rect := _unit_rect(u)
+			if u_rect.size.x > 0.0:
+				pos = Vector2(u_rect.get_center().x, u_rect.end.y - 12.0)
 		var live := age >= HASNEH_BLOOM
 		var live_age := maxf(0.0, age - HASNEH_BLOOM)
 		var warm := minf(0.24, age * 0.25) if age < HASNEH_INTRO_END else 0.08
@@ -1812,11 +1834,11 @@ func play_lior(unit: BattleUnit, actions: int = PrayerBook.LIOR_ACTIONS) -> void
 		shroud.append({
 			"x_frac": rng.randf(),
 			"delay": rng.randf_range(0.0, 0.45),
-			"rise": rng.randf_range(58.0, 126.0),
-			"sway": rng.randf_range(6.0, 18.0),
+			"rise": rng.randf_range(52.0, 112.0),
+			"sway": rng.randf_range(5.0, 14.0),
 			"phase": rng.randf_range(0.0, TAU),
 			"glyph": ch,
-			"px": rng.randi_range(11, 17),
+			"px": rng.randi_range(8, 11),
 			"color_idx": i % 3,
 		})
 	var orbits: Array[Dictionary] = []
@@ -1856,9 +1878,9 @@ func play_lior_tick(unit: BattleUnit, healed: int, remaining: int) -> void:
 	for _i in 18:
 		parts.append({
 			"x_off": rng.randf_range(-span_x, span_x),
-			"vy": rng.randf_range(-96.0, -42.0),
+			"vy": rng.randf_range(-90.0, -40.0),
 			"glyph": _letter(),
-			"px": rng.randi_range(11, 16),
+			"px": rng.randi_range(8, 11),
 			"delay": rng.randf_range(0.0, 0.18),
 		})
 	lior_ticks.append({
@@ -1892,7 +1914,7 @@ func _draw_lior() -> void:
 			continue
 		var age := time - float(st.born)
 		var center := rect.get_center()
-		var glow := 0.12 + 0.06 * sin(time * 4.5)
+		var glow := 0.06 + 0.03 * sin(time * 4.5)
 		draw_rect(rect, Color(PrayerBook.INK, glow))
 		for s in st.shroud:
 			var sa := age - float(s.delay)
@@ -1901,18 +1923,18 @@ func _draw_lior() -> void:
 			var cyc := fposmod(sa * 0.55, 1.0)
 			var px := rect.position.x + 12.0 + float(s.x_frac) * maxf(10.0, rect.size.x - 24.0) + sin(time * 3.5 + float(s.phase)) * float(s.sway)
 			var py := rect.end.y - 6.0 - cyc * float(s.rise)
-			var a := sin(cyc * PI) * 0.9
-			_glyph(String(s.glyph), Vector2(px, py), int(s.px), Color(HEAL_PALETTE[int(s.color_idx)], a), Color(INK_DARK, a * 0.75))
+			var a := sin(cyc * PI) * 0.40
+			_glyph(String(s.glyph), Vector2(px, py), int(s.px), Color(HEAL_PALETTE[int(s.color_idx)], a), Color(INK_DARK, a * 0.55))
 		var orb_rx := rect.size.x * 0.44
 		for o in st.orbits:
 			if int(o.idx) >= actions:
 				continue
 			var ang := float(o.ang) + time * 1.9
 			var pos := Vector2(center.x + cos(ang) * orb_rx, center.y - 22.0 + sin(ang) * 18.0)
-			_glyph(String(o.glyph), pos, 14, Color(HEAL_PALETTE[0], 0.92), Color(INK_DARK, 0.85))
+			_glyph(String(o.glyph), pos, 10, Color(HEAL_PALETTE[0], 0.52), Color(INK_DARK, 0.45))
 		if age < LIOR_CAST_END:
 			var wa := age / 0.35 if age < 0.35 else maxf(0.0, 1.0 - (age - 0.9) / 0.65)
-			_draw_palette_word("ליאור", Vector2(center.x, rect.position.y - 22.0 - age * 10.0), 24, wa, HEAL_PALETTE)
+			_draw_palette_word("ליאור", Vector2(center.x, rect.position.y - 22.0 - age * 10.0), 20, wa * 0.85, HEAL_PALETTE)
 	for i in range(lior_ticks.size() - 1, -1, -1):
 		var tk: Dictionary = lior_ticks[i]
 		var ta := time - float(tk.born)
@@ -1925,9 +1947,11 @@ func _draw_lior() -> void:
 			var ha := ta - float(pt.delay)
 			if ha < 0.0 or ha > 0.9:
 				continue
-			var a := maxf(0.0, 1.0 - ha / 0.9)
+			var a := maxf(0.0, 1.0 - ha / 0.9) * 0.42
 			_glyph(String(pt.glyph), Vector2(cx + float(pt.x_off), rect.position.y + 10.0 + float(pt.vy) * ha),
-				int(pt.px), Color(INK_HEAL, a), Color(INK_DARK, a * 0.8))
+				int(pt.px), Color(INK_HEAL, a), Color(INK_DARK, a * 0.55))
 		var la := maxf(0.0, 1.0 - ta / 1.1)
 		if la > 0.01 and int(tk.healed) > 0:
-			_glyph("+%d HP" % int(tk.healed), Vector2(cx, rect.position.y - 12.0 - ta * 28.0), 15, Color(INK_HEAL, la), Color(INK_DARK, la * 0.9))
+			var lpos := Vector2(cx, rect.position.y - 14.0 - ta * 26.0)
+			draw_string_outline(font, lpos, "+%d HP" % int(tk.healed), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, 4, Color(0.04, 0.03, 0.06, la))
+			draw_string(font, lpos, "+%d HP" % int(tk.healed), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(INK_HEAL, la))

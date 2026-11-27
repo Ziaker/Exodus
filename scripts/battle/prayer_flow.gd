@@ -311,10 +311,11 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 		var en_needed := PrayerBook.en_cost(id)
 		unit.current_en -= en_needed
 		var bush := _summon_burning_bush(unit)
-		fx.play_hasneh_haboer(unit, int(bush.hp))
-		_log("%s invokes Hasneh Habo'er: Burning Bush (%d HP) manifests (%d EN)." % [
-			unit.display_name, int(bush.hp), en_needed])
-		_event("%s summons the Burning Bush (%d HP)!" % [battle.short_name(unit), int(bush.hp)])
+		var bush_unit: BattleUnit = bush.unit
+		fx.play_hasneh_haboer(unit, bush_unit.current_hp, bush_unit)
+		_log("%s invokes Hasneh Habo'er: Burning Bush (%d HP) enters battle as an enemy summon (%d EN)." % [
+			unit.display_name, bush_unit.current_hp, en_needed])
+		_event("%s summons the Burning Bush (%d HP)!" % [battle.short_name(unit), bush_unit.current_hp])
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	elif id == PrayerBook.SHALHEVET:
@@ -876,41 +877,86 @@ func _esh_sinai(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: 
 			return
 
 
-## D-118 Hasneh Habo'er: summons a 10 HP Burning Bush linked to `caster`.
+## D-118 Hasneh Habo'er: summons a real 10 HP Burning Bush BattleUnit into BattleState & HUD opponents.
 func _summon_burning_bush(caster: BattleUnit) -> Dictionary:
+	var idx := burning_bushes.size() + 1
+	var st := UnitStats.new()
+	st.max_hp = PrayerBook.HASNEH_BUSH_HP
+	st.max_en = 0
+	st.atk = PrayerBook.HASNEH_BUSH_BASE_DAMAGE
+	st.mak = PrayerBook.HASNEH_BUSH_BASE_DAMAGE
+	st.defense = 6
+	st.mef = 6
+	st.agi = 8
+	var bush_unit := BattleUnit.new(StringName("burning_bush_%d" % idx), "BURNING BUSH", st, false, false)
+	bush_unit.kind = &"burning_bush"
+	bush_unit.race = &"summon"
+	bush_unit.acts_available = 2
+	battle.state.add_unit(bush_unit)
+	battle.state.turn_order.append(bush_unit)
+	# Keep silhouettes array aligned with opponents using a 1x1 transparent texture (body is 100% Hebrew letters in PrayFX).
+	while battle.hud.silhouettes.size() < battle.hud.opponents.size():
+		battle.hud.silhouettes.append(_transparent_tex())
+	battle.hud.opponents.append(bush_unit)
+	battle.hud.silhouettes.append(_transparent_tex())
 	var bush := {
 		"caster": caster,
-		"hp": PrayerBook.HASNEH_BUSH_HP,
-		"max_hp": PrayerBook.HASNEH_BUSH_HP,
+		"unit": bush_unit,
+		"hp": bush_unit.current_hp,
+		"max_hp": bush_unit.stats.max_hp,
 		"alive": true,
 	}
 	burning_bushes.append(bush)
+	battle._refresh_all()
 	return bush
+
+
+func _transparent_tex() -> ImageTexture:
+	var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	return ImageTexture.create_from_image(img)
 
 
 func living_burning_bushes() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for b in burning_bushes:
+		var u: BattleUnit = b.get("unit", null)
+		if u != null:
+			b.hp = u.current_hp
+			b.alive = u.is_alive()
 		if bool(b.get("alive", false)) and int(b.get("hp", 0)) > 0:
 			out.append(b)
 	return out
 
 
-## Damages a summoned Burning Bush; updates its individual VFX entry and clears it at 0 HP.
+## Damages a summoned Burning Bush BattleUnit directly; updates its VFX entry and clears it at 0 HP.
 func damage_burning_bush(index: int, amount: int) -> int:
 	if index < 0 or index >= burning_bushes.size():
 		return 0
 	var bush: Dictionary = burning_bushes[index]
+	var u: BattleUnit = bush.get("unit", null)
+	if u != null:
+		if not u.is_alive():
+			return 0
+		var applied := u.take_damage(amount)
+		bush.hp = u.current_hp
+		bush.alive = u.is_alive()
+		if not u.is_alive():
+			_log("The Burning Bush is extinguished.")
+			_event("The Burning Bush fades.")
+		fx.set_hasneh_bush_hp(index, u.current_hp)
+		battle._refresh_all()
+		return applied
 	if not bool(bush.get("alive", false)):
 		return 0
-	var applied := mini(int(bush.hp), maxi(0, amount))
-	bush.hp = int(bush.hp) - applied
+	var fallback_applied := mini(int(bush.hp), maxi(0, amount))
+	bush.hp = int(bush.hp) - fallback_applied
 	if int(bush.hp) <= 0:
 		bush.alive = false
 		_log("The Burning Bush is extinguished.")
 		_event("The Burning Bush fades.")
 	fx.set_hasneh_bush_hp(index, int(bush.hp))
-	return applied
+	return fallback_applied
 
 
 ## Executes a Burning Bush attack on `target`: 2x damage if target is already burning, then inflicts BURN.

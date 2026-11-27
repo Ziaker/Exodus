@@ -179,7 +179,11 @@ func _refresh_all() -> void:
 		_indicator_round = state.round_number
 		queued_acts_by_foe.clear()
 	hud.players.assign([_fallen, _ally])
-	hud.opponents.assign([state.units[2], state.units[3]])
+	var opps: Array[BattleUnit] = []
+	for u in state.units:
+		if not u.is_player:
+			opps.append(u)
+	hud.opponents.assign(opps)
 	hud.actor = 0 if active_actor == null or active_actor == _fallen else 1
 	hud.queue_redraw()
 
