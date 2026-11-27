@@ -1186,19 +1186,30 @@ func _draw_shachar() -> void:
 
 # ------------------------------------------------------------------ D-118 Esh Sinai, Lehavah & Hasneh Habo'er (100% Hebrew letters)
 
-## Draws a Hebrew word right-to-left cycling through `palette` per glyph.
+## Draws a Hebrew word right-to-left cycling through `palette` per glyph with real glyph widths.
 func _draw_palette_word(word: String, center: Vector2, px: int, alpha: float, palette: Array[Color]) -> void:
 	if alpha <= 0.01 or word.is_empty() or palette.is_empty():
 		return
 	var n := word.length()
-	var step := float(px) * 0.62
-	var start_x := center.x + (float(n - 1) * step) * 0.5
+	var widths: Array[float] = []
+	var total_w := 0.0
+	var pad := 1.5
 	for i in n:
 		var ch := word.substr(i, 1)
-		if ch == " ":
-			continue
-		var col: Color = palette[i % palette.size()]
-		_glyph(ch, Vector2(start_x - float(i) * step, center.y), px, Color(col, alpha), Color(INK_DARK, alpha * 0.9))
+		var w := float(px) * 0.34 if ch == " " else maxf(float(px) * 0.24, font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x)
+		widths.append(w)
+		total_w += w + (pad if i < n - 1 else 0.0)
+	var cursor_x := center.x + total_w * 0.5
+	for i in n:
+		var ch := word.substr(i, 1)
+		var w := widths[i]
+		cursor_x -= w
+		if ch != " ":
+			var col: Color = palette[i % palette.size()]
+			var pos := Vector2(cursor_x, center.y)
+			draw_string_outline(font, pos, ch, HORIZONTAL_ALIGNMENT_LEFT, -1, px, 3, Color(INK_DARK, alpha * 0.9))
+			draw_string(font, pos, ch, HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(col, alpha))
+		cursor_x -= pad
 
 
 ## Draws a Hebrew word right-to-left with alternating 3-color sacred fire glyphs (orange, yellow, white).
@@ -1677,7 +1688,7 @@ func _draw_shalhevet() -> void:
 	if age >= 0.25 and age < 2.0:
 		var wa := (age - 0.25) / 0.3 if age < 0.55 else maxf(0.0, 1.0 - (age - 1.3) / 0.7)
 		var wx := minf(stage_w * 0.5, 140.0 + wp * 340.0)
-		_draw_tricolor_word("שלהבת", Vector2(wx, hud.STAGE_RECT.position.y + 58.0), 32, wa)
+		_draw_tricolor_word("שלהבת", Vector2(wx, hud.STAGE_RECT.position.y + 92.0), 32, wa)
 	if age >= 0.82 and age < 0.90:
 		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.89, 0.67, (1.0 - (age - 0.82) / 0.08) * 0.42))
 
@@ -1738,7 +1749,7 @@ func _draw_nogah() -> void:
 	var age := time - nogah_at
 	if age < -NOGAH_BURST or age > NOGAH_END:
 		return
-	var star := Vector2(hud.SCREEN.x * 0.5, hud.STAGE_RECT.position.y + 56.0)
+	var star := Vector2(hud.SCREEN.x * 0.5, hud.STAGE_RECT.position.y + 92.0)
 	var dark := 0.4 * clampf((age + NOGAH_BURST) / NOGAH_BURST, 0.0, 1.0) if age < 0.0 else maxf(0.0, 0.4 * (1.0 - age / NOGAH_END))
 	if dark > 0.01:
 		draw_rect(hud.STAGE_RECT, Color(0.04, 0.024, 0.07, dark))
