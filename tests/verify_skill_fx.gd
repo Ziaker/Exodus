@@ -155,12 +155,13 @@ func _run() -> void:
 	check(second_combo > second_plain, "TWIN FANG: the 2nd hit is stronger when the 1st landed (%d vs %d)" % [second_combo, second_plain])
 	reset()
 	hit(&"fang_flurry", 0); hit(&"fang_flurry", 1); hit(&"fang_flurry", 2)
-	check(foe.bleeds.size() == 3, "FANG FLURRY: each hit adds a bleed (%d)" % foe.bleeds.size())
+	check(foe.bleeds.size() == 3, "FANG FLURRY: each hit adds a bleed stack (%d)" % foe.bleeds.size())
 	var hp := foe.current_hp
 	await b._status_tick()
-	check(hp - foe.current_hp == SkillFx.BLEED_DAMAGE * 3, "Bleeds hurt 2 each at the start of the round")
-	await b._status_tick(); await b._status_tick()
-	check(foe.bleeds.is_empty(), "A bleed lasts 3 rounds")
+	check(hp == foe.current_hp, "D-124: bleeds no longer hurt (they cut healing 20% per stack)")
+	check(foe.heal_factor() < 0.5 + 0.001 and foe.heal_factor() > 0.39, "3 bleeds cut the healing received by 60%")
+	await b._status_tick()
+	check(foe.bleeds.is_empty(), "A bleed lasts until the end of the next turn (2 round ticks)")
 	reset()
 	hit(&"heavy_crush")
 	check(foe.has_status(&"break") and foe.stats.defense == 8, "HEAVY CRUSH breaks DEF 10 -> 8")
@@ -236,7 +237,7 @@ func _run() -> void:
 	# ---- heal
 	reset(); hero.burns.append(2); hero.bleeds.append(2); hero.current_hp = 500
 	b._self_skill(hero, &"mend", 0, false)
-	check(hero.current_hp == 508 and hero.burns.is_empty() and hero.bleeds.is_empty(), "MEND heals 8 and cleanses burns and bleeds")
+	check(hero.current_hp == 506 and hero.burns.is_empty() and hero.bleeds.is_empty(), "MEND heals 8 (cut to 6 by the BLEED it then cleanses, D-124) and cleanses burns and bleeds")
 	reset(); ally.current_hp = 500; hero.current_hp = 500
 	b._self_skill(hero, &"dark_siphon", 0, false, ally)
 	check(ally.current_hp == 512 and hero.current_hp == 500, "DARK BOON heals the chosen ally, not the user")

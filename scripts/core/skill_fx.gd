@@ -7,8 +7,11 @@ extends RefCounted
 const CHILL_MULT := 0.75        # the chilled unit's next attack deals 25% less
 const WEAKEN_MULT := 0.8        # a weakened unit's hits deal 20% less
 const MARK_MULT := 1.25         # the next hit on a marked unit deals 25% more
-const BLEED_DAMAGE := 2         # per bleed, per round
-const BLEED_ROUNDS := 3
+## D-124 BLEED canônico: -20% of the healing received per stack, up to 4 stacks, until the end
+## of the unit's next turn (read as 2 round ticks, like BLIND/MAGEN). No damage over time anymore.
+const BLEED_HEAL_CUT := 0.20
+const BLEED_MAX_STACKS := 4
+const BLEED_ROUNDS := 2
 const BREAK_DEF := 0.25         # BREAK and BERSERK: DEF falls 25%
 const SNARE_AGI := 4
 const SLEEP_ID := &"sleep"
@@ -18,7 +21,7 @@ const BLIND_ROUNDS := 2          # SANVERIM: until the end of the next round
 const MAGEN_ROUNDS := 2          # D-112 MAGEN: +1 physical DEF stage until the end of the next round
 const ZOHAR_ROUNDS := 2          # D-112 ZOHAR: wider POINT zone until the end of the next round
 ## Negative statuses cleared by Tahorah (D-112). Positive buffs (taunt, zohar, etc.) are preserved.
-const NEGATIVE_STATUSES: Array[StringName] = [&"blind", &"chill", &"weaken", &"mark", &"snare", &"break", &"sleep", &"slow", &"chaki", &"paralyzed"]
+const NEGATIVE_STATUSES: Array[StringName] = [&"blind", &"chill", &"weaken", &"mark", &"snare", &"break", &"sleep", &"slow", &"chaki", &"paralyzed", &"trapped"]
 
 ## Statuses that only change a stat (restored when they end).
 const STAT_STATUSES := [&"snare", &"break", &"berserk"]
@@ -59,14 +62,13 @@ static func in_mult(defender: BattleUnit) -> float:
 	return 1.0
 
 
-## One round passes for `unit`: bleeds hurt, REGEN heals, every counter drops by one and
-## the expired statuses fall off. Returns {"bleed": damage dealt, "regen": hp healed}.
+## One round passes for `unit`: bleeds wear off, REGEN heals, every counter drops by one and
+## the expired statuses fall off. Returns {"bleed": 0 (D-124: no damage), "regen": hp healed}.
 static func tick(unit: BattleUnit) -> Dictionary:
 	var result := {"bleed": 0, "regen": 0, "mend": 0}
 	if not unit.is_alive():
 		return result
 	if not unit.bleeds.is_empty():
-		result.bleed = unit.take_damage(BLEED_DAMAGE * unit.bleeds.size())
 		for i in range(unit.bleeds.size() - 1, -1, -1):
 			unit.bleeds[i] -= 1
 			if unit.bleeds[i] <= 0:
@@ -112,6 +114,7 @@ static func cleanse_all(unit: BattleUnit) -> int:
 			unit.remove_status(id)
 			removed += 1
 	unit.paralyzed_acts = 0
+	unit.trapped_actions = 0
 	return removed
 
 

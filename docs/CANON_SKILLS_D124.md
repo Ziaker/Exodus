@@ -67,3 +67,11 @@
    * **Status de aprovação visual (2026-11-27):** **TODOS APROVADOS (8/8):** `Mazz Bite`, `Fang Sting`, `Fang Spine [ZAHAV]`, `Vuln Pierce` *(sem outline dourado)*, `Dark Breath v2` *(ar saindo diretamente da boca grotesca de perfil)*, `Umbral Gaze` *(versão mais escura)*, `Ignoma` *(chamas rabiscadas sem olho)*, `Ignoma Esh [ZAHAV]` *(outline dourado + `אש`)*. Referências HTML salvas em [`docs/vfx_refs/d124_d125/`](vfx_refs/d124_d125/README.md) e estilo documentado em [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md).
 
 *Única pendência menor:* confirmar se `Vuln Pierce` dobra o dano apenas em reação contra ação não-ofensiva anunciada ou também contra alvo com estado/postura não-ofensiva ativa no round.
+
+## 4. Fase 1 implementada (2026-11-27) — 3 regras globais
+
+Implementadas em `skill_book.gd`, `skill_fx.gd`, `battle_unit.gd` e `playable_controller.gd`; testes em `tests/verify_d124_rules.gd` (38 checks). O catálogo das 6 skills (Fase 2) e os VFX (Fases 3–5) seguem NÃO IMPLEMENTADOS. Leituras adotadas, a confirmar pelo autor:
+
+- **HIGH SPEED:** flag `high_speed` na skill; a barra de ataque/defesa dura `1/1,2` s e, no contra-ataque, o ponteiro do lado `HIGH SPEED` roda a `1/1,2` (o do oponente não muda). Nenhuma skill atual tem a flag (vem na Fase 2).
+- **BLEED:** −20% da cura por acúmulo (máx. 4); sem dano; dura 2 ticks de round (leitura de "até o fim do próximo turno", como `BLIND`/`MAGEN`); o 5º acúmulo renova os 4. `MEND` cura e depois limpa, então a cura do próprio `MEND` ainda é cortada pelo BLEED que ele remove.
+- **Prisão:** `BattleUnit.trap(n)` + status `trapped` (purificável pela `Tahorah`); o turno do preso é PASS automático (D-105), guardando atos; cada ação de turno concluída por qualquer unidade (comando do herói ou ato do inimigo; reações não contam) desconta 1. Um round sem nenhuma ação conta como 1 ação, para a prisão não travar a batalha.

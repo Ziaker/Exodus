@@ -30,8 +30,11 @@ var race: StringName = &""
 var haganah: Dictionary = {}
 ## D-106 (Survival skills, see SkillFx): id -> {"rounds": int, "mod": {"stat","delta"}}.
 var statuses: Dictionary = {}
-## Bleeds: remaining rounds of each one (they stack, SkillFx.BLEED_DAMAGE per round each).
+## D-124 BLEED: remaining rounds of each stack (up to SkillFx.BLEED_MAX_STACKS); each stack cuts
+## the healing received by 20%.
 var bleeds: Array[int] = []
+## D-124 temporização de ação: global actions left before a trapped unit is freed (0 = free).
+var trapped_actions: int = 0
 ## REGEN: HP restored at the start of each of the next `regen_rounds` rounds.
 var regen_amount: int = 0
 var regen_rounds: int = 0
@@ -180,7 +183,43 @@ func take_damage(amount: int) -> int:
 	current_hp -= applied
 	return applied
 
+## D-124: share of the healing that gets through (BLEED: -20% per stack, 4 stacks at most).
+func heal_factor() -> float:
+	return 1.0 - SkillFx.BLEED_HEAL_CUT * float(mini(SkillFx.BLEED_MAX_STACKS, bleeds.size()))
+
+
+## D-124 BLEED: adds `stacks` stacks (4 at most; at the cap every stack is refreshed). Returns the stack count.
+func add_bleed(stacks: int = 1) -> int:
+	for _i in maxi(0, stacks):
+		if bleeds.size() < SkillFx.BLEED_MAX_STACKS:
+			bleeds.append(SkillFx.BLEED_ROUNDS)
+		else:
+			for j in bleeds.size():
+				bleeds[j] = SkillFx.BLEED_ROUNDS
+	return bleeds.size()
+
+
+## D-124: traps the unit for `actions` global actions (keeps the larger value). Its queued acts are lost
+## by the controller; the acts it did not use stay (the trap acts as an automatic PASS).
+func trap(actions: int) -> void:
+	trapped_actions = maxi(trapped_actions, maxi(0, actions))
+	if trapped_actions > 0:
+		add_status(&"trapped", 99, {})
+
+
+## D-124: one global action was completed in the battle. Returns true when this frees the unit.
+func tick_trap() -> bool:
+	if trapped_actions <= 0:
+		return false
+	trapped_actions -= 1
+	if trapped_actions > 0:
+		return false
+	remove_status(&"trapped")
+	return true
+
+
 func heal(amount: int) -> int:
+	amount = maxi(0, int(round(float(amount) * heal_factor())))
 	var applied := mini(stats.max_hp - current_hp, maxi(0, amount))
 	current_hp += applied
 	return applied

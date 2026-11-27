@@ -55,7 +55,7 @@ const DEFS := {
 		"info": "SHADOW BITE 1 ACT / 4 EN: power 6 physical hit, twice; each hit that lands steals 1 SP."},
 	&"fang_flurry": {"name": "FANG FLURRY", "acts": 2, "en": 5, "hp": 0, "pp": 0, "kind": "strike",
 		"power": 4, "marks": [0.25, 0.5, 0.75], "fx": {"bleed": 1},
-		"info": "FANG FLURRY 2 ACT / 5 EN: power 4 physical hit, three times; each hit that lands adds a BLEED (2/round, 3 rounds, stacks)."},
+		"info": "FANG FLURRY 2 ACT / 5 EN: power 4 physical hit, three times; each hit that lands adds a BLEED (-20% healing received per stack, up to 4)."},
 	&"heavy_crush": {"name": "HEAVY CRUSH", "acts": 2, "en": 5, "hp": 0, "pp": 0, "kind": "strike",
 		"power": 11, "marks": [0.5], "fx": {"status": "break", "rounds": 2},
 		"info": "HEAVY CRUSH 2 ACT / 5 EN: power 11 heavy strike; the target's DEF falls 25% for 2 rounds (BREAK)."},
@@ -125,6 +125,19 @@ const KIND_SKILLS := {
 	&"genetic_foe_a": [&"lunge", &"bleedbuff"],
 	&"genetic_foe_b": [&"heat_wave", &"energy_eat"],
 }
+
+
+## D-124 HIGH SPEED: the pointer of this attack runs 20% faster (also against the opponent's pointer in a counter).
+const HIGH_SPEED_FACTOR := 1.2
+
+
+static func is_high_speed(skill: StringName) -> bool:
+	return bool(def(skill).get("high_speed", false))
+
+
+## Bar seconds after HIGH SPEED (the base seconds when the attack is not HIGH SPEED).
+static func bar_seconds(seconds: float, high_speed: bool) -> float:
+	return seconds / HIGH_SPEED_FACTOR if high_speed else seconds
 
 
 static func def(skill: StringName) -> Dictionary:

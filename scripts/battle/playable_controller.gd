@@ -472,6 +472,8 @@ func run_battle() -> void:
 			prayer.expire(unit)
 			if _skip_if_asleep(unit):
 				pass
+			elif unit.trapped_actions > 0:
+				_auto_pass_trapped(unit)
 			elif unit.is_player:
 				await _player_turn(unit)
 			else:
@@ -485,6 +487,10 @@ func run_battle() -> void:
 		if state.is_over(): break
 		_expire_stages(null)
 		prayer.expire(null)
+		# D-124: a round with only auto-PASSes would never free anyone; it counts as one action.
+		if _round_actions == 0:
+			_global_action_done(true)
+		_round_actions = 0
 		state.end_round()
 		_append_log("End of round %d: +20%% EN." % state.round_number)
 		_event("End of round %d: +20%% EN." % state.round_number)
@@ -576,6 +582,7 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 
 
 func _execute_command(unit: BattleUnit, command: String, reacting: bool = false, chain: bool = false, skill: Dictionary = {}, planned: BattleUnit = null) -> bool:
+	_high_speed = false
 	if command == "PRAY":
 		return await prayer.execute(unit, skill, reacting)
 	if command == FIGHT and not skill.is_empty():
@@ -869,6 +876,7 @@ func _player_turn(unit: BattleUnit) -> void:
 			var is_lior_cast: bool = command == "PRAY" and StringName(detail.get("pray", &"")) == PrayerBook.LIOR
 			if not _player_interrupted and not is_lior_cast and unit.is_alive():
 				prayer.tick_lior(unit)
+			_global_action_done()
 			# D-118 Esh Ochelet: the marked hero is bitten after each action it completes.
 			if not _player_interrupted and unit.is_alive():
 				prayer.tick_ochelet(unit)
@@ -959,6 +967,7 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		if skill != &"":
 			used += int(SkillBook.def(skill).acts)
 			await _enemy_skill(unit, skill)
+			_global_action_done()
 			prayer.tick_ochelet(unit)
 			if _enemy_interrupted:
 				var lost: Array[String] = []
@@ -1001,6 +1010,7 @@ func _enemy_turn(unit: BattleUnit) -> void:
 				fx.play("RAAM", defender, int(res.get("damage", 0)), unit)
 			else:
 				await _perform_attack(unit, defender, basic_power, false, defense_paid, not reaction_declared)
+		_global_action_done()
 		prayer.tick_ochelet(unit)
 		if _enemy_interrupted:
 			var following: Array[String] = []
@@ -1021,6 +1031,7 @@ func short_name(unit: BattleUnit) -> String:
 
 
 func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, auto_hit: bool = false, chain: bool = false) -> void:
+	_high_speed = false
 	action_attacker = attacker
 	action_defender = defender
 	phase_text = "ATTACK" if attacker.is_player else "ENEMY ATTACK"
@@ -1099,6 +1110,7 @@ func _manual_rhythm(duration: float, point_half: float, chain: bool = false) -> 
 		rhythm._label.text = "ATTACK: %s -> %s | Z" % [short_name(action_attacker), short_name(action_defender)]
 	hud.message = rhythm._label.text
 	hud.feedback = "Z / Enter or click: stop marker in the center"
+	duration = SkillBook.bar_seconds(duration, _high_speed)
 	rhythm.configure(point_half)
 	rhythm.set_marks(_rhythm_marks)
 	if chain:
@@ -1123,7 +1135,9 @@ func _counter_ai_time(red_seconds: float) -> float:
 	return rng.randf_range(0.0, red_seconds)
 
 
-func _counter_exchange(hero: BattleUnit, enemy: BattleUnit, kind: String) -> Dictionary:
+## `fast_side`: "white" (the hero's pointer) or "red" (the enemy's) runs 20% faster when that side's
+## attack is HIGH SPEED (D-124); "" keeps both at the normal speed.
+func _counter_exchange(hero: BattleUnit, enemy: BattleUnit, kind: String, fast_side: String = "") -> Dictionary:
 	await _flush_log()
 	var index: int = hud.players.find(hero) if kind == "panel" else hud.opponents.find(enemy)
 	var rails: Array[Rect2] = hud.counter_rail_rects(kind, index)
@@ -1134,7 +1148,9 @@ func _counter_exchange(hero: BattleUnit, enemy: BattleUnit, kind: String) -> Dic
 	hud.mode = "counter"
 	hud.message = "COUNTER: %s x %s | Z" % [short_name(hero), short_name(enemy)]
 	hud.feedback = "Z / Enter or click: stop the white pointer"
-	counter.start(kind, rails[0], rails[1], BattleMath.RHYTHM_FIXED_SECONDS, red_seconds, white_half, red_half, _counter_ai_time(red_seconds))
+	var white_seconds := SkillBook.bar_seconds(BattleMath.RHYTHM_FIXED_SECONDS, fast_side == "white")
+	red_seconds = SkillBook.bar_seconds(red_seconds, fast_side == "red")
+	counter.start(kind, rails[0], rails[1], white_seconds, red_seconds, white_half, red_half, _counter_ai_time(red_seconds))
 	_refresh_all()
 	var raw: Dictionary = await counter.finished
 	hud.mode = "busy"
@@ -1157,7 +1173,7 @@ func _execute_counter(reactor: BattleUnit, enemy: BattleUnit, target: BattleUnit
 	_append_log("%s counter-attacks %s (1 act spent)." % [reactor.display_name, enemy.display_name])
 	_set_role(reactor, "COUNTER")
 	_event("%s counter-attacks %s." % [short_name(reactor), short_name(enemy)])
-	var o := await _counter_exchange(reactor, enemy, "panel")
+	var o := await _counter_exchange(reactor, enemy, "panel", "red" if SkillBook.is_high_speed(skill) else "")
 	_counter_resolved = true
 	match int(o.winner):
 		BattleMath.CounterWinner.PLAYER:
@@ -1196,7 +1212,7 @@ func _enemy_counter(hero: BattleUnit, enemy: BattleUnit, skill: StringName = &""
 	_set_role(hero, "ATTACK")
 	_set_role(enemy, "COUNTER")
 	_event("%s counter-attacks!" % short_name(enemy))
-	var o := await _counter_exchange(hero, enemy, "enemy")
+	var o := await _counter_exchange(hero, enemy, "enemy", "white" if SkillBook.is_high_speed(skill) else "")
 	match int(o.winner):
 		BattleMath.CounterWinner.PLAYER:
 			if skill == &"": _strike(hero, enemy, o.player_timing, false)
@@ -1692,6 +1708,7 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 		target_side = "enemy"
 		if ally_target == null: return false
 	_current_skill = skill
+	_high_speed = SkillBook.is_high_speed(skill)
 	_pay_skill(unit, skill, extra)
 	phase_text = ("REACTION " if reacting else "") + String(d.name)
 	_append_log("%s uses %s." % [unit.display_name, d.name])
@@ -1824,6 +1841,42 @@ func _burn_tick() -> void:
 
 
 ## D-106 SLEEP: a sleeping unit loses its turn (all its acts) and wakes up.
+## D-124 temporização de ação: actions completed in this round (a turn of auto-PASS is not one).
+var _round_actions := 0
+
+
+## D-124: one global action was completed; every trapped unit counts it down and is freed at 0.
+## `forced` is the stalemate guard (a whole round with no action).
+func _global_action_done(forced: bool = false) -> void:
+	if not forced:
+		_round_actions += 1
+	for unit in state.units:
+		if unit.is_alive() and unit.trapped_actions > 0 and unit.tick_trap():
+			_append_log("%s is freed." % unit.display_name)
+			_event("%s is freed." % short_name(unit))
+
+
+## D-124: a trapped unit's turn is an automatic PASS: the unused acts and reactions stay and
+## the turn is skipped (D-105). Its queued acts are lost when it is trapped (see trap_unit).
+func _auto_pass_trapped(unit: BattleUnit) -> void:
+	_turn_passed = true
+	action_attacker = unit
+	action_defender = null
+	phase_text = "PASS"
+	_append_log("%s is trapped and passes the turn (%d act(s) kept)." % [unit.display_name, unit.acts_available])
+	_event("%s is trapped." % short_name(unit))
+
+
+## D-124: traps `unit` for `actions` global actions; the acts it had queued in its running turn are lost.
+func trap_unit(unit: BattleUnit, actions: int) -> void:
+	unit.trap(actions)
+	_append_log("%s is trapped for %d action(s)." % [unit.display_name, actions])
+	_event("%s is trapped." % short_name(unit))
+	if unit == turn_owner:
+		if unit.is_player: _player_interrupted = true
+		else: _enemy_interrupted = true
+
+
 func _skip_if_asleep(unit: BattleUnit) -> bool:
 	if not unit.has_status(SkillFx.SLEEP_ID):
 		return false
@@ -1842,15 +1895,6 @@ func _status_tick() -> void:
 		if not unit.is_alive():
 			continue
 		var res := SkillFx.tick(unit)
-		if int(res.bleed) > 0:
-			action_attacker = unit
-			action_defender = unit
-			fx.play("BURN", unit, int(res.bleed))
-			_append_log("%s bleeds: -%d HP." % [unit.display_name, int(res.bleed)])
-			_event("%s bleeds: %d damage." % [short_name(unit), int(res.bleed)])
-			if not unit.is_alive():
-				_event("%s is down." % short_name(unit))
-			changed = true
 		if int(res.mend) > 0:
 			fx.play("HEAL", unit, int(res.mend))
 			if prayer != null:
@@ -1924,6 +1968,8 @@ func _fx_roll(chance: int) -> bool:
 
 ## The skill being resolved (UNBLOCKABLE reads it); stale between skills, which is harmless.
 var _current_skill: StringName = &""
+## D-124 HIGH SPEED: the attack being resolved has a 20% faster pointer (reset by every plain attack / command).
+var _high_speed := false
 
 
 ## D-106: one hit of a skill with its signature effect. `prev_applied` is the result of the
@@ -1955,9 +2001,8 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 	if fxd.has("en_drain"):
 		defender.current_en = maxi(0, defender.current_en - int(fxd.en_drain))
 	if fxd.has("bleed") and defender.is_alive():
-		for _b in int(fxd.bleed):
-			defender.bleeds.append(SkillFx.BLEED_ROUNDS)
-		_append_log("%s bleeds (%d bleed(s))." % [defender.display_name, defender.bleeds.size()])
+		defender.add_bleed(int(fxd.bleed))
+		_append_log("%s bleeds (%d stack(s): -%d%% healing)." % [defender.display_name, defender.bleeds.size(), int(round((1.0 - defender.heal_factor()) * 100.0))])
 		_event("%s is bleeding." % short_name(defender))
 	if fxd.has("leech"):
 		attacker.heal(int(fxd.leech))
@@ -2015,6 +2060,7 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		var room := maxi(0, unit.current_en - int(d.en))
 		extra = clampi(_enemy_en_extra(room), 0, room)
 	_current_skill = skill
+	_high_speed = SkillBook.is_high_speed(skill)
 	_pay_skill(unit, skill, extra)
 	action_attacker = unit
 	phase_text = "ENEMY " + String(d.name)
