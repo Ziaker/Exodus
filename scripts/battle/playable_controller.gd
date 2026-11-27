@@ -377,7 +377,7 @@ func _planned_hp() -> int:
 	var total := 0
 	for detail in _planned_skills:
 		if detail.has("skill") and StringName(detail.skill) != &"":
-			total += int(SkillBook.def(StringName(detail.skill)).hp)
+			total += SkillBook.hp_cost_of(StringName(detail.skill), active_actor.stats.max_hp if active_actor != null else 0)
 	return total
 
 
@@ -455,6 +455,8 @@ func run_battle() -> void:
 	while not state.is_over():
 		waiting_players.clear()
 		state.start_round()
+		for u in state.units:
+			u.passive_stance = false  # D-124: the stance lasts only through the round it was taken
 		prayer.round_start()
 		if state.round_number > 1:
 			hud.announce("ROUND %02d" % state.round_number)
@@ -604,6 +606,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 	# D-038: REST never spends an act — it ends participation and stores the
 	# remaining ones. Handle it before the shared spend_act() gate below.
 	if command == "REST":
+		unit.passive_stance = true
 		return _execute_rest(unit, reacting)
 	if command == "PASS":
 		return _execute_pass(unit)
@@ -614,6 +617,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 	action_defender = defender if defender != null else unit
 	phase_text = "REACTION " + command if reacting else command
 	_refresh_all()
+	unit.passive_stance = command in ["ITEM", "DEFEND"]
 	match command:
 		FIGHT:
 			_clear_roles()
@@ -686,6 +690,7 @@ func _planned_or_new_target(planned: BattleUnit, side: String = "enemy") -> Batt
 ## atos restantes (teto D-005) e recupera exatamente 2 EN — a mesma regra do
 ## controlador base e da interface jogável.
 func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
+	unit.passive_stance = true
 	if unit.prays:
 		return prayer.rest(unit, reacting)
 	var remaining: int = unit.acts_available
@@ -713,6 +718,7 @@ func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
 ## the acts left, takes later turns of the same round normally (acting or reacting) and
 ## whatever is still unused at the end of the round goes to the stock (D-005). No EN, no SP.
 func _execute_pass(unit: BattleUnit) -> bool:
+	unit.passive_stance = true
 	_turn_passed = true
 	action_attacker = unit
 	action_defender = null
@@ -964,6 +970,13 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		_interrupt_gainer = null
 		_clear_roles()
 		var skill := &"" if unit.kind == &"burning_bush" else _enemy_choice(unit, 2 - used)
+		if skill == &"rest":
+			# D-129: Floater Eye out of EN (or with no non-floater ally left) rests via D-038.
+			_execute_rest(unit, false)
+			_global_action_done()
+			prayer.tick_ochelet(unit)
+			await _pause_result()
+			break
 		if skill != &"":
 			used += int(SkillBook.def(skill).acts)
 			await _enemy_skill(unit, skill)
@@ -1031,7 +1044,9 @@ func short_name(unit: BattleUnit) -> String:
 
 
 func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, auto_hit: bool = false, chain: bool = false) -> void:
-	_high_speed = false
+	_high_speed = attacker.next_attack_high_speed
+	attacker.next_attack_high_speed = false
+	attacker.passive_stance = false
 	action_attacker = attacker
 	action_defender = defender
 	phase_text = "ATTACK" if attacker.is_player else "ENEMY ATTACK"
@@ -1126,7 +1141,9 @@ func _manual_rhythm(duration: float, point_half: float, chain: bool = false) -> 
 # ------------------------------------------------- D-049 counter-attack exchange
 
 ## Overridable by tests: does an attacked enemy counter-attack instead of defending?
-func _enemy_counter_roll(_enemy: BattleUnit) -> bool:
+func _enemy_counter_roll(enemy: BattleUnit) -> bool:
+	if enemy != null and enemy.race == &"floater_eye":
+		return false
 	return rng.randf() < BattleMath.ENEMY_COUNTER_CHANCE
 
 
@@ -1587,7 +1604,7 @@ func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: i
 			labels.append(skill_label(skill))
 			skill_ids.append(skill)
 			# D-111: a hero who prays pays prayer skills with PP (Survival human allies).
-			if not SkillBook.affordable(skill, acts_left, en_left, hp_left, unit.current_pp if unit.prays else 99):
+			if not SkillBook.affordable(skill, acts_left, en_left, hp_left, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 				skill_disabled.append(labels.size() - 1)
 				skill_reasons[labels.size() - 1] = _short_reason(skill, acts_left, en_left, hp_left)
 		hud.command_options = labels
@@ -1691,7 +1708,7 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 	var skill := StringName(detail.skill)
 	var d := SkillBook.def(skill)
 	var extra := int(detail.get("extra", 0))
-	if not SkillBook.affordable(skill, unit.acts_available, unit.current_en - extra, unit.current_hp, unit.current_pp if unit.prays else 99):
+	if not SkillBook.affordable(skill, unit.acts_available, unit.current_en - extra, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 		_append_log("%s cannot pay %s any more." % [unit.display_name, d.name])
 		_event("%s cannot pay %s." % [short_name(unit), d.name])
 		return true
@@ -1702,14 +1719,27 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 		target = await _planned_or_new_target(planned)
 		if target == null: return false
 	var ally_target: BattleUnit = null
-	if d.kind == "heal" and bool(SkillFx.fx_of(skill).get("ally", false)):
-		# D-106 DARK BOON: the hero picks which ally is healed.
-		ally_target = await _wait_target("player")
-		target_side = "enemy"
-		if ally_target == null: return false
+	if (d.kind == "heal" and bool(SkillFx.fx_of(skill).get("ally", false))) \
+			or (d.kind == "buff" and bool(SkillFx.fx_of(skill).get("ally_only", false))):
+		# D-106 DARK BOON / D-129 Floater Eye buffs learned by Fallen: pick an ally (solo defaults to self).
+		if _allies_of(unit).size() > 1:
+			ally_target = await _wait_target("player")
+			target_side = "enemy"
+			if ally_target == null: return false
+		else:
+			ally_target = unit
+	# D-124 FANG SPINE / IGNOMA ESH: the second hit goes to a second target (the same foe or another).
+	_second_target = null
+	if bool(d.get("dual", false)):
+		phase_text = "SELECT %s 2ND TARGET" % d.name
+		_second_target = await _wait_target("enemy")
+		if _second_target == null: return false
 	_current_skill = skill
-	_high_speed = SkillBook.is_high_speed(skill)
+	_high_speed = SkillBook.is_high_speed(skill) or (d.kind in ["strike", "magic"] and unit.next_attack_high_speed)
+	if d.kind in ["strike", "magic"]:
+		unit.next_attack_high_speed = false
 	_pay_skill(unit, skill, extra)
+	unit.passive_stance = d.kind in ["buff", "heal"]
 	phase_text = ("REACTION " if reacting else "") + String(d.name)
 	_append_log("%s uses %s." % [unit.display_name, d.name])
 	if not reacting: _clear_roles()
@@ -1730,6 +1760,7 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 		"strike": await _skill_strike(unit, target, skill, reacting)
 		"magic": await _hero_magic(unit, skill, reacting)
 		_: _self_skill(unit, skill, extra, reacting, ally_target)
+	_second_target = null
 	_refresh_all()
 	return true
 
@@ -1739,7 +1770,7 @@ func _pay_skill(unit: BattleUnit, skill: StringName, extra: int) -> void:
 	for _i in int(d.acts):
 		unit.spend_act()
 	unit.current_en = maxi(0, unit.current_en - int(d.en) - extra)
-	unit.current_hp = maxi(1, unit.current_hp - int(d.hp))
+	unit.current_hp = maxi(1, unit.current_hp - SkillBook.hp_cost_of(skill, unit.stats.max_hp))
 	if unit.prays and int(d.get("pp", 0)) > 0:
 		unit.change_pp(-int(d.pp))
 	_refresh_all()
@@ -1755,24 +1786,76 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 		_enemy_prayer(unit, skill)
 		return
 	if d.kind == "buff":
-		# D-106: HOWL taunts, PRIMAL ROAR is berserk (2 stages, DEF down), WAR CRY buffs the team.
-		var receivers: Array[BattleUnit] = [unit]
-		if bool(fxd.get("team", false)):
-			receivers = _allies_of(unit)
-		for receiver in receivers:
-			for _s in int(fxd.get("stages", 1)):
-				_add_stage(receiver)
-		if bool(fxd.get("taunt", false)):
-			SkillFx.apply_status(unit, &"taunt", 1)
-			_append_log("%s taunts: foes can only attack it until the next round." % unit.display_name)
-		if fxd.has("status") and not fxd.has("chance"):
-			SkillFx.apply_status(unit, StringName(fxd.status), int(fxd.get("rounds", 1)))
-			_append_log("%s: DEF falls (%s)." % [unit.display_name, String(fxd.status).to_upper()])
-		fx.play("BUFF", unit, int(d.hp))
-		letter_fx.self_skill(unit, "buff")
-		_append_log("%s: -%d HP, +%d ATK stage(s) (%d active, ATK x%.2f)." % [unit.display_name, int(d.hp),
-			int(fxd.get("stages", 1)), unit.atk_stages.size(), 1.0 + SkillBook.ATK_STAGE_BONUS * unit.atk_stages.size()])
-		_event("%s's ATK rises." % short_name(unit))
+		# D-129: ally-targeted support buffs (VERDANT MIGHT, VERDANT SHELL, KEEN GAZE, ETHER LINK).
+		# Floater Eyes NEVER target themselves or other Floater Eyes — only the accompanied human/Mazik.
+		if bool(fxd.get("ally_only", false)):
+			var recipient: BattleUnit = null
+			if unit.race == &"floater_eye":
+				recipient = _buff_ally_target(unit)
+			elif not unit.is_player:
+				recipient = _buff_ally_target(unit)
+				if recipient == null:
+					recipient = unit
+			else:
+				recipient = ally_target if ally_target != null else unit
+			if recipient == null or (unit.race == &"floater_eye" and recipient.race == &"floater_eye"):
+				_append_log("%s has no valid ally for %s." % [unit.display_name, d.name])
+				_event("%s finds no ally to buff." % short_name(unit))
+				return
+			action_defender = recipient
+			var notes: Array[String] = []
+			for _s in int(fxd.get("atk_stages", 0)):
+				_add_stage(recipient)
+			if int(fxd.get("atk_stages", 0)) > 0:
+				notes.append("+%d ATK stage" % int(fxd.atk_stages))
+			for _s in int(fxd.get("mak_stages", 0)):
+				_add_mak_stage(recipient)
+			if int(fxd.get("mak_stages", 0)) > 0:
+				notes.append("+%d MAK stage" % int(fxd.mak_stages))
+			for _s in int(fxd.get("def_stages", 0)):
+				_add_def_stage(recipient)
+			if int(fxd.get("def_stages", 0)) > 0:
+				notes.append("+%d DEF stage" % int(fxd.def_stages))
+			for _s in int(fxd.get("mef_stages", 0)):
+				_add_mef_stage(recipient)
+			if int(fxd.get("mef_stages", 0)) > 0:
+				notes.append("+%d MEF stage" % int(fxd.mef_stages))
+			var agi_delta := int(fxd.get("agi_bonus", 0))
+			if agi_delta > 0:
+				recipient.stats.agi += agi_delta
+				recipient.agi_buffs.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "amount": agi_delta})
+				notes.append("+%d AGI" % agi_delta)
+			if bool(fxd.get("high_speed_next", false)):
+				recipient.next_attack_high_speed = true
+				notes.append("HIGH SPEED")
+			var sp_amt := int(fxd.get("sp_bonus", 0))
+			if sp_amt > 0:
+				recipient.add_sp(sp_amt)
+				recipient.sp_buffs.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "amount": sp_amt})
+				notes.append("+%d SP" % sp_amt)
+			fx.play("BUFF", recipient, 0)
+			_append_log("%s casts %s on %s: %s (EN %d/%d)." % [
+				unit.display_name, d.name, recipient.display_name, ", ".join(notes), unit.current_en, unit.stats.max_en])
+			_event("%s buffs %s (%s)." % [short_name(unit), short_name(recipient), ", ".join(notes)])
+		else:
+			# D-106: HOWL taunts, PRIMAL ROAR is berserk (2 stages, DEF down), WAR CRY buffs the team.
+			var receivers: Array[BattleUnit] = [unit]
+			if bool(fxd.get("team", false)):
+				receivers = _allies_of(unit)
+			for receiver in receivers:
+				for _s in int(fxd.get("stages", 1)):
+					_add_stage(receiver)
+			if bool(fxd.get("taunt", false)):
+				SkillFx.apply_status(unit, &"taunt", 1)
+				_append_log("%s taunts: foes can only attack it until the next round." % unit.display_name)
+			if fxd.has("status") and not fxd.has("chance"):
+				SkillFx.apply_status(unit, StringName(fxd.status), int(fxd.get("rounds", 1)))
+				_append_log("%s: DEF falls (%s)." % [unit.display_name, String(fxd.status).to_upper()])
+			fx.play("BUFF", unit, int(d.hp))
+			letter_fx.self_skill(unit, "buff")
+			_append_log("%s: -%d HP, +%d ATK stage(s) (%d active, ATK x%.2f)." % [unit.display_name, int(d.hp),
+				int(fxd.get("stages", 1)), unit.atk_stages.size(), 1.0 + SkillBook.ATK_STAGE_BONUS * unit.atk_stages.size()])
+			_event("%s's ATK rises." % short_name(unit))
 	else:
 		var patient := unit
 		if bool(fxd.get("ally", false)):
@@ -1797,6 +1880,31 @@ func _add_stage(unit: BattleUnit) -> void:
 	unit.atk_stages.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &""})
 
 
+func _add_mak_stage(unit: BattleUnit) -> void:
+	unit.mak_stages.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &""})
+
+
+func _add_def_stage(unit: BattleUnit) -> void:
+	unit.def_round_stages.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &""})
+
+
+func _add_mef_stage(unit: BattleUnit) -> void:
+	unit.mef_stages.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &""})
+
+
+## D-129: living non-Floater-Eye ally on the same side (never self, never another Floater Eye).
+func _buff_ally_target(unit: BattleUnit) -> BattleUnit:
+	var best: BattleUnit = null
+	for other in state.units:
+		if other == unit or not other.is_alive() or other.is_player != unit.is_player:
+			continue
+		if other.race == &"floater_eye":
+			continue
+		if best == null or other.current_sp > best.current_sp:
+			best = other
+	return best
+
+
 ## A stage lasts 1 full round: it ends when, in a later round, the turn of the unit that
 ## owned the turn at cast time comes back; `owner == null` = end of round (the owner
 ## never came back in the following round).
@@ -1810,6 +1918,43 @@ func _expire_stages(owner: BattleUnit) -> void:
 				unit.atk_stages.remove_at(i)
 				_append_log("%s: ATK stage ended (%d active)." % [unit.display_name, unit.atk_stages.size()])
 				_event("%s's ATK boost ends." % short_name(unit))
+		for i in range(unit.mak_stages.size() - 1, -1, -1):
+			var info: Dictionary = unit.mak_stages[i]
+			if int(info.round) >= state.round_number:
+				continue
+			if owner == null or StringName(info.owner) == owner.id:
+				unit.mak_stages.remove_at(i)
+				_append_log("%s: MAK stage ended (%d active)." % [unit.display_name, unit.mak_stages.size()])
+		for i in range(unit.def_round_stages.size() - 1, -1, -1):
+			var info: Dictionary = unit.def_round_stages[i]
+			if int(info.round) >= state.round_number:
+				continue
+			if owner == null or StringName(info.owner) == owner.id:
+				unit.def_round_stages.remove_at(i)
+				_append_log("%s: DEF stage ended (%d active)." % [unit.display_name, unit.def_round_stages.size()])
+		for i in range(unit.mef_stages.size() - 1, -1, -1):
+			var info: Dictionary = unit.mef_stages[i]
+			if int(info.round) >= state.round_number:
+				continue
+			if owner == null or StringName(info.owner) == owner.id:
+				unit.mef_stages.remove_at(i)
+				_append_log("%s: MEF stage ended (%d active)." % [unit.display_name, unit.mef_stages.size()])
+		for i in range(unit.agi_buffs.size() - 1, -1, -1):
+			var info: Dictionary = unit.agi_buffs[i]
+			if int(info.round) >= state.round_number:
+				continue
+			if owner == null or StringName(info.owner) == owner.id:
+				unit.stats.agi = maxi(1, unit.stats.agi - int(info.get("amount", 0)))
+				unit.agi_buffs.remove_at(i)
+				_append_log("%s: AGI boost ended." % unit.display_name)
+		for i in range(unit.sp_buffs.size() - 1, -1, -1):
+			var info: Dictionary = unit.sp_buffs[i]
+			if int(info.round) >= state.round_number:
+				continue
+			if owner == null or StringName(info.owner) == owner.id:
+				unit.add_sp(-int(info.get("amount", 0)))
+				unit.sp_buffs.remove_at(i)
+				_append_log("%s: SP boost ended." % unit.display_name)
 
 
 ## Burns: 3 damage per stacked burn at the start of each round, 3 rounds each.
@@ -1968,6 +2113,8 @@ func _fx_roll(chance: int) -> bool:
 
 ## The skill being resolved (UNBLOCKABLE reads it); stale between skills, which is harmless.
 var _current_skill: StringName = &""
+## D-124 VULN PIERCE: the struck hero declared DEFEND against the skill being resolved.
+var _defender_defending := false
 ## D-124 HIGH SPEED: the attack being resolved has a 20% faster pointer (reset by every plain attack / command).
 var _high_speed := false
 
@@ -1978,6 +2125,9 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		reacting: bool, attack: int, defense: int, magic: bool, prev_applied: int = -1) -> int:
 	var fxd := SkillFx.fx_of(skill)
 	var mult := 1.0
+	# D-124 VULN PIERCE: x2 against a target doing a non-offensive action (stance) or defending.
+	if fxd.has("vs_passive") and (defender.passive_stance or _defender_defending):
+		mult *= float(fxd.vs_passive)
 	if fxd.has("combo") and index > 0 and prev_applied >= 0:
 		mult *= 1.0 + float(fxd.combo)
 	if fxd.has("execute") and float(defender.current_hp) < float(defender.stats.max_hp) * float(fxd.below):
@@ -1987,11 +2137,14 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		_hit_mods["prayer_base"] = true
 	if fxd.has("pierce"):
 		_hit_mods["pierce"] = float(fxd.pierce)
+	if fxd.has("no_damage"):
+		_hit_mods["no_damage"] = true
 	var was_burning := not defender.burns.is_empty()
-	var applied := _skill_hit(attacker, defender, SkillFx.hit_power(skill, index), reacting, attack, defense, magic)
+	var applied := _skill_hit(attacker, defender, SkillFx.hit_power(skill, index, attacker), reacting, attack, defense, magic)
 	_hit_mods = {}
 	if applied < 0:
 		return applied
+	var shielded := not defender.haganah.is_empty()  # Haganah blocks status conditions
 	if fxd.has("steal_sp"):
 		var stolen := mini(int(fxd.steal_sp), defender.current_sp)
 		defender.add_sp(-stolen)
@@ -2000,8 +2153,17 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		defender.add_sp(-int(fxd.sp_drain))
 	if fxd.has("en_drain"):
 		defender.current_en = maxi(0, defender.current_en - int(fxd.en_drain))
-	if fxd.has("bleed") and defender.is_alive():
-		defender.add_bleed(int(fxd.bleed))
+	if fxd.has("pp_drain") and defender.prays and defender.is_alive():
+		var drained_pp := -defender.change_pp(-int(fxd.pp_drain))
+		if drained_pp > 0:
+			_append_log("%s loses %d PP." % [defender.display_name, drained_pp])
+			_event("%s loses %d PP." % [short_name(defender), drained_pp])
+	var is_point := attack == BattleMath.RhythmResult.POINT
+	var bleed_stacks := int(fxd.get("bleed_point", fxd.get("bleed", 0))) if is_point else int(fxd.get("bleed", 0))
+	if bool(fxd.get("bleed_point_only", false)) and not is_point:
+		bleed_stacks = 0  # D-124 FANG STING: BLEED only on POINT
+	if bleed_stacks > 0 and defender.is_alive() and not shielded:
+		defender.add_bleed(bleed_stacks)
 		_append_log("%s bleeds (%d stack(s): -%d%% healing)." % [defender.display_name, defender.bleeds.size(), int(round((1.0 - defender.heal_factor()) * 100.0))])
 		_event("%s is bleeding." % short_name(defender))
 	if fxd.has("leech"):
@@ -2014,7 +2176,17 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		var blast := defender.take_damage(defender.burn_round_damage())
 		_append_log("%s detonates: %s burns for %d now." % [attacker.display_name, defender.display_name, blast])
 		_event("%s's burns detonate: %d damage." % [short_name(defender), blast])
-	if defender.is_alive():
+	# D-124 UMBRAL GAZE: trapped for X global actions (the unit's queued acts are lost).
+	if fxd.has("trap") and defender.is_alive() and not shielded:
+		trap_unit(defender, int(fxd.trap))
+	# D-124 IGNOMA / IGNOMA ESH: a single-target magic strike burns like HEAT WAVE (35%).
+	var strike_def := SkillBook.def(skill)
+	if String(strike_def.get("kind", "")) == "strike" and int(strike_def.get("burn_chance", 0)) > 0 \
+			and defender.is_alive() and not shielded and _burn_roll(int(strike_def.burn_chance)):
+		defender.burns.append(int(fxd.get("burn_rounds", SkillBook.BURN_ROUNDS)))
+		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
+		_event("%s is burning." % short_name(defender))
+	if defender.is_alive() and not (shielded and fxd.has("status")):
 		if fxd.has("sleep_chance") and _fx_roll(int(fxd.sleep_chance)):
 			SkillFx.apply_status(defender, SkillFx.SLEEP_ID, 1)
 			_append_log("%s falls asleep." % defender.display_name)
@@ -2041,12 +2213,23 @@ func _enemy_en_extra(maximum: int) -> int:
 	return rng.randi_range(0, maxi(0, maximum))
 
 
-## &"" = ATTACK, else the skill drawn among the payable ones.
+## &"" = ATTACK, &"rest" = REST (D-129 Floater Eye fallback), else the skill drawn among the payable ones.
 func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
+	if unit.race == &"floater_eye":
+		if _buff_ally_target(unit) == null:
+			return &"rest"
+		var buffs: Array[StringName] = []
+		var f_acts := mini(budget, unit.acts_available)
+		for skill in unit.skills:
+			if SkillBook.affordable(skill, f_acts, unit.current_en, unit.current_hp, 99, unit.stats.max_hp):
+				buffs.append(skill)
+		if buffs.is_empty():
+			return &"rest"
+		return buffs[clampi(_enemy_skill_pick(buffs.size()), 0, buffs.size() - 1)]
 	var choices: Array[StringName] = [&""]
 	var acts := mini(budget, unit.acts_available)
 	for skill in unit.skills:
-		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99):
+		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 			choices.append(skill)
 	return choices[clampi(_enemy_skill_pick(choices.size()), 0, choices.size() - 1)]
 
@@ -2060,8 +2243,11 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		var room := maxi(0, unit.current_en - int(d.en))
 		extra = clampi(_enemy_en_extra(room), 0, room)
 	_current_skill = skill
-	_high_speed = SkillBook.is_high_speed(skill)
+	_high_speed = SkillBook.is_high_speed(skill) or (d.kind in ["strike", "magic"] and unit.next_attack_high_speed)
+	if d.kind in ["strike", "magic"]:
+		unit.next_attack_high_speed = false
 	_pay_skill(unit, skill, extra)
+	unit.passive_stance = d.kind in ["buff", "heal"] or (d.kind == "prayer" and String(PrayerBook.entry(skill).get("target", "self")) in ["ally", "allies", "self"])
 	action_attacker = unit
 	phase_text = "ENEMY " + String(d.name)
 	fx.play("WHITEN", unit)
@@ -2106,8 +2292,10 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		return
 	if d.kind == "strike":
 		var target: BattleUnit = targets[0]
+		_second_target = _enemy_second_target(target) if bool(d.get("dual", false)) else null
 		if target.is_alive():
 			await _skill_strike(unit, target, skill, false, bool(paid.get(target, false)), not bool(declared.get(target, false)))
+		_second_target = null
 		return
 	var roll := _ai_roll(unit, targets[0])
 	if skill == PrayerBook.CHEREV and prayer != null:
@@ -2125,10 +2313,25 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		_magic_hit(unit, target, skill, false, timing, defense[0])
 
 
+## D-124: the second target of a dual skill (FANG SPINE / IGNOMA ESH); null = the same target.
+var _second_target: BattleUnit = null
+
+
+## Overridable by tests: the enemy AI's second target (a random living hero, possibly the first).
+func _enemy_second_target(first: BattleUnit) -> BattleUnit:
+	var heroes: Array[BattleUnit] = []
+	for hero in hud.players:
+		if hero.is_alive(): heroes.append(hero)
+	if heroes.is_empty(): return first
+	return heroes[rng.randi_range(0, heroes.size() - 1)]
+
+
 ## Lunge: one rail with two marks for the attacker and for the defender, then 2 hits.
+## D-124: a "dual" skill sends hit 2 at `_second_target` (own defense rail), a "magic" strike uses MAK/MEF.
 func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName, reacting: bool,
 		defense_paid: bool = false, auto_hit: bool = false) -> void:
 	var d := SkillBook.def(skill)
+	var magic := bool(d.get("magic", false))
 	var marks: Array[float] = []
 	marks.assign(d.marks)
 	action_attacker = attacker
@@ -2139,15 +2342,28 @@ func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		await _enemy_counter(attacker, defender, skill)
 		return
 	var attack := await _skill_attack_timing(attacker, defender, marks, auto_hit)
-	var defense := await _skill_defense_timing(defender, attacker, marks, defense_paid)
+	var second: BattleUnit = _second_target if bool(d.get("dual", false)) and marks.size() > 1 else null
+	var defense: Array[int] = []
+	if second != null and second != defender and second.is_alive():
+		var d0 := await _skill_defense_timing(defender, attacker, [0.5], defense_paid)
+		var d1 := await _skill_defense_timing(second, attacker, [0.5], false)
+		defense = [d0[0], d1[0]]
+	else:
+		second = null
+		defense = await _skill_defense_timing(defender, attacker, marks, defense_paid)
+	_defender_defending = defense_paid
 	var prev := -1
 	for i in marks.size():
-		if not defender.is_alive(): break
+		var victim: BattleUnit = second if (second != null and i == 1) else defender
+		if not victim.is_alive():
+			if i > 0 or second == null: break
+			continue
 		cross_hit = true
 		next_hit = i > 0
-		prev = _skill_hit_fx(attacker, defender, skill, i, reacting, attack[i], defense[i], false, prev)
+		prev = _skill_hit_fx(attacker, victim, skill, i, reacting, attack[i], defense[i], magic, prev)
 		cross_hit = false
 		next_hit = false
+	_defender_defending = false
 
 
 ## Heat wave by a hero: one attack rail, then each enemy defends on its own; each enemy
@@ -2189,7 +2405,7 @@ func _hero_skill_lands(hero: BattleUnit, counterer: BattleUnit, skill: StringNam
 			if not counterer.is_alive(): break
 			cross_hit = true
 			next_hit = i > 0
-			prev = _skill_hit_fx(hero, counterer, skill, i, false, timing, BattleMath.RhythmResult.MISS, false, prev)
+			prev = _skill_hit_fx(hero, counterer, skill, i, false, timing, BattleMath.RhythmResult.MISS, bool(d.get("magic", false)), prev)
 			cross_hit = false
 			next_hit = false
 		return
@@ -2217,7 +2433,7 @@ func _enemy_skill_lands(enemy: BattleUnit, target: BattleUnit, skill: StringName
 			if not target.is_alive(): break
 			cross_hit = true
 			next_hit = i > 0
-			prev = _skill_hit_fx(enemy, target, skill, i, false, timing, BattleMath.RhythmResult.MISS, false, prev)
+			prev = _skill_hit_fx(enemy, target, skill, i, false, timing, BattleMath.RhythmResult.MISS, bool(d.get("magic", false)), prev)
 			cross_hit = false
 			next_hit = false
 		return

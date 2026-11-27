@@ -75,3 +75,17 @@ Implementadas em `skill_book.gd`, `skill_fx.gd`, `battle_unit.gd` e `playable_co
 - **HIGH SPEED:** flag `high_speed` na skill; a barra de ataque/defesa dura `1/1,2` s e, no contra-ataque, o ponteiro do lado `HIGH SPEED` roda a `1/1,2` (o do oponente não muda). Nenhuma skill atual tem a flag (vem na Fase 2).
 - **BLEED:** −20% da cura por acúmulo (máx. 4); sem dano; dura 2 ticks de round (leitura de "até o fim do próximo turno", como `BLIND`/`MAGEN`); o 5º acúmulo renova os 4. `MEND` cura e depois limpa, então a cura do próprio `MEND` ainda é cortada pelo BLEED que ele remove.
 - **Prisão:** `BattleUnit.trap(n)` + status `trapped` (purificável pela `Tahorah`); o turno do preso é PASS automático (D-105), guardando atos; cada ação de turno concluída por qualquer unidade (comando do herói ou ato do inimigo; reações não contam) desconta 1. Um round sem nenhuma ação conta como 1 ação, para a prisão não travar a batalha.
+
+## 5. Fase 2 implementada (2026-11-27) — catálogo das 6 skills + 2 ZAHAV
+
+Em `skill_book.gd` (8 entradas, as 5 antigas removidas), `skill_fx.gd`, `playable_controller.gd`, `survival_data.gd`; testes em `tests/verify_d124_skills.gd` (271 checks). Sem VFX (Fases 3 a 5); a ativação `ZAHAV` (botão `A`, 20 SP) continua NÃO implementada, então `fang_spine` e `ignoma_esh` existem e são testáveis mas ainda não aparecem no menu. Leituras adotadas, a confirmar pelo autor:
+
+- **"N + ATK" / "N + MAK":** usei o poder N na fórmula normal de combate (poder × ATK/DEF, ou MAK/MEF nas mágicas) — não soma aditiva.
+- **Mazz Bite:** poder `10 + 30% do HP máx.`; custo `ceil(30% do HP máx.)`, exige HP atual maior que o custo.
+- **Skills mágicas de 1 alvo** (`umbral_gaze`, `ignoma`, `ignoma_esh`) reaproveitam o caminho `kind: strike` com `magic: true`; `dark_breath` segue no caminho mágico em todos os inimigos.
+- **Fang Sting:** BLEED só com a marca de ataque em `POINT`. **Fang Spine:** BLEED ×1 no contato e ×2 no `POINT` por golpe; o 2º golpe vai para um 2º alvo escolhido (herói: depois do 1º alvo; inimigo: herói vivo sorteado, podendo repetir).
+- **Vuln Pierce (pendência do autor):** dobra o dano se o alvo está "passivo": a última ação do round foi PASS, REST, ITEM, buff, cura ou reza em aliado/si, ou se ele declarou DEFEND contra a skill; a postura zera a cada round e com qualquer ação ofensiva.
+- **Dark Breath:** 0 de dano; só em quem toma contato (esquiva perfeita evita tudo): −3 PP (quem não reza só fica cego) e `BLIND` por 1 round.
+- **Haganah** passa a bloquear BLEED, prisão, BURN e os status dessas skills.
+- **Survival:** `ignoma` entrou no pool (28 skills) mas **nenhum demônio a usa ainda**; o nome hebraico dela (`כדור אש`) é só um provisório descritivo; `fang_spine`/`ignoma_esh` não estão no pool. Os hebraicos antigos das skills renomeadas foram mantidos.
+- O recurso `UNBLOCKABLE` (do antigo `void_gaze`) ficou no motor, sem nenhuma skill que o use.

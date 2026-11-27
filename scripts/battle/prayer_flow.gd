@@ -291,6 +291,8 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			return true
 	for _a in acts_needed:
 		unit.spend_act()
+	# D-124 VULN PIERCE: a prayer on allies / the caster itself is a non-offensive action.
+	unit.passive_stance = String(PrayerBook.entry(id).get("target", "self")) in ["ally", "allies", "self"]
 	if needs_en:
 		unit.current_en -= PrayerBook.en_cost(id)
 	d["done"] = true

@@ -210,6 +210,8 @@ func _refresh_all() -> void:
 func choice_weight(unit: BattleUnit, skill: StringName) -> float:
 	var t := temperament_of(unit)
 	var kind := "attack" if skill == &"" else String(SkillBook.def(skill).get("kind", "strike"))
+	if skill != &"" and bool(SkillBook.def(skill).get("magic", false)):
+		kind = "magic"  # D-124: a single-target magic strike (UMBRAL GAZE, IGNOMA) weighs as magic
 	var hurt := float(unit.current_hp) / float(maxi(1, unit.stats.max_hp))
 	if kind == "prayer" or PrayerBook.is_prayer(skill):
 		return _prayer_weight(unit, skill)
@@ -253,7 +255,7 @@ func temperament_pick(unit: BattleUnit, budget: int) -> StringName:
 	var choices: Array[StringName] = [&""]
 	var acts := mini(budget, maxi(unit.acts_available, 0))
 	for skill in unit.skills:
-		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99):
+		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 			choices.append(skill)
 	var total := 0.0
 	for c in choices:
@@ -330,7 +332,7 @@ func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	if not it.is_empty() and not bool(it.used):
 		it.used = true
 		var skill: StringName = it.skill
-		if skill == &"" or SkillBook.affordable(skill, mini(budget, unit.acts_available), unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99):
+		if skill == &"" or SkillBook.affordable(skill, mini(budget, unit.acts_available), unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 			var t: BattleUnit = it.target
 			_forced_target = t if t != null and t.is_alive() else null
 			return skill

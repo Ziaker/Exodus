@@ -475,25 +475,27 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 		_flash_feedback("DODGE")  # D-109: só o centro da defesa evita contato
 		return -1
 
-	# Creator 2026-11-23: magic = same formula with MAK/MEF. ATK stages raise physical ATK only.
-	var defence_stat: int = defender.stats.mef if magic else defender.effective_def()
+	# Creator 2026-11-23: magic = same formula with MAK/MEF. D-129 adds MAK/MEF/DEF stages.
+	var defence_stat: int = defender.effective_mef() if magic else defender.effective_def()
 	var pierce := float(_hit_mods.get("pierce", 0.0))
 	if pierce > 0.0:
 		defence_stat = maxi(1, int(round(float(defence_stat) * (1.0 - pierce))))
 	var result: Dictionary
 	if bool(_hit_mods.get("prayer_base", false)):
 		# D-107 CHEREV (id &"cherav"): the prayer formula (10 + MAK - MEF), like Ra'am.
-		result = PrayerBook.raam_damage(0, attacker.stats.mak, attacker.stats.agi, defender.stats.mef,
+		result = PrayerBook.raam_damage(0, int(round(attacker.effective_mak())), attacker.stats.agi, defender.effective_mef(),
 			attacker.current_sp, defender.current_sp, defender.race, rng)
 	else:
 		result = BattleMath.physical_damage(power,
-			float(attacker.stats.mak) if magic else attacker.effective_atk(), attacker.stats.agi,
+			attacker.effective_mak() if magic else attacker.effective_atk(), attacker.stats.agi,
 			defence_stat, attacker.current_sp, defender.current_sp, rng)
 
 	# D-109: the attack mark scales the hit (white 50%, grey 80%, yellow 100%; side defence halves).
 	var amount := BattleMath.scaled_damage(int(result.amount), attack_timing, defense_timing)
 	# D-106: CHILL / WEAKEN on the attacker, MARK on the defender, the skill's own multiplier.
 	amount = int(round(float(amount) * SkillFx.out_mult(attacker) * float(_hit_mods.get("mult", 1.0)) * SkillFx.in_mult(defender)))
+	if bool(_hit_mods.get("no_damage", false)):
+		amount = 0  # D-124 DARK BREATH: contact only, never HP damage
 	SkillFx.consume_attack(attacker)
 
 	var applied := defender.take_damage(amount)

@@ -33,6 +33,9 @@ var statuses: Dictionary = {}
 ## D-124 BLEED: remaining rounds of each stack (up to SkillFx.BLEED_MAX_STACKS); each stack cuts
 ## the healing received by 20%.
 var bleeds: Array[int] = []
+## D-124 VULN PIERCE: set when the unit's last action this round was non-offensive (PASS, REST, ITEM, buff,
+## heal, a non-hostile prayer) or when it is defending; cleared by an offensive action and every round.
+var passive_stance: bool = false
 ## D-124 temporização de ação: global actions left before a trapped unit is freed (0 = free).
 var trapped_actions: int = 0
 ## REGEN: HP restored at the start of each of the next `regen_rounds` rounds.
@@ -42,6 +45,14 @@ var regen_rounds: int = 0
 var mends: Array[int] = []
 ## D-112 MAGEN: remaining rounds of each physical DEF stage (+25% physical DEF each).
 var def_stages: Array[int] = []
+## D-129 Floater Eye buffs (1 full round each, {"round": cast round, "owner": turn owner id}).
+var mak_stages: Array[Dictionary] = []
+var def_round_stages: Array[Dictionary] = []
+var mef_stages: Array[Dictionary] = []
+var agi_buffs: Array[Dictionary] = []
+var sp_buffs: Array[Dictionary] = []
+## D-129 KEEN GAZE: the unit's next offensive attack gains HIGH SPEED (consumed on attack).
+var next_attack_high_speed: bool = false
 ## D-112 GEVURAH: damage bonus fraction on the next attack (0.15 + 0.05 per extra PP); consumed on attack.
 var gevurah_bonus: float = 0.0
 ## D-112 MISHPAT: damage dealt by this unit in its last offensive action.
@@ -105,9 +116,19 @@ func effective_atk() -> float:
 	return float(stats.atk) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(atk_stages.size()))
 
 
-## Physical DEF with active Magen stages applied (+25% per stage).
+## MAK with the active stages applied (+25% per stage, D-129 VERDANT MIGHT).
+func effective_mak() -> float:
+	return float(stats.mak) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mak_stages.size()))
+
+
+## Physical DEF with active Magen and Verdant Shell stages applied (+25% per stage).
 func effective_def() -> int:
-	return maxi(1, int(round(float(stats.defense) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(def_stages.size())))))
+	return maxi(1, int(round(float(stats.defense) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(def_stages.size() + def_round_stages.size())))))
+
+
+## Magic DEF (MEF) with active Verdant Shell stages applied (+25% per stage, D-129).
+func effective_mef() -> int:
+	return maxi(1, int(round(float(stats.mef) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mef_stages.size())))))
 
 ## D-106: adds a status (a repeat refreshes it); `mod` changes a stat until it ends.
 func add_status(id: StringName, rounds: int, mod: Dictionary = {}) -> void:

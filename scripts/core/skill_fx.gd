@@ -132,9 +132,14 @@ static func fx_of(skill: StringName) -> Dictionary:
 
 
 ## Power of hit `index` (BLADE DANCE climbs); every other skill keeps one power.
-static func hit_power(skill: StringName, index: int) -> int:
+static func hit_power(skill: StringName, index: int, attacker: BattleUnit = null) -> int:
 	var d := SkillBook.def(skill)
 	if d.has("powers"):
 		var powers: Array = d.powers
 		return int(powers[clampi(index, 0, powers.size() - 1)])
-	return int(d.get("power", 0))
+	var power := int(d.get("power", 0))
+	# D-124 MAZZ BITE: the power also carries a share of the user's max HP.
+	var hp_share := float(fx_of(skill).get("power_hp_pct", 0.0))
+	if hp_share > 0.0 and attacker != null:
+		power += int(round(float(attacker.stats.max_hp) * hp_share))
+	return power

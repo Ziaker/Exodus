@@ -94,10 +94,10 @@ func _run() -> void:
 	# ---- the 27 skills all carry an effect and a description; the 4 main-game skills are untouched
 	var ids: Array[StringName] = []
 	ids.assign(SurvivalData.SURVIVAL_SKILLS)
-	check(ids.size() == 27, "27 Survival skills")
+	check(ids.size() == 28, "28 Survival skills (D-124: 5 reworked + IGNOMA)")
 	for id in ids:
 		var d := SkillBook.def(id)
-		check(d.has("fx") or d.has("powers"), "%s has a signature effect" % id)
+		check(d.has("fx") or d.has("powers") or int(d.get("burn_chance", 0)) > 0, "%s has a signature effect" % id)
 		check(String(d.info).begins_with(String(d.name)), "%s: the description starts with its name" % id)
 	for id in [&"lunge", &"bleedbuff", &"heat_wave", &"energy_eat"]:
 		check(not SkillBook.def(id).has("fx"), "%s (yours) keeps its own effect" % id)
@@ -115,13 +115,6 @@ func _run() -> void:
 	check(SkillFx.hit_power(&"blade_dance", 0) == 3 and SkillFx.hit_power(&"blade_dance", 3) == 6, "BLADE DANCE climbs 3,4,5,6")
 	reset(); foe.stats.defense = 20
 	var normal := plain(7)
-	reset(); foe.stats.defense = 20
-	var pierced := hit(&"soul_pierce")
-	check(pierced > normal, "SOUL PIERCE ignores half the DEF (%d vs %d)" % [pierced, normal])
-	reset()
-	var steal_before := hero.current_sp
-	hit(&"shadow_bite", 0); hit(&"shadow_bite", 1)
-	check(hero.current_sp >= steal_before + 2 and foe.current_sp <= 98, "SHADOW BITE steals 1 SP per hit that lands (hero %d, foe %d)" % [hero.current_sp, foe.current_sp])
 	reset()
 	hit(&"frost_lance")
 	check(foe.has_status(&"chill"), "FROST LANCE chills")
@@ -154,8 +147,8 @@ func _run() -> void:
 	var second_plain := hit(&"twin_fang", 1, -1)
 	check(second_combo > second_plain, "TWIN FANG: the 2nd hit is stronger when the 1st landed (%d vs %d)" % [second_combo, second_plain])
 	reset()
-	hit(&"fang_flurry", 0); hit(&"fang_flurry", 1); hit(&"fang_flurry", 2)
-	check(foe.bleeds.size() == 3, "FANG FLURRY: each hit adds a bleed stack (%d)" % foe.bleeds.size())
+	hit(&"fang_sting", 0); hit(&"fang_sting", 0); hit(&"fang_sting", 0)
+	check(foe.bleeds.size() == 3, "FANG STING: each POINT hit adds a bleed stack (%d)" % foe.bleeds.size())
 	var hp := foe.current_hp
 	await b._status_tick()
 	check(hp == foe.current_hp, "D-124: bleeds no longer hurt (they cut healing 20% per stack)")
@@ -205,8 +198,7 @@ func _run() -> void:
 	b._magic_hit(hero, foe, &"hellfire", false, R.POINT, R.MISS)
 	check(foe.burns.size() == 1 and foe.burns[0] == 5, "HELLFIRE burns for 5 rounds (%s)" % [foe.burns])
 	reset()
-	b._magic_hit(hero, foe, &"frost_breath", false, R.POINT, R.MISS)
-	check(foe.has_status(&"slow"), "FROST BREATH slows")
+	SkillFx.apply_status(foe, &"slow", 1)
 	b.state.start_round()
 	check(b.state.turn_order.back() == foe, "A slowed unit acts last in the round")
 	reset()
@@ -228,10 +220,6 @@ func _run() -> void:
 	log_before = b.log_history.size()
 	b._magic_hit(hero, foe, &"thunder_call", false, R.POINT, R.MISS)
 	check(not b.log_history.slice(log_before).any(func(l: String) -> bool: return l.contains("struck twice")), "...and once when the roll fails")
-	reset()
-	b._current_skill = &"void_gaze"
-	var rails: Array[int] = await b._skill_defense_timing(hero, foe, [0.5], true)
-	check(rails == [R.MISS], "VOID GAZE cannot be defended: no rail even for a paid defense")
 	b._current_skill = &"hellfire"
 
 	# ---- heal

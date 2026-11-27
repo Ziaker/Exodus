@@ -116,7 +116,7 @@ func _bleed() -> void:
 	u.burns.append(2)
 	check(SkillFx.cleanse_all(u) >= 3 and u.bleeds.is_empty(), "Tahorah cleanses BLEED")
 	# the legacy FANG FLURRY adds stacks through the same rule
-	check(SkillBook.def(&"fang_flurry").fx.bleed == 1, "FANG FLURRY still carries its bleed fx (replaced in phase 2)")
+	check(SkillBook.def(&"fang_sting").fx.bleed == 1, "FANG STING carries the canonical bleed fx")
 
 
 # --------------------------------------------------------------------------- HIGH SPEED
