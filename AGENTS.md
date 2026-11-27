@@ -50,6 +50,12 @@ o autor decidir explicitamente.
     branches `claude/*` atrasadas ou commits antigos — para testar, capturar ou provar algo.
     A evidência de teste cita o `git rev-parse HEAD` sobre o qual rodou.
 
+13. **Protótipos VFX sempre com modo Aliados / 3 cartões Survival (D-137).** Todo
+    protótipo visual HTML de ataque/VFX criado para aprovação do autor DEVE funcionar
+    tanto com inimigos como alvo quanto nos **cartões dos aliados (3 cartões do modo
+    Survival)**, exibindo o efeito diretamente sobre o(s) cartão(ões) no mesmo tamanho
+    usado contra inimigos (sem recorte ao cartão), com seletor direto no protótipo.
+
 ## Evidência mínima por tipo de trabalho
 
 - **Código:** comando de parse/teste + saída real + hash do diff antes de declarar pronto.

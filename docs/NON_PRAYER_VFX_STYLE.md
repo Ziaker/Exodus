@@ -141,7 +141,8 @@ Qualquer novo ataque não-reza adicionado ao jogo só é considerado entregue ap
 2. Efeito visual implementado em `scripts/battle/skill_grotesque_fx.gd` seguindo os 4 motores desta especificação.
 3. Conformidade verificada com a **Lei do Outline Dourado** (`ZAHAV` exclusivo) e a **Separação Hebraica** (sem letras hebraicas, salvo exceção nominal).
 4. Cobertura de teste automatizado headless (`tests/`).
-5. Captura visual (quadros/vídeo reais no Godot) inspecionada pelo agente e **aprovada visualmente pelo criador** (`AGENTS.md`).
+5. **Protótipo HTML obrigatório com modo Inimigos e 3 Aliados (D-137):** todo protótipo visual HTML apresentado ao criador deve funcionar nos **3 cartões de aliados do Survival** (efeito no próprio cartão, mesmo tamanho, sem recorte) além dos inimigos.
+6. Captura visual (quadros/vídeo reais no Godot) inspecionada pelo agente e **aprovada visualmente pelo criador** (`AGENTS.md`).
 
 ---
 

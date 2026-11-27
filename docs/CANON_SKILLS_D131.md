@@ -47,9 +47,12 @@
 
 ---
 
-## 4. Diretrizes de VFX (D-125)
+## 4. Diretrizes de VFX (D-125 & D-137)
 
-Todas as 7 entradas acima (5 base + 2 `ZAHAV`) são ataques não-reza e deverão seguir estritamente [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) (*Rabisco Anatômico Grotesco 12 FPS + Interferência Hipnótica Moiré* em paleta sombria, sem neon; **outline dourado exclusivo em `Vital Claws` e `Weakenen`**; sem letras hebraicas). Protótipos HTML interativos e validação visual do criador estão **PENDENTES**.
+Todas as 7 entradas acima (5 base + 2 `ZAHAV`) são ataques não-reza e seguem estritamente [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) (*Rabisco Anatômico Grotesco 12 FPS + Interferência Hipnótica Moiré* em paleta sombria, sem neon; **outline dourado exclusivo em `Vital Claws` e `Weakenen`**; sem letras hebraicas), com protótipo obrigatório funcionando tanto em inimigos quanto nos **3 cartões de aliados do Survival** (**D-137**).
+
+* **Aprovados visualmente (4/7 — 2026-11-27):** **`Stone Crush`**, **`Energy Blow`**, **`Weaken`** e **`Mark of Sun`**.
+* **Em revisão visual v2 (3/7):** **`Drain Claw`**, **`Vital Claws [ZAHAV]`** e **`Weakenen [ZAHAV]`**.
 
 ---
 
