@@ -31,7 +31,9 @@ func _wait_mode(b: Control, wanted: String, limit: int = 240) -> bool:
 
 func _battle(encounter: String, stratum: int = 1) -> Control:
 	SurvivalState.reset()
+	# D-111: o Yoch recrutado no grupo (a run começa só com o Fallen).
 	SurvivalState.patch({"seed": 1, "encounter_id": encounter, "stratum": stratum,
+		"party": [SurvivalAllies.yoch_member("test_yoch")],
 		"gains": {"max_hp": 0, "max_en": 0, "atk": 0, "mak": 0, "defense": 0, "mef": 0, "agi": 30}})
 	var b: Control = load(SurvivalData.BATTLE_SCENE).instantiate()
 	b.suppress_scene_change = true

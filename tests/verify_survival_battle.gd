@@ -63,7 +63,8 @@ func _run() -> void:
 		"seed": 1,
 		"fallen_hp": 15,
 		"fallen_en": 4,
-		"yoch_hp": 20,
+		# D-111: o Yoch recrutado no grupo (a run começa só com o Fallen).
+		"party": [_yoch_with_hp(20)],
 		"bead": 1,
 		"chakra": 1,
 		"macca": 40,
@@ -153,7 +154,7 @@ func _run() -> void:
 	_check(int(SurvivalState.data().continues) == 2, "Continues decremented 3 -> 2 (got %d)" % int(SurvivalState.data().continues))
 	_check(battle._fallen.current_hp == battle._fallen.stats.max_hp and battle._fallen.current_en == battle._fallen.stats.max_en,
 			"Continue restores Fallen to full HP and EN")
-	_check(battle._ally.current_hp == battle._ally.stats.max_hp, "Continue restores Yoch to full HP")
+	_check(battle._ally.current_hp == battle._ally.stats.max_hp, "Continue restores the ally (Yoch) to full HP")
 	_check(battle._fallen.stats.atk == atk_before_death, "Continue keeps all stats intact (no halving)")
 	_check(ProgressStore.load_gains() == main_gains_before, "Main game ProgressStore gains untouched on Survival death")
 	_check(ProgressStore.load_deaths() == main_deaths_before, "Main game ProgressStore deaths untouched on Survival death")
@@ -213,3 +214,9 @@ func _run() -> void:
 
 	print("SURVIVAL BATTLE CHECKS PASSED: %d FAILED: %d" % [checks, int(failed)])
 	quit(1 if failed else 0)
+
+
+func _yoch_with_hp(hp: int) -> Dictionary:
+	var y := SurvivalAllies.yoch_member("test_yoch")
+	y["hp"] = hp
+	return y

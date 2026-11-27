@@ -40,12 +40,27 @@ func _freeze(b: Control) -> void:
 	b._refresh_all()
 
 
+## D-111: a run começa só com o Fallen; estes testes lutam com o Yoch recrutado no grupo.
+## `yoch_relics` / `yoch_pp` / `yoch_hp` no patch viram a ficha dele.
+func _with_yoch(patch: Dictionary) -> Dictionary:
+	var y := SurvivalAllies.yoch_member("test_yoch")
+	y["relics"] = patch.get("yoch_relics", [])
+	y["pp"] = int(patch.get("yoch_pp", SurvivalData.YOCH_BASE.pp))
+	y["hp"] = int(patch.get("yoch_hp", -1))
+	var out := patch.duplicate()
+	for k in ["yoch_relics", "yoch_pp", "yoch_hp"]:
+		out.erase(k)
+	out["party"] = [y]
+	return out
+
+
 func _battle(encounter: String, patch: Dictionary = {}) -> Control:
 	SurvivalState.reset()
 	var base := {"seed": 1, "encounter_id": encounter,
 		"gains": {"max_hp": 0, "max_en": 0, "atk": 0, "mak": 0, "defense": 0, "mef": 0, "agi": 30}}
-	for k in patch.keys():
-		base[k] = patch[k]
+	var full := _with_yoch(patch)
+	for k in full.keys():
+		base[k] = full[k]
 	SurvivalState.patch(base)
 	var b: Control = load(SurvivalData.BATTLE_SCENE).instantiate()
 	b.suppress_scene_change = true
@@ -127,7 +142,8 @@ func _battle_warden() -> void:
 	for foe in b.hud.opponents:
 		foe.current_hp = 0
 	b._show_result()
-	_check(int(SurvivalState.data().yoch_pp) == 1, "ARK SHARD bonus PP is spent first and not banked (%d)" % int(SurvivalState.data().yoch_pp))
+	var banked := int(SurvivalState.party()[0].pp)
+	_check(banked == 1, "ARK SHARD bonus PP is spent first and not banked (%d)" % banked)
 	b.queue_free()
 	await process_frame
 
@@ -308,7 +324,8 @@ func _world() -> void:
 		if bool(e.get("warden", false)):
 			warden = e
 	_check(String(warden.get("id", "")) == SurvivalStrata.warden_of(2), "Warden flagged on the map")
-	_check(w.npcs.size() == 4, "Keeper + 3 events on the map (%d)" % w.npcs.size())
+	var recruits := SurvivalAllies.encounters(4321, 2).size() + (1 if SurvivalAllies.yoch_in_stratum(4321, 2) else 0)
+	_check(w.npcs.size() == 4 + recruits, "Keeper + 3 events + %d recruitables (D-111) on the map (%d)" % [recruits, w.npcs.size()])
 	_check(w._location_title().contains("STRATUM 2/5"), "Location line shows the stratum")
 	# Guardião não persegue.
 	var wc: Vector2i = warden.cell
@@ -325,7 +342,7 @@ func _world() -> void:
 	var ids: Array[String] = []
 	for o in w.service_options():
 		ids.append(String(o.id))
-	_check(ids == ["heal", "shop", "relics", "new_run", "daily", "title", "leave"], "Service options before the warden falls: %s" % str(ids))
+	_check(ids == ["heal", "shop", "relics", "hire", "reserve", "new_run", "daily", "title", "leave"], "Service options before the warden falls: %s" % str(ids))
 	_check(String(w.service_options()[0].label) == "HEAL FREE", "HEAL FREE label")
 	w.service_index = 0
 	SurvivalState.patch({"fallen_hp": 10})
@@ -409,8 +426,8 @@ func _world() -> void:
 	# DESCEND aparece com o guardião morto, pede confirmação e desce.
 	SurvivalState.patch({"defeated": [SurvivalStrata.warden_of(2)]})
 	w.service_open = true
-	_check(w.service_index_of("descend") == 3, "DESCEND appears after the warden falls")
-	w.service_index = 3
+	_check(w.service_index_of("descend") == 5, "DESCEND appears after the warden falls (after HIRE and RESERVE)")
+	w.service_index = 5
 	_check(w.confirm_service_option() == "descend" and SurvivalState.stratum() == 2, "First Z only asks to confirm")
 	w.hud.queue_redraw()
 	await process_frame

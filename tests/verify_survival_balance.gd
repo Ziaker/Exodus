@@ -49,8 +49,9 @@ func _run() -> void:
 	var hero := _sheet(SurvivalData.FALLEN_BASE)
 	var par1 := SurvivalStrata.par_sp(1)
 	check(absi(hero.sp_value() - par1) <= 3, "Fallen starts with the SP of stratum 1 (%d vs %d)" % [hero.sp_value(), par1])
-	var yoch := _sheet(SurvivalData.YOCH_BASE)
-	check(yoch.sp_value() < hero.sp_value() and yoch.max_en == 0, "Yoch is weaker than Fallen and has no EN (%d)" % yoch.sp_value())
+	# D-111: o Yoch tem sempre o mesmo SP do Fallen (sem EN).
+	var yoch := SurvivalAllies.yoch_base_stats(hero.sp_value())
+	check(yoch.sp_value() == hero.sp_value() and yoch.max_en == 0, "Yoch has the Fallen's SP and no EN (%d)" % yoch.sp_value())
 	# o SP esperado sobe a cada estrato, como o dos inimigos
 	for s in range(2, 6):
 		check(SurvivalStrata.par_sp(s) > SurvivalStrata.par_sp(s - 1), "Expected SP rises at stratum %d" % s)
@@ -112,7 +113,7 @@ func _run() -> void:
 					acc[stratum].dsp += float(h.sp_value() - es.sp_value())
 					acc[stratum].adsp += absf(float(h.sp_value() - es.sp_value()))
 					acc[stratum].n += 1
-					var offers := SurvivalAbsorb.roll_options(rng, def, [] as Array[StringName], 1.0, {"stratum": stratum, "yoch": false})
+					var offers := SurvivalAbsorb.roll_options(rng, def, [] as Array[StringName], 1.0, {"stratum": stratum})
 					var pick: Dictionary = {}
 					var best := -1
 					for o in offers:

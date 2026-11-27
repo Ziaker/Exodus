@@ -669,6 +669,17 @@ func _width(value: String, px: int, bold := false) -> float:
 
 
 ## Nunca corta o texto: reduza a fonte até a frase inteira caber no espaço.
+## D-111: the 3 narrow windows (Survival) share one name size, the largest that fits every hero
+## (the chooser's arrow and each one's SP included), so no name looks bigger than the others.
+func _narrow_name_px(r: Rect2) -> int:
+	var px := 12
+	var pips := 4 * (20.0 / 3.0) + 3 * 2.0
+	for unit in players:
+		var limit := r.size.x - 18.0 - pips - 16.0 / 3.0 - _width("SP %d" % unit.current_sp, 9) - 6.0 - 9.0
+		px = mini(px, _fit_px(unit.display_name, 12, maxf(12.0, limit), true))
+	return px
+
+
 func _fit_px(value: String, px: int, max_width: float, bold := false, min_px := 7) -> int:
 	var size := px
 	while size > min_px and _width(value, size, bold) > max_width:
@@ -1545,7 +1556,7 @@ func _character(who: int, r: Rect2) -> void:
 	var label := unit.display_name + (" [DOWN]" if down else "")
 	_str(label, name_x, top_line,
 			Color("ede7e1") if down else Color.WHITE,
-			_fit_px(label, 12, maxf(12.0, name_limit), true), true)
+			_narrow_name_px(r) if narrow and not down else _fit_px(label, 12, maxf(12.0, name_limit), true), true)
 	if not down:
 		var planned: int = battle.planned_acts_for(unit)
 		for i in 4:
@@ -1776,7 +1787,8 @@ func _input(event: InputEvent) -> void:
 		elif mode == "react" and event.keycode in [KEY_TAB, KEY_LEFT, KEY_RIGHT]:
 			for i in players.size():
 				var next := (actor + i + 1) % players.size()
-				if players[next].is_alive() and players[next].acts_available > 0:
+				# D-111: skip heroes that cannot react (a Survival ally in AUTO never reacts).
+				if players[next].is_alive() and players[next].acts_available > 0 						and battle.eligible_reactors().has(players[next]):
 					battle.select_reactor(next)
 					break
 		elif mode == "command" and event.keycode in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:

@@ -140,7 +140,7 @@ func play_break(target: BattleUnit) -> void:
 				"spin": rng.randf_range(-2.0, 2.0),
 			})
 	impact_center = art.get_center() + Vector2(0, -art.size.y * 0.1)
-	card_center = hud.STATUS_RECTS[0].get_center()
+	card_center = hud.status_rect(0).get_center()
 	impact_at = time
 	if not hud.broken_units.has(target): hud.broken_units.append(target)
 	await get_tree().create_timer(BREAK_SECONDS).timeout

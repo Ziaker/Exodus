@@ -4,6 +4,40 @@ Não faz parte da lore nem da campanha. Sandbox de combate e exploração para
 testar os **35 demônios**, 27 habilidades placeholder, itens e continues. A
 entrada é o comando `Survival` do menu do título.
 
+## Aliados (D-111, criador 2026-11-26)
+
+Especificação: `docs/plans/2026-11-26-survival-aliados.md`. Regras puras em
+`scripts/survival/survival_allies.gd`; estado em `SurvivalState` (save **v3**: saves antigos com o
+Yoch fixo são descartados e a run recomeça).
+
+- A run começa **só com o Fallen**. Grupo: Fallen + até **2 aliados**; reserva do santuário até **8**.
+- Aliados **demônios e humanos** (nunca anjos). Entram por:
+  - **oferta ao vencer** (25% das vitórias): painel com a arte do derrotado, `Z: ACCEPT  X: REFUSE`;
+    entra com a ficha que tinha na luta e HP/EN/PP cheios;
+  - **HIRE** no santuário: 2 demônios do estrato (sem guardião) por **SP × 2 M**;
+  - **encontros no mapa** (0–3 por estrato: 15/35/35/15%; 75% demônio / 25% humano), figura de
+    frente como os eventos: conversa (entra), pede um consumível, pede **SP × 1 M**, ou luta-teste
+    (entra só se vencer; sem absorção; HP/EN/PP/continues voltam ao fim, itens gastos não).
+- **Yoch**: 15% por estrato; aviso `YOCH IS SOMEWHERE IN THIS STRATUM`; figura = battler
+  `Zealot Masakado.png` completamente amarelo; SP sempre igual ao do Fallen; entra ao falar com ele.
+- **RESERVE** no santuário troca grupo ↔ reserva. Aliado caído não luta até o **HEAL** (que revive).
+- **Relíquias**: 1 por unidade (Fallen incluído); humanos (Yoch incluído) 2. A reserva não ativa perks.
+- **Crescimento**: absorção só melhora o Fallen (a oferta `YOCH +n` saiu). Aliado vivo no fim da luta
+  conta a luta; a cada 2, +1 (65%) / +2 (20%) / +3 (15%) num atributo; aviso no canto do mapa.
+- **MANUAL / AUTO** por aliado: tecla **C** no mapa (status, consumíveis, configuração) e comando
+  **PARTY** do Fallen na batalha (não gasta ato). AUTO = IA dos inimigos, sem barra, nunca reage.
+- Batalha com 3 heróis: as 3 janelas dividem a largura das 2 ("3 estreitos"); a janela estreita
+  mantém os 4 marcadores de ato e esconde o texto `ACT n/4`.
+- Debug (auditoria 2026-11-26): `tools/debug_survival_soak.gd -- [lutas] [semente] [mapas]` joga
+  lutas e ações de mapa aleatórias com um bot, captura erros de script por `Logger` e checa os
+  invariantes do save; `tools/debug_survival_roundtrip.gd` faz as idas e voltas reais de cena
+  (mapa → luta → mapa, oferta, luta-teste vencida e perdida).
+- Prova: `tests/verify_survival_allies.gd` (2140 checks). Capturas: `tools/capture_survival_allies.gd`
+  → `captures/allies/`. **O julgamento visual é do criador.**
+
+As seções abaixo sobre a Yoch fixa no grupo (ofertas `YOCH +n`, 2 relíquias por aliado, ficha
+HP 17/SP 45) descrevem a base anterior; onde divergem, vale este bloco.
+
 ## Primeira dungeon · Necrópole Saturnina (D-114)
 
 O primeiro estrato começa no Pórtico dos Que Desistiram, junto ao santuário.

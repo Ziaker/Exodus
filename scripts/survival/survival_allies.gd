@@ -305,3 +305,40 @@ static func grow(m: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
 
 static func growth_line(m: Dictionary, g: Dictionary) -> String:
 	return "%s +%d %s" % [String(m.get("name", "?")), int(g.amount), String(STAT_LABELS.get(String(g.stat), g.stat))]
+
+
+## Figura recortada de um battler do VX (sem moldura nem fundo), para mostrar colorida (o mapa e a
+## oferta ao vencer). O fundo do VX também fica preso em bolsões fechados pela sombra do chão
+## (entre as patas): todo pixel da cor do fundo some. `tint` pinta a figura inteira de uma cor (Yoch).
+static func cutout_image(path: String, tint: Color = Color(0, 0, 0, 0)) -> Image:
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	var src: Texture2D = load(path)
+	var img := src.get_image()
+	if img == null:
+		return null
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	var framed := img.get_pixel(0, 0).a > 0.15
+	if framed and img.get_width() > 8 and img.get_height() > 8:
+		img = img.get_region(Rect2i(2, 2, img.get_width() - 4, img.get_height() - 4))
+	var bg := img.get_pixel(0, 0)
+	var hud_script: GDScript = load("res://scripts/battle/playable_hud.gd")
+	hud_script._strip_opaque_bg(img)
+	if framed:
+		hud_script.strip_frame_lines(img)
+		for y in img.get_height():
+			for x in img.get_width():
+				var c := img.get_pixel(x, y)
+				if c.a > 0.0 and absf(c.r - bg.r) < 0.03 and absf(c.g - bg.g) < 0.03 and absf(c.b - bg.b) < 0.03:
+					img.set_pixel(x, y, Color(0, 0, 0, 0))
+	var used := img.get_used_rect()
+	if used.size.x > 0 and used.size.y > 0:
+		img = img.get_region(used)
+	if tint.a > 0.0:
+		for y in img.get_height():
+			for x in img.get_width():
+				if img.get_pixel(x, y).a > 0.05:
+					img.set_pixel(x, y, Color(tint.r, tint.g, tint.b, 1.0))
+	return img

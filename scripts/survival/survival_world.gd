@@ -66,6 +66,18 @@ func _can_step(from: Vector2i, to: Vector2i) -> bool:
 	return super._can_step(from, to) and SurvivalStrata.edge_is_open(from, to, SurvivalState.stratum())
 
 
+## Auditoria 2026-11-26: a figura à frente só conta se não há parede fina (aresta fechada da
+## Necrópole) entre o jogador e ela; antes dava para falar e ver o NPC através da parede.
+func npc_near() -> Dictionary:
+	var here := npc_at(cell)
+	if not here.is_empty():
+		return here
+	var front: Vector2i = cell + DIRS[facing]
+	if not SurvivalStrata.edge_is_open(cell, front, SurvivalState.stratum()):
+		return {}
+	return npc_at(front)
+
+
 ## Atendente + eventos ainda não resolvidos do estrato.
 func _npc_defs() -> Array:
 	var out: Array = SurvivalData.NPCS.duplicate(true)
@@ -79,6 +91,8 @@ func _npc_defs() -> Array:
 		out.append({"id": String(ev.id), "role": "event", "kind": String(ev.kind),
 			"cell": ev.cell, "picture": String(def.picture), "name": String(def.name),
 			"pages": [String(def.text)]})
+	# D-111: recrutáveis do estrato (encontros e, às vezes, o Yoch).
+	out.append_array(_recruit_npcs())
 	return out
 
 
@@ -126,6 +140,25 @@ func _ready() -> void:
 	if not (s.get("pending_relic_choice", []) as Array).is_empty():
 		relic_choice_open = true
 		relic_choice_index = 0
+	# D-111: uma luta-teste nunca termina no mapa. Se o save ainda tem uma (o jogo fechou no meio
+	# dela), ela é desfeita como derrota: tudo volta ao snapshot e o candidato continua no mapa.
+	var stale: Dictionary = s.get("duel", {})
+	if not stale.is_empty():
+		var snap: Dictionary = stale.get("snapshot", {})
+		SurvivalState.patch({"duel": {},
+			"fallen_hp": int(snap.get("fallen_hp", s.get("fallen_hp", 1))),
+			"fallen_en": int(snap.get("fallen_en", s.get("fallen_en", 0))),
+			"party": (snap.get("party", s.get("party", [])) as Array).duplicate(true),
+			"continues": int(snap.get("continues", s.get("continues", 0)))})
+		_sync_party_from_state()
+		s = SurvivalState.data()
+	# D-111: aviso do Yoch no começo do estrato em que ele está, e crescimento dos aliados.
+	var st := SurvivalState.stratum()
+	if SurvivalAllies.yoch_in_stratum(int(s.get("seed", 1)), st) and not bool(s.get("yoch_joined", false)) \
+			and int(s.get("yoch_notice", 0)) != st:
+		show_notice(SurvivalAllies.YOCH_NOTICE)
+		SurvivalState.patch({"yoch_notice": st})
+	_show_growth()
 	_check_cleared()
 	_redraw()
 
@@ -144,7 +177,7 @@ func _map_cell(c: Vector2i) -> void:
 
 func _is_modal_open() -> bool:
 	return super._is_modal_open() or service_open or relic_open or cleared_open \
-			or shop_open or event_open or relic_choice_open
+			or shop_open or event_open or relic_choice_open or hire_open or reserve_open or menu_open
 
 
 func _build_party() -> void:
@@ -189,6 +222,8 @@ func service_options() -> Array[Dictionary]:
 		{"id": "heal", "label": "HEAL FREE" if price == 0 else "HEAL %dM" % price},
 		{"id": "shop", "label": "SHOP"},
 		{"id": "relics", "label": "RELICS"},
+		{"id": "hire", "label": "HIRE"},
+		{"id": "reserve", "label": "RESERVE"},
 	]
 	if SurvivalState.warden_down() and SurvivalState.stratum() < SurvivalStrata.COUNT:
 		out.append({"id": "descend", "label": "DESCEND"})
@@ -230,6 +265,16 @@ func talk() -> bool:
 				"HEAL is free once per stratum" if SurvivalState.heal_price() == 0 else "HEAL costs Macca now")
 		_redraw()
 		return true
+	if role in ["recruit", "yoch"]:
+		talk_count += 1
+		talking_npc = npc
+		_show_picture(npc)
+		active_event = npc
+		event_open = true
+		event_index = 0
+		event_feedback = recruit_text(npc)
+		_redraw()
+		return true
 	if role == "event":
 		talk_count += 1
 		talking_npc = npc
@@ -250,7 +295,19 @@ var _trimmed_pictures := {}
 ## mercador tem 216 px com espaço vazio embaixo e flutuava. Aqui a figura é recortada
 ## na parte opaca e os pés ficam na mesma linha de chão de uma figura de 185 px.
 func _show_picture(npc: Dictionary) -> void:
-	if String(npc.get("role", "")) != "event":
+	var role := String(npc.get("role", ""))
+	if role in ["recruit", "yoch"]:
+		# D-111: o candidato aparece de frente como os eventos (figura recortada, pés no chão);
+		# o Yoch é a arte do Masakado completamente amarela.
+		var tex: Texture2D = cutout(String(npc.picture), SurvivalAllies.YOCH_INK if role == "yoch" else Color(0, 0, 0, 0))
+		var sz := tex.get_size() * NPC_PICTURE_SCALE
+		var floor_line := NPC_PICTURE_CENTER.y + 185.0 * NPC_PICTURE_SCALE * 0.5
+		npc_picture.texture = tex
+		npc_picture.size = sz
+		npc_picture.position = Vector2(NPC_PICTURE_CENTER.x - sz.x * 0.5, floor_line - sz.y).floor()
+		npc_picture.visible = true
+		return
+	if role != "event":
 		super._show_picture(npc)
 		return
 	var path := String(npc.picture)
@@ -315,6 +372,10 @@ func confirm_service_option() -> String:
 			open_shop()
 		"relics":
 			_open_relics()
+		"hire":
+			open_hire()
+		"reserve":
+			open_reserve()
 		"descend":
 			close_service()
 			if SurvivalState.descend():
@@ -442,6 +503,8 @@ func confirm_shop() -> bool:
 func event_options() -> Array[Dictionary]:
 	if active_event.is_empty():
 		return []
+	if String(active_event.get("role", "")) in ["recruit", "yoch"]:
+		return recruit_options(active_event)
 	var max_hp := SurvivalState.fallen_max_hp()
 	match String(active_event.kind):
 		"altar":
@@ -507,6 +570,24 @@ func confirm_event() -> String:
 	var id := String(opt.id)
 	var s := SurvivalState.data()
 	var done := false
+	if String(active_event.get("role", "")) in ["recruit", "yoch"]:
+		if id == "leave":
+			close_event()
+			return id
+		if _confirm_recruit(id):
+			var gone := String(active_event.id)
+			for npc in npcs.duplicate():
+				if String(npc.id) == gone:
+					npcs.erase(npc)
+			loot_toast = event_feedback
+			event_open = false
+			active_event = {}
+			talking_npc = {}
+			_up_needs_release = true
+			refresh_front_picture()
+			_sync_party_from_state()
+		_redraw()
+		return id
 	match id:
 		"leave":
 			close_event()
@@ -626,11 +707,14 @@ func _close_relics() -> void:
 	_redraw()
 
 
-func _equip_relic(who: String) -> void:
+func _equip_relic(who: String = "") -> void:
 	var owned := _owned_relics()
 	if owned.is_empty():
 		return
 	var id := owned[clampi(relic_index, 0, owned.size() - 1)]
+	if who.is_empty():
+		var wearers := relic_wearers()
+		who = String(wearers[clampi(relic_wearer, 0, wearers.size() - 1)].who)
 	SurvivalState.toggle_relic(who, id)
 	_sync_party_from_state()
 
@@ -697,13 +781,19 @@ func _draw_overlay() -> void:
 		_draw_relics()
 	elif shop_open:
 		_draw_shop()
+	elif hire_open:
+		_draw_hire()
+	elif reserve_open:
+		_draw_reserve()
+	elif menu_open:
+		_draw_menu()
 
 
-func _ally_line(label: String, list: Array) -> String:
+func _ally_line(label: String, list: Array, cap: int = SurvivalRelics.MAX_PER_UNIT) -> String:
 	var names: Array[String] = []
 	for id in list:
 		names.append(SurvivalRelics.name_of(String(id)))
-	return "%s %d/2: %s" % [label, list.size(), ", ".join(names) if not names.is_empty() else "-"]
+	return "%s %d/%d: %s" % [label, list.size(), cap, ", ".join(names) if not names.is_empty() else "-"]
 
 
 func _covenant_line(list: Array) -> String:
@@ -714,39 +804,39 @@ func _covenant_line(list: Array) -> String:
 
 
 func _draw_relics() -> void:
-	var s := SurvivalState.data()
 	var b := PANEL_RECT
 	_panel(b, GOLD_INK)
 	_text(bold_font(), "ANCIENT RELICS", b.get_center().x, b.position.y + 22, 15, GOLD_INK, HORIZONTAL_ALIGNMENT_CENTER)
-	var f: Array = s.get("fallen_relics", [])
-	var y: Array = s.get("yoch_relics", [])
-	_text(bold_font(), _ally_line("FALLEN", f), b.position.x + 14, b.position.y + 48, 11, GREEN_INK)
-	_text(ui_font, _covenant_line(f), b.position.x + 24, b.position.y + 63, 10, GOLD_INK)
-	_text(bold_font(), _ally_line("YOCH", y), b.position.x + 14, b.position.y + 82, 11, BLUE_INK)
-	_text(ui_font, _covenant_line(y), b.position.x + 24, b.position.y + 97, 10, GOLD_INK)
-	_overlay.draw_line(Vector2(b.position.x + 10, b.position.y + 106), Vector2(b.end.x - 10, b.position.y + 106), Color(1, 1, 1, 0.25))
+	# D-111: o portador escolhido (Left/Right) e os relíquias dele; 1 por unidade, humanos 2.
+	var wearers := relic_wearers()
+	relic_wearer = clampi(relic_wearer, 0, wearers.size() - 1)
+	var w: Dictionary = wearers[relic_wearer]
+	_text(bold_font(), "< %s >  (%d/%d)" % [String(w.name), relic_wearer + 1, wearers.size()],
+			b.get_center().x, b.position.y + 46, 12, GREEN_INK, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(bold_font(), _ally_line(String(w.name), w.relics, int(w.cap)), b.position.x + 14, b.position.y + 68, 11, GREEN_INK)
+	_text(ui_font, _covenant_line(w.relics), b.position.x + 24, b.position.y + 84, 10, GOLD_INK)
+	_overlay.draw_line(Vector2(b.position.x + 10, b.position.y + 96), Vector2(b.end.x - 10, b.position.y + 96), Color(1, 1, 1, 0.25))
 	var owned := _owned_relics()
 	var rows := 12
 	var first := clampi(relic_index - rows / 2, 0, maxi(0, owned.size() - rows))
 	for i in range(first, mini(owned.size(), first + rows)):
-		var row_y := b.position.y + 118 + (i - first) * 19
+		var row_y := b.position.y + 108 + (i - first) * 19
 		var selected := i == relic_index
 		var id := owned[i]
 		if selected:
 			_overlay.draw_rect(Rect2(b.position.x + 10, row_y - 2, b.size.x - 20, 18), Color(1, 1, 1, 0.16))
 		var who := ""
-		if f.has(id):
-			who = "[F]"
-		elif y.has(id):
-			who = "[Y]"
+		for other in wearers:
+			if (other.relics as Array).has(id):
+				who = String(other.name)
 		var ink := Color.WHITE if selected else INK
 		_text(ui_font, ("> " if selected else "  ") + SurvivalRelics.name_of(id), b.position.x + 16, row_y + 11, 11, ink)
 		_text(ui_font, String(SurvivalRelics.relic(id).info), b.position.x + 220, row_y + 11, 10,
 				GOLD_INK if SurvivalRelics.relic(id).has("perk") else ink)
-		_text(bold_font(), who, b.end.x - 16, row_y + 11, 10, GREEN_INK if who == "[F]" else BLUE_INK, HORIZONTAL_ALIGNMENT_RIGHT)
+		_text(bold_font(), who, b.end.x - 16, row_y + 11, 10, GREEN_INK if who == String(w.name) else BLUE_INK, HORIZONTAL_ALIGNMENT_RIGHT)
 	if owned.size() > rows:
 		_text(ui_font, "%d/%d" % [relic_index + 1, owned.size()], b.end.x - 16, b.end.y - 34, 10, INK, HORIZONTAL_ALIGNMENT_RIGHT)
-	_text(bold_font(), "Up/Down: select   Z: Fallen   X: Yoch   Esc: close", b.get_center().x, b.end.y - 14, 10, INK, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(bold_font(), "Up/Down: relic   Left/Right: who   Z: equip / remove   X: close", b.get_center().x, b.end.y - 14, 10, INK, HORIZONTAL_ALIGNMENT_CENTER)
 
 
 func _draw_shop() -> void:
@@ -871,17 +961,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		if k == null:
 			return
 		match k.keycode:
-			KEY_LEFT, KEY_UP:
+			KEY_UP:
 				relic_index = posmod(relic_index - 1, maxi(1, _owned_relics().size()))
 				_redraw()
-			KEY_RIGHT, KEY_DOWN:
+			KEY_DOWN:
 				relic_index = posmod(relic_index + 1, maxi(1, _owned_relics().size()))
 				_redraw()
+			KEY_LEFT, KEY_RIGHT:
+				relic_wearer = posmod(relic_wearer + (1 if k.keycode == KEY_RIGHT else -1), relic_wearers().size())
+				_redraw()
 			KEY_Z, KEY_ENTER, KEY_KP_ENTER:
-				_equip_relic("fallen")
-			KEY_X:
-				_equip_relic("yoch")
-			KEY_ESCAPE:
+				_equip_relic()
+			KEY_X, KEY_ESCAPE:
 				_close_relics()
 		get_viewport().set_input_as_handled()
 		return
@@ -894,6 +985,52 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_DOWN, KEY_RIGHT: move_shop_cursor(1)
 			KEY_Z, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE: confirm_shop()
 			KEY_X, KEY_ESCAPE: close_shop()
+		get_viewport().set_input_as_handled()
+		return
+	if menu_open or hire_open or reserve_open:
+		var k := _key(event)
+		if k == null:
+			return
+		if menu_open:
+			match k.keycode:
+				KEY_UP, KEY_LEFT: move_menu(-1)
+				KEY_DOWN, KEY_RIGHT: move_menu(1)
+				KEY_Z, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE: confirm_menu()
+				KEY_X, KEY_ESCAPE, KEY_C:
+					if menu_target >= 0:
+						menu_target = -1
+						menu_feedback = "Z: MANUAL/AUTO or use item   X / C: close"
+						_redraw()
+					else:
+						toggle_menu()
+		elif hire_open:
+			match k.keycode:
+				KEY_UP, KEY_LEFT:
+					hire_index = posmod(hire_index - 1, maxi(1, hire_rows().size()))
+					_redraw()
+				KEY_DOWN, KEY_RIGHT:
+					hire_index = posmod(hire_index + 1, maxi(1, hire_rows().size()))
+					_redraw()
+				KEY_Z, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE: confirm_hire()
+				KEY_X, KEY_ESCAPE:
+					hire_open = false
+					_redraw()
+		else:
+			match k.keycode:
+				KEY_UP, KEY_LEFT:
+					reserve_index = posmod(reserve_index - 1, maxi(1, reserve_rows().size()))
+					_redraw()
+				KEY_DOWN, KEY_RIGHT:
+					reserve_index = posmod(reserve_index + 1, maxi(1, reserve_rows().size()))
+					_redraw()
+				KEY_Z, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE: confirm_reserve()
+				KEY_X, KEY_ESCAPE:
+					if not reserve_pick.is_empty():
+						reserve_pick = ""
+						reserve_feedback = "CANCELLED."
+					else:
+						reserve_open = false
+					_redraw()
 		get_viewport().set_input_as_handled()
 		return
 	if event_open:
@@ -925,6 +1062,12 @@ func _unhandled_input(event: InputEvent) -> void:
 					_redraw()
 				else:
 					close_service()
+		get_viewport().set_input_as_handled()
+		return
+	# D-111: C abre o menu de status / itens / configurações em qualquer lugar do mapa.
+	var kc := _key(event)
+	if kc != null and kc.keycode == KEY_C and not _is_modal_open() and not busy and not encounter_pending:
+		toggle_menu()
 		get_viewport().set_input_as_handled()
 		return
 	super._unhandled_input(event)
@@ -1002,10 +1145,11 @@ func _draw_extra_hud() -> void:
 	var npc := npc_near()
 	if not npc.is_empty() and String(npc.get("role", "")) == "sanctuary":
 		_str("Z: HEAL & SHOP", 420, LOCATION_LINE_Y + 15.5, GREEN_INK, 12, true)
-	elif not npc.is_empty() and String(npc.get("role", "")) == "event":
+	elif not npc.is_empty() and String(npc.get("role", "")) in ["event", "recruit", "yoch"]:
 		_str("Z: " + String(npc.name), 420, LOCATION_LINE_Y + 15.5, GOLD_INK, 12, true)
 	elif not loot_toast.is_empty():
 		_str(loot_toast, 420, LOCATION_LINE_Y + 15.5, GOLD_INK, 11, true)
+	_draw_growth()
 	var r := SURVIVAL_PANEL_RECT
 	hud.draw_line(Vector2(r.position.x, r.position.y + 0.5), Vector2(r.end.x, r.position.y + 0.5), Color(1, 1, 1, 0.35))
 	var x := r.position.x + 8
@@ -1142,3 +1286,550 @@ func _restore_state() -> void:
 			visited[Vector2i(int(c[0]), int(c[1]))] = true
 	for id in saved.get("seen", []):
 		enemies.seen[String(id)] = true
+
+
+# ------------------------------------------------------------ D-111: aliados no mapa
+
+const HUD_SCRIPT := preload("res://scripts/battle/playable_hud.gd")
+## D-111: com 3 membros, as 3 janelas de status dividem a largura das 2 (como na batalha).
+const NARROW_STATUS_LIMIT := 150.0
+const GROWTH_TOAST_MS := 3000
+
+var hire_open := false
+var hire_index := 0
+var hire_feedback := ""
+var reserve_open := false
+var reserve_index := 0
+var reserve_pick := ""
+var reserve_feedback := ""
+var menu_open := false
+var menu_index := 0
+var menu_target := -1
+var menu_feedback := ""
+var relic_wearer := 0
+var growth_lines: Array[String] = []
+var _growth_until := 0
+var _cutouts := {}
+
+
+func _draw_status(unit: BattleUnit, r: Rect2) -> void:
+	if r.size.x >= NARROW_STATUS_LIMIT:
+		super._draw_status(unit, r)
+		return
+	# Janela estreita: mesmas linhas, fonte um ponto menor.
+	hud.draw_line(Vector2(r.position.x, r.position.y + 0.5), Vector2(r.end.x, r.position.y + 0.5), Color(1, 1, 1, 0.35))
+	var x := r.position.x + 6
+	var right := r.end.x - 6
+	var name := unit.display_name + ("" if unit.is_alive() else " [DOWN]")
+	var px := 12
+	while px > 9 and ui_bold.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > r.size.x - 12:
+		px -= 1
+	_str(name, x, r.position.y + 18, Color.WHITE if unit.is_alive() else INK, px, true)
+	var hp_w := _str("HP ", x, r.position.y + 40, INK, 10)
+	_str("%d/%d" % [unit.current_hp, unit.stats.max_hp], x + hp_w, r.position.y + 40, Color.WHITE, 10, true)
+	if unit.prays:
+		_str("PP %d/%d" % [unit.current_pp, PrayerBook.MAX_PP], right, r.position.y + 40, INK, 10, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	else:
+		_str("EN %d/%d" % [unit.current_en, unit.stats.max_en], right, r.position.y + 40, INK, 10, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	var sp_w := _str("SP ", x, r.position.y + 61, Color.WHITE, 11, true)
+	_str(str(unit.current_sp), x + sp_w, r.position.y + 61, Color.WHITE, 11, true)
+
+
+static func member_unit(m: Dictionary, slot: int) -> BattleUnit:
+	var st := SurvivalState.member_stats(m)
+	var u := BattleUnit.new(StringName("ally_%d" % slot), String(m.name), st, true)
+	if SurvivalAllies.prays(m):
+		u.race = &"human"
+		u.start_praying(int(m.get("pp", 0)))
+	else:
+		u.current_en = clampi(int(m.get("en", st.max_en)), 0, st.max_en)
+	u.current_hp = SurvivalState.member_hp(m)
+	u.restore_sp()
+	return u
+
+
+## Recorte da figura de um battler do VX (sem o fundo e a moldura). `tint` pinta tudo de uma cor
+## (o Yoch é a arte do Masakado completamente amarela, criador 2026-11-26).
+func cutout(path: String, tint: Color = Color(0, 0, 0, 0)) -> Texture2D:
+	var key := path + str(tint)
+	if _cutouts.has(key):
+		return _cutouts[key]
+	var img := SurvivalAllies.cutout_image(path, tint)
+	if img == null:
+		return null
+	var tex := ImageTexture.create_from_image(img)
+	_cutouts[key] = tex
+	return tex
+
+
+## Recrutáveis do estrato ainda não resolvidos (+ o Yoch quando ele está aqui).
+func _recruit_npcs() -> Array:
+	var s := SurvivalState.data()
+	var seed := int(s.get("seed", 1))
+	var st := SurvivalState.stratum()
+	var done: Array = s.get("recruits_done", [])
+	var out: Array = []
+	for e in SurvivalAllies.encounters(seed, st):
+		if done.has(String(e.id)):
+			continue
+		var def := SurvivalData.demon_by_id(String(e.candidate))
+		var npc := {"id": String(e.id), "role": "recruit", "kind": String(e.kind),
+			"candidate": String(e.candidate), "cell": e.cell, "picture": String(def.get("picture", "")),
+			"name": String(def.get("name", "?")), "pages": [""]}
+		if e.has("item"):
+			npc["item"] = String(e.item)
+		out.append(npc)
+	if SurvivalAllies.yoch_in_stratum(seed, st) and not bool(s.get("yoch_joined", false)):
+		out.append({"id": "yoch", "role": "yoch", "cell": SurvivalAllies.yoch_cell(seed, st),
+			"picture": SurvivalAllies.YOCH_PICTURE, "name": "YOCH", "pages": [""]})
+	return out
+
+
+func recruit_stats(candidate: String) -> Dictionary:
+	return SurvivalAllies.stats_like_battle(candidate, SurvivalState.fallen_sp())
+
+
+## Textos dos encontros (provisórios: o criador ainda não definiu os textos exatos).
+func recruit_text(npc: Dictionary) -> String:
+	var name := String(npc.get("name", "?"))
+	if String(npc.get("role", "")) == "yoch":
+		return "YOCH waits here. He will walk with you."
+	match String(npc.get("kind", "")):
+		"talk": return "%s wants to join you." % name
+		"item": return "%s will join for one %s." % [name, String(SurvivalData.shop_item(String(npc.get("item", ""))).get("name", "?"))]
+		"money": return "%s will join for %dM." % [name, SurvivalAllies.money_price(recruit_stats(String(npc.candidate)))]
+		"duel": return "%s wants to test your strength. Win and it joins." % name
+	return ""
+
+
+func recruit_options(npc: Dictionary) -> Array[Dictionary]:
+	var leave := {"id": "leave", "label": "LEAVE"}
+	if String(npc.get("role", "")) == "yoch":
+		return [{"id": "join", "label": "TAKE YOCH"}, leave]
+	match String(npc.get("kind", "")):
+		"talk": return [{"id": "join", "label": "ACCEPT"}, leave]
+		"item":
+			var item := String(npc.get("item", ""))
+			return [{"id": "give", "label": "GIVE %s (x%d)" % [String(SurvivalData.shop_item(item).get("name", "?")), int(SurvivalState.data().get(item, 0))]}, leave]
+		"money": return [{"id": "pay", "label": "PAY %dM" % SurvivalAllies.money_price(recruit_stats(String(npc.candidate)))}, leave]
+		"duel": return [{"id": "duel", "label": "FIGHT"}, leave]
+	return [leave]
+
+
+func _no_room_text() -> String:
+	return "NO ROOM: party %d/%d and reserve %d/%d are full." % [SurvivalState.party().size(),
+			SurvivalAllies.PARTY_MAX, SurvivalState.reserve().size(), SurvivalAllies.RESERVE_MAX]
+
+
+## Resolve a escolha num recrutável. Devolve true quando o encontro acabou (some do mapa).
+func _confirm_recruit(id: String) -> bool:
+	var npc := active_event
+	var s := SurvivalState.data()
+	if id == "duel":
+		if not SurvivalState.has_room():
+			event_feedback = _no_room_text()
+			return false
+		var stats := recruit_stats(String(npc.candidate))
+		SurvivalState.patch({"duel": {"encounter": String(npc.id), "candidate": String(npc.candidate),
+			"stats": stats, "snapshot": {"fallen_hp": int(s.fallen_hp), "fallen_en": int(s.fallen_en),
+				"party": (s.get("party", []) as Array).duplicate(true), "continues": int(s.continues)}}})
+		event_open = false
+		active_event = {}
+		talking_npc = {}
+		npc_picture.visible = false
+		_begin_battle({"id": String(npc.candidate)})
+		return false
+	if not SurvivalState.has_room():
+		event_feedback = _no_room_text()
+		return false
+	var m: Dictionary = {}
+	if String(npc.get("role", "")) == "yoch":
+		m = SurvivalAllies.yoch_member(SurvivalState.new_uid())
+	else:
+		var stats := recruit_stats(String(npc.candidate))
+		match id:
+			"give":
+				var item := String(npc.get("item", ""))
+				if not SurvivalState.consume_item(item):
+					event_feedback = "You have no %s." % String(SurvivalData.shop_item(item).get("name", "?"))
+					return false
+			"pay":
+				var price := SurvivalAllies.money_price(stats)
+				if int(s.get("macca", 0)) < price:
+					event_feedback = "NOT ENOUGH MACCA (need %dM)." % price
+					return false
+				SurvivalState.patch({"macca": int(s.macca) - price})
+		m = SurvivalAllies.new_member(SurvivalState.new_uid(), String(npc.candidate), stats, int(s.get("seed", 1)))
+	var where := SurvivalState.add_member(m)
+	if String(npc.get("role", "")) != "yoch":
+		var done: Array = (SurvivalState.data().get("recruits_done", []) as Array).duplicate()
+		done.append(String(npc.id))
+		SurvivalState.patch({"recruits_done": done})
+	event_feedback = "%s joins the %s." % [String(m.name), where]
+	return true
+
+
+# ---- santuário: HIRE (2 demônios do estrato) e RESERVE (troca grupo <-> reserva)
+
+func hire_rows() -> Array[Dictionary]:
+	var s := SurvivalState.data()
+	var st := SurvivalState.stratum()
+	var hired: Array = s.get("hired", [])
+	var rows: Array[Dictionary] = []
+	for id in SurvivalAllies.hire_stock(int(s.get("seed", 1)), st):
+		if hired.has("%d:%s" % [st, id]):
+			continue
+		var stats := recruit_stats(id)
+		rows.append({"id": id, "name": String(SurvivalData.demon_by_id(id).name), "stats": stats,
+			"price": SurvivalAllies.hire_price(stats)})
+	return rows
+
+
+func open_hire() -> void:
+	close_service()
+	hire_open = true
+	hire_index = 0
+	hire_feedback = "Up/Down: select   Z: hire   X: back"
+	_redraw()
+
+
+func confirm_hire() -> bool:
+	var rows := hire_rows()
+	if rows.is_empty():
+		return false
+	var row: Dictionary = rows[clampi(hire_index, 0, rows.size() - 1)]
+	var s := SurvivalState.data()
+	if not SurvivalState.has_room():
+		hire_feedback = _no_room_text()
+	elif int(s.get("macca", 0)) < int(row.price):
+		hire_feedback = "NOT ENOUGH MACCA (need %dM)." % int(row.price)
+	else:
+		var hired: Array = (s.get("hired", []) as Array).duplicate()
+		hired.append("%d:%s" % [SurvivalState.stratum(), String(row.id)])
+		SurvivalState.patch({"macca": int(s.macca) - int(row.price), "hired": hired})
+		var where := SurvivalState.add_member(SurvivalAllies.new_member(SurvivalState.new_uid(), String(row.id), row.stats, int(s.get("seed", 1))))
+		hire_feedback = "%s joins the %s." % [String(row.name), where]
+		hire_index = 0
+		_sync_party_from_state()
+		_redraw()
+		return true
+	_redraw()
+	return false
+
+
+## Linhas do painel RESERVE: o grupo primeiro, depois a reserva.
+func reserve_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for m in SurvivalState.party():
+		rows.append({"where": "party", "member": m})
+	for m in SurvivalState.reserve():
+		rows.append({"where": "reserve", "member": m})
+	return rows
+
+
+func open_reserve() -> void:
+	close_service()
+	reserve_open = true
+	reserve_index = 0
+	reserve_pick = ""
+	reserve_feedback = "Z: move between party and reserve   X: back"
+	_redraw()
+
+
+func confirm_reserve() -> void:
+	var rows := reserve_rows()
+	if rows.is_empty():
+		return
+	var row: Dictionary = rows[clampi(reserve_index, 0, rows.size() - 1)]
+	var uid := String(row.member.uid)
+	if not reserve_pick.is_empty():
+		# Segundo Z: o aliado da reserva troca de lugar com este do grupo.
+		if String(row.where) == "party" and SurvivalState.move_member(reserve_pick, uid):
+			reserve_feedback = "Swapped."
+		else:
+			reserve_feedback = "Choose a party member to swap with."
+			_redraw()
+			return
+		reserve_pick = ""
+	elif String(row.where) == "reserve" and SurvivalState.party().size() >= SurvivalAllies.PARTY_MAX:
+		reserve_pick = uid
+		reserve_feedback = "Party full: choose who goes to the reserve (Z). X cancels."
+	elif SurvivalState.move_member(uid):
+		reserve_feedback = "%s moved to the %s." % [String(row.member.name), "reserve" if String(row.where) == "party" else "party"]
+	else:
+		reserve_feedback = "The reserve is full (%d/%d)." % [SurvivalState.reserve().size(), SurvivalAllies.RESERVE_MAX]
+	reserve_index = clampi(reserve_index, 0, maxi(0, reserve_rows().size() - 1))
+	_sync_party_from_state()
+	_redraw()
+
+
+# ---- menu C: status, bolsa (usar consumíveis) e MANUAL/AUTO
+
+## Linhas do menu: o Fallen, os aliados do grupo e os consumíveis (BLAST STONE não se usa no mapa).
+func menu_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = [{"type": "unit", "uid": "", "name": "FALLEN"}]
+	for m in SurvivalState.party():
+		rows.append({"type": "unit", "uid": String(m.uid), "name": String(m.name), "member": m})
+	var s := SurvivalState.data()
+	for id in ["bead", "medicine", "chakra", "soma"]:
+		rows.append({"type": "item", "id": id, "name": String(SurvivalData.shop_item(id).name), "count": int(s.get(id, 0))})
+	return rows
+
+
+func toggle_menu() -> void:
+	if menu_open:
+		menu_open = false
+	elif not _is_modal_open() and not busy:
+		menu_open = true
+		menu_index = 0
+		menu_target = -1
+		menu_feedback = "Z: MANUAL/AUTO or use item   X / C: close"
+	_redraw()
+
+
+func move_menu(delta: int) -> void:
+	if menu_target >= 0:
+		var units := menu_rows().filter(func(r: Dictionary) -> bool: return String(r.type) == "unit")
+		menu_target = posmod(menu_target + delta, units.size())
+	else:
+		menu_index = posmod(menu_index + delta, menu_rows().size())
+	_redraw()
+
+
+func confirm_menu() -> void:
+	var rows := menu_rows()
+	var units := rows.filter(func(r: Dictionary) -> bool: return String(r.type) == "unit")
+	if menu_target >= 0:
+		var item_row: Dictionary = rows[clampi(menu_index, 0, rows.size() - 1)]
+		menu_feedback = use_item_on_map(String(item_row.id), String(units[menu_target].uid))
+		menu_target = -1
+		_sync_party_from_state()
+		_redraw()
+		return
+	var row: Dictionary = rows[clampi(menu_index, 0, rows.size() - 1)]
+	if String(row.type) == "unit":
+		if String(row.uid).is_empty():
+			menu_feedback = "FALLEN is always under your command."
+		else:
+			var on := not bool(row.member.get("auto", false))
+			SurvivalState.update_member(String(row.uid), {"auto": on})
+			menu_feedback = "%s: %s" % [String(row.name), "AUTO" if on else "MANUAL"]
+	elif int(row.count) <= 0:
+		menu_feedback = "No %s in the bag." % String(row.name)
+	else:
+		menu_target = 0
+		menu_feedback = "Use %s on whom? Up/Down: select   Z: use   X: back" % String(row.name)
+	_redraw()
+
+
+## Consumível fora da batalha (D-111): mesmas quantias da batalha; não revive nem gasta em alvo cheio.
+func use_item_on_map(item_id: String, uid: String) -> String:
+	var def := SurvivalData.shop_item(item_id)
+	var s := SurvivalState.data()
+	var kind := String(def.get("kind", ""))
+	var amount := int(def.get("amount", 0))
+	if kind in ["hp", "en"] and SurvivalRelics.party_has(s, "item_boost"):
+		amount = int(round(float(amount) * 1.5))
+	var name := "FALLEN"
+	var changes := {}
+	if uid.is_empty():
+		var hp := int(s.fallen_hp)
+		var en := int(s.fallen_en)
+		var top_hp := SurvivalState.fallen_max_hp()
+		var top_en := SurvivalState.fallen_max_en()
+		var new_hp := hp
+		var new_en := en
+		match kind:
+			"hp": new_hp = mini(top_hp, hp + amount)
+			"en": new_en = mini(top_en, en + amount)
+			"full":
+				new_hp = top_hp
+				new_en = top_en
+		if new_hp == hp and new_en == en:
+			return "NO EFFECT — FALLEN is full; item kept."
+		changes = {"fallen_hp": new_hp, "fallen_en": new_en}
+	else:
+		var m := SurvivalState.find_member(uid)
+		name = String(m.get("name", "?"))
+		if bool(m.get("down", false)):
+			return "%s is down: only HEAL at the sanctuary revives. Item kept." % name
+		var st := SurvivalState.member_stats(m)
+		var hp := SurvivalState.member_hp(m)
+		var en := int(m.get("en", 0))
+		var pp := int(m.get("pp", 0))
+		var prays := SurvivalAllies.prays(m)
+		var nh := hp
+		var ne := en
+		var np := pp
+		match kind:
+			"hp": nh = mini(st.max_hp, hp + amount)
+			"en":
+				if prays: np = mini(PrayerBook.MAX_PP, pp + 2)
+				else: ne = mini(st.max_en, en + amount)
+			"full":
+				nh = st.max_hp
+				if prays: np = PrayerBook.MAX_PP
+				else: ne = st.max_en
+		if nh == hp and ne == en and np == pp:
+			return "NO EFFECT — %s is full; item kept." % name
+		SurvivalState.update_member(uid, {"hp": nh, "en": ne, "pp": np})
+	if not SurvivalState.consume_item(item_id):
+		return "No %s in the bag." % String(def.get("name", "?"))
+	if not changes.is_empty():
+		SurvivalState.patch(changes)
+	return "%s used on %s." % [String(def.get("name", "?")), name]
+
+
+func _draw_menu() -> void:
+	var b := Rect2(158, 70, 500, 380)
+	_panel(b, GOLD_INK)
+	_text(bold_font(), "STATUS / ITEMS / SETTINGS", b.get_center().x, b.position.y + 22, 14, GOLD_INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var rows := menu_rows()
+	var unit_i := -1
+	var y := b.position.y + 46
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		var selected := i == menu_index and menu_target < 0
+		if String(row.type) == "unit":
+			unit_i += 1
+			var target_sel := menu_target == unit_i
+			if selected or target_sel:
+				_overlay.draw_rect(Rect2(b.position.x + 10, y - 13, b.size.x - 20, 34), Color(1, 1, 1, 0.16))
+			var line := ""
+			if String(row.uid).is_empty():
+				var fs := SurvivalState.fallen_stats()
+				var s := SurvivalState.data()
+				line = "HP %d/%d  EN %d/%d  SP %d" % [int(s.fallen_hp), fs.max_hp, int(s.fallen_en), fs.max_en, fs.sp_value()]
+			else:
+				var m: Dictionary = row.member
+				var st := SurvivalState.member_stats(m)
+				line = ("DOWN — HEAL at the sanctuary  " if bool(m.get("down", false)) else "") + "HP %d/%d  %s  SP %d" % [
+					SurvivalState.member_hp(m), st.max_hp,
+					("PP %d/%d" % [int(m.get("pp", 0)), PrayerBook.MAX_PP]) if SurvivalAllies.prays(m) else ("EN %d/%d" % [int(m.get("en", 0)), st.max_en]),
+					st.sp_value()]
+				var auto_on := bool(m.get("auto", false))
+				_text(bold_font(), "AUTO" if auto_on else "MANUAL", b.end.x - 18, y + 1, 11, BLUE_INK if auto_on else GREEN_INK, HORIZONTAL_ALIGNMENT_RIGHT)
+			_text(bold_font(), ("> " if selected or target_sel else "  ") + String(row.name), b.position.x + 16, y + 1, 12, Color.WHITE if selected or target_sel else INK)
+			_text(ui_font, line, b.position.x + 34, y + 16, 10, INK)
+			y += 38
+		else:
+			if String(rows[i - 1].type) == "unit":
+				_overlay.draw_line(Vector2(b.position.x + 10, y - 12), Vector2(b.end.x - 10, y - 12), Color(1, 1, 1, 0.25))
+				y += 4
+			if selected:
+				_overlay.draw_rect(Rect2(b.position.x + 10, y - 13, b.size.x - 20, 20), Color(1, 1, 1, 0.16))
+			_text(bold_font(), ("> " if selected else "  ") + "%s  x%d" % [String(row.name), int(row.count)], b.position.x + 16, y + 1, 12,
+					Color.WHITE if selected else INK)
+			_text(ui_font, String(SurvivalData.shop_item(String(row.id)).info), b.position.x + 200, y + 1, 10, INK)
+			y += 22
+	_text(ui_font, menu_feedback, b.get_center().x, b.end.y - 14, 11, INK, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+func _draw_hire() -> void:
+	var s := SurvivalState.data()
+	var b := Rect2(158, 110, 500, 250)
+	_panel(b, GOLD_INK)
+	_text(bold_font(), "HIRE AN ALLY — STRATUM %d" % SurvivalState.stratum(), b.get_center().x, b.position.y + 22, 14, GOLD_INK, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(bold_font(), "MACCA %dM   PARTY %d/%d   RESERVE %d/%d" % [int(s.get("macca", 0)), SurvivalState.party().size(), SurvivalAllies.PARTY_MAX,
+			SurvivalState.reserve().size(), SurvivalAllies.RESERVE_MAX], b.end.x - 14, b.position.y + 44, 11, GOLD_INK, HORIZONTAL_ALIGNMENT_RIGHT)
+	var rows := hire_rows()
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		var y := b.position.y + 64 + i * 50
+		var selected := i == hire_index
+		if selected:
+			_overlay.draw_rect(Rect2(b.position.x + 10, y - 4, b.size.x - 20, 44), Color(1, 1, 1, 0.16))
+		_text(bold_font(), ("> " if selected else "  ") + String(row.name), b.position.x + 16, y + 10, 12, Color.WHITE if selected else INK)
+		_text(bold_font(), "%dM" % int(row.price), b.end.x - 16, y + 10, 12,
+				GREEN_INK if int(s.get("macca", 0)) >= int(row.price) else ENEMY_INK, HORIZONTAL_ALIGNMENT_RIGHT)
+		var st: Dictionary = row.stats
+		_text(ui_font, "SP %d   HP %d  EN %d  ATK %d  MAK %d  DEF %d  MEF %d  AGI %d" % [SurvivalAllies.sp_of(st),
+				int(st.max_hp), int(st.max_en), int(st.atk), int(st.mak), int(st.defense), int(st.mef), int(st.agi)],
+				b.position.x + 30, y + 28, 10, INK)
+	if rows.is_empty():
+		_text(ui_font, "Nobody left to hire in this stratum.", b.get_center().x, b.position.y + 100, 12, INK, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(ui_font, hire_feedback, b.get_center().x, b.end.y - 14, 11, INK, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+func _draw_reserve() -> void:
+	var b := Rect2(158, 60, 500, 400)
+	_panel(b, GOLD_INK)
+	_text(bold_font(), "PARTY %d/%d — RESERVE %d/%d" % [SurvivalState.party().size(), SurvivalAllies.PARTY_MAX,
+			SurvivalState.reserve().size(), SurvivalAllies.RESERVE_MAX], b.get_center().x, b.position.y + 22, 14, GOLD_INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var rows := reserve_rows()
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		var m: Dictionary = row.member
+		var y := b.position.y + 46 + i * 30 + (8 if String(row.where) == "reserve" else 0)
+		var selected := i == reserve_index
+		var picked := String(m.uid) == reserve_pick
+		if selected or picked:
+			_overlay.draw_rect(Rect2(b.position.x + 10, y - 12, b.size.x - 20, 26), Color(1, 1, 1, 0.22 if picked else 0.16))
+		var st := SurvivalState.member_stats(m)
+		_text(bold_font(), ("> " if selected else "  ") + String(m.name), b.position.x + 16, y + 5, 12, Color.WHITE if selected else INK)
+		_text(ui_font, "%s   HP %d/%d   SP %d" % ["DOWN" if bool(m.get("down", false)) else "", SurvivalState.member_hp(m), st.max_hp, st.sp_value()],
+				b.position.x + 170, y + 5, 10, INK)
+		_text(bold_font(), "PARTY" if String(row.where) == "party" else "RESERVE", b.end.x - 16, y + 5, 10,
+				GREEN_INK if String(row.where) == "party" else BLUE_INK, HORIZONTAL_ALIGNMENT_RIGHT)
+	if rows.is_empty():
+		_text(ui_font, "No allies yet.", b.get_center().x, b.position.y + 100, 12, INK, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(ui_font, reserve_feedback, b.get_center().x, b.end.y - 14, 11, INK, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+## Quem pode usar relíquias no painel RELICS: o Fallen e cada aliado (grupo e reserva).
+func relic_wearers() -> Array[Dictionary]:
+	var out: Array[Dictionary] = [{"who": "fallen", "name": "FALLEN", "relics": SurvivalState.data().get("fallen_relics", []), "cap": SurvivalRelics.MAX_PER_UNIT}]
+	for list in [SurvivalState.party(), SurvivalState.reserve()]:
+		for m in list:
+			out.append({"who": String(m.uid), "name": String(m.name), "relics": m.get("relics", []), "cap": SurvivalRelics.cap_of(m)})
+	return out
+
+
+func _show_growth() -> void:
+	var s := SurvivalState.data()
+	var lines: Array = s.get("growth_toast", [])
+	if lines.is_empty():
+		return
+	growth_lines.clear()
+	for l in lines:
+		growth_lines.append(String(l))
+	SurvivalState.patch({"growth_toast": []})
+	_growth_until = Time.get_ticks_msec() + GROWTH_TOAST_MS
+	if is_inside_tree():
+		get_tree().create_timer(float(GROWTH_TOAST_MS) / 1000.0).timeout.connect(func() -> void:
+			growth_lines.clear()
+			_redraw())
+
+
+## Aviso do começo do estrato (Yoch presente): faixa no alto da vista 3D por alguns segundos.
+## Antes ia para a linha de dicas, que o "Z: HEAL & SHOP" do santuário escondia e o 1º passo apagava.
+const NOTICE_MS := 4500
+var notice_text := ""
+
+
+func show_notice(text: String) -> void:
+	notice_text = text
+	if is_inside_tree():
+		get_tree().create_timer(float(NOTICE_MS) / 1000.0).timeout.connect(func() -> void:
+			notice_text = ""
+			_redraw())
+	_redraw()
+
+
+func _draw_growth() -> void:
+	if not notice_text.is_empty():
+		var font: Font = ui_bold
+		var w := font.get_string_size(notice_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		var cx := FRAME_RECT.position.x + (AUTOMAP_RECT.position.x - FRAME_RECT.position.x) * 0.5
+		var box := Rect2(cx - w * 0.5 - 14, FRAME_RECT.position.y + 14, w + 28, 30)
+		hud.draw_rect(box, Color(0.03, 0.02, 0.03, 0.82))
+		hud.draw_rect(Rect2(box.position + Vector2(0.5, 0.5), box.size - Vector2.ONE), Color(SurvivalAllies.YOCH_INK, 0.9), false, 1)
+		_str(notice_text, cx, box.position.y + 20, SurvivalAllies.YOCH_INK, 15, true, HORIZONTAL_ALIGNMENT_CENTER)
+	if growth_lines.is_empty():
+		return
+	# Canto superior direito da vista 3D, ao lado do automapa (que ocupa o canto).
+	var x := AUTOMAP_RECT.position.x - 10
+	var y := FRAME_RECT.position.y + 22
+	for line in growth_lines:
+		_str(line, x, y, GREEN_INK, 12, true, HORIZONTAL_ALIGNMENT_RIGHT)
+		y += 18

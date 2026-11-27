@@ -1487,8 +1487,13 @@ func handle_confirm() -> void:
 			# Volta ao dungeon quando a batalha veio de um encontro no mapa.
 			var return_scene := String(Engine.get_meta(DUNGEON_RETURN_META, ""))
 			if not return_scene.is_empty():
-				Engine.remove_meta(DUNGEON_RETURN_META)
 				var fader := get_tree().root.get_node_or_null("SceneFader")
+				# Auditoria 2026-11-26: Z during the fade-in of this battle was ignored by the
+				# fader but the return scene was already forgotten, so the battle never left.
+				# Keep it until the fader is free; the next Z leaves.
+				if fader != null and String(fader.get("_phase")) != "":
+					return
+				Engine.remove_meta(DUNGEON_RETURN_META)
 				if fader != null:
 					fader.fade_to(return_scene)
 				else:

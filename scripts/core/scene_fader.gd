@@ -32,7 +32,19 @@ func is_busy() -> bool:
 
 ## Inicia a transição. `flash` é o lampejo vermelho do encontro no overworld.
 func fade_to(path: String, flash: bool = false) -> void:
-	if _phase != "" or path.is_empty():
+	if path.is_empty():
+		return
+	# Auditoria 2026-11-26: um pedido durante o fade-in era descartado em silêncio e quem pediu
+	# (o mapa, com encounter_pending ligado) ficava travado. Agora ele vira o fade-out a partir
+	# do escuro atual; durante um fade-out (outra troca já em curso) o primeiro pedido vence.
+	if _phase == "in":
+		var dark := 1.0 - clampf(_time / IN_TIME, 0.0, 1.0)
+		_target = path
+		_flash = false
+		_phase = "out"
+		_time = dark * OUT_TIME
+		return
+	if _phase != "":
 		return
 	_target = path
 	_flash = flash

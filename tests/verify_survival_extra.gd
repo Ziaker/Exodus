@@ -40,14 +40,29 @@ func _freeze(b: Control) -> void:
 	b._refresh_all()
 
 
+## D-111: a run começa só com o Fallen; estes testes lutam com o Yoch recrutado no grupo.
+## `yoch_relics` / `yoch_pp` / `yoch_hp` no patch viram a ficha dele.
+func _with_yoch(patch: Dictionary) -> Dictionary:
+	var y := SurvivalAllies.yoch_member("test_yoch")
+	y["relics"] = patch.get("yoch_relics", [])
+	y["pp"] = int(patch.get("yoch_pp", SurvivalData.YOCH_BASE.pp))
+	y["hp"] = int(patch.get("yoch_hp", -1))
+	var out := patch.duplicate()
+	for k in ["yoch_relics", "yoch_pp", "yoch_hp"]:
+		out.erase(k)
+	out["party"] = [y]
+	return out
+
+
 func _new_battle(enc_id: String, extra: Dictionary) -> Control:
 	SurvivalState.reset()
 	var patch := {
 		"encounter_id": enc_id,
 		"gains": {"max_hp": 0, "max_en": 0, "atk": 0, "mak": 0, "defense": 0, "mef": 0, "agi": 20},
 	}
-	for key in extra.keys():
-		patch[key] = extra[key]
+	var full := _with_yoch(extra)
+	for key in full.keys():
+		patch[key] = full[key]
 	SurvivalState.patch(patch)
 	var b: Control = load(SurvivalData.BATTLE_SCENE).instantiate()
 	b.suppress_scene_change = true
@@ -200,6 +215,12 @@ func _run() -> void:
 	SurvivalState.clear()
 	ProgressStore.clear()
 	ProgressStore.save_path_override = ""
+	if meta_backup.is_empty():
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SurvivalMeta.SAVE_PATH))
+	else:
+		var mf := FileAccess.open(SurvivalMeta.SAVE_PATH, FileAccess.WRITE)
+		mf.store_string(meta_backup)
+		mf.close()
 	print("SURVIVAL EXTRA CHECKS PASSED: %d FAILED: %d" % [checks, int(failed)])
 	quit(1 if failed else 0)
 

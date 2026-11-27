@@ -126,11 +126,15 @@ func _run() -> void:
 	_check(int(SurvivalState.data().macca) == SurvivalData.STARTING_MACCA - 20, "Macca deducted on purchase")
 	_check(int(SurvivalState.data().bead) == SurvivalData.STARTING_BEADS + 1, "BEAD count incremented")
 	_check(SurvivalState.consume_item("bead"), "Consuming BEAD succeeds")
-	SurvivalState.patch({"fallen_hp": 1, "fallen_en": 0, "yoch_hp": 2})
+	var hurt := SurvivalAllies.yoch_member("data_y")
+	hurt["hp"] = 2
+	SurvivalState.patch({"fallen_hp": 1, "fallen_en": 0, "party": [hurt]})
 	SurvivalState.heal_party_full()
 	_check(int(SurvivalState.data().fallen_hp) == SurvivalState.fallen_max_hp(), "Healer restores Fallen HP")
 	_check(int(SurvivalState.data().fallen_en) == SurvivalState.fallen_max_en(), "Healer restores Fallen EN")
-	_check(int(SurvivalState.data().yoch_hp) == SurvivalState.yoch_max_hp(), "Healer restores Yoch HP")
+	var healed: Dictionary = SurvivalState.party()[0]
+	_check(SurvivalState.member_hp(healed) == SurvivalState.member_max_hp(healed), "Healer restores the ally's HP")
+	_check(SurvivalState.reset().party.is_empty(), "D-111: a new run starts with the Fallen alone")
 	var left := SurvivalState.use_continue()
 	_check(left == 2, "Using continue decrements 3 -> 2 (got %d)" % left)
 	_check(ProgressStore.load_gains() == before_gains, "SurvivalState never modifies ProgressStore")

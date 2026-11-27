@@ -68,7 +68,7 @@ func _run() -> void:
 
 	_check(w.talk(), "Z opens unified Healer & Shop option bar")
 	_check(w.service_open, "Service bar is open")
-	_check(w.service_options().size() == 7, "Service bar has HEAL, SHOP, RELICS, NEW RUN, DAILY, TITLE, LEAVE")
+	_check(w.service_options().size() == 9, "Service bar has HEAL, SHOP, RELICS, HIRE, RESERVE, NEW RUN, DAILY, TITLE, LEAVE")
 
 	# Opção 0: HEAL (grátis).
 	_check(w.confirm_service_option() == "heal", "Option 0 executes HEAL")

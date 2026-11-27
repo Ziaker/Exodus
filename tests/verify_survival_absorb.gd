@@ -63,7 +63,7 @@ func _run() -> void:
 				_check(not SkillBook.def(StringName(option.skill)).is_empty(), "New skill exists in SkillBook")
 			else:
 				# D-071: raridade COMMON/RARE/EPIC; HP/EN têm valores fixos por raridade;
-				# EPIC pode ser +3/+3 em dois atributos (kind "stat2"); "yoch" vai para a Yoch.
+				# EPIC pode ser +3/+3 em dois atributos (kind "stat2"). D-111: não há mais oferta "yoch".
 				var keys: Array = option.stats if String(option.kind) == "stat2" else [option.stat]
 				for key in keys:
 					var hp_en := StringName(key) in [&"max_hp", &"max_en"]
@@ -71,9 +71,9 @@ func _run() -> void:
 					_check((hp_en and amount in [3, 5, 6, 8, 10, 16]) or (not hp_en and amount >= 1 and amount <= SurvivalAbsorb.MAX_POINTS),
 							"Stat amount follows the rarity table (got %d %s)" % [amount, key])
 					_check(String(option.rarity) in SurvivalAbsorb.RARITIES, "Option has a rarity")
-					if String(option.kind) != "yoch":
-						_check(not stats_seen.has(String(key)), "Stat options are distinct")
-						stats_seen[String(key)] = true
+					_check(String(option.kind) != "yoch", "D-111: no YOCH +n offer")
+					_check(not stats_seen.has(String(key)), "Stat options are distinct")
+					stats_seen[String(key)] = true
 		skills += skill_options
 	_check(absf(float(skills) / 1000.0 - SurvivalAbsorb.SKILL_CHANCE) < 0.05,
 			"Skill chance is ~30%% (got %.1f%%)" % (float(skills) / 10.0))

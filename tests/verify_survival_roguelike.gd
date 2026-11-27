@@ -62,12 +62,16 @@ func _run() -> void:
 		var after: String = str([st.atk, st.mak, st.defense, st.mef, st.agi, st.max_hp, st.max_en])
 		_check(before != after or String(r.id) == "dry_well", "Relic %s changes a stat" % id)
 	_check(SurvivalRelics.STARTER_IDS.size() == 6, "6 starter relics")
-	var eq := {"fallen_relics": [], "yoch_relics": []}
+	var eq := {"fallen_relics": [], "party": [SurvivalAllies.yoch_member("rl_y")], "reserve": []}
 	for id in ["shard_of_urim", "ashen_tablet", "iron_covenant"]:
-		eq = SurvivalRelics.toggle(eq, "fallen", id)
-	_check((eq.fallen_relics as Array).size() == 2, "Fallen capped at 2 relics")
-	eq = SurvivalRelics.toggle(eq, "yoch", "shard_of_urim")
-	_check((eq.yoch_relics as Array).has("shard_of_urim") and not (eq.fallen_relics as Array).has("shard_of_urim"),
+		eq.merge(SurvivalRelics.toggle(eq, "fallen", id), true)
+	_check((eq.fallen_relics as Array).size() == 1, "D-111: Fallen capped at 1 relic")
+	for id in ["ashen_tablet", "iron_covenant", "ember_tooth"]:
+		eq.merge(SurvivalRelics.toggle(eq, "rl_y", id), true)
+	_check((eq.party[0].relics as Array).size() == 2, "D-111: a human (Yoch) holds 2 relics")
+	eq.merge(SurvivalRelics.toggle(eq, "rl_y", "ashen_tablet"), true)
+	eq.merge(SurvivalRelics.toggle(eq, "rl_y", "shard_of_urim"), true)
+	_check((eq.party[0].relics as Array).has("shard_of_urim") and not (eq.fallen_relics as Array).has("shard_of_urim"),
 			"Equipping elsewhere moves the unique relic")
 
 	# Identificação: nome hebraico para toda skill,??? só para id desconhecido.

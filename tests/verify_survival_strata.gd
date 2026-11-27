@@ -255,8 +255,8 @@ func _absorb() -> void:
 			"Deeper strata roll more RARE/EPIC (%d vs %d)" % [rarity_by_stratum[5], rarity_by_stratum[1]])
 	var skill_share := float(skills) / float(total)
 	_check(skill_share > 0.25 and skill_share < 0.35, "~30%% skill chance (%.3f)" % skill_share)
-	var yoch_share := float(yoch) / float(total)
-	_check(yoch_share > 0.20 and yoch_share < 0.30, "~25%% Yoch option (%.3f)" % yoch_share)
+	# D-111: a absorção só melhora o Fallen; a oferta YOCH +n saiu.
+	_check(yoch == 0, "D-111: no YOCH +n offer any more (%d)" % yoch)
 	# Desespero sobe a raridade: nunca COMMON com HP < 35%.
 	var common_desperate := 0
 	for i in 500:
@@ -280,17 +280,15 @@ func _absorb() -> void:
 	_check(bonus_skills > 330, "Skill bonus raises the skill rate (%d/500)" % bonus_skills)
 	# Aplicação pura de cada tipo.
 	var st := UnitStats.new()
-	var ys := UnitStats.new()
 	var gains := {}
-	var yg := {}
 	var learned: Array[StringName] = []
-	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "stat", "stat": &"max_hp", "amount": 10}, ys, yg)
+	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "stat", "stat": &"max_hp", "amount": 10})
 	_check(st.max_hp == 20 and int(gains.max_hp) == 10, "max_hp offer applies")
-	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "stat2", "stats": [&"atk", &"agi"], "amount": 3}, ys, yg)
+	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "stat2", "stats": [&"atk", &"agi"], "amount": 3})
 	_check(st.atk == 8 and st.agi == 8 and int(gains.atk) == 3 and int(gains.agi) == 3, "EPIC dual offer applies")
-	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "yoch", "stat": &"defense", "amount": 4}, ys, yg)
-	_check(ys.defense == 9 and int(yg.defense) == 4 and not gains.has("defense"), "Yoch offer goes to Yoch only")
-	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "skill", "skill": &"hellfire"}, ys, yg)
+	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "yoch", "stat": &"defense", "amount": 4})
+	_check(st.defense == 5 and not gains.has("defense"), "D-111: an old YOCH offer changes nothing")
+	SurvivalAbsorb.apply_option(st, gains, learned, {"kind": "skill", "skill": &"hellfire"})
 	_check(learned == [&"hellfire"], "Skill offer learns")
 
 
@@ -310,7 +308,9 @@ func _relics() -> void:
 	_check(st.atk == 5 + 9 and st.agi == 7, "apply_all applies relics + covenant")
 	_check(SurvivalRelics.covenants(["shard_of_urim"]).is_empty(), "Half a pair gives nothing")
 	_check(SurvivalRelics.has_perk(["golden_calf", "merchant_seal"], "mammon"), "MAMMON perk from the pair")
-	_check(SurvivalRelics.party_has({"fallen_relics": [], "yoch_relics": ["raziel_book"]}, "identified"), "party_has sees Yoch's relics")
+	_check(SurvivalRelics.party_has({"fallen_relics": [], "party": [{"relics": ["raziel_book"]}]}, "identified"), "party_has sees an ally's relics")
+	_check(not SurvivalRelics.party_has({"fallen_relics": [], "party": [], "reserve": [{"relics": ["raziel_book"]}]}, "identified"), "D-111: the reserve does not count")
+	_check(SurvivalRelics.cap_of({"kind": "demon"}) == 1 and SurvivalRelics.cap_of({"kind": "human"}) == 2 and SurvivalRelics.cap_of({"kind": "yoch"}) == 2 and SurvivalRelics.cap_of("fallen") == 1, "D-111: 1 relic per unit, humans 2")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	var drops := SurvivalRelics.roll(rng, SurvivalRelics.all_ids(), [], 3)
@@ -349,14 +349,18 @@ func _economy() -> void:
 	_check(SurvivalState.heal_price() == 30, "OMEN 2: heal never free")
 	SurvivalState.patch({"omen": 0})
 	# Preços: inflação e descontos.
-	SurvivalState.patch({"stratum": 1, "fallen_relics": [], "yoch_relics": []})
+	SurvivalState.patch({"stratum": 1, "fallen_relics": [], "party": []})
 	_check(SurvivalState.item_price("bead") == 20, "BEAD 20M on stratum 1")
 	SurvivalState.patch({"stratum": 3})
 	_check(SurvivalState.item_price("bead") == 26, "BEAD inflates to 26M on stratum 3")
 	SurvivalState.patch({"fallen_relics": ["merchant_seal"]})
 	_check(SurvivalState.item_price("bead") == 20, "MERCHANT SEAL -25%")
-	SurvivalState.patch({"fallen_relics": ["merchant_seal", "golden_calf"]})
-	_check(SurvivalState.item_price("bead") == 13, "MAMMON -50%")
+	# D-111: 1 relíquia no Fallen; o par MAMMON precisa de um humano (2 relíquias).
+	var keeper := SurvivalAllies.yoch_member("eco_yoch")
+	keeper["relics"] = ["merchant_seal", "golden_calf"]
+	SurvivalState.patch({"fallen_relics": [], "party": [keeper]})
+	_check(SurvivalState.item_price("bead") == 13, "MAMMON -50% (pair on a human ally)")
+	SurvivalState.patch({"party": []})
 	var stock := SurvivalData.shop_stock(9, 2)
 	_check(stock.size() == 4 and stock[0] == "bead" and stock[1] == "chakra", "Shop stock: 2 fixed + 2 rotating")
 	var varied := {}
@@ -368,10 +372,10 @@ func _economy() -> void:
 		_check(SurvivalState.buy_item(id), "Buy %s" % id)
 	_check(SurvivalState.total_items() == 1 + 1 + 3, "total_items counts every item key")
 	# Identificação por relíquia.
-	SurvivalState.patch({"yoch_relics": ["raziel_book"]})
+	SurvivalState.patch({"fallen_relics": ["raziel_book"]})
 	SurvivalState.learn_skill(&"hellfire")
 	_check(not (SurvivalState.data().unidentified as Array).has("hellfire"), "BOOK OF RAZIEL: skill arrives identified")
-	SurvivalState.patch({"yoch_relics": []})
+	SurvivalState.patch({"fallen_relics": []})
 	SurvivalState.learn_skill(&"mend")
 	_check((SurvivalState.data().unidentified as Array).has("mend"), "Without it the skill is unidentified")
 	# OMEN 4 = 2 continues.
@@ -385,12 +389,40 @@ func _economy() -> void:
 	SurvivalState.patch({"defeated": wardens, "stratum": 5})
 	_check(SurvivalState.run_cleared(), "Run cleared when the stratum 5 warden falls")
 	_check(not SurvivalState.descend(), "No descend past stratum 5")
-	# Yoch cresce: status vêm de yoch_gains + relíquias.
-	SurvivalState.patch({"yoch_gains": {"max_hp": 10, "max_en": 0, "atk": 2, "mak": 0, "defense": 0, "mef": 0, "agi": 0},
-		"yoch_relics": ["blood_vessel", "manna_jar"]})
-	var ys := SurvivalState.yoch_stats()
-	_check(ys.max_hp == int(SurvivalData.YOCH_BASE.max_hp) + 10 + 20 + 20 and ys.atk == int(SurvivalData.YOCH_BASE.atk) + 2, "Yoch stats include gains, relic and BLOOD PACT (%d)" % ys.max_hp)
-	_check(SurvivalState.yoch_max_hp() == ys.max_hp, "yoch_max_hp matches yoch_stats")
+	# D-111: o Yoch tem sempre o SP do Fallen; as relíquias dele somam por cima.
+	SurvivalState.patch({"defeated": [], "stratum": 1})
+	var y := SurvivalAllies.yoch_member("eco_y2")
+	var fsp := SurvivalState.fallen_sp()
+	_check(SurvivalState.member_stats(y).sp_value() == fsp and SurvivalState.member_stats(y).max_en == 0, "Yoch SP equals Fallen SP (%d) with no EN" % fsp)
+	SurvivalState.patch({"gains": {"max_hp": 0, "max_en": 0, "atk": 5, "mak": 0, "defense": 0, "mef": 0, "agi": 0}})
+	_check(SurvivalState.member_stats(y).sp_value() == SurvivalState.fallen_sp(), "Yoch follows the Fallen after an absorption")
+	y["relics"] = ["blood_vessel"]
+	_check(SurvivalState.member_stats(y).max_hp == SurvivalAllies.yoch_base_stats(SurvivalState.fallen_sp()).max_hp + 20, "Yoch's relic adds on top")
+	SurvivalState.patch({"gains": SurvivalState._zero_gains()})
+	# Grupo e reserva.
+	SurvivalState.patch({"party": [], "reserve": []})
+	var adds: Array[String] = []
+	for i in 11:
+		adds.append(SurvivalState.add_member(SurvivalAllies.new_member(SurvivalState.new_uid(), "pixie", SurvivalAllies.stats_like_battle("pixie", fsp))))
+	_check(adds.slice(0, 2) == ["party", "party"] and adds.slice(2, 10).all(func(w: String) -> bool: return w == "reserve") and adds[10] == "", "2 in the party, 8 in the reserve, then no room (%s)" % str(adds))
+	var p0 := String(SurvivalState.party()[0].uid)
+	var r0 := String(SurvivalState.reserve()[0].uid)
+	_check(not SurvivalState.move_member(p0), "Reserve full: a party member cannot go there")
+	_check(SurvivalState.move_member(r0, p0) and String(SurvivalState.party()[0].uid) == r0 and SurvivalState.reserve().any(func(m: Dictionary) -> bool: return String(m.uid) == p0), "Swap party <-> reserve")
+	# Relíquias: teto 1 no demônio, troca de dono.
+	SurvivalState.patch({"relics": ["shard_of_urim", "ember_tooth"], "fallen_relics": []})
+	SurvivalState.toggle_relic(r0, "shard_of_urim")
+	SurvivalState.toggle_relic(r0, "ember_tooth")
+	_check((SurvivalState.find_member(r0).relics as Array) == ["shard_of_urim"], "A demon ally keeps 1 relic")
+	SurvivalState.toggle_relic("fallen", "shard_of_urim")
+	_check((SurvivalState.data().fallen_relics as Array) == ["shard_of_urim"] and (SurvivalState.find_member(r0).relics as Array).is_empty(), "Equipping elsewhere moves the relic")
+	# HEAL revive os caídos (grupo e reserva).
+	SurvivalState.update_member(r0, {"down": true, "hp": 0})
+	SurvivalState.patch({"heals_used": 0, "omen": 0})
+	SurvivalState.sanctuary_heal()
+	var healed := SurvivalState.find_member(r0)
+	_check(not bool(healed.down) and SurvivalState.member_hp(healed) == SurvivalState.member_max_hp(healed), "HEAL revives a downed ally")
+	SurvivalState.patch({"party": [], "reserve": [], "fallen_relics": []})
 
 
 func _meta() -> void:
@@ -415,31 +447,35 @@ func _meta() -> void:
 
 
 func _save() -> void:
-	# v1 migra: relíquias iniciais antigas, estrato 1, campos novos com padrão.
-	var v1 := {"fallen_hp": 20, "fallen_en": 10, "yoch_hp": 12, "yoch_pp": 2,
-		"gains": {"max_hp": 0, "max_en": 0, "atk": 2, "mak": 0, "defense": 0, "mef": 0, "agi": 0},
-		"skills": [], "unidentified": [], "relics": SurvivalRelics.STARTER_IDS.duplicate(),
-		"fallen_relics": ["blood_vessel"], "yoch_relics": [], "absorbs": {}, "seed": 77, "macca": 50,
-		"bead": 1, "chakra": 0, "continues": 3, "defeated": [], "encounter_id": "", "cell": [12, 10],
-		"facing": 0, "visited": [], "seen": [], "enemies": []}
-	v1["fallen_hp"] = int(SurvivalData.FALLEN_BASE.max_hp) + 15 # acima do maximo: so vale com a BLOOD VESSEL (bug antigo do validador)
-	var f := FileAccess.open(SurvivalState.SAVE_PATH, FileAccess.WRITE)
-	f.store_string(JSON.stringify({"version": 1, "state": v1}))
-	f.close()
-	if Engine.has_meta(SurvivalState.META_KEY):
-		Engine.remove_meta(SurvivalState.META_KEY)
-	_check(SurvivalState.load_from_file(), "v1 save migrates (HP above base thanks to a relic is valid)")
+	# D-111: saves antigos (v1/v2, com o Yoch fixo no grupo) são descartados.
+	for old in [1, 2]:
+		var f := FileAccess.open(SurvivalState.SAVE_PATH, FileAccess.WRITE)
+		f.store_string(JSON.stringify({"version": old, "state": {"fallen_hp": 20}}))
+		f.close()
+		if Engine.has_meta(SurvivalState.META_KEY):
+			Engine.remove_meta(SurvivalState.META_KEY)
+		_check(not SurvivalState.has_save() and not SurvivalState.load_from_file(), "v%d save is discarded (run restarts)" % old)
+	SurvivalState.reset()
+	var yoch := SurvivalAllies.yoch_member("save_y")
+	yoch["relics"] = ["blood_vessel", "manna_jar"]
+	SurvivalState.patch({"party": [yoch]})
+	Engine.remove_meta(SurvivalState.META_KEY)
+	_check(SurvivalState.load_from_file(), "v3 save with an ally loads")
 	var s := SurvivalState.data()
-	_check(int(s.stratum) == 1 and (s.relics as Array).size() == 6 and int(s.medicine) == 0, "Migrated fields")
+	_check((s.party as Array).size() == 1 and String(s.party[0].kind) == "yoch", "Ally kept in the save")
 	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SurvivalState.SAVE_PATH))
-	_check(int(raw.version) == 2, "Save rewritten as v2")
-	# Inválidos: estrato fora, célula de parede no labirinto do estrato, relíquia desconhecida.
-	for bad in [{"stratum": 9}, {"relics": ["nope"]}, {"omen": 7}, {"medicine": -1}, {"yoch_gains": {"atk": -3}}]:
+	_check(int(raw.version) == 3, "Save written as v3")
+	var demon_two := SurvivalAllies.new_member("bad_d", "pixie", SurvivalAllies.stats_like_battle("pixie", 73))
+	demon_two["relics"] = ["shard_of_urim", "ember_tooth"]
+	var bads: Array = [{"stratum": 9}, {"relics": ["nope"]}, {"omen": 7}, {"medicine": -1},
+		{"party": [demon_two]}, {"party": [{"uid": "x"}]}, {"fallen_relics": ["shard_of_urim", "ember_tooth"]},
+		{"party": [yoch, yoch]}, {"reserve": [demon_two]}]
+	for bad in bads:
 		var copy: Dictionary = s.duplicate(true)
 		for k in bad.keys():
 			copy[k] = bad[k]
 		var g := FileAccess.open(SurvivalState.SAVE_PATH, FileAccess.WRITE)
-		g.store_string(JSON.stringify({"version": 2, "state": copy}))
+		g.store_string(JSON.stringify({"version": 3, "state": copy}))
 		g.close()
 		Engine.remove_meta(SurvivalState.META_KEY)
 		_check(not SurvivalState.load_from_file(), "Invalid save refused: %s" % str(bad))

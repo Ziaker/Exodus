@@ -98,7 +98,8 @@ func _create_units() -> void:
 		slot += 1
 	_ally = _members[0] if not _members.is_empty() else null
 	var duel_state: Dictionary = s.get("duel", {})
-	duel = not duel_state.is_empty()
+	# Só é luta-teste quando o encontro é o candidato dela (um duel velho no save não vaza).
+	duel = not duel_state.is_empty() and String(duel_state.get("candidate", "")) == String(s.get("encounter_id", ""))
 
 	var enc_id := String(s.get("encounter_id", "pixie"))
 	# Uma run tem uma semente, mas cada encontro deve sortear uma oferta diferente:
@@ -1154,8 +1155,8 @@ func _unit_from_member(m: Dictionary, slot: int, s: Dictionary) -> BattleUnit:
 		u.start_praying(clampi(pp, 0, PrayerBook.MAX_PP))
 		u.set_meta("spells", (m.get("spells", []) as Array).duplicate())
 		# Em AUTO a IA dos inimigos ganha PP com PRAY (em MANUAL, PRAY é o comando do herói).
-		if bool(m.get("auto", false)) and not skills.has(&"pray"):
-			skills.append(&"pray")
+		if bool(m.get("auto", false)):
+			_add_auto_prayers(u, skills)
 	else:
 		u.current_en = clampi(int(m.get("en", st.max_en)), 0, st.max_en)
 	u.skills = skills
@@ -1384,12 +1385,14 @@ func set_member_auto(uid: String, on: bool) -> void:
 			continue
 		if on:
 			_auto[u.id] = true
-			if u.prays and not u.skills.has(&"pray"):
-				u.skills.append(&"pray")
+			if u.prays:
+				_add_auto_prayers(u, u.skills)
 		else:
 			_auto.erase(u.id)
 			if u.prays:
-				u.skills.erase(&"pray")
+				for sk in u.get_meta("auto_added", []):
+					u.skills.erase(sk)
+				u.remove_meta("auto_added")
 	if _party_panel != null:
 		_party_panel.queue_redraw()
 
@@ -1600,16 +1603,11 @@ const OFFER_BOUNDS := Rect2(122, 92, 300, 190)
 func _show_offer_overlay() -> void:
 	_hide_offer_overlay()
 	_offer_texture = null
-	if offer_unit != null and not offer_unit.sprite_path.is_empty() and ResourceLoader.exists(offer_unit.sprite_path):
-		var src: Texture2D = load(offer_unit.sprite_path)
-		var img := src.get_image()
+	if offer_unit != null:
+		# Battler do VX recortado (sem moldura e fundo), como a figura do mapa.
+		var img := SurvivalAllies.cutout_image(offer_unit.sprite_path)
 		if img != null:
-			if img.is_compressed():
-				img.decompress()
-			img.convert(Image.FORMAT_RGBA8)
-			var used := img.get_used_rect()
-			if used.size.x > 0 and used.size.y > 0:
-				_offer_texture = ImageTexture.create_from_image(img.get_region(used))
+			_offer_texture = ImageTexture.create_from_image(img)
 	_offer_layer = CanvasLayer.new()
 	_offer_layer.layer = 61
 	_offer_panel = Control.new()
@@ -1682,3 +1680,22 @@ func _finish_duel(won: bool) -> void:
 	hud.feedback = "Everything but items is restored. Z / Enter: return to the Survival Arena."
 	hud.mode = "result"
 	_refresh_all()
+
+
+## AUTO = a IA dos inimigos: quem reza ganha PP com PRAY e usa as rezas que a IA conhece (as que
+## o SkillBook também define: SANVERIM, NECHAMAH, CHERAV). Em MANUAL elas ficam no menu PRAY.
+func _add_auto_prayers(u: BattleUnit, skills: Array[StringName]) -> void:
+	var added: Array[StringName] = []
+	var wanted: Array[StringName] = [&"pray"]
+	# Só as rezas que a IA dos inimigos sabe resolver (as dos humanos, D-107). Desde a D-112 o
+	# SkillBook.def() devolve definição para TODA reza; Refuah, Ra'am, Magen etc. pelo caminho da
+	# IA gastavam PP sem efeito nenhum (achado da auditoria 2026-11-26).
+	for sp in u.get_meta("spells", []):
+		var id := StringName(String(sp))
+		if PrayerBook.is_human_spell(id):
+			wanted.append(id)
+	for id in wanted:
+		if not skills.has(id):
+			skills.append(id)
+			added.append(id)
+	u.set_meta("auto_added", added)
