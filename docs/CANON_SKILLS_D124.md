@@ -11,16 +11,16 @@
 
 ## 1. Catálogo Canônico de Ataques (6 base + 2 evoluções `ZAHAV`)
 
-| # | Nome | Evolução `ZAHAV` | Origem (Survival D-106) | Custo / Tipo / Alvo | Efeito Canônico |
+| # | Nome | Evolução `ZAHAV` | Origem (Survival D-106) | Ficha (`ACT/EN/CAT/ALVO`, D-131) | Efeito Canônico |
 |---|---|---|---|---|---|
-| 1 | **Mazz Bite** | — | Rework de `SHADOW BITE` | `1 ACT / 30% HP máx.` · Físico · 1 alvo | A troco de perder **30% do HP máximo** *(requer HP atual > custo)*, realiza um ataque físico de **alta velocidade (`HIGH SPEED`)** causando **10 de dano base + 30% do HP máximo** de dano extra. |
-| 2 | **Fang Sting** | **Fang Spine** | Rework de `FANG FLURRY` | `2 ACT / 6 EN` · Físico · 1 alvo | Causa **5 + ATK** de dano e aplica **`BLEED` somente no `POINT`** (se acertar no `BEAM`/blast, **não** aplica `BLEED`). |
-| 2Z | **Fang Spine** *(ZAHAV)* | Evolução de `Fang Sting` | — | `3 ACT / 10 EN` · Físico · Alvo alternável | Realiza **2 ataques consecutivos ou intercalados entre alvos** em uma mesma ação, causando **`15 + ATK` por golpe** *(autorizada calibração para baixo se excessivo no balanceamento)*, aplicando **`BLEED` ao contato** e **`BLEED ×2` no `POINT`**. |
-| 3 | **Vuln Pierce** | — | Rework de `SOUL PIERCE` | `1 ACT / 8 EN` · Físico · 1 alvo | Causa **15 + ATK** de dano; causa o **dobro de dano** em alvos que estejam realizando uma **ação não-ofensiva**. |
-| 4 | **Dark Breath** | — | Rework de `FROST BREATH` | `3 ACT / 15 EN` · Mágico · Todos inimigos | Solta um bafo de trevas (**0 de dano**): reduz o **PP em 3** de quem não desvia e **cega** até o fim do round *(alvos sem PP sofrem apenas a cegueira)*. |
-| 5 | **Umbral Gaze** | — | Rework de `VOID GAZE` | `3 ACT / 15 EN` · Mágico · 1 alvo | Abre um círculo de sombras nos pés do alvo e o espeta com espinhos de trevas, causando **15 + MAK** e **aprisionando o alvo por 2 ações globais** *(ver §2.3)*. |
-| 6 | **Ignoma** | **Ignoma Esh** | Nova skill canônica | `2 ACT / 8 EN` · Mágico · 1 alvo | Lança uma bola de fogo no alvo causando **10 + MAK** de dano com **35% de chance de causar `BURN`**. |
-| 6Z | **Ignoma Esh** *(ZAHAV)* | Evolução de `Ignoma` | — | `3 ACT / 12 EN` · Mágico · 1 alvo alternável | Lança **duas bolas de fogo** em 1 alvo ou em 2 alvos diferentes, causando cada uma **10 + MAK** de dano com **35% de chance de causar `BURN`**. *(Única skill da D-124 que usa **letras hebraicas `אש`** no VFX, por ter `Esh` no nome.)* |
+| 1 | **Mazz Bite** | — | Rework de `SHADOW BITE` | `1ACT / 30% HP máx. / PHYS / 1T` | A troco de perder **30% do HP máximo** *(requer HP atual > custo)*, realiza um ataque físico de **alta velocidade (`HIGH SPEED`)** causando **10 `PHYS` base + 30% do HP máximo** de dano extra. |
+| 2 | **Fang Sting** | **Fang Spine** | Rework de `FANG FLURRY` | `2ACT / 6EN / PHYS / 1T` | Causa **5 `PHYS` + ATK** de dano e aplica **`BLEED` somente no `POINT`** (se acertar no `BEAM`/blast, **não** aplica `BLEED`). |
+| 2Z | **Fang Spine** *(ZAHAV)* | Evolução de `Fang Sting` | — | `3ACT / 10EN / PHYS / 1T–2T` *(alternável)* | Realiza **2 ataques consecutivos ou intercalados entre alvos** em uma mesma ação, causando **`15 PHYS + ATK` por golpe** *(autorizada calibração para baixo se excessivo no balanceamento)*, aplicando **`BLEED` ao contato** e **`BLEED ×2` no `POINT`**. |
+| 3 | **Vuln Pierce** | — | Rework de `SOUL PIERCE` | `1ACT / 8EN / PHYS / 1T` | Causa **15 `PHYS` + ATK** de dano; causa o **dobro de dano** em **Alvos Vulneráveis** *(ação não-ofensiva ou efeito que força `PASS`, unificado pela D-131)*. |
+| 4 | **Dark Breath** | — | Rework de `FROST BREATH` | `3ACT / 15EN / STAT / 3T` *(todos inimigos)* | Solta um bafo de trevas (**0 de dano**): reduz o **PP em 3** de quem não desvia e **cega** até o fim do round *(alvos sem PP sofrem apenas a cegueira)*. |
+| 5 | **Umbral Gaze** | — | Rework de `VOID GAZE` | `3ACT / 15EN / MAGI / 1T` | Abre um círculo de sombras nos pés do alvo e o espeta com espinhos de trevas, causando **15 `MAGI` + MAK** e **aprisionando o alvo por 2 ações globais** *(ver §2.3)*. |
+| 6 | **Ignoma** | **Ignoma Esh** | Nova skill canônica | `2ACT / 8EN / MAGI / 1T` | Lança uma bola de fogo no alvo causando **10 `MAGI` + MAK** de dano com **35% de chance de causar `BURN`**. |
+| 6Z | **Ignoma Esh** *(ZAHAV)* | Evolução de `Ignoma` | — | `3ACT / 12EN / MAGI / 1T–2T` *(alternável)* | Lança **duas bolas de fogo** em 1 alvo ou em 2 alvos diferentes, causando cada uma **10 `MAGI` + MAK** de dano com **35% de chance de causar `BURN`**. *(Única skill da D-124 que usa **letras hebraicas `אש`** no VFX, por ter `Esh` no nome.)* |
 
 *(Todas as evoluções `ZAHAV` obedecem à regra da D-118: acionadas segurando `A`, com nome exibido em dourado e custo de 20 SP após a conclusão; disponíveis a partir da metade da campanha para o jogador, além de Anjos e elites.)*
 
@@ -66,7 +66,7 @@
    * **Geometria:** reservada para **alguns outros anjos** (não usada em ataques demoníacos/não-reza comuns).
    * **Status de aprovação visual (2026-11-27):** **TODOS APROVADOS (8/8):** `Mazz Bite`, `Fang Sting`, `Fang Spine [ZAHAV]`, `Vuln Pierce` *(sem outline dourado)*, `Dark Breath v2` *(ar saindo diretamente da boca grotesca de perfil)*, `Umbral Gaze` *(versão mais escura)*, `Ignoma` *(chamas rabiscadas sem olho)*, `Ignoma Esh [ZAHAV]` *(outline dourado + `אש`)*. Referências HTML salvas em [`docs/vfx_refs/d124_d125/`](vfx_refs/d124_d125/README.md) e estilo documentado em [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md).
 
-*Única pendência menor:* confirmar se `Vuln Pierce` dobra o dano apenas em reação contra ação não-ofensiva anunciada ou também contra alvo com estado/postura não-ofensiva ativa no round.
+7. **Unificação de `Vuln Pierce` com `Alvo Vulnerável` (D-131):** fechado pelo criador em 2026-11-27 — `Vuln Pierce` dobra o dano contra qualquer **Alvo Vulnerável** (realizando ação não-ofensiva **ou** sob efeito que força `PASS`, como paralisação ou aprisionamento). Tabela acima padronizada para a taxonomia oficial da D-131 (`PHYS`/`MAGI`/`STAT`, `PHYS`/`MAGI`/`DMG`, `1T`–`3T`).
 
 ## 4. Fase 1 implementada (2026-11-27) — 3 regras globais
 

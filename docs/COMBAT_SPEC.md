@@ -1668,14 +1668,14 @@ Especificação completa das 6 skills canônicas (+ 2 evoluções `ZAHAV`: `Mazz
 - **`BLEED` (canônico):** condição de status que **reduz em 20% as curas recebidas** até o fim do próximo turno, podendo **acumular até 4 vezes** (até −80%).
 - **Temporização de ação:** efeitos que duram por **X ações/atos** encerram-se após **X ações realizadas depois da efetuação do efeito**. Para efeitos de prisão/imobilização, funciona como um **`PASS` automático**: o alvo **não perde** ações/reações ainda não utilizadas, **porém perde os atos que estavam em fila**.
 
-## Taxonomia oficial de combate, Alvo Vulnerável e Lote 2 de skills — D-131 (criador, 2026-11-27; DESIGN CONFIRMADO; NÃO IMPLEMENTADO)
+## Taxonomia oficial de combate, Alvo Vulnerável e Lote 2 de skills — D-131 (criador, 2026-11-27; DESIGN 100% FECHADO; NÃO IMPLEMENTADO)
 Especificação completa das 5 skills canônicas (+ 2 evoluções `ZAHAV`: `Stone Crush`, `Energy Blow`, `Drain Claw`/`Vital Claws`, `Weaken`/`Weakenen`, `Mark of Sun`) em `docs/CANON_SKILLS_D131.md`.
 
 - **Categorias de habilidade:** `PHYS` (física), `MAGI` (mágica) e `STAT` (status/debuff/marca).
-- **Tipos de dano:** `PHYS` (físico), `MAGI` (mágico) e `DMG` (dano sem tipagem).
+- **Tipos de dano:** `PHYS` (físico, mitigado por `DEF`), `MAGI` (mágico, mitigado por `MEF`) e `DMG` (dano sem tipagem — ignora `DEF` e `MEF`, mantendo barra de ritmo, bloqueio/desvio, vantagem de SP e variação ±10%).
 - **Notação de alvos:** `1T`, `2T` e `3T` (`T` = target).
-- **Alvo Vulnerável:** combatente que está realizando uma **ação não-ofensiva** ou que está sob um **efeito que força o `PASS`** (como paralisação ou aprisionamento).
-- **Dispell em `Weaken`/`Weakenen`:** ambas as versões duram até o fim do combate e podem sofrer dispell.
+- **Alvo Vulnerável (unificado com `Vuln Pierce` D-124):** combatente que está realizando uma **ação não-ofensiva** ou que está sob um **efeito que força o `PASS`** (como paralisação ou aprisionamento).
+- **Regras fechadas do Lote 2:** `Energy Blow` rouba metade do EN máx. **até o fim da batalha**; `Drain Claw`/`Vital Claws` curam **80% do HP drenado** com teto na parcela percentual contra chefes/Guardiões/Anjos (`40`/`60 HP`); `Weaken`/`Weakenen` **acumulam** (piso efetivo `1`) até o fim do combate e sofrem dispell (`Tahorah`); `Mark of Sun` dispara `+20 MAGI` **por golpe** (mitigado por `MEF`), **desaparecendo no 3º golpe recebido** ou ao fim do próximo round (também dissipável).
 
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), itens abençoados da
