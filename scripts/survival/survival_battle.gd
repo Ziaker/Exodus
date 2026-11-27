@@ -7,6 +7,10 @@ signal item_chosen
 signal continue_answered
 signal absorb_chosen
 
+const NECROPOLE_MAP := preload("res://scripts/survival/necropole_map.gd")
+const NECROPOLE_VISUAL := preload("res://scripts/survival/necropole_visual.gd")
+const DUNGEON_PROTO := preload("res://prototypes/dungeon-crawler/dungeon_proto.gd")
+
 var demon_def: Dictionary = {}
 ## Demônios desta luta (o tocado no mapa + reforços por tier).
 var encounter_ids: Array[String] = []
@@ -46,8 +50,6 @@ var intents: Dictionary = {}
 var _intent_round := -1
 var _ai_unit: BattleUnit = null
 var _forced_target: BattleUnit = null
-var _intent_layer: CanvasLayer
-var _intent_panel: Control
 ## Saque da vitória (relíquia de elite) para o log/testes.
 var loot_relic := ""
 ## PP de cada aliado que reza, salvo na run antes do bônus da ARK SHARD (uid -> PP).
@@ -61,6 +63,62 @@ func _init() -> void:
 	# básico de potência 100 daria 100+ de dano e mataria um demônio ou herói
 	# num golpe. Aqui a escala é a mesma das habilidades placeholder (4..11).
 	basic_power = 10
+
+
+func _build_ui() -> void:
+	super._build_ui()
+	if SurvivalState.stratum() == 1:
+		_install_necropole_stage()
+
+
+## D-114 / criador 2026-11-27: palco 3D real da Necrópole Saturnina no fundo da batalha do Estrato 1.
+func _install_necropole_stage() -> void:
+	if stage == null or stage.size.x <= 0.0:
+		return
+	var sub := SubViewport.new()
+	sub.name = "NecropoleViewport"
+	sub.size = Vector2i(stage.size * (DUNGEON_PROTO.SCREEN.x / stage.size.x))
+	sub.own_world_3d = true
+	sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	stage.add_child(sub)
+	var world := Node3D.new()
+	sub.add_child(world)
+	var pivot := Node3D.new()
+	var view := NECROPOLE_MAP.sepulchre() + Vector2i(0, 2)
+	pivot.position = Vector3(view.x, 0.0, view.y)
+	world.add_child(pivot)
+	var camera := Camera3D.new()
+	camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	camera.fov = rad_to_deg(2.0 * atan(sub.size.y * 0.5 / DUNGEON_PROTO.PX_PER_TILE))
+	camera.position = Vector3(0.0, DUNGEON_PROTO.EYE_HEIGHT, 0.5)
+	camera.near = 0.01
+	camera.far = DUNGEON_PROTO.FAR_TILES
+	pivot.add_child(camera)
+	camera.current = true
+	var visual := NECROPOLE_VISUAL.new()
+	world.add_child(visual)
+	visual.install(pivot, camera)
+	stage.material = null
+	var image := TextureRect.new()
+	image.name = "NecropoleView"
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.texture = sub.get_texture()
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image.size = stage.size
+	stage.add_child(image)
+	var copy := BackBufferCopy.new()
+	copy.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	stage.add_child(copy)
+	var style := ShaderMaterial.new()
+	style.shader = DUNGEON_PROTO.MIXED_FILTER
+	style.set_shader_parameter("mixed_palette", DUNGEON_PROTO.MIXED_PALETTE)
+	style.set_shader_parameter("frame_height", sub.size.y)
+	var filter := ColorRect.new()
+	filter.name = "NecropoleFilter"
+	filter.size = stage.size
+	filter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	filter.material = style
+	stage.add_child(filter)
 
 
 func _create_units() -> void:
@@ -199,7 +257,6 @@ func _create_units() -> void:
 
 	# O HUD exige Array[String] tipado, não um Array comum.
 	hud.set_opponent_sprites(paths)
-	_build_intent_layer()
 
 
 func _refresh_all() -> void:
@@ -220,8 +277,6 @@ func _refresh_all() -> void:
 	if state.round_number != _intent_round and state.round_number > 0:
 		_intent_round = state.round_number
 		roll_intents()
-	if _intent_panel != null:
-		_intent_panel.queue_redraw()
 
 
 # ------------------------------------------------- D-069: temperaments & intents
@@ -274,11 +329,11 @@ func _prayer_weight(unit: BattleUnit, skill: StringName) -> float:
 func temperament_pick(unit: BattleUnit, budget: int) -> StringName:
 	var acts := mini(budget, maxi(unit.acts_available, 0))
 	if unit.race == &"floater_eye":
-		# D-129: Floater Eyes only cast buffs on their accompanied human/Mazik; out of EN or
-		# with no non-floater ally alive, they REST (D-038: +2 EN, end round).
+		# D-129: Floater Eyes only cast buffs on their accompanied human/Mazik; if the host
+		# is down, they flee automatically; if out of EN with a living host, they REST (D-038).
 		var host := _buff_ally_target(unit)
 		if host == null:
-			return &"rest"
+			return &"flee"
 		var buffs: Array[StringName] = []
 		var weights: Array[float] = []
 		var total_w := 0.0
@@ -320,6 +375,7 @@ func _floater_buff_weight(host: BattleUnit, skill: StringName) -> float:
 		&"verdant_shell": return 3.0 if host.def_round_stages.is_empty() else 1.0
 		&"keen_gaze": return 3.0 if host.agi_buffs.is_empty() else 0.75
 		&"ether_link": return 2.5 if host.sp_buffs.is_empty() else 0.75
+		&"aegis_iris": return 3.0 if host.haganah.is_empty() else 0.5
 	return 1.0
 
 
@@ -345,7 +401,7 @@ func roll_intents() -> void:
 			continue
 		var skill := temperament_pick(unit, 2)
 		var target: BattleUnit = null
-		var kind := "rest" if skill == &"rest" else ("attack" if skill == &"" else String(SkillBook.def(skill).get("kind", "strike")))
+		var kind := "flee" if skill == &"flee" else ("rest" if skill == &"rest" else ("attack" if skill == &"" else String(SkillBook.def(skill).get("kind", "strike"))))
 		if kind in ["attack", "strike"]:
 			target = temperament_target(unit)
 		elif kind == "buff" and bool(SkillFx.fx_of(skill).get("ally_only", false)):
@@ -358,6 +414,8 @@ func intent_text(unit: BattleUnit) -> String:
 	if it.is_empty():
 		return ""
 	var skill: StringName = it.skill
+	if skill == &"flee":
+		return "FLEE"
 	if skill == &"rest":
 		return "REST (+2 EN)"
 	var name := "ATTACK" if skill == &"" else SkillBook.display_name(skill)
@@ -381,22 +439,22 @@ func _enemy_turn(unit: BattleUnit) -> void:
 	_forced_target = null
 	if intents.has(unit.id):
 		intents[unit.id].used = true
-	if _intent_panel != null:
-		_intent_panel.queue_redraw()
 
 
 ## A primeira escolha do turno executa a intenção anunciada (se ainda der para pagar);
 ## as seguintes seguem o temperamento.
 func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	_ai_unit = unit
+	if unit.race == &"floater_eye" and _buff_ally_target(unit) == null:
+		return &"flee"
 	var it: Dictionary = intents.get(unit.id, {})
 	if not it.is_empty() and not bool(it.used):
 		it.used = true
 		var skill: StringName = it.skill
+		if skill == &"flee":
+			return &"flee" if unit.race == &"floater_eye" else temperament_pick(unit, budget)
 		if skill == &"rest":
 			return &"rest" if unit.race == &"floater_eye" else temperament_pick(unit, budget)
-		if unit.race == &"floater_eye" and _buff_ally_target(unit) == null:
-			return &"rest"
 		if skill == &"" or SkillBook.affordable(skill, mini(budget, unit.acts_available), unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 			var t: BattleUnit = it.target
 			_forced_target = t if t != null and t.is_alive() else null
@@ -423,35 +481,11 @@ func _player_with_most_sp() -> BattleUnit:
 	return super._player_with_most_sp()
 
 
-func _build_intent_layer() -> void:
-	_intent_layer = CanvasLayer.new()
-	_intent_layer.name = "IntentLayer"
-	_intent_layer.layer = 4
-	_intent_panel = Control.new()
-	_intent_panel.name = "Intents"
-	_intent_panel.size = HUD_SCRIPT.SCREEN
-	_intent_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_intent_panel.draw.connect(_draw_intents)
-	_intent_layer.add_child(_intent_panel)
-	add_child(_intent_layer)
-
-
-const INTENT_INK := {"attack": Color("ff8a7a"), "strike": Color("ff8a7a"),
-	"magic": Color("c9a2ff"), "heal": Color("81e6a8"), "buff": Color("f5e08e"), "rest": Color("81e6a8")}
-
-
-## Rótulo sob a sombra de cada inimigo (o nome do HUD fica acima da arte):
-## ação anunciada + temperamento. Coordenadas do HUD (544×416, ×1,5 na tela).
+## Coordenadas lógicas abaixo da arte do inimigo (mantido para testes de layout; nada é desenhado).
 func intent_rect(index: int) -> Rect2:
 	var art: Rect2 = hud.enemy_sprite_rect(index)
 	var w := 150.0
 	return Rect2(art.get_center().x - w * 0.5, art.end.y + 11.0, w, 24.0)
-
-
-func _draw_intents() -> void:
-	# Criador 2026-11-27: não desenhar caixas de intenção nem rótulos de temperamento abaixo dos inimigos.
-	# A lógica interna de temperamento e seleção de ações continua ativa na IA.
-	return
 
 
 ## D-073 LEVIATHAN SCALE: quem a usa não queima (as queimaduras somem antes do tique).
@@ -1107,7 +1141,16 @@ func _show_result() -> void:
 			macca_mult = 1.5
 		var elite_beaten := false
 		var warden_beaten := false
-		for id in encounter_ids:
+		for i in encounter_ids.size():
+			var id := encounter_ids[i]
+			var foe_id := StringName("foe_%d" % i)
+			var foe_fled := false
+			for u in state.units:
+				if not u.is_player and u.id == foe_id:
+					foe_fled = u.fled
+					break
+			if foe_fled:
+				continue
 			var def := SurvivalData.demon_by_id(id)
 			var gain := int(def.get("macca", 25))
 			if SurvivalData.is_elite(run_seed, id, omen_level):
@@ -1368,11 +1411,15 @@ func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
 	if seen == null:
 		seen = _auto_target(unit)
 	if seen != null:
-		SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
-		if prayer != null:
-			prayer.fx.play_sanverim(seen)
-		_append_log("%s is blinded by %s." % [seen.display_name, unit.display_name])
-		_event("%s is blinded." % short_name(seen))
+		if not seen.haganah.is_empty():
+			_append_log("%s's shield blocks SANVERIM." % seen.display_name)
+			_event("%s resists the blind." % short_name(seen))
+		else:
+			SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
+			if prayer != null:
+				prayer.fx.play_sanverim(seen)
+			_append_log("%s is blinded by %s." % [seen.display_name, unit.display_name])
+			_event("%s is blinded." % short_name(seen))
 	hud.message = "%s USES %s" % [short_name(unit), SkillBook.display_name(skill)]
 	_refresh_all()
 
@@ -1577,11 +1624,11 @@ var _offer_panel: Control
 var _offer_texture: Texture2D
 
 
-## Derrotados que podem pedir para entrar (não absorvidos; nunca anjo; D-129: nunca Floater Eye).
+## Derrotados que podem pedir para entrar (não absorvidos; nunca anjo; D-129: nunca Floater Eye nem fugitivo).
 func offer_pool() -> Array:
 	var pool: Array = []
 	for u in state.units:
-		if not u.is_player and not u.absorbed and u.race != &"floater_eye" and not SurvivalData.demon_by_id(String(u.kind)).is_empty():
+		if not u.is_player and not u.absorbed and not u.fled and u.race != &"floater_eye" and not SurvivalData.demon_by_id(String(u.kind)).is_empty():
 			pool.append(u)
 	return pool
 

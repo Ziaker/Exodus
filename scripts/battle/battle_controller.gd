@@ -445,7 +445,7 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int,
 		auto_hit: bool = false, chain: bool = false) -> void:
 	if not defender.is_alive():
 		return
-	var duration := BattleMath.rhythm_duration(attacker.stats.agi, defender.stats.agi,
+	var duration := BattleMath.rhythm_duration(attacker.effective_agi(), defender.effective_agi(),
 		attacker.current_sp, defender.current_sp)
 
 	var attack_timing := await _attack_timing(attacker, defender, duration, auto_hit, chain)
@@ -483,11 +483,11 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 	var result: Dictionary
 	if bool(_hit_mods.get("prayer_base", false)):
 		# D-107 CHEREV (id &"cherav"): the prayer formula (10 + MAK - MEF), like Ra'am.
-		result = PrayerBook.raam_damage(0, int(round(attacker.effective_mak())), attacker.stats.agi, defender.effective_mef(),
+		result = PrayerBook.raam_damage(0, int(round(attacker.effective_mak())), attacker.effective_agi(), defender.effective_mef(),
 			attacker.current_sp, defender.current_sp, defender.race, rng)
 	else:
 		result = BattleMath.physical_damage(power,
-			attacker.effective_mak() if magic else attacker.effective_atk(), attacker.stats.agi,
+			attacker.effective_mak() if magic else attacker.effective_atk(), attacker.effective_agi(),
 			defence_stat, attacker.current_sp, defender.current_sp, rng)
 
 	# D-109: the attack mark scales the hit (white 50%, grey 80%, yellow 100%; side defence halves).

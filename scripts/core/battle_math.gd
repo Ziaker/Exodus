@@ -141,7 +141,7 @@ const ZOHAR_POINT_MULT := 1.5
 
 ## POINT half-width of `own` against `rival`, with BLIND and ZOHAR applied.
 static func unit_point_half(own: BattleUnit, rival: BattleUnit) -> float:
-	var half := point_half_width(own.stats.agi, rival.stats.agi, own.current_sp, rival.current_sp)
+	var half := point_half_width(own.effective_agi(), rival.effective_agi(), own.current_sp, rival.current_sp)
 	if own.has_status(&"blind"):
 		half = maxf(POINT_MIN_HALF_WIDTH * 0.5, half * BLIND_POINT_MULT)
 	if own.has_status(&"zohar"):

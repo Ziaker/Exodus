@@ -116,12 +116,13 @@ func _verify_sprite_and_data() -> void:
 	check(sp == 54, "Floater Eye base SP is 54 (got %d)" % sp)
 	check(not SurvivalData.is_elite(1, SurvivalData.FLOATER_EYE_ID, 5), "Floater Eye is never an elite")
 
-	# 3. As 4 novas magias de buff com custos exatos D-129
+	# 3. As 5 novas magias de buff com custos exatos D-129
 	var expected_costs := {
 		&"verdant_might": [1, 8],
 		&"verdant_shell": [1, 8],
 		&"keen_gaze": [1, 6],
 		&"ether_link": [2, 10],
+		&"aegis_iris": [1, 8],
 	}
 	for sk in expected_costs.keys():
 		var sd := SkillBook.def(sk)
@@ -255,6 +256,14 @@ func _verify_human_example_battle() -> void:
 	check(eye_a.stats.max_hp == 8 and eye_a.stats.max_en == 24 and eye_a.current_en == 24,
 			"Floater Eye A starts with HP 8 / EN 24")
 
+	# Palco 3D da Necrópole Saturnina no Estrato 1, sem IntentLayer morto e sem nomes inimigos na faixa superior
+	check(b.stage.material == null and b.stage.get_node_or_null("NecropoleViewport") != null,
+			"Stratum 1 SurvivalBattle installs the Saturnine Necropolis 3D stage")
+	check(b.get_node_or_null("IntentLayer") == null, "Unused IntentLayer node is removed")
+	for entry in b.hud.turn_strip_entries():
+		if not (entry.unit as BattleUnit).is_player:
+			check(String(entry.text) == "FOE", "Turn strip hides enemy name (got %s)" % String(entry.text))
+
 	# Intenção dos olhos mira o humano, nunca eles mesmos
 	for eye in [eye_a, eye_b]:
 		var it: Dictionary = b.intents.get(eye.id, {})
@@ -262,7 +271,7 @@ func _verify_human_example_battle() -> void:
 		check(it.get("target") == human, "%s intent targets HUMAN A" % eye.display_name)
 		check(b.intent_text(eye).contains("HUMAN A"), "%s intent text names HUMAN A (%s)" % [eye.display_name, b.intent_text(eye)])
 
-	# Executa os 4 buffs e verifica alvo = HUMAN A, olhos NUNCA buffados, consumo exato de EN e efeito real
+	# Executa os 5 buffs e verifica alvo = HUMAN A, olhos NUNCA buffados, consumo exato de EN e efeito real
 	b.turn_owner = eye_a
 	var en0 := eye_a.current_en
 	await b._enemy_skill(eye_a, &"verdant_might")
@@ -280,10 +289,14 @@ func _verify_human_example_battle() -> void:
 	check(eye_a.def_round_stages.is_empty() and eye_b.def_round_stages.is_empty(), "Floater Eyes NEVER receive VERDANT SHELL")
 
 	var agi_before := human.stats.agi
+	var sp_base_before := human.sp_base()
 	var en2 := eye_a.current_en
 	await b._enemy_skill(eye_a, &"keen_gaze")
 	check(eye_a.current_en == en2 - 6, "KEEN GAZE consumes 6 EN (%d -> %d)" % [en2, eye_a.current_en])
-	check(human.stats.agi == agi_before + 4 and human.next_attack_high_speed, "KEEN GAZE gives HUMAN A +4 AGI and HIGH SPEED next attack")
+	check(human.stats.agi == agi_before and human.sp_base() == sp_base_before,
+			"KEEN GAZE does NOT mutate base stats.agi or sp_base() (stats.agi=%d, sp_base=%d)" % [human.stats.agi, human.sp_base()])
+	check(human.effective_agi() == agi_before + 4 and human.next_attack_high_speed,
+			"KEEN GAZE raises effective_agi() by +4 (%d -> %d) and grants HIGH SPEED" % [agi_before, human.effective_agi()])
 	check(eye_a.agi_buffs.is_empty() and eye_b.agi_buffs.is_empty() and not eye_a.next_attack_high_speed,
 			"Floater Eyes NEVER receive KEEN GAZE")
 
@@ -295,6 +308,21 @@ func _verify_human_example_battle() -> void:
 	check(human.current_sp == sp_before + 6 and human.sp_buffs.size() == 1, "ETHER LINK grants HUMAN A +6 temporary SP")
 	check(eye_a.sp_buffs.is_empty() and eye_b.sp_buffs.is_empty(), "Floater Eyes NEVER receive ETHER LINK")
 
+	# 5º buff: AEGIS IRIS (1 ACT / 8 EN, escudo de status não-reza por 1 rodada cheia)
+	var en_b1 := eye_b.current_en
+	await b._enemy_skill(eye_b, &"aegis_iris")
+	check(eye_b.current_en == en_b1 - 8, "AEGIS IRIS consumes 8 EN (%d -> %d)" % [en_b1, eye_b.current_en])
+	check(not human.haganah.is_empty() and bool(human.haganah.get("non_prayer", false)),
+			"AEGIS IRIS grants HUMAN A non-prayer status shield (haganah)")
+	check(eye_a.haganah.is_empty() and eye_b.haganah.is_empty(), "Floater Eyes NEVER receive AEGIS IRIS")
+	# Prova que o escudo bloqueia status (SNARE / BLEED / SLEEP)
+	human.current_hp = 999
+	human.stats.max_hp = 999
+	b._skill_hit_fx(b._fallen, human, &"stone_grasp", 0, false, R.POINT, R.MISS, false)
+	b._skill_hit_fx(b._fallen, human, &"fang_sting", 0, false, R.POINT, R.MISS, false)
+	check(not human.has_status(&"snare") and human.bleeds.is_empty(),
+			"AEGIS IRIS blocks SNARE and BLEED status conditions")
+
 	# Verifica que MAK buffado aumenta de fato o dano de CHEREV do humano
 	var unbuffed_mak := human.stats.mak
 	check(int(round(human.effective_mak())) > unbuffed_mak, "HUMAN A effective MAK raised for CHEREV (%d -> %d)" % [unbuffed_mak, int(round(human.effective_mak()))])
@@ -303,11 +331,11 @@ func _verify_human_example_battle() -> void:
 	b.state.round_number += 1
 	b._expire_stages(eye_a)
 	check(human.atk_stages.is_empty() and human.mak_stages.is_empty() and human.def_round_stages.is_empty()
-			and human.mef_stages.is_empty() and human.stats.agi == agi_before,
+			and human.mef_stages.is_empty() and human.effective_agi() == agi_before and human.stats.agi == agi_before,
 			"All eye_a buffs expire after 1 full round (ATK/MAK/DEF/MEF/AGI restored)")
 	b._expire_stages(eye_b)
-	check(human.sp_buffs.is_empty() and human.current_sp == sp_before,
-			"ETHER LINK +6 SP expires after 1 full round (SP restored to %d)" % sp_before)
+	check(human.sp_buffs.is_empty() and human.current_sp == sp_before and human.haganah.is_empty(),
+			"ETHER LINK +6 SP and AEGIS IRIS expire after 1 full round (SP restored to %d)" % sp_before)
 
 	b.queue_free()
 	await process_frame
@@ -335,15 +363,29 @@ func _verify_mazik_example_battle() -> void:
 	check(eye_a.current_en == 6 and eye_a.acts_available == 0 and eye_a.stored_acts == 2,
 			"Floater Eye REST recovers +2 EN flat (4 -> 6) and stores 2 acts")
 
-	# Quando o Mazik principal morre, Floater Eyes NUNCA buffam a si mesmos nem outro Floater Eye
+	# Quando o Mazik principal morre, Floater Eyes NUNCA buffam a si mesmos e FOGEM automaticamente
 	mazik.current_hp = 0
 	eye_b.current_en = 24
 	eye_b.acts_available = 2
 	check(b._buff_ally_target(eye_b) == null, "No valid buff target when accompanied Mazik is down")
-	check(b.temperament_pick(eye_b, 2) == &"rest", "Floater Eye falls back to REST when main ally is down")
+	check(b.temperament_pick(eye_b, 2) == &"flee", "Orphan Floater Eye chooses FLEE when main ally is down")
+	check(b._enemy_choice(eye_b, 2) == &"flee", "Orphan Floater Eye overrides pending buff intent with FLEE")
 	b._self_skill(eye_b, &"verdant_might", 0, false)
 	check(eye_a.atk_stages.is_empty() and eye_b.atk_stages.is_empty(),
 			"Even forced cast never buffs a Floater Eye")
+	b._execute_flee(eye_a)
+	b._execute_flee(eye_b)
+	check(eye_a.fled and eye_b.fled and not eye_a.is_alive() and not eye_b.is_alive(),
+			"Orphan Floater Eyes mark fled=true and leave combat")
+	check(b.state.is_over() and b.state.player_victory(),
+			"Battle ends in victory once all orphan Floater Eyes have fled")
+	var flee_macca_before := int(SurvivalState.data().macca)
+	b._show_result()
+	var iz_macca := int(SurvivalData.demon_by_id("izanami").macca)
+	if SurvivalData.is_elite(m_seed, "izanami", 0):
+		iz_macca *= 2
+	check(int(SurvivalState.data().macca) == flee_macca_before + iz_macca,
+			"Fled Floater Eyes yield 0 Macca (earned %d, expected %d for host only)" % [int(SurvivalState.data().macca) - flee_macca_before, iz_macca])
 
 	# Baixa durabilidade: Fallen no Estrato 1 derruba Floater Eye em 1 golpe normal
 	b.queue_free()

@@ -34,7 +34,7 @@ const HEBREW_SKILLS := {
 	&"umbral_gaze": "מבט הריק", &"ignoma": "כדור אש", &"blade_dance": "מחול להבים", &"stone_grasp": "אחיזת אבן",
 	# D-129 Floater Eye buffs (hebrew placeholder when unidentified after absorption).
 	&"verdant_might": "עוצמה ירוקה", &"verdant_shell": "שריון ירוק",
-	&"keen_gaze": "מבט חד", &"ether_link": "קשר אתר",
+	&"keen_gaze": "מבט חד", &"ether_link": "קשר אתר", &"aegis_iris": "מגן קשתית",
 }
 
 static func hebrew_skill(skill: StringName) -> String:
@@ -452,7 +452,7 @@ const FLOATER_EYE_STATS := {
 	"max_hp": 8, "max_en": 24, "atk": 2, "mak": 4, "defense": 3, "mef": 3, "agi": 10,
 }
 const FLOATER_EYE_SKILLS: Array[StringName] = [
-	&"verdant_might", &"verdant_shell", &"keen_gaze", &"ether_link",
+	&"verdant_might", &"verdant_shell", &"keen_gaze", &"ether_link", &"aegis_iris",
 ]
 
 

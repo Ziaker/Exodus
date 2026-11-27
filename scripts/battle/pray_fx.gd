@@ -124,7 +124,7 @@ func _draw() -> void:
 			continue
 		var card: Rect2 = hud.status_rect(i)
 		var marks: Array[Dictionary] = []
-		if not unit.haganah.is_empty():
+		if not unit.haganah.is_empty() and not bool(unit.haganah.get("non_prayer", false)):
 			marks.append({"glyph": MARK_GLYPH, "color": Color(PrayerBook.INK, pulse), "jitter": 0.0})
 		if not unit.def_stages.is_empty():
 			marks.append({"glyph": MARK_MAGEN, "color": Color(PrayerBook.INK, pulse), "jitter": 0.0})

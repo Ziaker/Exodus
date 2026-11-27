@@ -978,8 +978,14 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		_interrupt_gainer = null
 		_clear_roles()
 		var skill := &"" if unit.kind == &"burning_bush" else _enemy_choice(unit, 2 - used)
+		if skill == &"flee":
+			# D-129: orphan Floater Eye (accompanied human/Mazik is down) flees automatically.
+			_execute_flee(unit)
+			_global_action_done()
+			await _pause_result()
+			break
 		if skill == &"rest":
-			# D-129: Floater Eye out of EN (or with no non-floater ally left) rests via D-038.
+			# D-129: Floater Eye out of EN (with living ally) rests via D-038.
 			_execute_rest(unit, false)
 			_global_action_done()
 			prayer.tick_ochelet(unit)
@@ -1041,6 +1047,21 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		await _pause_result()
 		if _enemy_interrupted:
 			break
+
+
+## D-129: an orphan Floater Eye (no living non-floater ally left) flees immediately.
+func _execute_flee(unit: BattleUnit) -> void:
+	action_attacker = unit
+	action_defender = null
+	phase_text = "FLEE"
+	unit.fled = true
+	unit.current_hp = 0
+	unit.acts_available = 0
+	unit.stored_acts = 0
+	_append_log("%s flees without its ally." % unit.display_name)
+	_event("%s flees." % short_name(unit))
+	hud.feedback = "%s fled." % short_name(unit)
+	_refresh_all()
 
 
 func short_name(unit: BattleUnit) -> String:
@@ -1168,7 +1189,7 @@ func _counter_exchange(hero: BattleUnit, enemy: BattleUnit, kind: String, fast_s
 	var rails: Array[Rect2] = hud.counter_rail_rects(kind, index)
 	var white_half := BattleMath.unit_point_half(hero, enemy)
 	var red_half := BattleMath.unit_point_half(enemy, hero)
-	var red_seconds := BattleMath.counter_red_duration(BattleMath.RHYTHM_FIXED_SECONDS, enemy.stats.agi, hero.stats.agi)
+	var red_seconds := BattleMath.counter_red_duration(BattleMath.RHYTHM_FIXED_SECONDS, enemy.effective_agi(), hero.effective_agi())
 	timing_role = "COUNTER"
 	hud.mode = "counter"
 	hud.message = "COUNTER: %s x %s | Z" % [short_name(hero), short_name(enemy)]
@@ -1830,7 +1851,6 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 				notes.append("+%d MEF stage" % int(fxd.mef_stages))
 			var agi_delta := int(fxd.get("agi_bonus", 0))
 			if agi_delta > 0:
-				recipient.stats.agi += agi_delta
 				recipient.agi_buffs.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "amount": agi_delta})
 				notes.append("+%d AGI" % agi_delta)
 			if bool(fxd.get("high_speed_next", false)):
@@ -1841,6 +1861,9 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 				recipient.add_sp(sp_amt)
 				recipient.sp_buffs.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "amount": sp_amt})
 				notes.append("+%d SP" % sp_amt)
+			if bool(fxd.get("status_shield", false)):
+				recipient.haganah = {"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "non_prayer": true}
+				notes.append("STATUS SHIELD")
 			fx.play("BUFF", recipient, 0)
 			_append_log("%s casts %s on %s: %s (EN %d/%d)." % [
 				unit.display_name, d.name, recipient.display_name, ", ".join(notes), unit.current_en, unit.stats.max_en])
@@ -1952,7 +1975,6 @@ func _expire_stages(owner: BattleUnit) -> void:
 			if int(info.round) >= state.round_number:
 				continue
 			if owner == null or StringName(info.owner) == owner.id:
-				unit.stats.agi = maxi(1, unit.stats.agi - int(info.get("amount", 0)))
 				unit.agi_buffs.remove_at(i)
 				_append_log("%s: AGI boost ended." % unit.display_name)
 		for i in range(unit.sp_buffs.size() - 1, -1, -1):
@@ -1963,6 +1985,12 @@ func _expire_stages(owner: BattleUnit) -> void:
 				unit.add_sp(-int(info.get("amount", 0)))
 				unit.sp_buffs.remove_at(i)
 				_append_log("%s: SP boost ended." % unit.display_name)
+		if not unit.haganah.is_empty() and bool(unit.haganah.get("non_prayer", false)):
+			if int(unit.haganah.round) < state.round_number \
+					and (owner == null or StringName(unit.haganah.owner) == owner.id):
+				unit.haganah = {}
+				_append_log("%s: Aegis Iris ended." % unit.display_name)
+				_event("%s's status shield ends." % short_name(unit))
 
 
 ## Burns: 3 damage per stacked burn at the start of each round, 3 rounds each.
@@ -2080,11 +2108,15 @@ func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
 		if seen == null:
 			seen = _player_with_most_sp()
 		if seen != null:
-			SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
-			if prayer != null:
-				prayer.fx.play_sanverim(seen)
-			_append_log("%s is blinded by %s (smaller POINT zone until the end of the next round)." % [seen.display_name, unit.display_name])
-			_event("%s is blinded." % short_name(seen))
+			if not seen.haganah.is_empty():
+				_append_log("%s's shield blocks SANVERIM." % seen.display_name)
+				_event("%s resists the blind." % short_name(seen))
+			else:
+				SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
+				if prayer != null:
+					prayer.fx.play_sanverim(seen)
+				_append_log("%s is blinded by %s (smaller POINT zone until the end of the next round)." % [seen.display_name, unit.display_name])
+				_event("%s is blinded." % short_name(seen))
 	elif bool(fxd.get("mend", false)):
 		var patient := _weakest_ally(unit)
 		patient.mends.append(SkillFx.MEND_ROUNDS)
@@ -2194,7 +2226,7 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		defender.burns.append(int(fxd.get("burn_rounds", SkillBook.BURN_ROUNDS)))
 		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
 		_event("%s is burning." % short_name(defender))
-	if defender.is_alive() and not (shielded and fxd.has("status")):
+	if defender.is_alive() and not shielded:
 		if fxd.has("sleep_chance") and _fx_roll(int(fxd.sleep_chance)):
 			SkillFx.apply_status(defender, SkillFx.SLEEP_ID, 1)
 			_append_log("%s falls asleep." % defender.display_name)
@@ -2221,11 +2253,11 @@ func _enemy_en_extra(maximum: int) -> int:
 	return rng.randi_range(0, maxi(0, maximum))
 
 
-## &"" = ATTACK, &"rest" = REST (D-129 Floater Eye fallback), else the skill drawn among the payable ones.
+## &"" = ATTACK, &"flee" / &"rest" = D-129 Floater Eye fallback, else the skill drawn among the payable ones.
 func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	if unit.race == &"floater_eye":
 		if _buff_ally_target(unit) == null:
-			return &"rest"
+			return &"flee"
 		var buffs: Array[StringName] = []
 		var f_acts := mini(budget, unit.acts_available)
 		for skill in unit.skills:

@@ -611,7 +611,7 @@ func _cherev(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting:
 			_event("%s dodges." % battle.short_name(foe))
 			battle._present_strike(unit, foe, 0)
 			continue
-		var r := PrayerBook.raam_damage(0, unit.stats.mak, unit.stats.agi, foe.stats.mef,
+		var r := PrayerBook.raam_damage(0, int(round(unit.effective_mak())), unit.effective_agi(), foe.effective_mef(),
 			unit.current_sp, foe.current_sp, foe.race, battle.rng)
 		if bool(r.angel):
 			_log("%s -> %s: 0 dmg (Cherev has no effect on angels)" % [unit.display_name, foe.display_name])
@@ -700,7 +700,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	await fx.play_raam(target)
 	if not battle.is_inside_tree() or not target.is_alive():
 		return
-	var r := PrayerBook.raam_damage(extra, unit.stats.mak, unit.stats.agi, target.stats.mef,
+	var r := PrayerBook.raam_damage(extra, int(round(unit.effective_mak())), unit.effective_agi(), target.effective_mef(),
 		unit.current_sp, target.current_sp, target.race, battle.rng)
 	if bool(r.angel):
 		_log("%s -> %s: 0 dmg (Ra'am has no effect on angels)" % [unit.display_name, target.display_name])
@@ -1292,9 +1292,14 @@ func expire(owner: BattleUnit) -> void:
 		if h.is_empty() or int(h.round) >= battle.state.round_number:
 			continue
 		if owner == null or StringName(h.owner) == owner.id:
+			var is_aegis := bool(h.get("non_prayer", false))
 			unit.haganah = {}
-			_log("%s: Haganah ended." % unit.display_name)
-			_event("%s's Haganah ends." % battle.short_name(unit))
+			if is_aegis:
+				_log("%s: Aegis Iris ended." % unit.display_name)
+				_event("%s's status shield ends." % battle.short_name(unit))
+			else:
+				_log("%s: Haganah ended." % unit.display_name)
+				_event("%s's Haganah ends." % battle.short_name(unit))
 
 
 ## D-118 Shachar: detonates every pending dawn from an earlier round across all living foes.

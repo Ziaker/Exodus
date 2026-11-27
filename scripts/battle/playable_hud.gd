@@ -851,7 +851,7 @@ func turn_strip_entries() -> Array[Dictionary]:
 		if not unit.is_alive(): continue
 		result.append({
 			"unit": unit,
-			"text": unit.display_name if unit.is_player else battle.short_name(unit),
+			"text": unit.display_name if unit.is_player else "FOE",
 			"current": unit == owner,
 			"done": unit != owner and unit.acts_available <= 0,
 		})
@@ -882,7 +882,7 @@ func _turn_strip() -> void:
 		var e: Dictionary = entries[i]
 		var r := rects[i]
 		var unit: BattleUnit = e.unit
-		var ink: Color = GREEN_TEXT if unit.is_player else RED_TEXT
+		var ink: Color = GREEN_TEXT if unit.is_player else (FLOATER_EYE_GREEN if unit.race == &"floater_eye" else RED_TEXT)
 		if e.current:
 			draw_rect(r, ink)
 			draw_rect(Rect2(r.position + Vector2(0.5, 0.5), r.size - Vector2.ONE), Color.WHITE, false, 1)
@@ -924,7 +924,7 @@ func _sp_window() -> void:
 	var foe: BattleUnit = pair[1]
 	if own == null or foe == null: return
 	var own_text := "%s · %d SP" % [own.display_name, own.current_sp]
-	var foe_text := "%s · %d SP" % [battle.short_name(foe), foe.current_sp]
+	var foe_text := "FOE · %d SP" % foe.current_sp
 	# Texto nunca invade a barra: cada lado tem seu espaço reservado antes dela.
 	var own_limit := SP_TRACK.position.x - 64.0 - 6.0
 	var foe_limit := (SCREEN.x - 20.0 / 3.0) - SP_TRACK.end.x - 6.0

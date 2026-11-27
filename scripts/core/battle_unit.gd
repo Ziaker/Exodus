@@ -12,6 +12,8 @@ var stored_acts: int = 0
 var is_player: bool = false
 var is_fallen: bool = false
 var absorbed: bool = false
+## D-129: true when an orphan Floater Eye fled the battle (yields no Macca).
+var fled: bool = false
 var sprite_path: String = ""
 ## Enemy kind for the absorption counter (SkillBook.KIND_SKILLS); empty for heroes.
 var kind: StringName = &""
@@ -123,12 +125,26 @@ func effective_mak() -> float:
 
 ## Physical DEF with active Magen and Verdant Shell stages applied (+25% per stage).
 func effective_def() -> int:
+	if def_stages.is_empty() and def_round_stages.is_empty():
+		return stats.defense
 	return maxi(1, int(round(float(stats.defense) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(def_stages.size() + def_round_stages.size())))))
 
 
 ## Magic DEF (MEF) with active Verdant Shell stages applied (+25% per stage, D-129).
 func effective_mef() -> int:
+	if mef_stages.is_empty():
+		return stats.mef
 	return maxi(1, int(round(float(stats.mef) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mef_stages.size())))))
+
+
+## AGI with active Keen Gaze buffs applied (D-129: never mutates stats.agi or sp_base()).
+func effective_agi() -> int:
+	if agi_buffs.is_empty():
+		return stats.agi
+	var bonus := 0
+	for info in agi_buffs:
+		bonus += int(info.get("amount", 0))
+	return maxi(1, stats.agi + bonus)
 
 ## D-106: adds a status (a repeat refreshes it); `mod` changes a stat until it ends.
 func add_status(id: StringName, rounds: int, mod: Dictionary = {}) -> void:

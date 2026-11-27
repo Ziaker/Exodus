@@ -82,7 +82,10 @@ func _capture_battle_pair(enc_id: String, run_seed: int, stratum: int, start_fil
 	b.suppress_scene_change = true
 	root.add_child(b)
 	await _wait_mode(b, "plan")
-	# Frame 1: formação, silhuetas verdes e intenções apontando para o humano/Mazik
+	# Aguarda alguns quadros para o SubViewport 3D da Necrópole renderizar com nitidez
+	for _w in 6:
+		await process_frame
+	# Frame 1: formação, palco 3D da Necrópole Saturnina e silhuetas verdes
 	await _snap(start_file)
 
 	# Frame 2: Floater Eye A lança o buff no aliado principal, consumindo EN e registrando no log
@@ -109,12 +112,11 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	var h_seed := _find_seed("humans_s1", 2)
 	var m_seed := _find_seed("jack_frost", 2)
-	var m5_seed := _find_seed("izanami", 2)
 
 	await _capture_corridor(h_seed, "humans_s1", "01_dungeon_human_floaters.png")
 	await _capture_corridor(m_seed, "jack_frost", "02_dungeon_mazik_floaters.png")
 	await _capture_battle_pair("humans_s1", h_seed, 1, "03_battle_human_start.png", "04_battle_human_buff.png", &"verdant_might")
-	await _capture_battle_pair("izanami", m5_seed, 5, "05_battle_mazik_start.png", "06_battle_mazik_buff.png", &"verdant_shell")
+	await _capture_battle_pair("jack_frost", m_seed, 1, "05_battle_mazik_start.png", "06_battle_mazik_buff.png", &"aegis_iris")
 
 	SurvivalState.clear()
 	quit(0)

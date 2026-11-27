@@ -130,7 +130,7 @@ const DEFS := {
 	&"stone_grasp": {"name": "STONE GRASP", "acts": 1, "en": 4, "hp": 0, "pp": 0, "kind": "strike",
 		"power": 6, "marks": [0.5], "fx": {"status": "snare", "rounds": 2},
 		"info": "STONE GRASP 1 ACT / 4 EN: power 6 earth strike; the target's AGI falls by 4 for 2 rounds (SNARE)."},
-	# D-129 (creator 2026-11-27): 4 new Floater Eye support buff spells (1 full round, ally-targeted;
+	# D-129 (creator 2026-11-27): 5 new Floater Eye support buff spells (1 full round, ally-targeted;
 	# Floater Eyes never target themselves or other Floater Eyes).
 	&"verdant_might": {"name": "VERDANT MIGHT", "acts": 1, "en": 8, "hp": 0, "pp": 0, "kind": "buff",
 		"fx": {"ally_only": true, "atk_stages": 1, "mak_stages": 1},
@@ -144,6 +144,9 @@ const DEFS := {
 	&"ether_link": {"name": "ETHER LINK", "acts": 2, "en": 10, "hp": 0, "pp": 0, "kind": "buff",
 		"fx": {"ally_only": true, "sp_bonus": 6},
 		"info": "ETHER LINK 2 ACT / 10 EN: grants an ally +6 temporary SP for 1 full round."},
+	&"aegis_iris": {"name": "AEGIS IRIS", "acts": 1, "en": 8, "hp": 0, "pp": 0, "kind": "buff",
+		"fx": {"ally_only": true, "status_shield": true},
+		"info": "AEGIS IRIS 1 ACT / 8 EN: shields an ally from status conditions for 1 full round."},
 }
 
 ## Creator 2026-11-23: the current first-fight enemies keep their attributes and get the

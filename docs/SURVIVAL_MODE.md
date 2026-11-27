@@ -226,16 +226,17 @@ Não podem ser absorvidos e não entram no CODEX. Regras em `SkillBook.DEFS`, `S
 Inimigos de suporte da dungeon que voam junto de humanos ou Maziks (35% dos encontros normais, determinístico pela semente; Guardiões ficam de fora) e entram como aliados deles na batalha:
 
 - **Formação:** 1 ou 2 olhos (50/50) acompanhando **exatamente 1 único humano ou 1 único Mazik** — impede a formação de duplas ou trios de humanos e Maziks nessa situação.
-- **Visual:** sprite 2D em silhueta completamente verde (`assets/generated/survival/floater_eye.png`, gerado por `tools/generate_floater_eye_sprite.py`), flutuando ao lado do aliado no corredor 3D e na batalha (sem nomes desenhados sobre inimigos nem intenções/temperamentos abaixo deles).
+- **Visual:** sprite 2D em silhueta completamente verde (`assets/generated/survival/floater_eye.png`, gerado por `tools/generate_floater_eye_sprite.py`), flutuando ao lado do aliado no corredor 3D e na batalha sobre o palco 3D real da Necrópole Saturnina no Estrato 1 (sem nomes inimigos sobre sprites, na faixa de turno ou no cabeçalho de SP, e sem intenções/temperamentos desenhados abaixo deles).
 - **Atributos base (Estrato 1):** `HP 8`, `EN 24`, `ATK 2`, `MAK 4`, `DEF 3`, `MEF 3`, `AGI 10` (`SP 54`; escala leve por estrato `+1 HP / +4 EN` para manter baixa durabilidade e EN alta).
-- **4 magias novas de buff (exclusivas no humano ou Mazik acompanhado, nunca em Floater Eyes, duração 1 rodada cheia):**
+- **5 magias novas de buff (exclusivas no humano ou Mazik acompanhado, nunca em Floater Eyes, duração 1 rodada cheia):**
   - `VERDANT MIGHT` (`1 ACT / 8 EN`): `+1` estágio de `ATK` e `MAK` (`+25%` cada).
   - `VERDANT SHELL` (`1 ACT / 8 EN`): `+1` estágio de `DEF` e `MEF` (`+25%` cada).
-  - `KEEN GAZE` (`1 ACT / 6 EN`): `+4 AGI` e próximo ataque com `HIGH SPEED` (D-124).
+  - `KEEN GAZE` (`1 ACT / 6 EN`): `+4 AGI` via `effective_agi()` (sem mutar `stats.agi`/`sp_base()`) e próximo ataque com `HIGH SPEED` (D-124).
   - `ETHER LINK` (`2 ACT / 10 EN`): `+6 SP` temporários.
-- **Sem EN (ou sem aliado principal vivo):** executa `REST` (D-038: `0 ACT`, `+2 EN` fixos, encerra participação na rodada). Nunca contra-ataca.
-- **Absorção e economia:** absorvível pelo Fallen (herda `max_en` e pode ensinar os buffs novos), rende `10M` sem entrar em `defeated`/`CODEX`, e nunca aparece em oferta de recrutamento ou loja.
-- **Verificação:** `tests/verify_floater_eyes.gd` (2612 checks) e capturas em `captures/floater_eyes/` (`tools/capture_floater_eyes.gd`). **Aprovação visual pertence ao autor.**
+  - `AEGIS IRIS` (`1 ACT / 8 EN`): escudo de imunidade a status por 1 rodada cheia (não-reza, sem glifos hebraicos).
+- **Sem EN / órfão:** sem EN suficiente com aliado principal vivo, executa `REST` (D-038: `0 ACT`, `+2 EN` fixos, encerra participação na rodada). Se o humano ou Mazik principal morrer, os Floater Eyes órfãos **fogem automaticamente** (`FLEE`, sem conceder Macca). Nunca contra-atacam.
+- **Absorção e economia:** absorvível pelo Fallen (herda `max_en` e pode ensinar os 5 buffs novos), rende `10M` quando derrotado (sem entrar em `defeated`/`CODEX`), e nunca aparece em oferta de recrutamento ou loja.
+- **Verificação:** `tests/verify_floater_eyes.gd` (2631 checks) e capturas em `captures/floater_eyes/` (`tools/capture_floater_eyes.gd`). **Aprovação visual pertence ao autor.**
 
 ## Verificação
 
