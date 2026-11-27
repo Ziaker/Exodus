@@ -53,6 +53,16 @@ Esta regra aplica-se indistintamente a **todas** as rezas do jogo — da campanh
 | **Shalhevet** | שַׁלְהֶבֶת / `שלהבת` | D-118 | `play_shalhevet(foes)` | Maré horizontal de 110 letras flamejantes em 3 cores (laranja/amarelo/branco) + erupções de brasas por inimigo e palavra `שלהבת` acompanhando a crista | — |
 | **Nogah** | נֹגַהּ / `נוגה` | D-118 | `play_nogah(foes)` | Clarão estelar central de 24 feixes radiais + anéis de 16 letras de ofuscamento fechando sobre cada inimigo e palavra `נוגה` | `ס` (vermelho) |
 | **Lior** | לִיאוֹר / `ליאור` | D-118 | `play_lior(unit, actions)` / `play_lior_tick(unit, healed, remaining)` | Manto ascendente de 34 letras dourado-verde sobre o cartão do usuário + 5 letras orbitais de `ליאור` + pulso de cura por ação | `ל` + `xN` (BiDi-safe) |
+| **Esh** | אֵשׁ / `אש` | D-118 | `play_esh(caster, target, burned)` | Arco parabólico de letras tricolor (laranja/amarelo/branco) saindo do cartão do conjurador até o alvo + explosão compacta + labaredas de BURN lambendo o alvo + palavra `אש` | — |
+| **Meir** | מֵאִיר / `מאיר` | D-118 | `play_meir(caster, foes)` | Pulso de letras saindo do usuário → alerta vermelho `א` sobre os inimigos → 3 feixes-mira de letras travando no cartão + halo de letras girando e palavra `מאיר` | `א` (vermelho) |
+| **Ur Esh** | אוּר אֵשׁ / `אור אש` | D-118 | `play_ur_esh(caster, target, was_burning)` | Convergência dourada Zahav `אש → אור אש` + detonação radial tricolor + flash único dourado | — |
+| **Seraf** | שָׂרָף / `שרף` | D-118 | `play_seraf(unit, healed)` | Asas serafins de letras sobre o cartão + letras de cura subindo + centelhas douradas voando ao contador de SP + palavra `שרף` | — |
+| **Nitzotz** | נִיצוֹץ / `ניצוץ` | D-118 | `play_nitzotz(caster, target)` | 6 letras-centelha (`ניצוץא`) em arcos simétricos do cartão ao alvo + estalo radial + chamas de BURN superaquecidas | — |
+| **Esh Ochelet** | אֵשׁ אֹכֶלֶת / `אש אוכלת` | D-118 | `play_esh_ochelet(target)` / `play_ochelet_bite(target)` | Coroa/mandíbula de letras de fogo tricolor girando ao redor do alvo marcado e se fechando a cada mordida; flash único só na aplicação | coroa ativa enquanto marcado |
+| **Gever** | גֶּבֶר / `גבר` | D-118 | `play_gever(unit)` | 4 ondas crescentes escarlate-douradas (uma por estágio) + anel giratório ao fechar +4 | `ב` + `xN` (BiDi-safe) |
+| **Angel Hug** | מַלְאָךְ / `מלאך` | D-118 | `play_angel_hug(caster, target, landed)` | Asas largas de letras nascem do conjurador, varrem em arco e batem juntas como palmas sobre o alvo (flash/shake só na batida) + estática de letras paralisantes | `ע` + `xN` (ACT restantes) |
+| **God's Message** | דְּבַר אֵל / `דבר אל` | D-118 | `play_gods_message(caster, target, landed)` / `play_gods_message_fulfilled(unit, stat)` | Pergaminho celeste de letras se desenrolando + decreto `דבר אל` inscrito letra a letra (RTL) descendo e selando o alvo → estilhaça em letras vermelhas no próximo turno | `ד` |
+| **Adin / Adina / Adinut** | עָדִין · עֲדִינָה · עֲדִינוּת / `עדין` `עדינה` `עדינות` | D-118 | `play_adin(unit, stage)` | 3 degraus crescentes sobre o conjurador: azul calmo → dupla espiral azul-esmeralda → explosão serena imediata dourada-esmeralda-azul | — |
 
 ---
 

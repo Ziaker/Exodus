@@ -111,11 +111,11 @@ func _draw() -> void:
 			_glyph(MARK_NECHAMAH, Vector2(em_x, em_y), MARK_PX, Color(PrayerBook.INK, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
 			if foe.mends.size() > 1:
 				_glyph("x%d" % foe.mends.size(), Vector2(em_x + 12.0, em_y), 10, Color(PrayerBook.INK, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
-			em_x += 20.0
+			em_x += 28.0
 		if foe.paralyzed_acts > 0:
 			_glyph(MARK_ANGEL_HUG, Vector2(em_x, em_y), MARK_PX, Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
-			_glyph("x%d" % foe.paralyzed_acts, Vector2(em_x + 12.0, em_y), 10, Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
-			em_x += 20.0
+			_glyph("x%d" % foe.paralyzed_acts, Vector2(em_x + 14.0, em_y), 10, Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
+			em_x += 32.0
 		if foe.has_status(&"gods_message"):
 			_glyph(MARK_GODS_MESSAGE, Vector2(em_x, em_y), MARK_PX, Color("ffd84a", 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
 	for i in hud.players.size():
@@ -153,15 +153,18 @@ func _draw() -> void:
 		if unit.has_status(&"gods_message"):
 			marks.append({"glyph": MARK_GODS_MESSAGE, "color": Color("ffd84a", 0.7 + 0.3 * pulse), "jitter": 0.0})
 		var x: float = card.position.x + 7 + hud._width(unit.display_name, 13, true) + 8
+		var cursor := x
 		for m_idx in marks.size():
 			var mk: Dictionary = marks[m_idx]
-			var mx := x + float(m_idx) * 16.0 + float(mk.jitter)
+			var mx := cursor + float(mk.jitter)
 			draw_string(font, Vector2(mx, card.position.y + 18),
 				String(mk.glyph), HORIZONTAL_ALIGNMENT_LEFT, -1, MARK_PX, Color(mk.color))
 			var suf := String(mk.get("suffix", ""))
+			cursor += 16.0
 			if not suf.is_empty():
 				draw_string(font, Vector2(mx + 9.0, card.position.y + 18),
 					suf, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(mk.color))
+				cursor += font.get_string_size(suf, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 2.0
 	for letter in letters:
 		var k := (time - float(letter.born)) / RISE_TIME
 		if k < 0.0 or k > 1.0:
@@ -2248,7 +2251,7 @@ func _draw_meir(e: Dictionary, age: float) -> void:
 		var aa := 0.95 if age < 2.1 else maxf(0.0, 0.95 * (1.0 - (age - 2.1) / 0.55))
 		var bounce := absf(sin(age * 7.0)) * 4.0
 		for lk in e.locks:
-			_glyph_a(MARK_MEIR, Vector2(float(lk.x), float(lk.top) - 8.0 - bounce), 20, INK_ALERT, aa)
+			_glyph_a(MARK_MEIR, Vector2(float(lk.x), float(lk.top) - 30.0 - bounce), 20, INK_ALERT, aa)
 		var wa := age - alert_t
 		if wa < 0.18:
 			for w in e.whites:
@@ -2433,7 +2436,7 @@ func play_ochelet_bite(target: BattleUnit) -> void:
 
 func _draw_ochelet_apply(e: Dictionary, age: float) -> void:
 	if age < 1.1:
-		_draw_palette_word("אש אוכלת", (e.dst as Vector2) + Vector2(0.0, -64.0), 26, maxf(0.0, 1.0 - maxf(0.0, age - 0.5) / 0.6), FIRE_PALETTE)
+		_draw_palette_word("אש אוכלת", Vector2((e.dst as Vector2).x, (e.rect as Rect2).position.y - 30.0), 26, maxf(0.0, 1.0 - maxf(0.0, age - 0.5) / 0.6), FIRE_PALETTE)
 	var white: Texture2D = e.white
 	if white != null and age < 0.18 and int(age * 30.0) % 2 == 0:
 		draw_texture_rect(white, e.rect, false, Color(1.0, 0.98, 0.88, 0.8))
