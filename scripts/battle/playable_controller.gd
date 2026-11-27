@@ -1051,7 +1051,7 @@ func _execute_flee(unit: BattleUnit) -> void:
 	unit.acts_available = 0
 	unit.stored_acts = 0
 	_append_log("%s flees without its ally." % unit.display_name)
-	_event("%s flees." % short_name(unit))
+	_event("%s  FLEE" % short_name(unit))
 	hud.feedback = "%s fled." % short_name(unit)
 	_refresh_all()
 
@@ -1834,41 +1834,50 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 				recipient = ally_target if ally_target != null else unit
 			if recipient == null or (unit.race == &"floater_eye" and recipient.race == &"floater_eye"):
 				_append_log("%s has no valid ally for %s." % [unit.display_name, d.name])
-				_event("%s finds no ally to buff." % short_name(unit))
+				_event("%s  NO ALLY" % short_name(unit))
 				return
 			action_defender = recipient
 			var notes: Array[String] = []
+			var tags: Array[String] = []
 			for _s in int(fxd.get("atk_stages", 0)):
 				_add_stage(recipient)
 			if int(fxd.get("atk_stages", 0)) > 0:
 				notes.append("+%d ATK stage" % int(fxd.atk_stages))
+				tags.append("ATK ↑" if int(fxd.atk_stages) == 1 else "+%d ATK" % int(fxd.atk_stages))
 			for _s in int(fxd.get("mak_stages", 0)):
 				_add_mak_stage(recipient)
 			if int(fxd.get("mak_stages", 0)) > 0:
 				notes.append("+%d MAK stage" % int(fxd.mak_stages))
+				tags.append("MAK ↑" if int(fxd.mak_stages) == 1 else "+%d MAK" % int(fxd.mak_stages))
 			for _s in int(fxd.get("def_stages", 0)):
 				_add_def_stage(recipient)
 			if int(fxd.get("def_stages", 0)) > 0:
 				notes.append("+%d DEF stage" % int(fxd.def_stages))
+				tags.append("DEF ↑" if int(fxd.def_stages) == 1 else "+%d DEF" % int(fxd.def_stages))
 			for _s in int(fxd.get("mef_stages", 0)):
 				_add_mef_stage(recipient)
 			if int(fxd.get("mef_stages", 0)) > 0:
 				notes.append("+%d MEF stage" % int(fxd.mef_stages))
+				tags.append("MEF ↑" if int(fxd.mef_stages) == 1 else "+%d MEF" % int(fxd.mef_stages))
 			var agi_delta := int(fxd.get("agi_bonus", 0))
 			if agi_delta > 0:
 				recipient.agi_buffs.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "amount": agi_delta})
 				notes.append("+%d AGI" % agi_delta)
+				tags.append("+%d AGI" % agi_delta)
 			if bool(fxd.get("high_speed_next", false)):
 				recipient.next_attack_high_speed = true
 				notes.append("HIGH SPEED")
+				tags.append("HIGH SPEED")
 			var sp_amt := int(fxd.get("sp_bonus", 0))
 			if sp_amt > 0:
 				recipient.add_sp(sp_amt)
 				recipient.sp_buffs.append({"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "amount": sp_amt})
 				notes.append("+%d SP" % sp_amt)
+				tags.append("+%d SP" % sp_amt)
 			if bool(fxd.get("status_shield", false)):
 				recipient.haganah = {"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "non_prayer": true}
 				notes.append("STATUS SHIELD")
+				tags.append("STATUS SHIELD")
 			fx.play("BUFF", recipient, 0)
 			var popup_lines: Array[String] = []
 			if int(fxd.get("atk_stages", 0)) > 0 and int(fxd.get("mak_stages", 0)) > 0:
@@ -1887,7 +1896,8 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 				fx.label_override(recipient, popup_lines, fx._unit_rect(recipient), HUD_SCRIPT.FLOATER_EYE_GREEN)
 			_append_log("%s casts %s on %s: %s (EN %d/%d)." % [
 				unit.display_name, d.name, recipient.display_name, ", ".join(notes), unit.current_en, unit.stats.max_en])
-			_event("%s buffs %s (%s)." % [short_name(unit), short_name(recipient), ", ".join(notes)])
+			# D-110: telegraphic Battle Log line matching the rest of the combat events.
+			_event("%s → %s  %s" % [short_name(unit), short_name(recipient), "  ".join(tags)])
 		else:
 			# D-106: HOWL taunts, PRIMAL ROAR is berserk (2 stages, DEF down), WAR CRY buffs the team.
 			var receivers: Array[BattleUnit] = [unit]

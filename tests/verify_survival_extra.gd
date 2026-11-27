@@ -187,6 +187,7 @@ func _run() -> void:
 	tut.battle_scene = ""
 	root.add_child(tut)
 	await process_frame
+	tut.cell = tut.cell + Vector2i.UP  # só se fala com o curandeiro no bloco dele
 	_check(tut.talk() and tut.dialogue.is_open and not tut.service_open, "First keeper talk opens the tutorial, not the bar")
 	var tut_pages := 0
 	while tut.dialogue.is_open and tut_pages < 40:
@@ -208,6 +209,7 @@ func _run() -> void:
 	root.add_child(nr)
 	await process_frame
 	SurvivalState.patch({"macca": 0})
+	nr.cell = nr.cell + Vector2i.UP
 	nr.talk()
 	nr.service_index = nr.service_index_of("new_run")
 	_check(nr.confirm_service_option() == "new_run", "NEW RUN is in the service bar")

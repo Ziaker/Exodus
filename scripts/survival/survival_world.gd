@@ -186,16 +186,10 @@ func _can_step(from: Vector2i, to: Vector2i) -> bool:
 	return super._can_step(from, to) and SurvivalStrata.edge_is_open(from, to, SurvivalState.stratum())
 
 
-## Auditoria 2026-11-26: a figura à frente só conta se não há parede fina (aresta fechada da
-## Necrópole) entre o jogador e ela; antes dava para falar e ver o NPC através da parede.
+## Criador 2026-11-27: só se fala com o NPC (e só aparece a figura grande dele) no PRÓPRIO bloco; de frente, a distância
+## é vista pelo sprite 3D no corredor, sem o zoom da figura.
 func npc_near() -> Dictionary:
-	var here := npc_at(cell)
-	if not here.is_empty():
-		return here
-	var front: Vector2i = cell + DIRS[facing]
-	if not SurvivalStrata.edge_is_open(cell, front, SurvivalState.stratum()):
-		return {}
-	return npc_at(front)
+	return npc_at(cell)
 
 
 ## Atendente + eventos ainda não resolvidos do estrato.

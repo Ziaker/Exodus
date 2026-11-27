@@ -30,7 +30,7 @@ func _run() -> void:
 	await _frames(30)
 	w = current_scene
 	# Posicoes pedidas pelo criador (auditoria): [x, y, facing]
-	var spots := [[26, 164, 2], [26, 164, 0], [26, 164, 1], [26, 164, 3], [25, 164, 3], [26, 166, 2]]
+	var spots := [[26, 169, 0, "start_ahead"], [26, 168, 0, "on_keeper"], [26, 164, 2], [26, 164, 0], [26, 164, 1], [26, 164, 3], [25, 164, 3], [26, 166, 2]]
 	# NPCs de longe: 3 tiles antes de cada um, de frente
 	print("NPCSPRITES ", w.npc_sprites.size(), " of ", w.npcs.size())
 	for npc in w.npcs:

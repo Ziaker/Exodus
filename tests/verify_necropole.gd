@@ -64,7 +64,7 @@ func _run() -> void:
 	_check(dungeon.cell == start and SurvivalState.stratum() == 1, "run começa no Pórtico")
 	_check(dungeon.party.size() == 1 and dungeon.party[0].id == &"fallen",
 		"HUD inicial acompanha o grupo da run")
-	_check(dungeon.npc_near().get("id") == "sanctuary_keeper", "santuário na entrada")
+	_check(dungeon.npc_near().is_empty() and dungeon.npc_at(start + Vector2i.UP).get("id") == "sanctuary_keeper", "santuário na entrada, no bloco logo à frente (só se fala no bloco dele)")
 	_check(dungeon.enemies.entries.size() == SurvivalStrata.PER_STRATUM + 1, "demônios e grupo humano")
 	var warden: Dictionary = dungeon.enemies.at(finish)
 	_check(warden.get("id", "") == SurvivalStrata.warden_of(1) and warden.get("warden", false),
@@ -129,7 +129,8 @@ func _run() -> void:
 	# na memória desta cena, sem gravar no perfil do jogador.
 	dungeon._meta_cache = SurvivalMeta.data()
 	dungeon._meta_cache["keeper_intro"] = true
-	_check(dungeon.talk() and dungeon.service_open, "menu do santuário abre no Pórtico")
+	dungeon.cell = start + Vector2i.UP
+	_check(dungeon.talk() and dungeon.service_open, "menu do santuário abre no bloco do curandeiro")
 	dungeon.service_index = dungeon.service_index_of("descend")
 	_check(dungeon.service_index >= 0, "vitória habilita DESCEND")
 	dungeon.confirm_service_option()

@@ -48,7 +48,16 @@ func _run() -> void:
 		expected_floaters += SurvivalData.floater_eye_count(int(SurvivalState.data().seed), String(e.id))
 	_check(w.enemy_sprites.size() == SurvivalStrata.PER_STRATUM + 1 and w.viewport.find_children("*", "Sprite3D", true, false).size() == SurvivalStrata.PER_STRATUM + 1 + expected_floaters + w.npc_sprites.size(), "All 7 stratum demons, the human group and their Floater Eyes (+ the NPC sprites) have 3D corridor silhouettes")
 	_check(w.cell == start and w.facing == 0, "Player starts at sanctuary facing North toward healer/vendor")
-	_check(w.npc_picture.visible, "Healer/vendor SMT portrait is visible directly ahead on spawn")
+	# Criador 2026-11-27: de frente só há o sprite 3D (sem zoom); a figura grande e a conversa são no bloco do NPC.
+	_check(not w.npc_picture.visible and w.npc_near().is_empty(), "Healer/vendor: no zoom and no talking from the block ahead")
+	_check(w.npc_sprites.has("sanctuary_keeper"), "Healer/vendor has a 3D sprite visible from afar")
+	w.cell = start + Vector2i.UP
+	w._snap_to_state()
+	w.refresh_front_picture()
+	_check(w.npc_picture.visible, "Healer/vendor SMT portrait is visible on his own block")
+	w.cell = start
+	w._snap_to_state()
+	w.refresh_front_picture()
 	# Posições são embaralhadas pela semente: isola Pixie/Jack Frost para o teste de passo.
 	var keep: Array = []
 	for enemy in w.enemies.entries:
@@ -72,7 +81,9 @@ func _run() -> void:
 	# Tutorial da 1ª conversa (criador 2026-11-26) fica de fora: visto só na memória da cena.
 	w._meta_cache = SurvivalMeta.data()
 	w._meta_cache["keeper_intro"] = true
+	w.cell = start + Vector2i.UP  # só se fala com o curandeiro no bloco dele
 	_check(w.talk(), "Z opens unified Healer & Shop option bar")
+	w.cell = start
 	_check(w.service_open, "Service bar is open")
 	_check(w.service_options().size() == 9, "Service bar has HEAL, SHOP, RELICS, HIRE, RESERVE, NEW RUN, DAILY, TITLE, LEAVE")
 
@@ -100,10 +111,13 @@ func _run() -> void:
 	w.close_shop()
 
 	# Última opção: LEAVE.
+	w.cell = start + Vector2i.UP
 	w.talk()
 	w.service_index = w.service_options().size() - 1
 	_check(w.confirm_service_option() == "leave", "Last option closes bar")
 	_check(not w.service_open, "Service bar closed after LEAVE")
+	w.cell = start
+	w._snap_to_state()
 
 	# Pixie persegue até a borda do santuário, Jack Frost fica no extremo do mapa.
 	w.request(w.Act.FORWARD)
