@@ -64,6 +64,6 @@
    * **Regra de outline `ZAHAV`:** o **outline dourado só existe quando o ataque é realizado através de `ZAHAV`**; ataques normais sempre usam suas cores naturais.
    * **Hebraico:** **apenas `Ignoma Esh` usa letras hebraicas** (por conter `Esh` no nome — `אש`).
    * **Geometria:** reservada para **alguns outros anjos** (não usada em ataques demoníacos/não-reza comuns).
-   * **Status de aprovação visual (2026-11-27):** **Aprovados:** `Mazz Bite`, `Fang Sting`, `Vuln Pierce` *(sem outline dourado)*, `Umbral Gaze` *(versão mais escura)*. **Em iteração:** `Fang Spine [ZAHAV]`, `Dark Breath`, `Ignoma`, `Ignoma Esh [ZAHAV]`.
+   * **Status de aprovação visual (2026-11-27):** **Aprovados (6/8):** `Mazz Bite`, `Fang Sting`, `Fang Spine [ZAHAV]`, `Vuln Pierce` *(sem outline dourado)*, `Umbral Gaze` *(versão mais escura)*, `Ignoma`. **Em iteração (2/8):** `Dark Breath` *(jato saindo diretamente da boca)*, `Ignoma Esh [ZAHAV]`.
 
 *Única pendência menor:* confirmar se `Vuln Pierce` dobra o dano apenas em reação contra ação não-ofensiva anunciada ou também contra alvo com estado/postura não-ofensiva ativa no round.
