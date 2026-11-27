@@ -59,6 +59,7 @@ func _run() -> void:
 	await _sync()
 	await _mirror_and_geometry()
 	await _allies_and_layers()
+	await _closeup()
 	print("VERIFY_D124_VFX_OK: %d checks; 8 choreographies run clean and end on their own, hit moments sync the mechanics, gold only with ZAHAV, Hebrew only in Ignoma Esh, effects stay on the stage" % checks)
 	ProgressStore.clear()
 	b.queue_free()
@@ -75,7 +76,9 @@ func _body(src: String, fname: String) -> String:
 
 
 func _laws() -> void:
-	var src := FileAccess.get_file_as_string(FX_SCRIPT)
+	var src := FileAccess.get_file_as_string(FX_SCRIPT).replace("
+", "
+")
 	for fname in ["play_mazz_bite", "play_fang_sting", "play_vuln_pierce", "play_dark_breath", "play_umbral_gaze", "play_ignoma"]:
 		var body := _body(src, fname)
 		check(body.length() > 200 and not body.contains("GOLD") and not body.contains("palette_for(&\"blood\", true)") \
@@ -168,7 +171,7 @@ func _sync() -> void:
 			u.trapped_actions = 0
 		b._skill_strike(foe0, hero, id, false, false, true)  # sem await: acompanhamos o relógio
 		var before := hero.current_hp
-		var t_start: float = g.time
+		var t_start: float = await _effect_start()
 		var landed_at := -1.0
 		for _i in 160:
 			await process_frame
@@ -189,7 +192,7 @@ func _sync() -> void:
 			u.burns.clear()
 		b._second_target = ally
 		b._skill_strike(foe0, hero, id, false, false, true)
-		var t_start: float = g.time
+		var t_start: float = await _effect_start()
 		var times := [-1.0, -1.0]
 		for _i in 200:
 			await process_frame
@@ -214,7 +217,7 @@ func _sync() -> void:
 	var t_breath: float = g.breath_hit_age(hero, foe0)
 	check(t_breath > g.BREATH_START and g.breath_hit_age(hero, foe1) > t_breath, "the breath reaches the nearer target first")
 	b._dark_breath_flow(foe0, [hero, ally], {hero: BattleMath.RhythmResult.POINT, ally: BattleMath.RhythmResult.POINT}, {}, false)
-	var t0: float = g.time
+	var t0: float = await _effect_start()
 	var blind_at := -1.0
 	for _i in 200:
 		await process_frame
@@ -242,7 +245,9 @@ func _mirror_and_geometry() -> void:
 	var stage_end: float = g.stage_rect().end.y * g.DESIGN_SCALE
 	for u in [hero, ally]:
 		var geom: Dictionary = g.unit_geom(u)
-		check(Rect2(geom.card).has_point(geom.c) and float(geom.c.y) > stage_end, "a hero target is its CARD: the effect happens on the card, never on an enemy figure (%s)" % u.display_name)
+		var ref: Dictionary = g.unit_geom(foe0)
+		check(is_equal_approx(float(geom.k), float(ref.k)) and is_equal_approx(float(geom.c.y), float(ref.c.y)) and float(geom.c.y) < stage_end,
+			"an ALLY target gets exactly the size and height of an enemy target (k %.2f, y %.0f) (%s)" % [float(geom.k), float(geom.c.y), u.display_name])
 	for u in [foe0, foe1]:
 		var geom: Dictionary = g.unit_geom(u)
 		check(float(geom.k) >= 1.0 and float(geom.k) <= 2.6 and float(geom.c.x) > 0.0, "an enemy target scales its art with the sprite (k %.2f)" % float(geom.k))
@@ -279,13 +284,7 @@ func _allies_and_layers() -> void:
 		var stage_end: float = g.stage_rect().end.y
 		for key in g._fields:
 			var r: ColorRect = g._fields[key].rect
-			var card_g: Dictionary = g.unit_geom(hero)
-			var card_rect: Rect2 = Rect2(card_g.card).grow(7.0)
-			var field_d := Rect2(r.position * g.DESIGN_SCALE, r.size * g.DESIGN_SCALE)
-			var ally_a: Rect2 = Rect2(g.unit_geom(ally).card).grow(7.0)
-			check(card_rect.encloses(field_d) or ally_a.encloses(field_d) or key == &"breath" or Rect2(g.stage_rect().position * g.DESIGN_SCALE, g.stage_rect().size * g.DESIGN_SCALE).encloses(field_d), "%s on allies: Moire field '%s' stays on the target card or on the stage (flight)" % [id, key])
-		if id in [&"vuln_pierce", &"mazz_bite", &"fang_sting", &"umbral_gaze", &"ignoma"]:
-			check(g._warps.has(hero.id) and not b.hud.warp_hidden.has(hero.id), "%s on a hero: its card wobbles, no sprite overlay" % id)
+			check(Rect2(g.stage_rect().position * g.DESIGN_SCALE, g.stage_rect().size * g.DESIGN_SCALE).encloses(Rect2(r.position * g.DESIGN_SCALE, r.size * g.DESIGN_SCALE)), "%s on allies: Moire field '%s' stays inside the stage" % [id, key])
 		for e in g._effects:
 			e.at = g.time - float(g.DURATIONS[id]) + 0.05
 		await frames(14)
@@ -295,10 +294,69 @@ func _allies_and_layers() -> void:
 	var geom_h: Dictionary = g.unit_geom(hero)
 	var geom_y: Dictionary = g.unit_geom(ally)
 	check(float(geom_h.c.x) != float(geom_y.c.x), "Fallen and Yoch have their own columns")
-	check(float(geom_h.k) < 1.0 and float(geom_h.c.x) != float(g.unit_geom(foe0).c.x) or true, "a hero target is scaled down to fit its card")
+	check(is_equal_approx(float(geom_h.k), float(g.unit_geom(foe0).k)), "an ally effect is NOT scaled down: same size as on an enemy")
 	# o mesmo efeito, aliado atacando inimigo: caster herói (origem no cartão) com alvos inimigos
 	g.clear_all()
 	_start(&"ignoma_esh", ally, foe0, foe1)
 	await frames(10)
 	check(g.effect_count() == 1, "an ally can cast Ignoma Esh on the enemies (Yoch as the caster)")
 	g.clear_all()
+
+
+# --------------------------------------------------------------------------- PROTOTIPO: close-up do aliado (mesmo tamanho do inimigo)
+func _closeup() -> void:
+	g.clear_all()
+	var ref0: Dictionary = g.unit_geom(foe0)
+	var ref1: Dictionary = g.unit_geom(foe1)
+	g.closeup_begin([hero, ally])
+	for _i in 80:
+		await process_frame
+		if not g._closeup_opening and g.closeup_active():
+			break
+	check(g.closeup_active() and b.hud.closeup_hide, "close-up: the enemies vanish and the ally stand-ins appear")
+	var gh: Dictionary = g.unit_geom(hero)
+	var ga: Dictionary = g.unit_geom(ally)
+	check(is_equal_approx(float(gh.k), float(ref0.k)) and is_equal_approx(float(gh.h), float(ref0.h)) and is_equal_approx(float(gh.c.y), float(ref0.c.y)) and is_equal_approx(float(gh.c.x), float(ref0.c.x)),
+		"close-up: Fallen gets EXACTLY the rect, size and height of enemy slot 1 (k %.2f)" % float(gh.k))
+	check(is_equal_approx(float(ga.k), float(ref1.k)) and is_equal_approx(float(ga.c.x), float(ref1.c.x)) and is_equal_approx(float(ga.c.y), float(ref1.c.y)),
+		"close-up: Yoch gets EXACTLY the rect, size and height of enemy slot 2 (k %.2f)" % float(ga.k))
+	# o efeito roda no aliado do mesmo jeito que no inimigo (warp no sprite-substituto, nao no cartao)
+	g.play_vuln_pierce(foe0, hero, true)
+	await frames(20)
+	check(g._warps.has(hero.id) and bool(g._warps[hero.id].get("standin", false)) and not b.hud.warp_card.has(hero.id), "close-up: the warp runs on the stand-in sprite like on an enemy")
+	var sp: Sprite2D = g._warps[hero.id].sprite
+	check(sp.get_parent() == g._warp_layer, "close-up: the stand-in sits in the lowest layer (every effect is in front of the figure)")
+	for e in g._effects:
+		e.at = g.time - float(g.DURATIONS[&"vuln_pierce"]) + 0.05
+	for _i in 120:
+		await process_frame
+		if not g.closeup_active() and not g._closeup_closing:
+			break
+	check(not g.closeup_active() and not b.hud.closeup_hide and g.darken() < 0.01 and not g.is_busy(), "close-up: ends, the enemies come back and the stage clears")
+	# o fluxo do controlador: inimigo ataca o aliado => close-up automatico
+	for u in [hero, ally]:
+		u.stats.max_hp = 500
+		u.current_hp = 500
+	b._skill_strike(foe0, hero, &"vuln_pierce", false, false, true)
+	var saw := false
+	for _i in 240:
+		await process_frame
+		if g.closeup_active():
+			saw = true
+		if hero.current_hp < 500:
+			break
+	check(saw and hero.current_hp < 500, "an enemy attack on an ally triggers the close-up and the hit still lands on the choreography impact")
+	for _i in 240:
+		await process_frame
+		if not g.is_busy():
+			break
+	check(not g.is_busy() and not b.hud.closeup_hide, "the controller flow leaves no close-up behind")
+
+
+## Início do efeito (o close-up do aliado vem antes e leva ~0.4 s): espera o efeito existir e devolve o `at` dele.
+func _effect_start() -> float:
+	for _i in 200:
+		if g.effect_count() > 0:
+			return float(g._effects[0].at)
+		await process_frame
+	return g.time

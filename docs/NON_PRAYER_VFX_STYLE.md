@@ -165,3 +165,11 @@ Qualquer novo ataque não-reza adicionado ao jogo só é considerado entregue ap
 - **Mini barra HIGH SPEED do HTML** não foi duplicada (a barra real de ritmo já cumpre esse papel).
 - **Ignoma Esh em 1 alvo:** as duas bolas usam arcos de 52 e 82 px; as letras hebraicas do impacto ficam presas ao palco.
 - O impacto ainda mostra o número de dano padrão do jogo por cima da coreografia.
+
+## 9. Protótipo: close-up do aliado atingido (2026-11-27)
+
+Ordem do criador: o efeito num aliado tem **exatamente o tamanho** do efeito num inimigo. O aliado não tem figura no palco (só o cartão), então, quando um aliado é atingido, rola um close-up: o palco escurece (0,18 s), as figuras dos inimigos somem, e uma **figura-substituta** do aliado aparece no retângulo de sprite de um inimigo (slot = posição do aliado no grupo: Fallen no 1º, Yoch no 2º), com a mesma sombra de chão e o mesmo warp; o efeito roda nela como num inimigo e, no fim, o palco escurece de novo e devolve os inimigos. Implementação: `SkillGrotesqueFX.closeup_begin()` / `_closeup_end()`, gancho `closeup_hide` no HUD, chamado por `_gfx_start` e `_dark_breath_flow` do controlador. Teste: `tests/verify_d124_vfx.gd` (`_closeup`).
+
+- **A arte da figura-substituta é PROVISÓRIA** (`STANDIN_ART`, a silhueta de `Zealot Masakado`, a arte da Yoch no Survival): o criador ainda não definiu a arte de Fallen e Yoch no palco. Fica pendente.
+- Projétil de inimigo em close-up (Ignoma, Ignoma Esh) entra pela borda direita da tela, porque a figura do inimigo atacante some.
+- Mudar o tamanho do efeito num inimigo não faz parte disto: o ramo dos inimigos de `unit_geom` não foi alterado.

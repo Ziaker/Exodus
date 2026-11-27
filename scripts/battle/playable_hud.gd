@@ -471,6 +471,8 @@ func _track_hp_shake() -> void:
 
 ## D-125 (SkillGrotesqueFX): units whose enemy silhouette is replaced by the fever-warp overlay (the HUD
 ## skips the plain black silhouette) and the horizontal wobble of a hero card under the same warp.
+## PROTOTIPO D-125 (close-up dos aliados): enquanto verdadeiro, as figuras dos inimigos nao sao desenhadas.
+var closeup_hide := false
 var warp_hidden: Dictionary = {}
 var warp_card: Dictionary = {}
 
@@ -967,7 +969,7 @@ func _selected_enemy() -> int:
 func _enemy(_x: float, index: int) -> void:
 	if index >= opponents.size(): return
 	var unit := opponents[index]
-	if not unit.is_alive() or broken_units.has(unit): return
+	if not unit.is_alive() or broken_units.has(unit) or closeup_hide: return
 	var column := enemy_column(index)
 	var art := enemy_sprite_rect(index)
 	art.position += shake_offset(unit)
