@@ -1,0 +1,62 @@
+# Skills Canônicas Revisadas do Survival + Regras Globais de Combate (D-124)
+
+**Decisão:** D-124 · 2026-11-27 (decisão do criador)  
+**Estado:** **CANÔNICO — DESIGN CONFIRMADO; NÃO IMPLEMENTADO**  
+**Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md)
+
+> [!IMPORTANT]
+> Após as correções definidas pelo criador em 2026-11-27, os **6 ataques abaixo** (mais suas **2 evoluções `ZAHAV`**) passam a ser **canônicos** e eventualmente presentes no jogo principal, acompanhados de **3 regras globais de combate** (`HIGH SPEED`, `BLEED` canônico e `Temporização de ação`).
+
+---
+
+## 1. Catálogo Canônico de Ataques (6 base + 2 evoluções `ZAHAV`)
+
+| # | Nome | Evolução `ZAHAV` | Origem (Survival D-106) | Custo / Tipo / Alvo | Efeito Canônico |
+|---|---|---|---|---|---|
+| 1 | **Mazz Bite** | — | Rework de `SHADOW BITE` | `1 ACT / 30% HP` · Físico · 1 alvo | A troco de perder **30% do próprio HP**, realiza um ataque físico de **alta velocidade (`HIGH SPEED`)** causando **10 de dano base + 30% do próprio HP** de dano extra. |
+| 2 | **Fang Sting** | **Fang Spine** | Rework de `FANG FLURRY` | `2 ACT / 6 EN` · Físico · 1 alvo | Causa **5 + ATK** de dano e aplica **`BLEED` somente no `POINT`** (se acertar no `BEAM`/blast, **não** aplica `BLEED`). |
+| 2Z | **Fang Spine** *(ZAHAV)* | Evolução de `Fang Sting` | — | `3 ACT / 10 EN` · Físico · Alvo alternável | Realiza **2 ataques consecutivos ou intercalados entre alvos** em uma mesma ação, causando **15 + ATK** de dano, aplicando **`BLEED` ao contato** e **`BLEED ×2` no `POINT`**. |
+| 3 | **Vuln Pierce** | — | Rework de `SOUL PIERCE` | `1 ACT / 8 EN` · Físico · 1 alvo | Causa **15 + ATK** de dano; causa o **dobro de dano** em alvos que estejam realizando uma **ação não-ofensiva**. |
+| 4 | **Dark Breath** | — | Rework de `FROST BREATH` | `3 ACT / 15 EN` · Mágico · Todos inimigos | Solta um bafo de trevas: reduz o **PP em 3** de quem não desvia e **cega** até o fim do round. |
+| 5 | **Umbral Gaze** | — | Rework de `VOID GAZE` | `3 ACT / 15 EN` · Mágico · 1 alvo | Abre um círculo de sombras nos pés do alvo e o espeta com espinhos de trevas, causando **15 + MAK** e **aprisionando o alvo por 2 ações** *(ver §2.3)*. |
+| 6 | **Ignoma** | **Ignoma Esh** | Nova skill canônica | `2 ACT / 8 EN` · Mágico · 1 alvo | Lança uma bola de fogo no alvo causando **10 + MAK** de dano com **35% de chance de causar `BURN`**. |
+| 6Z | **Ignoma Esh** *(ZAHAV)* | Evolução de `Ignoma` | — | `3 ACT / 12 EN` · Mágico · 1 alvo alternável | Lança **duas bolas de fogo** em 1 alvo ou em 2 alvos diferentes, causando cada uma **10 + MAK** de dano com **35% de chance de causar `BURN`**. |
+
+*(Todas as evoluções `ZAHAV` obedecem à regra da D-118: acionadas segurando `A`, com nome exibido em dourado e custo de 20 SP após a conclusão; disponíveis a partir da metade da campanha para o jogador, além de Anjos e elites.)*
+
+---
+
+## 2. Regras Globais de Combate (D-124)
+
+### 2.1 Ataques de Alta Velocidade (`HIGH SPEED`)
+> Ataques com **"alta velocidade"** no texto são mais difíceis de bloquear por possuírem um **ponteiro 20% mais rápido** do que o ponteiro normal, além de também serem **mais rápidos do que o ponteiro do oponente no contra-ataque** (D-049).
+
+* Aplica-se a: **Mazz Bite** e quaisquer ataques futuros marcados como `HIGH SPEED`.
+* **Nota de integração com D-034 / D-049:** em vez da duração fixa padrão de `1,0 s`, a barra defensiva/ofensiva (e o trilho do atacante no contra-ataque) atravessa 20% mais rápido (`duração = 1,0 / 1,2 ≈ 0,833 s` ou velocidade `×1,20`).
+
+### 2.2 `BLEED` (Sangramento Canônico)
+> Condição de status que **reduz em 20% as curas recebidas** até o fim do próximo turno, podendo **acumular até 4 vezes** (até **−80%** de cura recebida).
+
+* **Diferença em relação ao Survival D-106:** no Survival (D-106, provisório), `BLEED` causava `2` de dano/round por 3 rounds. A definição da **D-124** é a regra **canônica** oficial de `BLEED` no jogo principal.
+* Continua sendo removível por **Tahorah** (D-112) e bloqueável por **Haganah** (D-048).
+
+### 2.3 Temporização de Ação (Efeitos por X Ações/Atos)
+> Quando um ataque diz que um efeito dura por **X ações/atos**, a duração conta o **número de ações realizadas após a efetuação do efeito** (ex.: se aprisionou uma unidade por 3 atos, após 3 ações o alvo é liberto).
+>
+> Para efeitos de prisão/imobilização temporizada, o estado funciona como um **`PASS` automático**: quem foi aprisionado **não perde** as ações ou reações que ainda não utilizou, **porém perde os atos que já estavam em fila**.
+
+* **Impacto em habilidades já especificadas:**
+  * **Umbral Gaze** (D-124): aprisiona o alvo por **2 ações** (perde a fila atual; age como `PASS` automático sem desperdiçar atos ainda não enfileirados; liberto após 2 ações).
+  * **Angel Hug** (D-118): paralisa por **3 atos** (segue a mesma contagem de ações realizadas após o efeito; nota: na D-118 quem está paralisado não pode agir nem reagir durante os 3 atos).
+  * **Lior** (D-118): cura durante uma sequência de **5 ações** após o uso.
+
+---
+
+## 3. Pendências técnicas para antes da implementação em código
+
+1. **`Mazz Bite` (`30% HP`):** confirmar se os 30% referem-se ao **HP máximo** ou ao **HP atual**, e se exige HP estritamente maior que o custo (como `Bleedbuff`, para impedir suicídio automático).
+2. **`Vuln Pierce` ("ação não-ofensiva"):** definir exatamente a janela de detecção — se vale apenas como **reação/contra-ataque** contra uma ação não-ofensiva anunciada (`PRAY`, buffs, curas, `REST`, etc.) ou também contra um alvo cuja última ação anunciada/em curso seja não-ofensiva.
+3. **`Fang Spine` (`15 + ATK`):** confirmar se `15 + ATK` é o dano de **cada um** dos 2 ataques (como especificado em `Ignoma Esh`) ou dividido entre os 2 golpes.
+4. **`Dark Breath` (dano e desvio):** confirmar se `Dark Breath` causa **0 de dano** (apenas −3 PP + cegueira até o fim do round) ou se possui dano base próprio, e se alvos sem PP (demônios que usam EN) sofrem apenas a cegueira.
+5. **Contagem de "ações realizadas" na Temporização de Ação:** confirmar se o contador de X ações/atos incrementa a cada **ação global** realizada por qualquer combatente na batalha (o que permite ao alvo aprisionado ser liberto enquanto outros agem, já que ele próprio está dando `PASS` automático) — comportamento mais coerente com "3 atos após este efeito, o alvo é liberto".
+6. **Substituição no Survival (`skill_book.gd` / `survival_data.gd`):** confirmar se os 5 antigos do Survival (`SHADOW BITE`, `FANG FLURRY`, `SOUL PIERCE`, `FROST BREATH`, `VOID GAZE`) devem ser substituídos diretamente no Survival ou se as 6 skills canônicas entram em paralelo no catálogo principal.

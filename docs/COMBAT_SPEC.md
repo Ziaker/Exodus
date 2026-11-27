@@ -1553,7 +1553,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 | **Cherev** *(D-107 / D-115)* | חֶרֶב | Espada / Sword | 3 PP / 1 ACT | Corte de luz em **todos os inimigos**, dano **10 + MAK − MEF** em cada alvo (id interno `cherav`). |
 
 - **Canonicidade (D-115):** todas as **11 rezas** da tabela acima pertencem ao **jogo canônico** (unificadas em `PrayerBook`, todas com VFX hebraico obrigatório pela D-113). As 3 iniciais do Yoch na campanha continuam `Refuah`, `Haganah` e `Ra'am`; como e quando as demais são aprendidas ou distribuídas na campanha é **PENDENTE**.
-- **Expansão canônica confirmada em design (D-118 — NÃO IMPLEMENTADO):** **8 novas rezas** (`Esh`, `Shalhevet`, `Lehavah`, `Nogah`, `Chaki`, `Lior`, `Meir`, `Shachar`), **6 magias de anjos** aprendíveis por Yoch em PP ao derrotar anjos (`Ur Esh`, `Seraf`, `Nitzotz`, `Esh Ochelet`, `Esh Sinai`, `Gever`), **6 skills de Gabriel** (`Angel Hug`, `God's Message`, `Hasneh Habo'er`, `Adin`→`Adina`→`Adinut`), regra **IMEDIATO** e sistema **ZAHAV** — especificação completa em `docs/ANGEL_PRAYERS_AND_ZAHAV.md`.
+- **Expansão canônica confirmada em design (D-118 — 20/20 magias implementadas em 2026-11-27; ZAHAV e IA inimiga PENDENTES):** **8 novas rezas** (`Esh`, `Shalhevet`, `Lehavah`, `Nogah`, `Chaki`, `Lior`, `Meir`, `Shachar`), **6 magias de anjos** aprendíveis por Yoch em PP ao derrotar anjos (`Ur Esh`, `Seraf`, `Nitzotz`, `Esh Ochelet`, `Esh Sinai`, `Gever`), **6 skills de Gabriel** (`Angel Hug`, `God's Message`, `Hasneh Habo'er`, `Adin`→`Adina`→`Adinut`), regra **IMEDIATO** e sistema **ZAHAV** — especificação completa em `docs/ANGEL_PRAYERS_AND_ZAHAV.md`.
 - **Banco de ideias futuras (D-116):** candidatos de vocabulário mágico hebraico para uso eventual (exploração/`Hineni`, elementais, suporte/oração, maldições, metafísicas e qualificadores) estão catalogados em `docs/MAGIC_VOCABULARY_BACKLOG.md` (referência futura; sem regras mecânicas fechadas).
 
 - Exemplos com os números do criador: Refuah 3 PP = 30 HP; Ra'am 4 PP = base 20.
@@ -1659,6 +1659,13 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
 
 - Exigir **avaliador temporal mecânico testável com tempos injetados** para fronteiras, t=0, t=1 s, timeout e primeiro input, **mais testes de integração reais de `RhythmBar`/`BattleController`** com eventos e FPS controlados **30/60/120**. Mesmos timestamps, parâmetros e seeds exigem mesmas classificações e estados mecânicos; não exigir reprodução visual pixel a pixel.
 - Verificar a infraestrutura Godot/testes do repositório antes de escolher harness ou arquivos. Fase 1 segue portões D-039/D-040: parse real, testes unitários/integração pertinentes, diff e evidência verificável; Fase 2 de múltiplas zonas e IA especial depende de liberação adequada da Fase 1. **Nenhum teste, código ou recurso foi executado/alterado nesta rodada documental.**
+
+## Regras globais de ataques e status — D-124 (criador, 2026-11-27; DESIGN CONFIRMADO, NÃO IMPLEMENTADO)
+Especificação completa das 6 skills canônicas (+ 2 evoluções `ZAHAV`: `Mazz Bite`, `Fang Sting`/`Fang Spine`, `Vuln Pierce`, `Dark Breath`, `Umbral Gaze`, `Ignoma`/`Ignoma Esh`) em `docs/CANON_SKILLS_D124.md`.
+
+- **`HIGH SPEED` attacks:** ataques com "alta velocidade" no texto usam ponteiro **20% mais rápido** do que o normal (mais difíceis de bloquear) e também são **mais rápidos do que o ponteiro do oponente no contra-ataque** (D-049).
+- **`BLEED` (canônico):** condição de status que **reduz em 20% as curas recebidas** até o fim do próximo turno, podendo **acumular até 4 vezes** (até −80%).
+- **Temporização de ação:** efeitos que duram por **X ações/atos** encerram-se após **X ações realizadas depois da efetuação do efeito**. Para efeitos de prisão/imobilização, funciona como um **`PASS` automático**: o alvo **não perde** ações/reações ainda não utilizadas, **porém perde os atos que estavam em fila**.
 
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), itens abençoados da

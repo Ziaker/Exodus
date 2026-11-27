@@ -21,15 +21,18 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
   * Criadas em `D-107` e confirmadas canônicas (`D-115`): **Sanverim**, **Nechamah**, **Cherev**.
   * Criadas em `D-112` e confirmadas canônicas (`D-115`): **Tahorah**, **Magen**, **Gevurah**, **Mishpat**, **Zohar**.
   * *(Forma e momento de desbloqueio das 8 rezas além das 3 iniciais na campanha: **PENDENTE**.)*
-* **Expansão canônica em design (`D-118`, [`docs/ANGEL_PRAYERS_AND_ZAHAV.md`](ANGEL_PRAYERS_AND_ZAHAV.md) — NÃO IMPLEMENTADO):**
+* **Expansão canônica em design (`D-118`, [`docs/ANGEL_PRAYERS_AND_ZAHAV.md`](ANGEL_PRAYERS_AND_ZAHAV.md) — 20/20 magias implementadas em 2026-11-27; ZAHAV e IA inimiga PENDENTES):**
   * **8 novas rezas (PP):** `Esh`, `Shalhevet`, `Lehavah`, `Nogah`, `Chaki`, `Lior`, `Meir`, `Shachar`.
   * **6 magias de Anjos** (EN para anjos; Yoch aprende em PP ao derrotar um anjo): `Ur Esh`, `Seraf`, `Nitzotz`, `Esh Ochelet`, `Esh Sinai`, `Gever`.
   * **6 skills de Gabriel:** `Angel Hug`, `God's Message`, `Hasneh Habo'er`, `Adin` → `Adina` → `Adinut`.
   * **Regra `IMEDIATO`** (resolve ao anunciar, sem reação) e **sistema `ZAHAV`** (metade do jogo; botão `A`; +2 estágios de dano e +20% chance de efeito por 20 SP após concluir; evolução com nome dourado; acessível a Anjos e elites).
 * **VFX canônicos (`D-052`, `D-113`):** absorção em letras hebraicas (`absorb_vfx.gd`) e **regra obrigatória de VFX 100% letras hebraicas** para todas as rezas ([`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md), `pray_fx.gd`).
 
-### 1.3 Skills canônicas do Prólogo (`D-050`, `D-117`)
-* **4 skills** (`SkillBook.KIND_SKILLS`): **LUNGE**, **BLEEDBUFF**, **HEAT WAVE**, **ENERGEAT** *(renomeada de Energy Eat em D-117; id interno `energy_eat`)* + aprendizado permanente a cada 4 absorções.
+### 1.3 Skills canônicas do Prólogo e Expansão Canônica (`D-050`, `D-117`, `D-124`)
+* **4 skills do Prólogo** (`SkillBook.KIND_SKILLS`): **LUNGE**, **BLEEDBUFF**, **HEAT WAVE**, **ENERGEAT** *(renomeada de Energy Eat em D-117; id interno `energy_eat`)* + aprendizado permanente a cada 4 absorções.
+* **6 skills canônicas revisadas + 2 evoluções `ZAHAV` (`D-124`, [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) — DESIGN CONFIRMADO; NÃO IMPLEMENTADO):**
+  * **Mazz Bite** *(rework de `SHADOW BITE`)*, **Fang Sting** *(rework de `FANG FLURRY`)* → ZAHAV **Fang Spine**, **Vuln Pierce** *(rework de `SOUL PIERCE`)*, **Dark Breath** *(rework de `FROST BREATH`)*, **Umbral Gaze** *(rework de `VOID GAZE`)*, **Ignoma** → ZAHAV **Ignoma Esh**.
+  * **3 regras globais canônicas (`D-124`):** `HIGH SPEED` (ponteiro 20% mais rápido e vantagem no contra-ataque), `BLEED` canônico (−20% cura recebida até o fim do próximo turno, acumula 4×) e `Temporização de ação` (dura X ações após o efeito; aprisionamento age como `PASS` automático perdendo a fila atual).
 
 ### 1.4 Personagens, raças, lore e mundo
 * **Personagens e raças (`D-048`, `D-050`):** **Fallen / Deviron** (demônio), **Yoch** (humano), **Maziks** (inimigos de silhueta com simetria perfeita), **Anjos** (imunes a Ra'am; classificação pendente).
@@ -44,9 +47,9 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
 * **IA/combate exclusivo do Survival:** temperamentos/intenções (`BRUTE`, `CASTER`, `SUPPORT`, `HUNTER`, `TRICKSTER`), 5 afixos de elite (`BRUTAL`, `SWIFT`, `STONE`, `BURNING`, `VAMPIRIC`) e absorção roguelike com raridades `COMMON`/`RARE`/`EPIC`.
 * **Sistema de aliados do Survival (`D-111`, `scripts/survival/survival_allies.gd`):** run começa só com Fallen; recrutamento de demônios/humanos, Yoch raro (15%/estrato), reserva até 8, crescimento a cada 2 lutas, `MANUAL`/`AUTO`, 3 painéis estreitos.
 * **Inimigos exclusivos do Survival:** 35 demônios SMT (`PIXIE` até `IZANAMI`) e 5 grupos genéricos de humanos sem lore (`HUMAN A/B/C`).
-* **27 skills exclusivas do Survival (`D-106`, `SurvivalData.SURVIVAL_SKILLS`, valores ainda marcados como proposta):**
-  * *10 físicas:* `SHADOW BITE`, `FANG FLURRY`, `HEAVY CRUSH`, `SOUL PIERCE`, `TWIN FANG`, `FROST LANCE`, `LIFE DRAIN`, `FINISHING BLOW` (`crushing_blow`), `BLADE DANCE`, `STONE GRASP`.
-  * *11 mágicas (all foes):* `PIXIE DUST`, `FROST BREATH`, `HELLFIRE`, `SPIRIT BRAND` (`spirit_bolt`), `CURSE RAY`, `VENOM CLOUD`, `MIND DRAIN` (`mind_blast`), `THUNDER CALL`, `SOUL LEECH` (`spirit_wave`), `EMBER BURST` (`ember_touch`), `VOID GAZE`.
+* **27 skills exclusivas do Survival (`D-106`, `SurvivalData.SURVIVAL_SKILLS`, valores ainda marcados como proposta; 5 promovidas/reworked para o cânone em `D-124`):**
+  * *10 físicas:* ~~`SHADOW BITE`~~ *(→ `Mazz Bite`, D-124)*, ~~`FANG FLURRY`~~ *(→ `Fang Sting`/`Fang Spine`, D-124)*, `HEAVY CRUSH`, ~~`SOUL PIERCE`~~ *(→ `Vuln Pierce`, D-124)*, `TWIN FANG`, `FROST LANCE`, `LIFE DRAIN`, `FINISHING BLOW` (`crushing_blow`), `BLADE DANCE`, `STONE GRASP`.
+  * *11 mágicas (all foes):* `PIXIE DUST`, ~~`FROST BREATH`~~ *(→ `Dark Breath`, D-124)*, `HELLFIRE`, `SPIRIT BRAND` (`spirit_bolt`), `CURSE RAY`, `VENOM CLOUD`, `MIND DRAIN` (`mind_blast`), `THUNDER CALL`, `SOUL LEECH` (`spirit_wave`), `EMBER BURST` (`ember_touch`), ~~`VOID GAZE`~~ *(→ `Umbral Gaze`, D-124)*.
   * *6 suportes/curas:* `HOWL`, `PRIMAL ROAR`, `WAR CRY`, `MEND`, `DARK BOON` (`dark_siphon`), `RENEW`.
 * **5 itens de loja do Survival (`D-072`):** `BEAD`, `CHAKRA`, `MEDICINE`, `SOMA`, `BLAST STONE`.
 * **Cenas e scripts:** `scenes/survival/SurvivalWorld.tscn`, `scenes/survival/SurvivalBattle.tscn`, `scripts/survival/*`, `prototypes/necropole-battle/`.
