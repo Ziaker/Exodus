@@ -225,7 +225,15 @@ func set_field(key: StringName, spec: Dictionary) -> void:
 		area_d = Rect2(x0, mouth.y - half, reach, half * 2.0)
 	# o retângulo coberto é recortado ao palco (o Moiré nunca passa do HUD superior nem do Battle Log)
 	var stage_d := Rect2(stage_rect().position * DESIGN_SCALE, stage_rect().size * DESIGN_SCALE)
-	var clipped := area_d.intersection(stage_d)
+	# o Moiré de um alvo herói fica recortado ao cartão dele (a figura do aliado); os demais, ao palco
+	var clip_d := stage_d
+	var area_center := area_d.get_center()
+	for hero in hud.players:
+		var cr: Rect2 = hud.status_rect(maxi(0, hud.players.find(hero)))
+		var card_d := Rect2(to_design(cr.position), to_design(cr.size)).grow(6.0)
+		if card_d.has_point(area_center):
+			clip_d = card_d
+	var clipped := area_d.intersection(clip_d)
 	if clipped.size.x <= 0.0 or clipped.size.y <= 0.0 or float(spec.get("env", 1.0)) <= 0.02:
 		rect.visible = false
 		return
@@ -609,10 +617,11 @@ func unit_geom(u: BattleUnit) -> Dictionary:
 	if u.is_player:
 		var idx: int = hud.players.find(u)
 		var card: Rect2 = hud.status_rect(maxi(0, idx))
-		# O herói não tem figura no palco, só o cartão: o efeito cai na coluna do cartão, rente ao fundo do PALCO, menor
-		# (k 0.85), para nunca cobrir o cartão nem o Battle Log (as mandíbulas do Mazz Bite chegam a ~92 px x k abaixo).
-		var c := Vector2(card.get_center().x * DESIGN_SCALE, stage_rect().end.y * DESIGN_SCALE - 90.0)
-		return {"c": c, "k": 0.85, "h": 90.0, "feet": c.y + 40.0, "origin": c}
+		# O herói não tem figura no palco: a figura do aliado é o CARTÃO. O efeito acontece sobre o próprio cartão (centro
+		# dele), reduzido (k 0.55) para caber na faixa dele; o Moiré fica recortado ao cartão (ver set_field).
+		var c: Vector2 = to_design(card.get_center())
+		return {"c": c, "k": 0.55, "h": card.size.y * DESIGN_SCALE, "feet": c.y + card.size.y * DESIGN_SCALE * 0.5, "origin": c,
+			"card": Rect2(to_design(card.position), to_design(card.size))}
 	var index: int = maxi(0, hud.opponents.find(u))
 	var rect: Rect2 = hud.enemy_sprite_rect(index)
 	var cc: Vector2 = to_design(rect.get_center())

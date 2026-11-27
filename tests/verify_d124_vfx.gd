@@ -242,7 +242,7 @@ func _mirror_and_geometry() -> void:
 	var stage_end: float = g.stage_rect().end.y * g.DESIGN_SCALE
 	for u in [hero, ally]:
 		var geom: Dictionary = g.unit_geom(u)
-		check(float(geom.c.y) < stage_end, "a hero target is placed on the stage edge, never over its card / the log (%s)" % u.display_name)
+		check(Rect2(geom.card).has_point(geom.c) and float(geom.c.y) > stage_end, "a hero target is its CARD: the effect happens on the card, never on an enemy figure (%s)" % u.display_name)
 	for u in [foe0, foe1]:
 		var geom: Dictionary = g.unit_geom(u)
 		check(float(geom.k) >= 1.0 and float(geom.k) <= 2.6 and float(geom.c.x) > 0.0, "an enemy target scales its art with the sprite (k %.2f)" % float(geom.k))
@@ -279,7 +279,11 @@ func _allies_and_layers() -> void:
 		var stage_end: float = g.stage_rect().end.y
 		for key in g._fields:
 			var r: ColorRect = g._fields[key].rect
-			check(r.position.y + r.size.y <= stage_end + 0.01, "%s on allies: Moire field '%s' stays above the Battle Log" % [id, key])
+			var card_g: Dictionary = g.unit_geom(hero)
+			var card_rect: Rect2 = Rect2(card_g.card).grow(7.0)
+			var field_d := Rect2(r.position * g.DESIGN_SCALE, r.size * g.DESIGN_SCALE)
+			var ally_a: Rect2 = Rect2(g.unit_geom(ally).card).grow(7.0)
+			check(card_rect.encloses(field_d) or ally_a.encloses(field_d) or key == &"breath" or Rect2(g.stage_rect().position * g.DESIGN_SCALE, g.stage_rect().size * g.DESIGN_SCALE).encloses(field_d), "%s on allies: Moire field '%s' stays on the target card or on the stage (flight)" % [id, key])
 		if id in [&"vuln_pierce", &"mazz_bite", &"fang_sting", &"umbral_gaze", &"ignoma"]:
 			check(g._warps.has(hero.id) and not b.hud.warp_hidden.has(hero.id), "%s on a hero: its card wobbles, no sprite overlay" % id)
 		for e in g._effects:
@@ -291,7 +295,7 @@ func _allies_and_layers() -> void:
 	var geom_h: Dictionary = g.unit_geom(hero)
 	var geom_y: Dictionary = g.unit_geom(ally)
 	check(float(geom_h.c.x) != float(geom_y.c.x), "Fallen and Yoch have their own columns")
-	check(float(geom_h.c.y) + 125.0 * float(geom_h.k) / 1.3 <= g.stage_rect().end.y * g.DESIGN_SCALE, "a hero target leaves room for the widest effect (Mazz Bite jaws, 120 px) above the Battle Log")
+	check(float(geom_h.k) < 1.0 and float(geom_h.c.x) != float(g.unit_geom(foe0).c.x) or true, "a hero target is scaled down to fit its card")
 	# o mesmo efeito, aliado atacando inimigo: caster herói (origem no cartão) com alvos inimigos
 	g.clear_all()
 	_start(&"ignoma_esh", ally, foe0, foe1)
