@@ -1504,7 +1504,7 @@ regras definitivas pendentes. Inventário, moeda e drop rules: **PENDENTE**.
 
 ## 13. Personagens, criaturas e facções — **PENDENTE**
 
-Fallen tem identidade definida pela D-126 (§15); a natureza de THÉOS permanece pendente. As definições narrativas definitivas dos três reis magos, Herodes e da figura equivalente a Jesus permanecem pendentes. Nenhuma facção foi formalizada.
+Fallen tem identidade definida pela D-126 (§15); THÉOS é Maesto, o criador, conforme D-127. As definições narrativas definitivas dos três reis magos, Herodes e da figura equivalente a Jesus permanecem pendentes. Nenhuma facção foi formalizada.
 
 ### 13.1 D-048 — raças e o aliado Yoch — **CONFIRMADO**
 
@@ -1568,7 +1568,13 @@ A história de **EXODUS** aborda **simetria**, **perfeição** e **falsos Messia
 
 ### 15.2 Questões não definidas — **PENDENTE**
 
-THÉOS existe como entidade citada na promessa de Fallen. Sua identidade, relação com Maesto, atributos, hierarquia celestial e relação entre céu, areia e superioridade permanecem pendentes. Também permanecem indefinidos o momento de revelação dos nomes de Deviron, o mecanismo detalhado de procriação dos Daemas e o destino de um Daema imortal após a absorção/fusão. Esta decisão não altera as regras de combate ou de absorção existentes.
+**THÉOS** é Maesto, conforme D-127 (§15.3). Seus atributos, hierarquia celestial e relação entre céu, areia e superioridade permanecem pendentes. Também permanecem indefinidos o momento de revelação dos nomes de Deviron, o mecanismo detalhado de procriação dos Daemas e o destino de um Daema imortal após a absorção/fusão. Esta decisão não altera as regras de combate ou de absorção existentes.
+
+### 15.3 D-127 — Designações do criador e referências egípcias — **CONFIRMADO / POSSIBILIDADE AUTORIZADA**
+
+- **CONFIRMADO:** THÉOS é Maesto; THÉOS é como o chamam e se referem a ele formalmente. Esta definição resolve a identidade anteriormente pendente, sem determinar quem conhece sua condição de criador ou o nome Maesto.
+- **POSSIBILIDADE AUTORIZADA:** Shaddai pode ser um nome atribuído a ele pelos humanos na época de EXODUS. Não foi definida sua adoção universal nem a existência de um culto específico.
+- **POSSIBILIDADE AUTORIZADA:** alguns Daemas podem ser baseados nos deuses egípcios. A noção autoral é que os equivalentes aos deuses egípcios sejam equivalentes aos animais de tier 4. Sua participação não deve ter grande importância a ponto de mudar substancialmente a história. A ausência da raça dos animais estabelecida na D-126 permanece; essa possibilidade diz respeito aos Daemas, não à introdução da fauna. A definição exata de tier 4, os indivíduos, suas capacidades e sua presença efetiva ficam pendentes; nenhuma escala mecânica é criada por esta decisão.
 
 ---
 
@@ -3306,3 +3312,6 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
 - **D-126 · 2026-11-25 (lore do criador; registro em 2026-11-27) — identidade de Deviron e cosmologia de Maesto.**
   **CONFIRMADO:** Deviron (Fallen), também chamado Samael, é o primeiro devilman e um Daema; sua capacidade é absorção e fundimento com outros seres. Daemas são demônios reais, únicos e imortais; todos os anjos também são Daemas. Ao procriar, dão origem a espécies de outras raças, que herdam uma versão mais fraca de sua capacidade original. Os termos Daema e capacidade de espécie ainda não existem na época de EXODUS. Maesto é o universo e seu criador, cuja existência é desconhecida nessa época. Humanos são uma raça nova em teste; anjos também são experimentos; Deviron é o primeiro teste de demônio de humano, enquanto normalmente demônios são baseados em animais. A raça dos animais não está presente nessa época, pois o foco era unicamente o teste de criação de humanos. Apenas essa época é sombria; o restante do universo é fantasia alto-astral.
   **PENDENTE:** relação de THÉOS com Maesto, revelação dos nomes ao jogador e detalhes não especificados da procriação e imortalidade diante da absorção. Nenhuma proposta editorial do estudo bíblico é canonizada por esta decisão. Impacto: `docs/GDD.md` (§§1.1, 13, 15 e Apêndice A), `docs/DECISIONS.md`, `docs/CANON_BOUNDARY.md`, `docs/ART_DIRECTION.md`, `docs/COMBAT_SPEC.md` (apenas remissões de lore).
+
+- **D-127 · 2026-11-27 (lore do criador) — THÉOS/Maesto, Shaddai e Daemas de inspiração egípcia.**
+  **CONFIRMADO:** THÉOS é Maesto, designação formal pela qual se referem a ele. **POSSIBILIDADES AUTORIZADAS:** Shaddai pode ser um nome que os humanos lhe dão nessa época; alguns Daemas podem ser baseados nos deuses egípcios, sendo os equivalentes a esses deuses os equivalentes aos animais de tier 4, sem grande importância para a história a ponto de alterá-la substancialmente. A ausência da raça dos animais (D-126) permanece. A relação THÉOS/Maesto deixa de ser pendente; a extensão do conhecimento dos personagens, a adoção de Shaddai, a definição de tier 4 e a seleção/participação dos Daemas específicos não foram fechadas. Não altera mecânicas. Impacto: `docs/GDD.md` (§§13, 15 e Apêndice A), `docs/DECISIONS.md`, `docs/CANON_BOUNDARY.md`, `docs/ART_DIRECTION.md`.

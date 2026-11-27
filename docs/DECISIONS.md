@@ -107,4 +107,6 @@ qualquer alteração em documentos ou código.
 
 | D-126 | 2026-11-25 (lore do criador; registro em 2026-11-27) | Identidade de Fallen (Deviron/Samael), primeiro devilman; Daemas únicos e imortais, anjos também Daemas, procriação e capacidades hereditárias; Maesto é universo e criador desconhecido; experimentos humanos e angelicais, ausência de animais na época e tom sombrio restrito à era de EXODUS. | `docs/GDD.md` §§1.1, 13, 15 e Apêndice A |
 
-Total: 94 decisões indexadas.
+| D-127 | 2026-11-27 (lore do criador) | THÉOS é Maesto, designação formal; Shaddai é possível nome humano da época. Autorizada a possibilidade de alguns Daemas de inspiração nos deuses egípcios, equivalentes aos animais de tier 4, sem grande impacto na história; a raça dos animais continua ausente. | `docs/GDD.md` §15 e Apêndice A |
+
+Total: 95 decisões indexadas.
