@@ -5,7 +5,7 @@
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (§9.1 e Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) (§Reza) · **Regra VFX:** [`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md) (D-113)
 
 > [!IMPORTANT]
-> Todas as rezas e magias de luz listadas neste documento são **canônicas** e estão sujeitas à regra **D-113** (VFX obrigatoriamente compostos por letras hebraicas em `scripts/battle/pray_fx.gd` quando forem implementadas).
+> **Todas as 20 magias e habilidades listadas neste documento** (as 8 rezas, as 6 angelicais e as 6 de Gabriel) são **canônicas** do jogo principal. Todas as rezas/magias de luz estão sujeitas à regra **D-113** (VFX obrigatoriamente compostos por letras hebraicas em `scripts/battle/pray_fx.gd` quando forem implementadas).
 
 ---
 
