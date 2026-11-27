@@ -13,14 +13,14 @@
 
 | # | Nome | Evolução `ZAHAV` | Origem (Survival D-106) | Custo / Tipo / Alvo | Efeito Canônico |
 |---|---|---|---|---|---|
-| 1 | **Mazz Bite** | — | Rework de `SHADOW BITE` | `1 ACT / 30% HP` · Físico · 1 alvo | A troco de perder **30% do próprio HP**, realiza um ataque físico de **alta velocidade (`HIGH SPEED`)** causando **10 de dano base + 30% do próprio HP** de dano extra. |
+| 1 | **Mazz Bite** | — | Rework de `SHADOW BITE` | `1 ACT / 30% HP máx.` · Físico · 1 alvo | A troco de perder **30% do HP máximo** *(requer HP atual > custo)*, realiza um ataque físico de **alta velocidade (`HIGH SPEED`)** causando **10 de dano base + 30% do HP máximo** de dano extra. |
 | 2 | **Fang Sting** | **Fang Spine** | Rework de `FANG FLURRY` | `2 ACT / 6 EN` · Físico · 1 alvo | Causa **5 + ATK** de dano e aplica **`BLEED` somente no `POINT`** (se acertar no `BEAM`/blast, **não** aplica `BLEED`). |
-| 2Z | **Fang Spine** *(ZAHAV)* | Evolução de `Fang Sting` | — | `3 ACT / 10 EN` · Físico · Alvo alternável | Realiza **2 ataques consecutivos ou intercalados entre alvos** em uma mesma ação, causando **15 + ATK** de dano, aplicando **`BLEED` ao contato** e **`BLEED ×2` no `POINT`**. |
+| 2Z | **Fang Spine** *(ZAHAV)* | Evolução de `Fang Sting` | — | `3 ACT / 10 EN` · Físico · Alvo alternável | Realiza **2 ataques consecutivos ou intercalados entre alvos** em uma mesma ação, causando **`15 + ATK` por golpe** *(autorizada calibração para baixo se excessivo no balanceamento)*, aplicando **`BLEED` ao contato** e **`BLEED ×2` no `POINT`**. |
 | 3 | **Vuln Pierce** | — | Rework de `SOUL PIERCE` | `1 ACT / 8 EN` · Físico · 1 alvo | Causa **15 + ATK** de dano; causa o **dobro de dano** em alvos que estejam realizando uma **ação não-ofensiva**. |
-| 4 | **Dark Breath** | — | Rework de `FROST BREATH` | `3 ACT / 15 EN` · Mágico · Todos inimigos | Solta um bafo de trevas: reduz o **PP em 3** de quem não desvia e **cega** até o fim do round. |
-| 5 | **Umbral Gaze** | — | Rework de `VOID GAZE` | `3 ACT / 15 EN` · Mágico · 1 alvo | Abre um círculo de sombras nos pés do alvo e o espeta com espinhos de trevas, causando **15 + MAK** e **aprisionando o alvo por 2 ações** *(ver §2.3)*. |
+| 4 | **Dark Breath** | — | Rework de `FROST BREATH` | `3 ACT / 15 EN` · Mágico · Todos inimigos | Solta um bafo de trevas (**0 de dano**): reduz o **PP em 3** de quem não desvia e **cega** até o fim do round *(alvos sem PP sofrem apenas a cegueira)*. |
+| 5 | **Umbral Gaze** | — | Rework de `VOID GAZE` | `3 ACT / 15 EN` · Mágico · 1 alvo | Abre um círculo de sombras nos pés do alvo e o espeta com espinhos de trevas, causando **15 + MAK** e **aprisionando o alvo por 2 ações globais** *(ver §2.3)*. |
 | 6 | **Ignoma** | **Ignoma Esh** | Nova skill canônica | `2 ACT / 8 EN` · Mágico · 1 alvo | Lança uma bola de fogo no alvo causando **10 + MAK** de dano com **35% de chance de causar `BURN`**. |
-| 6Z | **Ignoma Esh** *(ZAHAV)* | Evolução de `Ignoma` | — | `3 ACT / 12 EN` · Mágico · 1 alvo alternável | Lança **duas bolas de fogo** em 1 alvo ou em 2 alvos diferentes, causando cada uma **10 + MAK** de dano com **35% de chance de causar `BURN`**. |
+| 6Z | **Ignoma Esh** *(ZAHAV)* | Evolução de `Ignoma` | — | `3 ACT / 12 EN` · Mágico · 1 alvo alternável | Lança **duas bolas de fogo** em 1 alvo ou em 2 alvos diferentes, causando cada uma **10 + MAK** de dano com **35% de chance de causar `BURN`**. *(Única skill da D-124 que usa **letras hebraicas `אש`** no VFX, por ter `Esh` no nome.)* |
 
 *(Todas as evoluções `ZAHAV` obedecem à regra da D-118: acionadas segurando `A`, com nome exibido em dourado e custo de 20 SP após a conclusão; disponíveis a partir da metade da campanha para o jogador, além de Anjos e elites.)*
 
@@ -52,11 +52,13 @@
 
 ---
 
-## 3. Pendências técnicas para antes da implementação em código
+## 3. Decisões complementares fechadas (criador, 2026-11-27)
 
-1. **`Mazz Bite` (`30% HP`):** confirmar se os 30% referem-se ao **HP máximo** ou ao **HP atual**, e se exige HP estritamente maior que o custo (como `Bleedbuff`, para impedir suicídio automático).
-2. **`Vuln Pierce` ("ação não-ofensiva"):** definir exatamente a janela de detecção — se vale apenas como **reação/contra-ataque** contra uma ação não-ofensiva anunciada (`PRAY`, buffs, curas, `REST`, etc.) ou também contra um alvo cuja última ação anunciada/em curso seja não-ofensiva.
-3. **`Fang Spine` (`15 + ATK`):** confirmar se `15 + ATK` é o dano de **cada um** dos 2 ataques (como especificado em `Ignoma Esh`) ou dividido entre os 2 golpes.
-4. **`Dark Breath` (dano e desvio):** confirmar se `Dark Breath` causa **0 de dano** (apenas −3 PP + cegueira até o fim do round) ou se possui dano base próprio, e se alvos sem PP (demônios que usam EN) sofrem apenas a cegueira.
-5. **Contagem de "ações realizadas" na Temporização de Ação:** confirmar se o contador de X ações/atos incrementa a cada **ação global** realizada por qualquer combatente na batalha (o que permite ao alvo aprisionado ser liberto enquanto outros agem, já que ele próprio está dando `PASS` automático) — comportamento mais coerente com "3 atos após este efeito, o alvo é liberto".
-6. **Substituição no Survival (`skill_book.gd` / `survival_data.gd`):** confirmar se os 5 antigos do Survival (`SHADOW BITE`, `FANG FLURRY`, `SOUL PIERCE`, `FROST BREATH`, `VOID GAZE`) devem ser substituídos diretamente no Survival ou se as 6 skills canônicas entram em paralelo no catálogo principal.
+1. **`Mazz Bite` (`30% HP`):** refere-se a **30% do HP máximo** (requer HP atual > custo, impedindo suicídio automático).
+2. **`Fang Spine` (`15 + ATK`):** **2× `15 + ATK`** (por golpe), com liberdade criativa autorizada pelo criador para calibrar para baixo se ficar forte demais no jogo.
+3. **`Dark Breath`:** **não causa dano** (0 de dano; apenas `−3 PP` em quem não desvia + cegueira até o fim do round; alvos sem PP sofrem apenas a cegueira).
+4. **Temporização de Ação:** conta **qualquer ação global realizada na batalha** após a efetuação do efeito (liberando o alvo aprisionado após `X` ações globais).
+5. **Substituição no código e migração de `BLEED`:** substituir os 5 antigos diretamente no Survival (`skill_book.gd`) e migrar `BLEED` para `−20%` cura ×4 no jogo todo.
+6. **Direção visual (VFX):** **apenas `Ignoma Esh` usa letras hebraicas** (por conter `Esh` no nome — `אש`). As demais 7 entradas (`Mazz Bite`, `Fang Sting`, `Fang Spine`, `Vuln Pierce`, `Dark Breath`, `Umbral Gaze`, `Ignoma`) usam VFX não-tipográficos (mordidas/presas, estocadas/espinhos de sangue, perfuração de vulnerabilidade, bafo/névoa de trevas, círculo sombrio com estacas de sombra e bola de fogo).
+
+*Única pendência menor:* confirmar se `Vuln Pierce` dobra o dano apenas em reação contra ação não-ofensiva anunciada ou também contra alvo com estado/postura não-ofensiva ativa no round.
