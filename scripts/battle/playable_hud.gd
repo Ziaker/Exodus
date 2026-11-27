@@ -159,18 +159,10 @@ var events_read := 0
 const EVENT_CAP := 64
 const NO_INK := Color(0, 0, 0, 0)
 const TRANSIENT_LOG_MODES := ["skill", "pray", "en_extra", "absorb", "item"]
-## D-057 role tags (who attacks, who is the target, who defends, who reacts), drawn over
-## the enemy name and on the top border of a hero window. Colours chosen by the agent at
-## the creator's request ("sigo sua melhor recomendação"), pending his visual judgment.
-const ROLE_FILLS := {
-	"ATTACK": Color("bb3d48"), "TARGET": Color(10 / 255.0, 4 / 255.0, 7 / 255.0),
-	"DEFEND": Color("3f6fb8"), "COUNTER": Color("c8701e"), "REACT": Color("2f8f5b"),
-}
+## D-057 / D-135 / D-136: enemy roles use plain bold text (ROLE_ARROW_INKS); hero roles
+## live inside the hero card (options 2 + 3: left inner strip + subtle horizontal tint +
+## right-aligned plain text on the HP/EN row when width allows).
 const ROLE_PX := 9
-## D-136 (creator 2026-11-27): hero role cue inside the hero card (options 2 + 3),
-## replacing the floating top-border box (D-057) and refining D-135: a 2 layout-px
-## (3 screen-px) left inner strip + subtle horizontal tint in the role's colour, plus
-## plain right-aligned role text on the HP/EN row when width allows (non-narrow cards).
 const HERO_ROLE_STRIP_WIDTH := 2.0
 const HERO_ROLE_TINT_SHARE := 0.38
 const HERO_ROLE_TINT_ALPHA := 0.14
@@ -1578,7 +1570,7 @@ func hero_role_cue(who: int) -> Dictionary:
 	var sec_label := "PP" if unit.prays else "EN"
 	var sec_value := "%d/%d" % [unit.current_pp, PrayerBook.MAX_PP] if unit.prays else "%d/%d" % [unit.current_en, unit.stats.max_en]
 	var hp_value := "%d/%d" % [unit.current_hp, unit.stats.max_hp]
-	var sec_label_x := x + _width("HP", 9) + 4.0 + _width(hp_value, 9) + 10.0
+	var sec_label_x := x + _width("HP", 9) + 4.0 + _width(hp_value, 9, true) + 10.0
 	var sec_end_x := sec_label_x + _width(sec_label, 9) + 4.0 + _width(sec_value, 9, true)
 	var avail := right - (sec_end_x + 6.0)
 	var px := _fit_px(role, HERO_ROLE_PX, maxf(1.0, avail), true, 6)
@@ -1701,7 +1693,7 @@ func _character(who: int, r: Rect2) -> void:
 	var hp_label_w := _str("HP", x, bottom_line, Color(TEXT, vitals_alpha), 9)
 	var hp_value_x := x + hp_label_w + 4
 	_str(hp_value, hp_value_x, bottom_line, Color(HP_NUMBER, vitals_alpha), 9, true)
-	var sec_label_x := hp_value_x + _width(hp_value, 9) + 10
+	var sec_label_x := hp_value_x + _width(hp_value, 9, true) + 10
 	_str(sec_label, sec_label_x, bottom_line, Color(TEXT, vitals_alpha), 9)
 	# O número fica logo após o rótulo, não encostado na borda direita do painel.
 	_str(sec_value, sec_label_x + _width(sec_label, 9) + 4, bottom_line, sec_ink, 9, true)
@@ -1777,6 +1769,8 @@ func menu_columns() -> int:
 
 
 func menu_rect(count: int) -> Rect2:
+	if count <= 0:
+		return Rect2()
 	var r := COMMAND_RECT
 	var columns := menu_columns()
 	var rows := ceili(float(count) / columns)
@@ -1797,6 +1791,9 @@ func menu_cell(i: int, count: int) -> Rect2:
 
 func _menu() -> void:
 	var rows := _menu_rows()
+	# D-136 (creator 2026-11-27): hide the command window when no menu is open (no empty 9 px strip above the log).
+	if rows.is_empty():
+		return
 	var w := menu_rect(rows.size())
 	_window(w, CARD_FILL, WINDOW_BORDER)
 	var current := react_index if mode == "react" else (plan_index if mode == "plan" else (0 if mode == "en_extra" else command_index))

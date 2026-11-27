@@ -166,6 +166,27 @@ func _run() -> void:
 	check(inner0.grow(0.01).encloses(cue.strip_rect) and is_equal_approx(cue.strip_rect.size.x, battle.hud.HERO_ROLE_STRIP_WIDTH), "D-136: left strip stays strictly inside the 1 px border (%s vs %s)" % [cue.strip_rect, inner0])
 	check(inner0.grow(0.01).encloses(cue.tint_rect) and not cue.strip_rect.intersects(battle.hud.BATTLE_LOG_RECT), "D-136: tint stays inside the card and never invades the battle log")
 	check(bool(cue.show_label) and float(cue.label_avail) >= battle.hud._width("ATTACK", int(cue.label_px), true), "D-136: wide hero card shows right-aligned ATTACK label without colliding with HP/EN (%s)" % str(cue))
+	# D-136: all 5 roles use their ROLE_ARROW_INKS colour and fit even under 3-digit HP/EN stress.
+	var saved_role: String = battle.roles.get(battle._fallen.id, "")
+	var saved_hp_max: int = battle._fallen.stats.max_hp
+	var saved_hp_cur: int = battle._fallen.current_hp
+	var saved_en_max: int = battle._fallen.stats.max_en
+	var saved_en_cur: int = battle._fallen.current_en
+	battle._fallen.stats.max_hp = 999
+	battle._fallen.current_hp = 999
+	battle._fallen.stats.max_en = 999
+	battle._fallen.current_en = 999
+	for rname in ["ATTACK", "TARGET", "DEFEND", "COUNTER", "REACT"]:
+		battle.roles[battle._fallen.id] = rname
+		var rc: Dictionary = battle.hud.hero_role_cue(0)
+		check(not rc.is_empty() and rc.role == rname and rc.ink == battle.hud.ROLE_ARROW_INKS[rname], "D-136: role %s cue matches ROLE_ARROW_INKS" % rname)
+		check(bool(rc.show_label) and battle.hud._width(rname, int(rc.label_px), true) <= float(rc.label_avail), "D-136: %s fits at 999/999 HP & EN without colliding (px=%d avail=%.1f)" % [rname, int(rc.label_px), float(rc.label_avail)])
+	battle._fallen.stats.max_hp = saved_hp_max
+	battle._fallen.current_hp = saved_hp_cur
+	battle._fallen.stats.max_en = saved_en_max
+	battle._fallen.current_en = saved_en_cur
+	battle.roles[battle._fallen.id] = saved_role
+	check(battle.hud.menu_rect(0) == Rect2() and battle.hud._menu_rows().is_empty(), "D-136: collapsed empty menu produces no window strip during continue/animations")
 	# Narrow 3-hero layout (D-111): keeps the left strip + tint, drops the bottom-right label cleanly.
 	var third_dummy := BattleUnit.new(&"dummy_third", "PIXIE", battle._fallen.stats, true)
 	battle.hud.players.append(third_dummy)

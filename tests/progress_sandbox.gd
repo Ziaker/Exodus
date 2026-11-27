@@ -13,7 +13,8 @@ const TEST_PATH := "user://exodus_progress_verify.json"
 
 
 static func begin() -> void:
-	ProgressStore.save_path_override = TEST_PATH
+	# Per-PID sandbox file so concurrent test runs never wipe each other's save mid-flight.
+	ProgressStore.save_path_override = "user://exodus_progress_verify_%d.json" % OS.get_process_id()
 	ProgressStore.clear()
 
 
