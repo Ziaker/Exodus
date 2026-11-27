@@ -605,6 +605,10 @@ const BREATH_START := 0.26
 
 
 ## Geometria de uma unidade no espaço de design: centro, escala `k`, altura e pés.
+## Ordem do criador (2026-11-27): todos os efeitos grotescos saem com 85% do tamanho anterior (inimigos E aliados, iguais).
+const EFFECT_SCALE := 0.85
+
+
 func unit_geom(u: BattleUnit) -> Dictionary:
 	if u.is_player:
 		var idx: int = hud.players.find(u)
@@ -619,7 +623,7 @@ func unit_geom(u: BattleUnit) -> Dictionary:
 	var rect: Rect2 = hud.enemy_sprite_rect(index)
 	var cc: Vector2 = to_design(rect.get_center())
 	var hd: float = rect.size.y * DESIGN_SCALE
-	return {"c": cc, "k": clampf(hd / 100.0, 1.0, 2.6), "h": hd, "feet": to_design(Vector2(0, rect.end.y)).y, "origin": cc}
+	return {"c": cc, "k": clampf(hd / 100.0, 1.0, 2.6) * EFFECT_SCALE, "h": hd, "feet": to_design(Vector2(0, rect.end.y)).y, "origin": cc}
 
 
 ## Tamanho do efeito num inimigo (referência para o efeito nos cartões dos aliados).
