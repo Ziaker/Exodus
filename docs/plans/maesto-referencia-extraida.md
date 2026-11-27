@@ -1,5 +1,7 @@
 # Referência de Maesto extraída dos arquivos do criador (2026-11-25)
 
+> **ATUALIZAÇÃO (2026-11-27):** Uma auditoria completa e aprofundada das mesmas fontes (todas as 10 abas de `MAESTO.xlsx`, as 66.862 linhas da conversa completa e as 485 linhas do recorte recente, cruzadas contra o cânone atual de EXODUS até `D-137`) está consolidada em [`docs/MAESTO_UNIVERSE_AUDIT.md`](../MAESTO_UNIVERSE_AUDIT.md). Este arquivo é mantido intacto como registro histórico da primeira extração.
+
 Fontes: `MAESTO.xlsx` (outro RPG, mesmo universo, **sem datas** nas abas) e duas conversas com a
 Polaris (datas de 2023 a 2025 em cada item). O criador avisou que **há muita coisa velha**: esta lista
 existe para ele marcar o que vale. **Nada daqui foi aplicado ao jogo.** Conversas pessoais não foram copiadas.
