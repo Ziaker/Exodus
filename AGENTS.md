@@ -44,6 +44,12 @@ o autor decidir explicitamente.
     (auditado, testes passando, sem defeito identificável), commitar e dar push no mesmo
     instante, sem esperar nova autorização; seguir antes a obrigação 8 (fetch/status).
 
+12. **Testes só na versão atual (D-130).** Testes headless e capturas rodam apenas sobre a
+    árvore principal atualizada (`git fetch` + rebase em `main`). É proibido usar versões
+    antigas do jogo — worktrees em `.claude/worktrees/*`, cópias como `captures/*/base`,
+    branches `claude/*` atrasadas ou commits antigos — para testar, capturar ou provar algo.
+    A evidência de teste cita o `git rev-parse HEAD` sobre o qual rodou.
+
 ## Evidência mínima por tipo de trabalho
 
 - **Código:** comando de parse/teste + saída real + hash do diff antes de declarar pronto.

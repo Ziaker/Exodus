@@ -110,5 +110,6 @@ qualquer alteração em documentos ou código.
 | D-127 | 2026-11-27 (lore do criador) | THÉOS é Maesto, designação formal; Shaddai é possível nome humano da época. Autorizada a possibilidade de alguns Daemas de inspiração nos deuses egípcios, equivalentes aos animais de tier 4, sem grande impacto na história; a raça dos animais continua ausente. | `docs/GDD.md` §15 e Apêndice A |
 
 | D-128 | 2026-11-27 (lore do criador) | Cosmologia: Maesto cria toda vida e energia; religiões multirraciais, Shaddai/THÉOS; Daemas e demônios são raças distintas; regeneração a cada 8 dias e assimilação definitiva dos devilmen; tiers animais 0–4 por antropomorfização; Maziks criados por anjos a partir de humanos; rezas ensinadas nos templos (fogo por Gabriel); Deviron simétrico e expulso pelos anjos por inveja/medo; desfecho de EXODUS contribui para a transição de época. | `docs/GDD.md` §§1, 9, 10, 13–15 e Apêndice A |
+| D-130 | 2026-11-27 (decisão do criador) | Testes headless e capturas só rodam sobre a versão ATUAL do projeto (árvore principal em `main`, depois de `git fetch` + rebase). É proibido às IAs usar versões antigas do jogo — worktrees em `.claude/worktrees/*`, cópias como `captures/*/base`, branches `claude/*` atrasadas ou checkouts de commits antigos — para executar testes ou capturas headless, ou para provar qualquer coisa. Evidência de teste cita o commit (`git rev-parse HEAD`) sobre o qual rodou. | `AGENTS.md` (obrigação 12) |
 
-Total: 96 decisões indexadas.
+Total: 97 decisões indexadas.
