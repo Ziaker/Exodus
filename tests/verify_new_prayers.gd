@@ -192,7 +192,7 @@ func _run() -> void:
 				return false
 		return true
 	check(is_hebrew.call(fx_node.ALPHABET) and fx_node.ALPHABET.length() == 22, "D-113: PrayFX.ALPHABET contains the 22 Hebrew letters")
-	for mark in [fx_node.MARK_GLYPH, fx_node.MARK_MAGEN, fx_node.MARK_GEVURAH, fx_node.MARK_ZOHAR, fx_node.MARK_SANVERIM, fx_node.MARK_NECHAMAH]:
+	for mark in [fx_node.MARK_GLYPH, fx_node.MARK_MAGEN, fx_node.MARK_GEVURAH, fx_node.MARK_ZOHAR, fx_node.MARK_SANVERIM, fx_node.MARK_NECHAMAH, fx_node.MARK_CHAKI, fx_node.MARK_SHACHAR]:
 		check(is_hebrew.call(mark), "D-113: Persistent prayer mark '%s' is a valid Hebrew glyph" % mark)
 	var d113_methods := {
 		PrayerBook.REFUAH: &"play_refuah",
@@ -206,6 +206,8 @@ func _run() -> void:
 		PrayerBook.GEVURAH: &"play_gevurah",
 		PrayerBook.MISHPAT: &"play_mishpat",
 		PrayerBook.ZOHAR: &"play_zohar",
+		PrayerBook.CHAKI: &"play_chaki",
+		PrayerBook.SHACHAR: &"play_shachar",
 	}
 	for spell_id in PrayerBook.SPELLS.keys():
 		check(d113_methods.has(spell_id), "D-113: Prayer '%s' must be registered in the Hebrew VFX coverage map" % spell_id)
@@ -220,6 +222,25 @@ func _run() -> void:
 	var extra_kinds: Array = fx_node.card_fx.map(func(e: Dictionary) -> StringName: return StringName(e.kind))
 	check(extra_kinds.has(&"refuah") and extra_kinds.has(&"nechamah_tick"), "D-113: Refuah and Nechamah tick register Hebrew VFX in PrayFX.card_fx")
 	check(fx_node.raam_busy(), "D-113: Ra'am activates Hebrew lightning VFX in PrayFX")
+	# D-118 Chaki & Shachar runtime mechanics + Hebrew VFX verification
+	foe.current_hp = 500
+	foe.acts_available = 2
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.CHAKI, "target": foe, "extra": 0, "paid": 3, "owed": 0}, false)
+	check(foe.has_status(&"chaki") and foe.acts_available == 0, "D-118 Chaki binds foe and zeroes acts_available for the round")
+	check(fx_node.chaki_busy() and fx_node.chaki_bars.size() == 6, "D-118 Chaki activates 6-column Hebrew light cage VFX")
+	check(SkillFx.cleanse_all(foe) >= 1 and not foe.has_status(&"chaki"), "D-118 Chaki is cleanseable by Tahorah")
+	foe.current_hp = 500
+	var hp_before_shachar := foe.current_hp
+	yoch.acts_available = 4
+	await b.prayer.execute(yoch, {"pray": PrayerBook.SHACHAR, "target": yoch, "extra": 0, "paid": 3, "owed": 0}, false)
+	check(fx_node.shachar_pending and fx_node.shachar_busy(), "D-118 Shachar queues dawn and plays cast arc VFX")
+	check(foe.current_hp == hp_before_shachar, "D-118 Shachar does not deal damage before the next round")
+	b.state.round_number += 1
+	b.prayer.expire(yoch)
+	var expected_shachar := PrayerBook.shachar_damage(yoch.stats.mak)
+	check(foe.current_hp == hp_before_shachar - expected_shachar, "D-118 Shachar deals 30 + MAK (%d) at start of next round (got %d)" % [expected_shachar, hp_before_shachar - foe.current_hp])
+	check(not fx_node.shachar_pending and fx_node.shachar_rays.size() == 18, "D-118 Shachar clears pending mark and fires 18 Hebrew dawn rays")
 	fx_node.queue_redraw()
 	await process_frame
 

@@ -287,6 +287,15 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			_release(unit, d, "no foe left")
 		else:
 			await _cherev(unit, foes, d, reacting)
+	elif id == PrayerBook.SHACHAR:
+		_pending_shachar.append({"caster": unit, "round": battle.state.round_number,
+			"damage": PrayerBook.shachar_damage(unit.stats.mak)})
+		fx.play_shachar()
+		_log("%s invokes Shachar: radiant dawn will strike all foes for %d damage at the start of the next round (%d PP)." % [
+			unit.display_name, PrayerBook.shachar_damage(unit.stats.mak), _cost(d)])
+		_event("%s invokes Shachar: dawn gathers above." % battle.short_name(unit))
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	else:
 		var target: BattleUnit = d.target
 		if not target.is_alive():
@@ -351,7 +360,14 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			_log("%s prays Nechamah on %s: +%d HP per round for %d rounds (%d PP)." % [
 				unit.display_name, target.display_name, SkillFx.MEND_HEAL, SkillFx.MEND_ROUNDS, _cost(d)])
 			_event("%s prays Nechamah on %s." % [battle.short_name(unit), battle.short_name(target)])
-		if reacting and id in [PrayerBook.REFUAH, PrayerBook.HAGANAH, PrayerBook.TAHORAH, PrayerBook.GEVURAH, PrayerBook.MISHPAT, PrayerBook.ZOHAR, PrayerBook.SANVERIM, PrayerBook.NECHAMAH]:
+		elif id == PrayerBook.CHAKI:
+			SkillFx.apply_status(target, &"chaki", 1)
+			target.acts_available = 0
+			fx.play_chaki(target)
+			_log("%s prays Chaki on %s: bound in light, cannot act until round end (%d PP)." % [
+				unit.display_name, target.display_name, _cost(d)])
+			_event("%s binds %s with Chaki!" % [battle.short_name(unit), battle.short_name(target)])
+		if reacting and id in [PrayerBook.REFUAH, PrayerBook.HAGANAH, PrayerBook.TAHORAH, PrayerBook.GEVURAH, PrayerBook.MISHPAT, PrayerBook.ZOHAR, PrayerBook.SANVERIM, PrayerBook.NECHAMAH, PrayerBook.CHAKI]:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	save(unit)
 	battle._refresh_all()
@@ -661,9 +677,15 @@ func rest(unit: BattleUnit, reacting: bool) -> bool:
 	return true
 
 
+## D-118 Shachar: pending dawn casts that detonate at the start of the next round.
+var _pending_shachar: Array[Dictionary] = []
+
+
 ## Haganah lasts one full round: it ends when, in a later round, the turn of the unit that
 ## owned the turn at cast time comes back; `owner == null` = end of that later round.
+## D-118: also triggers any pending Shachar dawn at the start of the next round.
 func expire(owner: BattleUnit) -> void:
+	resolve_pending_shachar()
 	for unit in battle.state.units:
 		var h: Dictionary = unit.haganah
 		if h.is_empty() or int(h.round) >= battle.state.round_number:
@@ -672,6 +694,41 @@ func expire(owner: BattleUnit) -> void:
 			unit.haganah = {}
 			_log("%s: Haganah ended." % unit.display_name)
 			_event("%s's Haganah ends." % battle.short_name(unit))
+
+
+## D-118 Shachar: detonates every pending dawn from an earlier round across all living foes.
+func resolve_pending_shachar() -> int:
+	if _pending_shachar.is_empty():
+		return 0
+	var total_dealt := 0
+	var remaining: Array[Dictionary] = []
+	for entry in _pending_shachar:
+		if int(entry.round) >= battle.state.round_number:
+			remaining.append(entry)
+			continue
+		var caster: BattleUnit = entry.caster
+		var dmg := int(entry.damage)
+		var foes: Array[BattleUnit] = []
+		for foe in battle.hud.opponents.duplicate():
+			if (foe as BattleUnit).is_alive():
+				foes.append(foe)
+		if foes.is_empty():
+			continue
+		fx.play_shachar_dawn()
+		_log("Shachar dawn strikes all foes for %d damage!" % dmg)
+		_event("Shachar radiates across all foes!")
+		for foe in foes:
+			var applied := foe.take_damage(dmg)
+			total_dealt += applied
+			if caster != null:
+				caster.last_damage_dealt = applied
+			battle.fx.play("RAAM", foe, applied, caster)
+			if not foe.is_alive():
+				_event("%s is down." % battle.short_name(foe))
+		battle._refresh_all()
+	_pending_shachar = remaining
+	fx.shachar_pending = not _pending_shachar.is_empty()
+	return total_dealt
 
 
 func save(unit: BattleUnit) -> void:

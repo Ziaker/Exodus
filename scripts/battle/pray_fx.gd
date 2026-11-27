@@ -16,6 +16,8 @@ const MARK_GEVURAH := "ג"
 const MARK_ZOHAR := "ז"
 const MARK_SANVERIM := "ס"
 const MARK_NECHAMAH := "נ"
+const MARK_CHAKI := "ח"
+const MARK_SHACHAR := "ש"
 const MARK_PX := 13
 const PULSE_HZ := 2.6
 const INK_HOT := Color(1.0, 1.0, 0.88)
@@ -64,7 +66,7 @@ func cast(unit: BattleUnit) -> void:
 
 
 func is_busy() -> bool:
-	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy()
+	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy() or chaki_busy() or shachar_busy()
 
 
 func _draw() -> void:
@@ -74,7 +76,11 @@ func _draw() -> void:
 	_draw_mishpat()
 	_draw_cherev()
 	_draw_sanverim()
+	_draw_chaki()
+	_draw_shachar()
 	var pulse := 0.55 + 0.45 * absf(sin(time * PULSE_HZ))
+	if shachar_pending:
+		_glyph(MARK_SHACHAR, Vector2(hud.SCREEN.x - 20.0, 18.0), MARK_PX + 2, Color(INK_HOT, 0.72 + 0.28 * pulse), Color(INK_DARK, 0.9))
 	for i in hud.opponents.size():
 		var foe: BattleUnit = hud.opponents[i]
 		if not foe.is_alive():
@@ -84,6 +90,9 @@ func _draw() -> void:
 		var em_y := er.end.y + 12.0
 		if foe.has_status(&"blind"):
 			_glyph(MARK_SANVERIM, Vector2(em_x, em_y), MARK_PX, Color(INK_DEBUFF, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
+			em_x += 14.0
+		if foe.has_status(&"chaki"):
+			_glyph(MARK_CHAKI, Vector2(em_x, em_y), MARK_PX, Color(PrayerBook.INK, 0.70 + 0.30 * pulse), Color(INK_DARK, 0.9))
 			em_x += 14.0
 		if not foe.mends.is_empty():
 			_glyph(MARK_NECHAMAH, Vector2(em_x, em_y), MARK_PX, Color(PrayerBook.INK, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
@@ -105,6 +114,8 @@ func _draw() -> void:
 			marks.append({"glyph": MARK_ZOHAR, "color": INK_HOT, "jitter": 0.0})
 		if unit.has_status(&"blind"):
 			marks.append({"glyph": MARK_SANVERIM, "color": Color(INK_DEBUFF, 0.65 + 0.35 * pulse), "jitter": 0.0})
+		if unit.has_status(&"chaki"):
+			marks.append({"glyph": MARK_CHAKI, "color": Color(PrayerBook.INK, 0.70 + 0.30 * pulse), "jitter": 0.0})
 		if not unit.mends.is_empty():
 			marks.append({"glyph": MARK_NECHAMAH, "color": Color(PrayerBook.INK, pulse), "jitter": 0.0,
 				"suffix": "x%d" % unit.mends.size() if unit.mends.size() > 1 else ""})
@@ -966,3 +977,176 @@ func _draw_cherev() -> void:
 	if age < 0.55:
 		var wk := age / 0.55
 		_glyph("חרב", Vector2(hud.SCREEN.x * 0.5, c_y_mid - 28.0 - wk * 12.0), int(26.0 - 4.0 * wk), Color(INK_HOT, 1.0 - wk), Color(INK_DARK, 1.0 - wk))
+
+
+# ------------------------------------------------------------------ D-118 Chaki & Shachar (100% Hebrew letters)
+
+## Chaki (חכי): 6 parallel counter-flowing columns of Hebrew letters bind the target with lock-in & persistent ח.
+const CHAKI_LOCK := 0.55
+const CHAKI_END := 1.85
+var chaki_at := -99.0
+var chaki_target: BattleUnit
+var chaki_bars: Array[Dictionary] = []
+var chaki_shards: Array[Dictionary] = []
+
+
+func play_chaki(target: BattleUnit) -> void:
+	if hud == null or target == null:
+		return
+	chaki_target = target
+	chaki_bars.clear()
+	for b in 6:
+		var ox := -42.0 + float(b) * 16.8
+		var dir := 1.0 if b % 2 == 0 else -1.0
+		var glyphs: Array[Dictionary] = []
+		for g in 14:
+			glyphs.append({"y0": -110.0 + float(g) * 18.0, "glyph": _letter(), "px": 11 + (g % 3) * 2})
+		chaki_bars.append({"ox": ox, "dir": dir, "glyphs": glyphs})
+	chaki_shards.clear()
+	for i in 22:
+		var a := float(i) / 22.0 * TAU
+		chaki_shards.append({
+			"vx": cos(a) * rng.randf_range(50.0, 120.0),
+			"vy": sin(a) * rng.randf_range(35.0, 90.0),
+			"glyph": _letter(),
+			"px": rng.randi_range(11, 16),
+		})
+	chaki_at = time
+
+
+func chaki_busy() -> bool:
+	return time - chaki_at < CHAKI_END
+
+
+func _draw_chaki() -> void:
+	var age := time - chaki_at
+	if age < 0.0 or age > CHAKI_END or chaki_target == null:
+		return
+	var rect := _unit_rect(chaki_target)
+	if rect.size.x <= 0.0:
+		return
+	var center := rect.get_center()
+	var locked := age >= CHAKI_LOCK
+	var lock_age := maxf(0.0, age - CHAKI_LOCK)
+	var dark := 0.34 * (1.0 - clampf((age - 1.2) / 0.65, 0.0, 1.0))
+	if dark > 0.01:
+		draw_rect(hud.STAGE_RECT, Color(0.02, 0.01, 0.06, dark))
+	var squeeze := lerpf(1.42, 1.0, clampf(age / CHAKI_LOCK, 0.0, 1.0))
+	var cage_a := clampf(age / 0.25, 0.0, 1.0) if age < 1.25 else maxf(0.0, 1.0 - (age - 1.25) / 0.6)
+	var speed_px := 26.0 if locked else 140.0
+	var top_y: float = hud.STAGE_RECT.position.y + 8.0
+	var span_h: float = maxf(80.0, hud.STAGE_RECT.size.y - 16.0)
+	for bar in chaki_bars:
+		var bx := center.x + float(bar.ox) * squeeze
+		var dir := float(bar.dir)
+		for g in bar.glyphs:
+			var raw_y := float(g.y0) + age * speed_px * dir
+			var gy := top_y + fposmod(raw_y + span_h * 2.0, span_h)
+			var col := PrayerBook.INK if locked else INK_HOT
+			_glyph(String(g.glyph), Vector2(bx, gy), int(g.px), Color(col, cage_a * 0.9), Color(INK_DARK, cage_a * 0.85))
+	var word_y := lerpf(top_y + 24.0, center.y, clampf(age / CHAKI_LOCK, 0.0, 1.0))
+	var word_a := 1.0 if age < 1.3 else maxf(0.0, 1.0 - (age - 1.3) / 0.55)
+	if word_a > 0.01:
+		_glyph("חכי", Vector2(center.x, word_y), 28 if locked else 22, Color(INK_HOT, word_a), Color(INK_DARK, word_a))
+	if locked and lock_age < 0.52:
+		var sa := 1.0 - lock_age / 0.52
+		for s in chaki_shards:
+			_glyph(String(s.glyph), Vector2(center.x + float(s.vx) * lock_age, center.y + float(s.vy) * lock_age),
+				int(s.px), Color(PrayerBook.INK, sa), Color(INK_DARK, sa))
+	if locked and lock_age < 0.065:
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 1.0, 0.9, (1.0 - lock_age / 0.065) * 0.5))
+
+
+## Shachar (שחר): Phase 1 cast (solar arc of Hebrew letters + pending mark ש); Phase 2 dawn rays at next round start.
+const SHACHAR_CAST_END := 1.25
+const SHACHAR_DAWN_END := 1.55
+var shachar_pending := false
+var shachar_cast_at := -99.0
+var shachar_dawn_at := -99.0
+var shachar_arc: Array[Dictionary] = []
+var shachar_rays: Array[Dictionary] = []
+var shachar_motes: Array[Dictionary] = []
+
+
+func play_shachar() -> void:
+	if hud == null:
+		return
+	shachar_pending = true
+	shachar_arc.clear()
+	for ring in 3:
+		var n := 12 + ring * 5
+		for i in n:
+			var ang := PI + (float(i) / float(n - 1)) * PI
+			shachar_arc.append({"ring": ring, "ang": ang, "glyph": _letter(), "px": 10 + ring * 2})
+	shachar_cast_at = time
+
+
+func play_shachar_dawn() -> void:
+	if hud == null:
+		return
+	shachar_pending = false
+	shachar_rays.clear()
+	for r in 18:
+		var ang := PI * 0.14 + (float(r) / 17.0) * PI * 0.72
+		var stream: Array[Dictionary] = []
+		for k in 13:
+			var ch := "שחר"[k % 3] if k % 4 == 0 else _letter()
+			stream.append({"dist": 22.0 + float(k) * 20.0, "glyph": ch, "px": 11 + (k % 3) * 2, "wobble": rng.randf_range(-5.0, 5.0)})
+		shachar_rays.append({"ang": ang, "stream": stream})
+	shachar_motes.clear()
+	for i in 36:
+		shachar_motes.append({
+			"x": rng.randf_range(40.0, hud.SCREEN.x - 40.0),
+			"y": hud.STAGE_RECT.end.y - rng.randf_range(6.0, 44.0),
+			"vy": rng.randf_range(35.0, 75.0),
+			"glyph": _letter(),
+			"px": rng.randi_range(10, 16),
+			"delay": rng.randf_range(0.0, 0.35),
+		})
+	shachar_dawn_at = time
+
+
+func shachar_busy() -> bool:
+	return (time - shachar_cast_at < SHACHAR_CAST_END) or (time - shachar_dawn_at < SHACHAR_DAWN_END)
+
+
+func _draw_shachar() -> void:
+	var sun := Vector2(hud.SCREEN.x * 0.5, hud.STAGE_RECT.position.y + 18.0)
+	var cast_age := time - shachar_cast_at
+	if cast_age >= 0.0 and cast_age <= SHACHAR_CAST_END:
+		var prog := clampf(cast_age / SHACHAR_CAST_END, 0.0, 1.0)
+		var alpha := clampf(cast_age / 0.25, 0.0, 1.0) * (1.0 - clampf((cast_age - 0.85) / 0.4, 0.0, 1.0))
+		draw_rect(hud.STAGE_RECT, Color(0.03, 0.01, 0.07, 0.32 * alpha))
+		for l in shachar_arc:
+			var r := (20.0 + float(l.ring) * 18.0) * (0.45 + 0.55 * prog)
+			var lx := sun.x + cos(float(l.ang) + cast_age * 0.25) * r * 1.45
+			var ly := sun.y - sin(float(l.ang)) * r * 0.65 + 14.0
+			var col := INK_HOT if int(l.ring) == 0 else PrayerBook.INK
+			_glyph(String(l.glyph), Vector2(lx, ly), int(l.px), Color(col, alpha), Color(INK_DARK, alpha))
+		_glyph("שחר", sun + Vector2(0, 24.0), int(20.0 + 10.0 * prog), Color(INK_HOT, alpha), Color(INK_DARK, alpha))
+	var dawn_age := time - shachar_dawn_at
+	if dawn_age >= 0.0 and dawn_age <= SHACHAR_DAWN_END:
+		var glow := maxf(0.0, 0.34 * (1.0 - dawn_age / SHACHAR_DAWN_END))
+		draw_rect(hud.STAGE_RECT, Color(1.0, 0.89, 0.52, glow))
+		var ra := 1.0 if dawn_age < 0.2 else maxf(0.0, 1.0 - (dawn_age - 0.2) / (SHACHAR_DAWN_END - 0.2))
+		var reach := clampf(dawn_age / 0.22, 0.0, 1.0)
+		for ray in shachar_rays:
+			var ang := float(ray.ang)
+			for s in ray.stream:
+				var d := float(s.dist) * reach + dawn_age * 105.0
+				var rx := sun.x + cos(ang) * d * 1.35 + float(s.wobble)
+				var ry := sun.y + sin(ang) * d
+				if ry > hud.STAGE_RECT.end.y:
+					continue
+				var col := INK_HOT if float(s.dist) < 120.0 else PrayerBook.INK
+				_glyph(String(s.glyph), Vector2(rx, ry), int(s.px), Color(col, ra), Color(INK_DARK, ra * 0.85))
+		_glyph("שחר", sun + Vector2(0, 26.0), 32, Color(INK_HOT, ra), Color(INK_DARK, ra))
+		for m in shachar_motes:
+			var ma := dawn_age - float(m.delay)
+			if ma < 0.0 or ma > 1.2:
+				continue
+			var alpha := maxf(0.0, 1.0 - ma / 1.2)
+			_glyph(String(m.glyph), Vector2(float(m.x), float(m.y) - float(m.vy) * ma), int(m.px),
+				Color(PrayerBook.INK, alpha * 0.85), Color(INK_DARK, alpha * 0.7))
+		if dawn_age < 0.095:
+			draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.98, 0.86, (1.0 - dawn_age / 0.095) * 0.72))

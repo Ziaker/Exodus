@@ -18,7 +18,7 @@ const BLIND_ROUNDS := 2          # SANVERIM: until the end of the next round
 const MAGEN_ROUNDS := 2          # D-112 MAGEN: +1 physical DEF stage until the end of the next round
 const ZOHAR_ROUNDS := 2          # D-112 ZOHAR: wider POINT zone until the end of the next round
 ## Negative statuses cleared by Tahorah (D-112). Positive buffs (taunt, zohar, etc.) are preserved.
-const NEGATIVE_STATUSES: Array[StringName] = [&"blind", &"chill", &"weaken", &"mark", &"snare", &"break", &"sleep", &"slow"]
+const NEGATIVE_STATUSES: Array[StringName] = [&"blind", &"chill", &"weaken", &"mark", &"snare", &"break", &"sleep", &"slow", &"chaki"]
 
 ## Statuses that only change a stat (restored when they end).
 const STAT_STATUSES := [&"snare", &"break", &"berserk"]

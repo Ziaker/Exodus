@@ -17,10 +17,10 @@
 | **Shalhevet** | 3 ACT / 4 PP | Queima **todos os oponentes** causando **30 + MAK** de dano mágico, com **50%** de chance de causar **BURN**. |
 | **Lehavah** | 2 ACT / 3 PP | Causa uma explosão de luz e fogo em um alvo: **40 + MAK** de dano e o **cega** (reduzindo o limiar de acerto do ponteiro) até o fim do próximo round. |
 | **Nogah** | 3 ACT / 2 PP | Causa **cegueira** em **todos os inimigos** até o fim do próximo round. |
-| **Chaki** | 3 ACT / 3 PP | Prende o alvo em um raio de luz, **impedindo-o de realizar ações** até o fim do round. |
+| **Chaki** *(IMPLEMENTADO)* | 3 ACT / 3 PP | Prende o alvo em um raio de luz, **impedindo-o de realizar ações** até o fim do round. *(VFX 100% letras aprovado e portado em `pray_fx.gd`.)* |
 | **Lior** | 1 ACT / 2 PP | Uma luz envolve o usuário, curando sua vida em **5 + 5 por PP** durante uma **sequência de 5 ações** após o uso. |
 | **Meir** | 1 ACT / 2 PP | Força os oponentes a **focarem o usuário** até o fim do round *(provocação / taunt)*. |
-| **Shachar** | 3 ACT / 3 PP | Uma luz poderosa irradia do céu: causa **30 + MAK** de dano a **todos os inimigos no início do próximo round**. |
+| **Shachar** *(IMPLEMENTADO)* | 3 ACT / 3 PP | Uma luz poderosa irradia do céu: causa **30 + MAK** de dano a **todos os inimigos no início do próximo round**. *(VFX 100% letras aprovado e portado em `pray_fx.gd`.)* |
 
 ---
 

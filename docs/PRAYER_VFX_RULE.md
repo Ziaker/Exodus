@@ -45,6 +45,8 @@ Esta regra aplica-se indistintamente a **todas** as rezas do jogo — da campanh
 | **Gevurah** | גְּבוּרָה / `גבורה` | D-112 | `play_gevurah(target)` | Colapso espiral + anel formado por 16 letras sobre o aliado | `ג` (vibrante) |
 | **Mishpat** | מִשְׁפָּט / `משפט` | D-112 | `play_mishpat(caster, target)` | Letras vermelhas de retribuição em arco + paredes de letras fechando com `משפט`, impact frame, shake e queda | — |
 | **Zohar** | זֹהַר / `זוהר` | D-112 | `play_zohar(target)` | `זוהר` abrindo em dois feixes horizontais de luz sobre o aliado | `ז` |
+| **Chaki** | חָכִי / `חכי` | D-118 | `play_chaki(target)` | 6 colunas paralelas de letras em contracorrente + `חכי` travando com lock-in | `ח` |
+| **Shachar** | שַׁחַר / `שחר` | D-118 | `play_shachar()` / `play_shachar_dawn()` | Arco solar de letras no cast + 18 feixes radiais de letras varrendo todos os inimigos na virada de round | `ש` (pendente) |
 
 ---
 
