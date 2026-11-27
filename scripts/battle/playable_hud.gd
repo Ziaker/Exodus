@@ -1001,6 +1001,7 @@ func _enemy(_x: float, index: int) -> void:
 		# drop-shadow(0 8px 2px rgba(24,17,26,.45)) and the silhouette (fill:#000).
 		draw_texture_rect_region(texture, Rect2(art.position + Vector2(0, 8), art.size), region, Color(24 / 255.0, 17 / 255.0, 26 / 255.0, 0.45))
 		draw_texture_rect_region(texture, art, region, ink)
+	_status_icon_row(unit, box.position.x + SPRITE_BOX.x * 0.5, art.end.y + 14.0, SPRITE_BOX.x, true)
 	var selected := _selected_enemy() == index
 	if alert_visible() and alert_unit == unit:
 		var t := announcement_age / 0.75
@@ -1702,6 +1703,9 @@ func _character(who: int, r: Rect2) -> void:
 		_str(String(role_cue.role), float(role_cue.label_right), bottom_line, Color(role_cue.ink),
 				int(role_cue.label_px), true, HORIZONTAL_ALIGNMENT_RIGHT, Color(0, 0, 0, 0.75))
 	draw_set_transform(Vector2.ZERO)
+	# Opção C do protótipo de ícones de status: fileira sobre a borda inferior do cartão (4 px dentro, 6 fora).
+	if unit.is_alive():
+		_status_icon_row(unit, r.end.x - 6.0, r.end.y - STATUS_ICON_INSET, r.size.x - 12.0, false)
 	# D-057 / D-135 / D-136: the hero's role cue lives inside the hero card now; the hidden
 	# _role_tags entry stays only as the animated arrows' endpoint (D-059).
 	var role := role_of(unit)
@@ -1716,6 +1720,50 @@ func _character(who: int, r: Rect2) -> void:
 		hitboxes.append({"rect": r, "key": "player-target:" + str(who)})
 	elif mode == "react":
 		hitboxes.append({"rect": r, "key": "reactor:" + str(who)})
+
+
+## Ícones de status (StatusIcons): `anchor_x` é a borda direita (herói) ou o centro (inimigo); `top` o y da caixa.
+const STATUS_ICON_BOX := 10.0
+const STATUS_ICON_GAP := 2.0
+const STATUS_ICON_INSET := 4.0   # quanto do ícone entra no cartão do herói (o resto fica abaixo da borda)
+
+
+func status_icon_row_rect(count: int, anchor_x: float, top: float, centered: bool) -> Rect2:
+	var w := float(count) * STATUS_ICON_BOX + float(maxi(0, count - 1)) * STATUS_ICON_GAP
+	var x := anchor_x - w * 0.5 if centered else anchor_x - w
+	return Rect2(x, top, w, STATUS_ICON_BOX)
+
+
+func _status_icon_row(unit: BattleUnit, anchor_x: float, top: float, max_w: float, centered: bool) -> void:
+	var icons := StatusIcons.of(unit)
+	if icons.is_empty():
+		return
+	var fit := StatusIcons.fit(icons, max_w, STATUS_ICON_BOX, STATUS_ICON_GAP)
+	var shown: Array = fit.shown
+	var more: int = fit.more
+	var total := shown.size() + (1 if more > 0 else 0)
+	var row := status_icon_row_rect(total, anchor_x, top, centered)
+	var x := row.position.x
+	for icon in shown:
+		_status_icon(Rect2(x, top, STATUS_ICON_BOX, STATUS_ICON_BOX), icon)
+		x += STATUS_ICON_BOX + STATUS_ICON_GAP
+	if more > 0:
+		_status_icon(Rect2(x, top, STATUS_ICON_BOX, STATUS_ICON_BOX), {"label": "+%d" % more, "kind": -1, "count": 0})
+
+
+func _status_icon(r: Rect2, icon: Dictionary) -> void:
+	var fill: Color = StatusIcons.COLORS.get(int(icon.kind), StatusIcons.MORE_COLOR)
+	draw_rect(r, Color.BLACK)
+	draw_rect(r.grow(-1.0), fill)
+	var label := String(icon.label)
+	var px := 6 if label.length() > 1 else 7
+	var tw := _width(label, px, true)
+	_str(label, r.position.x + (r.size.x - tw) * 0.5, r.end.y - 2.5, Color.WHITE, px, true)
+	if int(icon.count) > 1:
+		var ct := str(int(icon.count))
+		var cw := _width(ct, 5, true)
+		draw_rect(Rect2(r.end.x - cw - 1.0, r.end.y - 5.0, cw + 2.0, 6.0), Color.BLACK)
+		_str(ct, r.end.x - cw, r.end.y + 0.5, Color.WHITE, 5, true)
 
 
 ## Small bar of a hero window: dark track with a light border, filled by `share`.

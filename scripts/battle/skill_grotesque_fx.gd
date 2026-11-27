@@ -1762,13 +1762,13 @@ func _is_sun_key(key: StringName) -> bool:
 
 
 ## Onde o sol de `u` fica. Inimigo: acima da cabeça (abaixo do HUD superior), escalado por k. Aliado: canto inferior-direito
-## LIVRE do cartão (sem cobrir nome/HP/PP/EN/ACT) e `min_y` logo abaixo do Battle Log.
+## do cartão, no MEIO da borda inferior, vazando para fora (ordem do criador) e `min_y` logo abaixo do Battle Log.
 func sun_spot(u: BattleUnit) -> Dictionary:
 	var g := unit_geom(u)
 	if u.is_player:
 		var card: Rect2 = g.card
 		var log_bottom: float = hud.BATTLE_LOG_RECT.end.y * DESIGN_SCALE
-		return {"p": Vector2(card.end.x - 24.0, card.position.y + card.size.y * 0.69), "r": 8.5, "ray_min": 4.5, "ray_var": 4.5, "ray_jit": 1.1, "ray_w": 1.4,
+		return {"p": Vector2(card.get_center().x, card.end.y), "r": 8.5, "ray_min": 4.5, "ray_var": 4.5, "ray_jit": 1.1, "ray_w": 1.4,
 			"disc_jit": 1.3, "disc_w": 1.8, "halo": Vector2(24.0, 18.0), "ally": true, "min_y": log_bottom + 2.0, "k": 1.0, "card": card}
 	var k: float = g.k
 	var top := maxf(float(g.c.y) - 80.0 * k, STAGE_TOP * DESIGN_SCALE + 34.0 * k)

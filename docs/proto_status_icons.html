@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-br"><meta charset="utf-8"><title>Protótipo v2 — ícones de status no espaço livre do cartão</title>
+<style>
+/* escala 2x do espaço lógico 544x416; cartão real: 195x44 (2 heróis) e ~128x44 (3 heróis); linhas em y+16 (nome) e y+35 (HP/EN) */
+body{background:#1b1410;color:#e8ddd0;font:12px monospace;margin:14px}
+h2{font-size:13px;margin:16px 0 4px}
+.note{color:#b9a995;font-size:11px;margin:3px 0 6px}
+.row{display:flex;gap:11px;margin-bottom:6px}
+.card{position:relative;height:88px;background:rgba(14,10,22,.94);border:2px solid rgba(240,225,228,.55);box-sizing:border-box;flex:none;font-size:18px}
+.w2{width:390px}.w3{width:257px}
+.t{position:absolute;white-space:nowrap}
+.name{left:18px;top:6px;font-weight:bold;font-size:22px}
+.sp{color:#7de08b;font-weight:bold}
+.pips{position:absolute;right:18px;top:12px;display:flex;gap:4px}.pips i{width:13px;height:13px;background:#e7ddd4}
+.hp{left:18px;top:50px;font-weight:bold}.hp b{color:#f09494}.en b{color:#8ad8ff}.pp b{color:#f5f58c}
+.l{color:#cfc7e2;font-weight:normal;margin-right:6px}
+.free{position:absolute;right:16px;top:44px;height:30px;display:flex;gap:4px;align-items:center;justify-content:flex-end}
+.free.left{justify-content:flex-start}
+.i{width:20px;height:20px;border:1px solid #000;font-size:12px;line-height:20px;text-align:center;font-weight:bold;color:#fff;position:relative;flex:none}
+.i small{position:absolute;right:-4px;bottom:-5px;font-size:10px;background:#000;padding:0 2px;line-height:11px}
+.buff{background:#2f7d4d}.deb{background:#9a2c3c}.stat{background:#7a5a1a}.mark{background:#c94c14}.more{background:#3a3450;font-size:11px;width:26px}
+.role{position:absolute;right:18px;top:50px;color:#f2c94c;font-weight:bold;font-size:15px}
+.strip{position:absolute;left:2px;top:2px;bottom:2px;width:6px;background:#f2c94c}
+.zone{position:absolute;outline:1px dashed #7de08b;background:rgba(125,224,139,.08)}
+.cap{font-size:11px;color:#9fe29f;margin:2px 0 10px}
+.foe{display:inline-block;width:160px;text-align:center;margin:0 20px}.sil{height:80px;background:#050208;border-radius:50px 50px 6px 6px;margin-bottom:5px}
+.fi{display:flex;gap:4px;justify-content:center}
+</style>
+<body>
+<div class="note">Zona verde tracejada = espaço realmente livre hoje na 2ª linha (à direita de HP/EN-PP, onde hoje fica o texto "TARGET"/"ATTACK"). Medidas em 2× do espaço lógico. Ícones/cores placeholder (verde buff · vermelho debuff · âmbar condição · laranja marca).</div>
+
+<h2>0 — O espaço livre real</h2>
+<div class="row">
+ <div class="card w2"><div class="t name">Yoch <span class="sp" style="font-size:18px;margin-left:12px">SP 119</span></div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp"><span class="l">HP</span><b>265/400</b> <span class="pp" style="margin-left:14px"><span class="l">PP</span><b>5/8</b></span></div>
+  <div class="zone" style="left:250px;right:16px;top:44px;height:34px"></div><div class="role">TARGET</div></div>
+ <div class="card w3"><div class="t name" style="font-size:19px">Yoch</div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp" style="font-size:16px"><span class="l">HP</span><b>265/400</b> <span class="pp" style="margin-left:8px"><span class="l">PP</span><b>5/8</b></span></div>
+  <div class="zone" style="left:215px;right:12px;top:44px;height:34px"></div></div>
+</div>
+<div class="cap">2 heróis: ~140 px (70 lógicos) livres · 3 heróis: só ~30 px (15 lógicos) — cabe 1 ícone.</div>
+
+<h2>Opção A — ícones ALINHADOS À DIREITA no espaço livre; o texto do papel (TARGET) sai e fica só a faixa lateral/tinta</h2>
+<div class="row">
+ <div class="card w2"><div class="strip"></div><div class="t name">Fallen <span class="sp" style="font-size:18px;margin-left:12px">SP 46</span></div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp"><span class="l">HP</span><b>400/400</b> <span class="en" style="margin-left:14px"><span class="l">EN</span><b>40/40</b></span></div>
+  <div class="free"><div class="i buff">A↑</div><div class="i buff">D↑</div><div class="i deb">M↓</div><div class="i mark">☀<small>2</small></div><div class="i stat">B<small>3</small></div></div></div>
+ <div class="card w3"><div class="t name" style="font-size:19px">Fallen</div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp" style="font-size:16px"><span class="l">HP</span><b>400/400</b> <span class="en" style="margin-left:8px"><span class="l">EN</span><b>40/40</b></span></div>
+  <div class="free"><div class="i more">+5</div></div></div>
+</div>
+<div class="cap">3 heróis: só o contador "+5" cabe (ou 1 ícone do mais importante).</div>
+
+<h2>Opção B — ícones logo após EN/PP (à esquerda do espaço livre); o texto do papel continua à direita quando cabe</h2>
+<div class="row">
+ <div class="card w2"><div class="t name">Yoch <span class="sp" style="font-size:18px;margin-left:12px">SP 119</span></div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp"><span class="l">HP</span><b>265/400</b> <span class="pp" style="margin-left:14px"><span class="l">PP</span><b>5/8</b></span></div>
+  <div class="free left" style="left:262px;right:auto"><div class="i stat">B<small>3</small></div><div class="i mark">☀<small>2</small></div></div><div class="role">TARGET</div></div>
+ <div class="card w3"><div class="t name" style="font-size:19px">Yoch</div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp" style="font-size:16px"><span class="l">HP</span><b>265/400</b> <span class="pp" style="margin-left:8px"><span class="l">PP</span><b>5/8</b></span></div>
+  <div class="free left" style="left:212px;right:auto"><div class="i more">+2</div></div></div>
+</div>
+<div class="cap">Com muitos ícones o texto do papel some primeiro (já some hoje no cartão estreito).</div>
+
+<h2>Opção C — ícones SOBRE a borda inferior do cartão (metade dentro, metade fora), sem tocar nenhum texto</h2>
+<div class="row" style="margin-bottom:18px">
+ <div class="card w2"><div class="t name">Fallen <span class="sp" style="font-size:18px;margin-left:12px">SP 46</span></div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp"><span class="l">HP</span><b>400/400</b> <span class="en" style="margin-left:14px"><span class="l">EN</span><b>40/40</b></span></div>
+  <div class="free" style="top:auto;bottom:-12px;right:12px"><div class="i buff">A↑</div><div class="i buff">D↑</div><div class="i deb">M↓</div><div class="i mark">☀<small>2</small></div><div class="i stat">B<small>3</small></div><div class="i stat">S</div></div></div>
+ <div class="card w3"><div class="t name" style="font-size:19px">Fallen</div><div class="pips"><i></i><i></i><i></i><i></i></div>
+  <div class="t hp" style="font-size:16px"><span class="l">HP</span><b>400/400</b> <span class="en" style="margin-left:8px"><span class="l">EN</span><b>40/40</b></span></div>
+  <div class="free" style="top:auto;bottom:-12px;right:8px"><div class="i buff">A↑</div><div class="i buff">D↑</div><div class="i deb">M↓</div><div class="i mark">☀<small>2</small></div><div class="i more">+2</div></div></div>
+</div>
+<div class="cap">Cabe a largura inteira do cartão (6 ícones em 2 heróis, 4 + "+N" em 3), mas invade os ~12 px entre o cartão e o Battle Log/chão.</div>
+
+<h2>Inimigos — fileira sob a figura (igual nas 3 opções)</h2>
+<div class="foe"><div class="sil"></div><div class="fi"><div class="i deb">M↓</div><div class="i mark">☀<small>3</small></div><div class="i stat">B<small>2</small></div></div></div>
+<div class="foe"><div class="sil"></div><div class="fi"><div class="i buff">A↑</div></div></div>
+</body></html>
