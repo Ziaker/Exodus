@@ -101,6 +101,8 @@ func _is_spell(d: Dictionary) -> bool:
 
 
 func _cost(d: Dictionary) -> int:
+	if bool(d.get("en_paid", false)):
+		return 0
 	return PrayerBook.base_cost(StringName(d.pray)) + int(d.get("extra", 0))
 
 
@@ -166,7 +168,8 @@ func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 		if acts_left < acts_needed:
 			_say("Need %d ACT for %s." % [acts_needed, PrayerBook.spell_name(pick)])
 			continue
-		var entry := {"spell": pick, "cost": PrayerBook.base_cost(pick)}
+		var en_paid := PrayerBook.uses_en(pick, unit)
+		var entry := {"spell": pick, "cost": 0 if en_paid else PrayerBook.base_cost(pick)}
 		if not bool(PrayerBook.simulate(_plan_start_pp, _queue(details, -1, 0, entry)).ok):
 			_say("Not enough PP for %s." % PrayerBook.spell_name(pick))
 			continue
@@ -178,7 +181,7 @@ func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 			_say("%s queued." % PrayerBook.spell_name(pick))
 		else:
 			_say("%s queued on %s: %d PP." % [PrayerBook.spell_name(pick), target.display_name, PrayerBook.base_cost(pick)])
-		return {"pray": pick, "target": target, "extra": 0, "paid": 0, "owed": 0}
+		return {"pray": pick, "target": target, "extra": 0, "paid": 0, "owed": 0, "en_paid": en_paid}
 	return {}
 
 
@@ -194,9 +197,15 @@ func _build_menu(avail: int, details: Array, acts_left: int, unit: BattleUnit = 
 	var has_meta := unit != null and unit.has_meta("spells")
 	var known: Array = unit.get_meta("spells") as Array if has_meta else []
 	var order: Array[StringName] = PrayerBook.ALL_BOOK_ORDER if has_meta else PrayerBook.SPELL_ORDER
-	for id in order:
-		if has_meta and not known.has(String(id)):
+	var seen: Array[StringName] = []
+	for base_id in order:
+		if has_meta and not known.has(String(base_id)):
 			continue
+		# D-118: Esh -> Ur Esh and Adin -> Adina -> Adinut evolve in the round after their use.
+		var id := resolve_evolution(unit, base_id)
+		if seen.has(id):
+			continue
+		seen.append(id)
 		var queued := false
 		for d in details:
 			if (d as Dictionary).get("pray", &"") == id:
@@ -204,14 +213,17 @@ func _build_menu(avail: int, details: Array, acts_left: int, unit: BattleUnit = 
 		var acts_needed := PrayerBook.act_cost(id)
 		var pp_needed := PrayerBook.base_cost(id)
 		var en_needed := PrayerBook.en_cost(id)
-		var en_only := pp_needed == 0 and en_needed > 0
-		var has_resource := (unit != null and unit.current_en >= en_needed) if en_only else (pp_needed <= avail)
+		var use_en := PrayerBook.uses_en(id, unit) or (pp_needed == 0 and en_needed > 0)
+		var free_skill := pp_needed == 0 and en_needed == 0
+		var has_resource := free_skill or ((unit != null and unit.current_en >= en_needed) if use_en else (pp_needed <= avail))
 		var castable := acts_left >= acts_needed and has_resource
 		var allocatable := queued and avail >= 1 and PrayerBook.accepts_extra_pp(id)
 		if castable or allocatable:
-			var label := "%s  %d EN" % [PrayerBook.spell_name(id), en_needed] if en_only else "%s  %d PP" % [PrayerBook.spell_name(id), pp_needed]
+			var label := "%s  %d EN" % [PrayerBook.spell_name(id), en_needed] if (use_en or free_skill) else "%s  %d PP" % [PrayerBook.spell_name(id), pp_needed]
 			if acts_needed > 1:
 				label += " / %d ACT" % acts_needed
+			if PrayerBook.is_immediate(id):
+				label += "  IMMEDIATE"
 			menu_rows.append(label)
 			menu_ids.append(id)
 			var extra_hint := " | queued: same target = +1 PP" if (queued and PrayerBook.accepts_extra_pp(id)) else ""
@@ -267,12 +279,20 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 		_release(unit, d, "no act left")
 		return true
 	# Pre-check EN cost before spending ACTs (Hasneh Habo'er, or angels using Esh Sinai).
-	var needs_en := (id == PrayerBook.HASNEH_HABOER) or (id == PrayerBook.ESH_SINAI and not unit.prays)
+	var needs_en := PrayerBook.uses_en(id, unit)
 	if needs_en and unit.current_en < PrayerBook.en_cost(id):
 		_release(unit, d, "not enough EN")
 		return true
+	# D-118 Nitzotz only works on a foe that is already burning (checked before any cost is paid).
+	if id == PrayerBook.NITZOTZ:
+		var nit_target: BattleUnit = d.get("target", null)
+		if nit_target == null or not nit_target.is_alive() or nit_target.burns.is_empty():
+			_release(unit, d, "the target is not burning")
+			return true
 	for _a in acts_needed:
 		unit.spend_act()
+	if needs_en:
+		unit.current_en -= PrayerBook.en_cost(id)
 	d["done"] = true
 	var hud: Control = battle.hud
 	battle.action_attacker = unit
@@ -309,7 +329,6 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	elif id == PrayerBook.HASNEH_HABOER:
 		var en_needed := PrayerBook.en_cost(id)
-		unit.current_en -= en_needed
 		var bush := _summon_burning_bush(unit)
 		var bush_unit: BattleUnit = bush.unit
 		fx.play_hasneh_haboer(unit, bush_unit.current_hp, bush_unit)
@@ -344,6 +363,41 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 		_log("%s prays Lior: heals %d HP per action for the next %d actions (%d PP)." % [
 			unit.display_name, heal_amt, PrayerBook.LIOR_ACTIONS, total_pp])
 		_event("%s is wrapped in Lior (%d HP x%d)." % [battle.short_name(unit), heal_amt, PrayerBook.LIOR_ACTIONS])
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	elif id == PrayerBook.MEIR:
+		SkillFx.apply_status(unit, &"taunt", 1)
+		fx.play_meir(unit, battle.hud.opponents)
+		_log("%s prays Meir: every foe can only attack it until the end of the round (%d PP)." % [unit.display_name, _cost(d)])
+		_event("%s prays Meir: all foes turn to it!" % battle.short_name(unit))
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	elif id == PrayerBook.SERAF:
+		var seraf_healed := unit.heal(PrayerBook.seraf_heal(unit.stats.mak))
+		unit.add_sp(PrayerBook.SERAF_SP)
+		fx.play_seraf(unit, seraf_healed)
+		_log("%s invokes Seraf: +%d HP, +%d SP." % [unit.display_name, seraf_healed, PrayerBook.SERAF_SP])
+		_event("%s invokes Seraf: +%d HP, +%d SP." % [battle.short_name(unit), seraf_healed, PrayerBook.SERAF_SP])
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	elif id == PrayerBook.GEVER:
+		for _s in PrayerBook.GEVER_STAGES:
+			battle._add_stage(unit)
+		fx.play_gever(unit)
+		_log("%s invokes Gever: +%d ATK stages until the end of the next round (%d active)." % [
+			unit.display_name, PrayerBook.GEVER_STAGES, unit.atk_stages.size()])
+		_event("%s invokes Gever: ATK +%d stages!" % [battle.short_name(unit), PrayerBook.GEVER_STAGES])
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	elif id == PrayerBook.ADIN or id == PrayerBook.ADINA or id == PrayerBook.ADINUT:
+		var rec := PrayerBook.adin_recovery(id)
+		var en_before := unit.current_en
+		unit.recover_en_flat(int(rec.en))
+		var adin_hp := unit.heal(int(rec.hp))
+		fx.play_adin(unit, [PrayerBook.ADIN, PrayerBook.ADINA, PrayerBook.ADINUT].find(id))
+		_log("%s casts %s: +%d EN, +%d HP." % [unit.display_name, PrayerBook.spell_name(id), unit.current_en - en_before, adin_hp])
+		_event("%s casts %s: +%d EN%s." % [battle.short_name(unit), PrayerBook.spell_name(id), unit.current_en - en_before,
+			", +%d HP" % adin_hp if int(rec.hp) > 0 else ""])
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	else:
@@ -421,8 +475,21 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			await _lehavah(unit, target, d, reacting)
 		elif id == PrayerBook.ESH_SINAI:
 			await _esh_sinai(unit, target, d, reacting)
+		elif id == PrayerBook.ESH:
+			await _esh(unit, target, d, reacting)
+		elif id == PrayerBook.UR_ESH:
+			await _ur_esh(unit, target, d, reacting)
+		elif id == PrayerBook.NITZOTZ:
+			await _nitzotz(unit, target, d, reacting)
+		elif id == PrayerBook.ESH_OCHELET:
+			_esh_ochelet(unit, target, d, reacting)
+		elif id == PrayerBook.ANGEL_HUG:
+			await _angel_hug(unit, target, d, reacting)
+		elif id == PrayerBook.GODS_MESSAGE:
+			await _gods_message(unit, target, d, reacting)
 		if reacting and id in [PrayerBook.REFUAH, PrayerBook.HAGANAH, PrayerBook.TAHORAH, PrayerBook.GEVURAH, PrayerBook.MISHPAT, PrayerBook.ZOHAR, PrayerBook.SANVERIM, PrayerBook.NECHAMAH, PrayerBook.CHAKI]:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+	_register_evolution(unit, id)
 	save(unit)
 	battle._refresh_all()
 	return true
@@ -442,10 +509,11 @@ func _reaction_pick(unit: BattleUnit) -> Dictionary:
 			target = await battle._wait_target("enemy" if PrayerBook.targets_enemy(pick) else "player")
 			if target == null:
 				continue
-		var cost := PrayerBook.base_cost(pick)
+		var en_paid := PrayerBook.uses_en(pick, unit)
+		var cost := 0 if en_paid else PrayerBook.base_cost(pick)
 		unit.change_pp(-cost)
 		battle._refresh_all()
-		return {"pray": pick, "target": target, "extra": 0, "paid": cost, "owed": 0}
+		return {"pray": pick, "target": target, "extra": 0, "paid": cost, "owed": 0, "en_paid": en_paid}
 	return {}
 
 
@@ -542,7 +610,7 @@ func _cherev(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting:
 			battle._present_strike(unit, foe, 0)
 			continue
 		var r := PrayerBook.raam_damage(0, unit.stats.mak, unit.stats.agi, foe.stats.mef,
-			unit.current_sp, foe.current_sp, foe.affinity, foe.race, battle.rng)
+			unit.current_sp, foe.current_sp, foe.race, battle.rng)
 		if bool(r.angel):
 			_log("%s -> %s: 0 dmg (Cherev has no effect on angels)" % [unit.display_name, foe.display_name])
 			_event("Cherev has no effect on %s." % battle.short_name(foe))
@@ -552,10 +620,7 @@ func _cherev(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting:
 		var beam := defense[0] == BattleMath.RhythmResult.BEAM
 		var applied := foe.take_damage(amount)
 		unit.last_damage_dealt = applied
-		unit.grant_acts(BattleMath.press_turn_acts(foe.affinity))
 		if bool(r.crit):
-			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-		if foe.affinity == BattleMath.Affinity.WEAK and applied > 0:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 		if reacting and not gained_react_sp:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
@@ -634,7 +699,7 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	if not battle.is_inside_tree() or not target.is_alive():
 		return
 	var r := PrayerBook.raam_damage(extra, unit.stats.mak, unit.stats.agi, target.stats.mef,
-		unit.current_sp, target.current_sp, target.affinity, target.race, battle.rng)
+		unit.current_sp, target.current_sp, target.race, battle.rng)
 	if bool(r.angel):
 		_log("%s -> %s: 0 dmg (Ra'am has no effect on angels)" % [unit.display_name, target.display_name])
 		_event("Ra'am has no effect on %s." % battle.short_name(target))
@@ -646,17 +711,14 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	var beam := defense == BattleMath.RhythmResult.BEAM
 	var applied := target.take_damage(amount)
 	unit.last_damage_dealt = applied
-	unit.grant_acts(BattleMath.press_turn_acts(target.affinity))
 	if bool(r.crit):
-		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-	if target.affinity == BattleMath.Affinity.WEAK and applied > 0:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-	_log("%s -> %s: %d dmg (Ra'am base %d, %s, rhythm %s, def %s, crit %s, affinity %s, SP roll %+d)" % [
+	_log("%s -> %s: %d dmg (Ra'am base %d, %s, rhythm %s, def %s, crit %s, SP roll %+d)" % [
 		unit.display_name, target.display_name, applied, int(r.base), "BLOCK" if beam else ("FULL" if attack == BattleMath.RhythmResult.POINT else "HIT %d%%" % int(round(BattleMath.strike_multiplier(attack, defense) * 100.0))),
 		battle._rhythm_name(attack), battle._rhythm_name(defense), "YES" if bool(r.crit) else "no",
-		battle._affinity_name(target.affinity), int(r.sp_roll)])
+		int(r.sp_roll)])
 	var dealt := hp_before - target.current_hp
 	if defense != BattleMath.RhythmResult.MISS:
 		battle._set_role(target, "DEFEND")
@@ -666,8 +728,6 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 		_event("Ra'am strikes %s: %d damage." % [battle.short_name(target), dealt])
 	if not target.is_alive():
 		_event("%s is down." % battle.short_name(target))
-	if BattleMath.press_turn_acts(target.affinity) > 0 and unit.is_alive():
-		_event("%s gains %d act." % [battle.short_name(unit), BattleMath.press_turn_acts(target.affinity)])
 	_present_raam(unit, target, dealt, beam, bool(r.crit))
 
 
@@ -739,7 +799,7 @@ var burning_bushes: Array[Dictionary] = []
 var _lior_states: Dictionary = {}
 
 
-## D-118 Shalhevet: sweeping fire wave dealing (30 + MAK - MEF) * affinity to all foes with 50% BURN.
+## D-118 Shalhevet: sweeping fire wave dealing (30 + MAK - MEF) to all foes with 50% BURN.
 func _shalhevet(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting: bool) -> void:
 	await fx.play_shalhevet(foes)
 	if not battle.is_inside_tree():
@@ -748,7 +808,7 @@ func _shalhevet(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacti
 	for foe in foes:
 		if not foe.is_alive():
 			continue
-		var dmg := PrayerBook.shalhevet_damage(unit.stats.mak, foe.stats.mef, foe.affinity)
+		var dmg := PrayerBook.shalhevet_damage(unit.stats.mak, foe.stats.mef)
 		var applied := foe.take_damage(dmg)
 		unit.last_damage_dealt = applied
 		var burned := false
@@ -811,12 +871,12 @@ func tick_lior(unit: BattleUnit) -> int:
 	return healed
 
 
-## D-118 Lehavah: (40 + MAK - MEF) * affinity light-and-fire explosion + blind (respecting Haganah).
+## D-118 Lehavah: (40 + MAK - MEF) light-and-fire explosion + blind (respecting Haganah).
 func _lehavah(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
 	await fx.play_lehavah(target)
 	if not battle.is_inside_tree() or not target.is_alive():
 		return
-	var dmg := PrayerBook.lehavah_damage(unit.stats.mak, target.stats.mef, target.affinity)
+	var dmg := PrayerBook.lehavah_damage(unit.stats.mak, target.stats.mef)
 	var applied := target.take_damage(dmg)
 	unit.last_damage_dealt = applied
 	var blinded := false
@@ -834,14 +894,12 @@ func _lehavah(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: boo
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 
 
-## D-118 Esh Sinai: IMMEDIATE (30 - MEF) * affinity magic damage (does NOT ignore defenses),
+## D-118 Esh Sinai: IMMEDIATE (30 - MEF) magic damage (does NOT ignore defenses),
 ## followed by 3 successive reactable hits. Angels pay 40 EN; Yoch pays 6 PP.
 func _esh_sinai(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: bool) -> void:
-	if not unit.prays:
-		unit.current_en -= PrayerBook.en_cost(PrayerBook.ESH_SINAI)
 	fx.play_esh_sinai(target)
-	# Hit 0: IMMEDIATE (no delay, no reaction window; respects MEF & affinity)
-	var hit_dmg := PrayerBook.esh_sinai_hit_damage(target.stats.mef, target.affinity)
+	# Hit 0: IMMEDIATE (no delay, no reaction window; respects MEF)
+	var hit_dmg := PrayerBook.esh_sinai_hit_damage(target.stats.mef)
 	var applied0 := target.take_damage(hit_dmg)
 	unit.last_damage_dealt = applied0
 	battle.fx.play("RAAM", target, applied0, unit)
@@ -864,7 +922,7 @@ func _esh_sinai(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: 
 		if not target.is_alive():
 			fx.cancel_esh_sinai_after(idx)
 			return
-		var follow_dmg := PrayerBook.esh_sinai_hit_damage(target.stats.mef, target.affinity)
+		var follow_dmg := PrayerBook.esh_sinai_hit_damage(target.stats.mef)
 		var applied := target.take_damage(follow_dmg)
 		unit.last_damage_dealt = applied
 		battle.fx.play("RAAM", target, applied, unit)
@@ -959,6 +1017,15 @@ func damage_burning_bush(index: int, amount: int) -> int:
 	return fallback_applied
 
 
+## Convenience wrapper for AI turns: resolves the Burning Bush attack by its BattleUnit reference.
+func burning_bush_attack_unit(bush_unit: BattleUnit, target: BattleUnit,
+		base_dmg: int = PrayerBook.HASNEH_BUSH_BASE_DAMAGE) -> Dictionary:
+	for i in burning_bushes.size():
+		if burning_bushes[i].get("unit", null) == bush_unit:
+			return burning_bush_attack(i, target, base_dmg)
+	return {"damage": 0, "doubled": false, "burned": false}
+
+
 ## Executes a Burning Bush attack on `target`: 2x damage if target is already burning, then inflicts BURN.
 func burning_bush_attack(index: int, target: BattleUnit, base_dmg: int = PrayerBook.HASNEH_BUSH_BASE_DAMAGE) -> Dictionary:
 	if index < 0 or index >= burning_bushes.size() or target == null or not target.is_alive():
@@ -983,11 +1050,241 @@ func burning_bush_attack(index: int, target: BattleUnit, base_dmg: int = PrayerB
 	return {"damage": applied, "doubled": was_burning, "burned": burned}
 
 
+## D-118 evolutions: unit -> {root id -> {"stage": last cast id, "round": round of that cast}}.
+var _evo: Dictionary = {}
+## D-118 Esh Ochelet: marked foe -> caster (30 magic damage per action it takes in its next turn).
+var _ochelet: Dictionary = {}
+const STAT_NAMES := {"atk": "ATK", "defense": "DEF", "mak": "MAK", "mef": "MEF", "agi": "AGI"}
+
+
+func _evolution_root(id: StringName) -> StringName:
+	if id == PrayerBook.ESH or id == PrayerBook.UR_ESH:
+		return PrayerBook.ESH
+	if id == PrayerBook.ADIN or id == PrayerBook.ADINA or id == PrayerBook.ADINUT:
+		return PrayerBook.ADIN
+	return &""
+
+
+func _knows(unit: BattleUnit, id: StringName) -> bool:
+	if id == PrayerBook.ADINA or id == PrayerBook.ADINUT:
+		return true
+	return unit != null and unit.has_meta("spells") and (unit.get_meta("spells") as Array).has(String(id))
+
+
+## D-118: the skill that `base_id` currently is for `unit` (Esh -> Ur Esh, Adin -> Adina -> Adinut),
+## one step further in the round after each use.
+func resolve_evolution(unit: BattleUnit, base_id: StringName) -> StringName:
+	if unit == null or not PrayerBook.EVOLUTIONS.has(base_id) or not _evo.has(unit):
+		return base_id
+	var entry: Dictionary = (_evo[unit] as Dictionary).get(_evolution_root(base_id), {})
+	if entry.is_empty():
+		return base_id
+	var stage := StringName(entry.stage)
+	var nxt: StringName = PrayerBook.EVOLUTIONS.get(stage, &"")
+	if nxt != &"" and int(entry.round) < battle.state.round_number and _knows(unit, nxt):
+		return nxt
+	return stage
+
+
+func _register_evolution(unit: BattleUnit, id: StringName) -> void:
+	var root := _evolution_root(id)
+	if root == &"" or unit == null:
+		return
+	if root == PrayerBook.ESH and not _knows(unit, PrayerBook.UR_ESH):
+		return
+	if not _evo.has(unit):
+		_evo[unit] = {}
+	var chain: Dictionary = _evo[unit]
+	var entry: Dictionary = chain.get(root, {})
+	# Casting the same stage twice in a round keeps the first cast's round (it evolves once).
+	if not entry.is_empty() and StringName(entry.stage) == id and int(entry.round) <= battle.state.round_number:
+		return
+	chain[root] = {"stage": id, "round": battle.state.round_number}
+
+
+## Applies a BURN unless Haganah shields the target; returns true when the burn was applied.
+func _ignite(target: BattleUnit) -> bool:
+	if not target.is_alive() or not target.haganah.is_empty():
+		return false
+	target.burns.append(SkillBook.BURN_ROUNDS)
+	return true
+
+
+## D-118 Esh: (20 + MAK - MEF) magic damage, 30% (+10% per extra PP) BURN.
+func _esh(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
+	var chance := PrayerBook.esh_burn_chance(int(d.get("extra", 0)))
+	var roll_burn: bool = int(battle.rng.randi_range(0, 99)) < chance
+	await fx.play_esh(unit, target, roll_burn)
+	if not battle.is_inside_tree() or not target.is_alive():
+		return
+	var applied := target.take_damage(PrayerBook.esh_damage(unit.stats.mak, target.stats.mef))
+	unit.last_damage_dealt = applied
+	var burned: bool = roll_burn and _ignite(target)
+	battle.fx.play("RAAM", target, applied, unit)
+	_log("%s prays Esh on %s: %d damage%s (%d PP, %d%% BURN)." % [
+		unit.display_name, target.display_name, applied, ", BURN" if burned else "", _cost(d), chance])
+	_event("Esh scorches %s: %d damage%s!" % [battle.short_name(target), applied, " (BURN)" if burned else ""])
+	if not target.is_alive():
+		_event("%s is down." % battle.short_name(target))
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+## D-118 Ur Esh: (20 + MAK - MEF) magic damage, guaranteed BURN, +40 damage if already burning.
+func _ur_esh(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
+	var was_burning := not target.burns.is_empty()
+	await fx.play_ur_esh(unit, target, was_burning)
+	if not battle.is_inside_tree() or not target.is_alive():
+		return
+	var applied := target.take_damage(PrayerBook.ur_esh_damage(unit.stats.mak, target.stats.mef, was_burning))
+	unit.last_damage_dealt = applied
+	var burned := _ignite(target)
+	battle.fx.play("RAAM", target, applied, unit)
+	_log("%s casts Ur Esh on %s: %d damage%s%s (%s)." % [unit.display_name, target.display_name, applied,
+		" (+40 vs BURN)" if was_burning else "", ", BURN" if burned else "", "%d PP" % _cost(d) if unit.prays else "EN"])
+	_event("Ur Esh detonates on %s: %d damage%s!" % [battle.short_name(target), applied, " (BURNING +40)" if was_burning else ""])
+	if not target.is_alive():
+		_event("%s is down." % battle.short_name(target))
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+## D-118 Nitzotz: 20 magic damage on a burning foe and its BURN rises to 10 damage per round.
+func _nitzotz(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: bool) -> void:
+	await fx.play_nitzotz(unit, target)
+	if not battle.is_inside_tree() or not target.is_alive():
+		return
+	var applied := target.take_damage(PrayerBook.nitzotz_damage(target.stats.mef))
+	unit.last_damage_dealt = applied
+	var superheated := target.is_alive() and not target.burns.is_empty()
+	if superheated:
+		target.burn_power = PrayerBook.NITZOTZ_BURN_POWER
+	battle.fx.play("RAAM", target, applied, unit)
+	_log("%s casts Nitzotz on %s: %d damage%s." % [unit.display_name, target.display_name, applied,
+		", BURN now %d per round" % PrayerBook.NITZOTZ_BURN_POWER if superheated else ""])
+	_event("Nitzotz strikes %s: %d damage%s!" % [battle.short_name(target), applied, " (BURN %d/round)" % PrayerBook.NITZOTZ_BURN_POWER if superheated else ""])
+	if not target.is_alive():
+		_event("%s is down." % battle.short_name(target))
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+## D-118 Esh Ochelet: IMMEDIATE mark; the foe takes 30 magic damage per action it takes in its next turn.
+func _esh_ochelet(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: bool) -> void:
+	SkillFx.apply_status(target, &"ochelet", 2)
+	_ochelet[target] = unit
+	fx.play_esh_ochelet(target)
+	_log("%s casts Esh Ochelet (IMMEDIATE) on %s: 30 magic damage for each action it takes in its next turn." % [
+		unit.display_name, target.display_name])
+	_event("Esh Ochelet latches onto %s!" % battle.short_name(target))
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+func is_ochelet_marked(unit: BattleUnit) -> bool:
+	return unit != null and _ochelet.has(unit) and unit.has_status(&"ochelet")
+
+
+## D-118 Esh Ochelet: one bite after each action `unit` completes (never interrupts it).
+func tick_ochelet(unit: BattleUnit) -> int:
+	if unit == null or not unit.is_alive() or not is_ochelet_marked(unit):
+		return 0
+	var caster: BattleUnit = _ochelet[unit]
+	var applied := unit.take_damage(PrayerBook.esh_ochelet_damage(unit.stats.mef))
+	if caster != null:
+		caster.last_damage_dealt = applied
+	fx.play_ochelet_bite(unit)
+	battle.fx.play("RAAM", unit, applied, caster)
+	_log("Esh Ochelet bites %s: %d damage." % [unit.display_name, applied])
+	_event("Esh Ochelet bites %s: %d damage." % [battle.short_name(unit), applied])
+	if not unit.is_alive():
+		_event("%s is down." % battle.short_name(unit))
+	battle._refresh_all()
+	return applied
+
+
+## End of `unit`'s turn: its Esh Ochelet mark is spent.
+func turn_end(unit: BattleUnit) -> void:
+	if unit != null and _ochelet.has(unit):
+		_ochelet.erase(unit)
+		unit.remove_status(&"ochelet")
+
+
+## D-118 Angel Hug: IMMEDIATE; the target loses its next 3 acts (cannot act or react). Haganah blocks it.
+func _angel_hug(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: bool) -> void:
+	var blocked := not target.haganah.is_empty()
+	if not blocked:
+		SkillFx.apply_status(target, &"paralyzed", 4)
+		target.paralyzed_acts = PrayerBook.ANGEL_HUG_ACTS
+		target.apply_paralysis()
+	await fx.play_angel_hug(unit, target, not blocked)
+	if not battle.is_inside_tree():
+		return
+	if blocked:
+		_log("%s uses Angel Hug on %s: blocked by Haganah." % [unit.display_name, target.display_name])
+		_event("Haganah protects %s from Angel Hug." % battle.short_name(target))
+	else:
+		_log("%s uses Angel Hug (IMMEDIATE) on %s: paralyzed for %d acts." % [unit.display_name, target.display_name, PrayerBook.ANGEL_HUG_ACTS])
+		_event("Angel Hug paralyzes %s for %d acts!" % [battle.short_name(target), PrayerBook.ANGEL_HUG_ACTS])
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+## Start of a round (after the acts were granted): paralysed units lose the acts they still owe.
+func round_start() -> void:
+	for u in battle.state.units:
+		var unit: BattleUnit = u
+		if unit.is_alive() and unit.paralyzed_acts > 0:
+			var lost := unit.apply_paralysis()
+			if lost > 0:
+				_log("%s is paralyzed: -%d act(s) (%d left to lose)." % [unit.display_name, lost, unit.paralyzed_acts])
+				_event("%s is paralyzed and loses %d act(s)." % [battle.short_name(unit), lost])
+
+
+## D-118 God's Message: IMMEDIATE; marks the target, which loses 3 stages of a random stat on its next turn.
+func _gods_message(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: bool) -> void:
+	var blocked := not target.haganah.is_empty()
+	if not blocked:
+		SkillFx.apply_status(target, &"gods_message", 3)
+	await fx.play_gods_message(unit, target, not blocked)
+	if not battle.is_inside_tree():
+		return
+	if blocked:
+		_log("%s speaks God's Message to %s: blocked by Haganah." % [unit.display_name, target.display_name])
+		_event("Haganah protects %s from God's Message." % battle.short_name(target))
+	else:
+		_log("%s speaks God's Message (IMMEDIATE) to %s: next turn it loses %d stages of a random stat." % [
+			unit.display_name, target.display_name, PrayerBook.GODS_MESSAGE_STAGES])
+		_event("God's Message is inscribed on %s." % battle.short_name(target))
+	if reacting:
+		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+
+
+## Start of `unit`'s turn: a pending God's Message is fulfilled (3 stages = 3 x 25% off a random stat, until round end).
+func fulfil_gods_message(unit: BattleUnit) -> bool:
+	if unit == null or not unit.is_alive() or not unit.has_status(&"gods_message"):
+		return false
+	unit.remove_status(&"gods_message")
+	var stats_pool: Array[String] = ["atk", "defense", "mak", "mef", "agi"]
+	var stat_key: String = stats_pool[battle.rng.randi_range(0, stats_pool.size() - 1)]
+	var current := int(unit.stats.get(stat_key))
+	var loss := mini(int(round(float(current) * SkillBook.ATK_STAGE_BONUS * float(PrayerBook.GODS_MESSAGE_STAGES))), maxi(0, current - 1))
+	unit.add_status(&"gm_debuff", 1, {"stat": stat_key, "delta": -loss})
+	fx.play_gods_message_fulfilled(unit, String(STAT_NAMES[stat_key]))
+	_log("God's Message is fulfilled: %s loses %d stages of %s (-%d)." % [
+		unit.display_name, PrayerBook.GODS_MESSAGE_STAGES, STAT_NAMES[stat_key], loss])
+	_event("God's Message: %s loses %d stages of %s." % [battle.short_name(unit), PrayerBook.GODS_MESSAGE_STAGES, STAT_NAMES[stat_key]])
+	battle._refresh_all()
+	return true
+
+
 ## Haganah lasts one full round: it ends when, in a later round, the turn of the unit that
 ## owned the turn at cast time comes back; `owner == null` = end of that later round.
 ## D-118: also triggers any pending Shachar dawn at the start of the next round.
 func expire(owner: BattleUnit) -> void:
 	resolve_pending_shachar()
+	if owner != null:
+		fulfil_gods_message(owner)
 	for unit in battle.state.units:
 		var h: Dictionary = unit.haganah
 		if h.is_empty() or int(h.round) >= battle.state.round_number:
@@ -1020,7 +1317,7 @@ func resolve_pending_shachar() -> int:
 		_log("Shachar dawn strikes all foes (30 + %d MAK - MEF)!" % caster_mak)
 		_event("Shachar radiates across all foes!")
 		for foe in foes:
-			var dmg := PrayerBook.shachar_damage(caster_mak, foe.stats.mef, foe.affinity)
+			var dmg := PrayerBook.shachar_damage(caster_mak, foe.stats.mef)
 			var applied := foe.take_damage(dmg)
 			total_dealt += applied
 			if caster != null:

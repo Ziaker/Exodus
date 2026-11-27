@@ -16,6 +16,7 @@ const COMMANDS := ["New Game", "Continue", "Survival", "Shutdown"]
 const NEW_GAME_SCENE := "res://prototypes/dungeon-crawler/DungeonProto.tscn"
 ## Modo à parte, "for fun": não lê nem escreve o ProgressStore da campanha.
 const SURVIVAL_SCENE := "res://scenes/survival/SurvivalWorld.tscn"
+const SURVIVAL_INTRO_SCENE := "res://scenes/survival/SurvivalIntro.tscn"
 const SCALE := 416.0 / 480.0
 const WINDOW_WIDTH := 192.0 * SCALE
 const ROW_HEIGHT := 32.0 * SCALE
@@ -135,12 +136,14 @@ func confirm() -> void:
 			get_tree().change_scene_to_file(NEW_GAME_SCENE)
 		"Survival":
 			# Retoma a run salva; NEW RUN no santuário começa do zero.
-			if not SurvivalState.load_from_file():
+			var resumed := SurvivalState.load_from_file()
+			if not resumed:
 				SurvivalState.reset()
 			# Meta-unlocks são relíquias; a run em si continua isolada.
 			for id in SurvivalMeta.data().get("unlocked", []):
 				SurvivalState.grant_relic(String(id))
-			get_tree().change_scene_to_file(SURVIVAL_SCENE)
+			# Run nova: cutscene de entrada do Kazfiel antes do mapa (criador 2026-11-27).
+			get_tree().change_scene_to_file(SURVIVAL_SCENE if resumed else SURVIVAL_INTRO_SCENE)
 		"Shutdown":
 			get_tree().quit()
 

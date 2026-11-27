@@ -1,0 +1,631 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="nitzotz" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Nitzotz v2 <span class="opacity-80">ניצוץ</span>
+        </button>
+        <button data-spell="gever" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Gever <span class="opacity-80">גבר</span>
+        </button>
+        <button data-spell="angel_hug" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Angel Hug <span class="opacity-80">מלאך</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="400" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    const FIRE_PALETTE = ['#ff7a1f', '#ffd84a', '#ffffff'];
+    const GEVER_PALETTE = ['#ff5a36', '#ffd84a', '#ffffff'];
+    const ANGEL_PALETTE = ['#ffffff', '#fffce0', '#ffd84a'];
+
+    const SPELLS = {
+      nitzotz: {
+        title: 'NITZOTZ (v2) · 2 ACT / 3 PP OU 15 EN · 6 LETRAS EM ARCO SAINDO DE YOCH -> 20 DMG + BURN 10/RND',
+        log: [
+          'YOCH launches NITZOTZ — 6 blazing spark-letters arc toward burning MAZIK B!',
+          'NITZOTZ strikes (20 DMG) and superheats BURN to 10 DMG/round!'
+        ],
+        duration: 3.1
+      },
+      gever: {
+        title: 'GEVER · ANGELICAL · 3 ACT / 4 PP OU 20 EN · +4 ESTÁGIOS DE ATK ATÉ O FIM DO PRÓXIMO ROUND',
+        log: [
+          'YOCH invokes GEVER — four surges of crimson-gold might erupt!',
+          'YOCH gains +4 ATK STAGES until end of next round (mark ב x4)!'
+        ],
+        duration: 3.0
+      },
+      angel_hug: {
+        title: 'ANGEL HUG · GABRIEL · 2 ACT / 5 EN · IMEDIATO · PARALISA O ALVO POR 3 ATOS (SEM AGIR/REAGIR)',
+        log: [
+          'GABRIEL uses ANGEL HUG (IMMEDIATE)! Wings of Hebrew light wrap around YOCH!',
+          'YOCH is PARALYZED for 3 ACTS (cannot act or react)!'
+        ],
+        duration: 3.2
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 218, y: 176, w: 68, h: 108 },
+      { id: 'B', name: 'MAZIK B', x: 408, y: 168, w: 76, h: 120 },
+      { id: 'C', name: 'MAZIK C', x: 598, y: 176, w: 68, h: 108 }
+    ];
+
+    let activeSpell = 'nitzotz';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'nitzotz') {
+        // 6 letras em arco saindo do cartão de YOCH (3 curvando à esquerda, 3 à direita) até MAZIK B
+        const word6 = 'ניצוץא';
+        const ctrlOffsets = [
+          { cx: -210, cy: -80, delay: 0.00 },
+          { cx: 210,  cy: -80, delay: 0.03 },
+          { cx: -145, cy: -130, delay: 0.06 },
+          { cx: 145,  cy: -130, delay: 0.09 },
+          { cx: -75,  cy: -155, delay: 0.12 },
+          { cx: 75,   cy: -155, delay: 0.15 }
+        ];
+        fx.sixArcs = ctrlOffsets.map((c, idx) => ({
+          ch: word6[idx],
+          cxOff: c.cx,
+          cyOff: c.cy,
+          delay: c.delay,
+          colorIdx: idx % 3
+        }));
+        fx.baseFlames = [];
+        for (let i = 0; i < 28; i++) {
+          fx.baseFlames.push({
+            xOff: (Math.random() - 0.5) * 62,
+            baseY: 36 - Math.random() * 68,
+            rise: 22 + Math.random() * 36,
+            phase: Math.random() * 6.28,
+            ch: i % 5 === 0 ? 'ניצוץ'[i % 5] : randGlyph(),
+            size: 11 + Math.random() * 6,
+            isExtra: i >= 12
+          });
+        }
+        fx.sparkBurst = [];
+        for (let i = 0; i < 36; i++) {
+          const a = (i / 36) * Math.PI * 2;
+          const spd = 105 + Math.random() * 215;
+          fx.sparkBurst.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.72,
+            ch: i % 4 === 0 ? 'ניצוץ'[i % 5] : randGlyph(),
+            size: 12 + Math.random() * 9,
+            colorIdx: i % 3,
+            life: 0.35 + Math.random() * 0.35
+          });
+        }
+      } else if (id === 'gever') {
+        // 4 surtos crescentes de poder (+1, +2, +3, +4 ATK) saindo do cartão de YOCH
+        fx.surges = [0.15, 0.45, 0.75, 1.05].map((st, si) => {
+          const cols = [];
+          for (let i = 0; i < 14; i++) {
+            cols.push({
+              xOff: (i / 13 - 0.5) * 236,
+              rise: 62 + si * 26 + Math.random() * 22,
+              ch: i % 3 === 0 ? 'גבר'[i % 3] : randGlyph(),
+              size: 12 + si * 2,
+              colorIdx: (i + si) % 3
+            });
+          }
+          return { st, si, cols };
+        });
+        fx.ring = [];
+        for (let i = 0; i < 20; i++) {
+          fx.ring.push({
+            a: (i / 20) * Math.PI * 2,
+            ch: randGlyph(),
+            size: 13 + (i % 2) * 3,
+            colorIdx: i % 3
+          });
+        }
+      } else if (id === 'angel_hug') {
+        // Duas asas/braços angelicais envolvendo e travando o cartão de YOCH (IMEDIATO em t=0) + 3 selos (3 atos)
+        fx.arms = [];
+        for (let side of [-1, 1]) {
+          for (let row = 0; row < 3; row++) {
+            for (let i = 0; i < 10; i++) {
+              const frac = i / 9;
+              fx.arms.push({
+                side,
+                row,
+                frac,
+                ch: i % 4 === 0 ? 'מלאך'[i % 4] : randGlyph(),
+                size: 12 + (2 - row) * 2,
+                colorIdx: (i + row) % 3
+              });
+            }
+          }
+        }
+        fx.seals = [0, 1, 2].map(i => ({
+          idx: i,
+          a: (i / 3) * Math.PI * 2,
+          ch: 'מלא'[i]
+        }));
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 26 + i * 42 + Math.sin(time * 0.8 + i * 1.1) * 12;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 26);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 278, W, 2);
+    }
+
+    function drawFoe(foe, flashAlpha, damageLabel, subTag, subColor) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = flashAlpha > 0.05 ? `rgba(255, 252, 230, ${0.4 + flashAlpha * 0.6})` : '#06030a';
+      ctx.fillRect(x - foe.w * 0.24, y - foe.h * 0.52, foe.w * 0.48, foe.h * 0.22);
+      ctx.fillRect(x - foe.w * 0.44, y - foe.h * 0.26, foe.w * 0.88, foe.h * 0.46);
+      ctx.fillRect(x - foe.w * 0.16, y + foe.h * 0.20, foe.w * 0.32, foe.h * 0.32);
+      ctx.fillRect(x - foe.w * 0.56, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+      ctx.fillRect(x + foe.w * 0.44, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.62);
+
+      if (subTag) {
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = subColor || '#ff7a1f';
+        ctx.fillText(subTag, x, y + foe.h * 0.64);
+      }
+      if (damageLabel) {
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = damageLabel.color || '#fff3b0';
+        ctx.fillText(damageLabel.text, x, y - 22 - damageLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawGabriel() {
+      const gx = 408, gy = 160;
+      ctx.save();
+      ctx.fillStyle = '#1b1428';
+      ctx.fillRect(gx - 22, gy - 68, 44, 30);
+      ctx.fillRect(gx - 36, gy - 34, 72, 68);
+      ctx.fillRect(gx - 86, gy - 48, 46, 56);
+      ctx.fillRect(gx + 40, gy - 48, 46, 56);
+      ctx.fillRect(gx - 18, gy + 34, 36, 36);
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd84a';
+      ctx.fillText('GABRIEL', gx, gy - 78);
+      ctx.restore();
+    }
+
+    function drawWordPalette(word, cx, cy, px, alpha, palette) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const startX = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        if (ch === ' ') return;
+        ctx.fillStyle = palette[i % palette.length];
+        ctx.fillText(ch, startX - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, yochMark, yochSub, cmdText) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45 (PP 5/8)', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(topTag, W - 16, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 286, W - 32, 44);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 286, W - 32, 1);
+      ctx.fillRect(16, 329, W - 32, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 313);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff', mark: null },
+        { x: 286, name: '▸ YOCH', hp: 'HP 68/74', res: yochSub || 'PP 5/8', col: '#f5f58c', mark: yochMark || null }
+      ];
+      panels.forEach(p => {
+        ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(p.x, 338, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, p.x + 12, 357);
+        if (p.mark) {
+          ctx.font = 'bold 14px "Times New Roman", serif';
+          ctx.fillStyle = p.mark.col || '#ffd84a';
+          ctx.fillText(p.mark.glyph, p.x + 86, 357);
+          if (p.mark.suffix) {
+            ctx.font = 'bold 11px monospace';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(p.mark.suffix, p.x + 100, 357);
+          }
+        }
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, p.x + 12, 376);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, p.x + 128, 376);
+      });
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 338, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText(cmdText || ('PRAY ▸ ' + activeSpell.toUpperCase()), 568, 366);
+    }
+
+    function renderNitzotz() {
+      const target = FOES[1];
+      const flightDur = 0.44;
+      const snapT = 0.56; // quando as 6 letras convergem e estalam no alvo
+      const snapped = t >= snapT;
+      const sAge = Math.max(0, t - snapT);
+
+      let shakeX = 0, shakeY = 0;
+      if (snapped && sAge < 0.22) {
+        const m = 7 * (1 - sAge / 0.22);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = snapped && sAge < 1.2 ? 0.36 * (1 - sAge / 1.2) : 0.16;
+      ctx.fillStyle = `rgba(14, 4, 10, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      const flash = snapped && sAge < 0.24 ? 1 - sAge / 0.24 : 0;
+      const dmg = snapped && sAge < 1.2 ? { text: '20 DMG · BURN 10/RND!', rise: sAge * 26, color: '#ffd84a' } : null;
+      const burnTag = snapped ? 'BURN (10/RND!)' : 'BURN (3/RND)';
+      const burnCol = snapped ? '#ffd84a' : '#ff7a1f';
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flash : 0, i === 1 ? dmg : null, i === 1 ? burnTag : null, burnCol));
+
+      ctx.textAlign = 'center';
+      // Chamas do BURN no alvo: fracas antes -> superaquecidas depois
+      fx.baseFlames.forEach((fl, i) => {
+        if (fl.isExtra && !snapped) return;
+        const spd = snapped ? 2.4 : 1.1;
+        const rise = snapped ? fl.rise * 2.1 : fl.rise;
+        const cyc = (t * spd + fl.phase) % 1.0;
+        const col = snapped ? FIRE_PALETTE[i % 3] : '#ff7a1f';
+        const px = snapped ? fl.size + 4 : fl.size;
+        ctx.save();
+        ctx.globalAlpha = (1 - cyc) * (snapped ? 0.98 : 0.65);
+        ctx.font = `bold ${px | 0}px "Times New Roman", serif`;
+        ctx.fillStyle = col;
+        ctx.fillText(fl.ch, target.x + fl.xOff + Math.sin(t * 7 + fl.phase) * 5, target.y + fl.baseY - cyc * rise);
+        ctx.restore();
+      });
+      ctx.restore();
+
+      drawHud(SPELLS.nitzotz.log[snapped ? 1 : 0], snapped ? 'BURN INTENSIFIED: 10/RND' : '6 SPARK-LETTERS IN ARC');
+
+      // 6 letras em arco saindo do cartão de YOCH (414, 344) até MAZIK B (desenhadas SOBRE o HUD!)
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      ctx.textAlign = 'center';
+      const sx = 414, sy = 344;
+      const ex = target.x, ey = target.y;
+
+      fx.sixArcs.forEach(arc => {
+        const age = t - arc.delay;
+        if (age < 0 || age > flightDur + 0.14) return;
+        const prog = Math.min(1, age / flightDur);
+        const fade = age <= flightDur ? 1 : Math.max(0, 1 - (age - flightDur) / 0.14);
+        const cx = (sx + ex) * 0.5 + arc.cxOff;
+        const cy = (sy + ey) * 0.5 + arc.cyOff;
+
+        // Desenha 4 rastros curtos + a letra líder brilhante de cada um dos 6 arcos
+        for (let k = 0; k < 4; k++) {
+          const pf = Math.max(0, prog - k * 0.065);
+          const u = 1 - pf;
+          const bx = u * u * sx + 2 * u * pf * cx + pf * pf * ex;
+          const by = u * u * sy + 2 * u * pf * cy + pf * pf * ey;
+          ctx.save();
+          ctx.globalAlpha = fade * (1 - k * 0.24);
+          ctx.font = `bold ${22 - k * 3}px "Times New Roman", serif`;
+          ctx.fillStyle = k === 0 ? '#ffffff' : FIRE_PALETTE[arc.colorIdx];
+          ctx.fillText(arc.ch, bx, by);
+          ctx.restore();
+        }
+      });
+
+      if (snapped) {
+        fx.sparkBurst.forEach(s => {
+          if (sAge > s.life) return;
+          const a = Math.max(0, 1 - sAge / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[s.colorIdx];
+          ctx.fillText(s.ch, target.x + s.vx * sAge, target.y + s.vy * sAge);
+          ctx.restore();
+        });
+        if (sAge < 0.95) {
+          drawWordPalette('ניצוץ', target.x, target.y - 38 - sAge * 20, 32, 1 - sAge / 0.95, FIRE_PALETTE);
+        }
+        if (sAge < 0.07) {
+          ctx.fillStyle = `rgba(255, 246, 210, ${(1 - sAge / 0.07) * 0.45})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+      ctx.restore();
+    }
+
+    function renderGever() {
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cx = cardX + cardW * 0.5;
+      const cy = cardY + cardH * 0.5;
+
+      let stages = 0;
+      fx.surges.forEach(s => { if (t >= s.st) stages = s.si + 1; });
+
+      ctx.save();
+      drawPlasmaBg(t);
+      FOES.forEach(f => drawFoe(f, 0, null, null, null));
+      ctx.restore();
+
+      const mark = stages > 0 ? { glyph: 'ב', suffix: 'x' + stages, col: '#ff5a36' } : null;
+      drawHud(SPELLS.gever.log[stages >= 4 ? 1 : 0], `ATK STAGES: +${stages} / +4`, mark);
+
+      ctx.save();
+      ctx.textAlign = 'center';
+
+      // Brilho quente crescendo no cartão conforme os 4 estágios empilham
+      if (stages > 0) {
+        const g = (0.07 * stages) * (t < 2.2 ? 1 : Math.max(0, 1 - (t - 2.2) / 0.7));
+        ctx.fillStyle = `rgba(255, 120, 48, ${g})`;
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+      }
+
+      // 4 ondas ascendentes sucessivas de letras (1 por estágio de ATK!)
+      fx.surges.forEach(s => {
+        const age = t - s.st;
+        if (age < 0 || age > 0.95) return;
+        const k = age / 0.95;
+        const a = k < 0.2 ? k / 0.2 : Math.max(0, 1 - (k - 0.2) / 0.8);
+        s.cols.forEach(c => {
+          ctx.save();
+          ctx.globalAlpha = a * 0.95;
+          ctx.font = `bold ${c.size}px "Times New Roman", serif`;
+          ctx.fillStyle = GEVER_PALETTE[c.colorIdx];
+          ctx.fillText(c.ch, cx + c.xOff, cardY + 12 - k * c.rise);
+          ctx.restore();
+        });
+      });
+
+      // Anel de poder girando ao redor de YOCH ao atingir +4
+      if (stages >= 4 && t < 2.8) {
+        const ra = t < 2.1 ? 0.95 : Math.max(0, 0.95 * (1 - (t - 2.1) / 0.7));
+        fx.ring.forEach(r => {
+          const ang = r.a + t * 2.8;
+          ctx.save();
+          ctx.globalAlpha = ra;
+          ctx.font = `bold ${r.size}px "Times New Roman", serif`;
+          ctx.fillStyle = GEVER_PALETTE[r.colorIdx];
+          ctx.fillText(r.ch, cx + Math.cos(ang) * 136, cy - 8 + Math.sin(ang) * 28);
+          ctx.restore();
+        });
+      }
+
+      if (t > 0.15 && t < 2.4) {
+        const wa = t < 0.45 ? (t - 0.15) / 0.3 : Math.max(0, 1 - (t - 1.7) / 0.7);
+        drawWordPalette('גבר', cx, cardY - 58 - stages * 6, 24 + stages * 3, wa, GEVER_PALETTE);
+      }
+
+      if (stages > 0 && t < 2.5) {
+        ctx.font = 'bold 17px monospace';
+        ctx.fillStyle = stages >= 4 ? '#ffd84a' : '#ff8a5c';
+        ctx.fillText(`+${stages} ATK STAGE${stages > 1 ? 'S' : ''}!`, cx, cardY - 20);
+      }
+
+      ctx.restore();
+    }
+
+    function renderAngelHug() {
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cx = cardX + cardW * 0.5;
+      const cy = cardY + cardH * 0.5;
+
+      ctx.save();
+      drawPlasmaBg(t);
+      const dark = t < 2.5 ? 0.34 : Math.max(0, 0.34 * (1 - (t - 2.5) / 0.6));
+      ctx.fillStyle = `rgba(10, 6, 20, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+      drawGabriel();
+      ctx.restore();
+
+      const mark = { glyph: 'ע', suffix: '3 ACT', col: '#fffce0' };
+      drawHud(SPELLS.angel_hug.log[t > 0.6 ? 1 : 0], 'IMMEDIATE · PARALYZED (3 ACTS)', mark, 'PARALYZED', 'GABRIEL ▸ ANGEL HUG');
+
+      ctx.save();
+      ctx.textAlign = 'center';
+
+      // Clarão imediato suave no t = 0
+      if (t < 0.08) {
+        ctx.fillStyle = `rgba(255, 252, 232, ${(1 - t / 0.08) * 0.55})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Duas asas/braços de letras hebraicas se fechando imediatamente ao redor do cartão de YOCH (abraço paralisante!)
+      const clasp = Math.min(1, t / 0.38);
+      const ease = 1 - Math.pow(1 - clasp, 3);
+      const holdA = t < 2.6 ? 0.95 : Math.max(0, 0.95 * (1 - (t - 2.6) / 0.55));
+
+      fx.arms.forEach(a => {
+        // Começa aberto nas laterais (±190px) e se fecha cruzando sobre o cartão (±10..115px)
+        const startX = cx + a.side * (195 - a.frac * 50);
+        const endX = cx + a.side * (120 * (1 - a.frac) - 18 * a.frac);
+        const bx = startX + (endX - startX) * ease;
+        const arcY = -Math.sin(a.frac * Math.PI) * (24 + a.row * 10);
+        const by = cy - 6 + (a.row - 1) * 16 + arcY * (1 - ease * 0.55);
+        ctx.save();
+        ctx.globalAlpha = holdA;
+        ctx.font = `bold ${a.size}px "Times New Roman", serif`;
+        ctx.fillStyle = ANGEL_PALETTE[a.colorIdx];
+        ctx.fillText(a.ch, bx, by);
+        ctx.restore();
+      });
+
+      // 3 selos orbitais brilhando sobre YOCH (representando os 3 atos de paralisia)
+      if (t > 0.25) {
+        const sa = Math.min(1, (t - 0.25) / 0.3) * holdA;
+        fx.seals.forEach(s => {
+          const ang = s.a + t * 1.1;
+          const sx = cx + Math.cos(ang) * 72;
+          const sy = cardY - 24 + Math.sin(ang) * 12;
+          ctx.save();
+          ctx.globalAlpha = sa;
+          ctx.font = 'bold 17px "Times New Roman", serif';
+          ctx.fillStyle = '#ffd84a';
+          ctx.fillText(s.ch, sx, sy);
+          ctx.restore();
+        });
+      }
+
+      if (t < 2.3) {
+        const wa = t < 0.25 ? t / 0.25 : Math.max(0, 1 - (t - 1.65) / 0.65);
+        drawWordPalette('מלאך', cx, cardY - 54, 28, wa, ANGEL_PALETTE);
+      }
+
+      ctx.restore();
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'nitzotz') renderNitzotz();
+      else if (activeSpell === 'gever') renderGever();
+      else renderAngelHug();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'nitzotz');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

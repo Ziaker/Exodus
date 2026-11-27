@@ -66,6 +66,9 @@ func _run() -> void:
 	_check(w.party[0].current_hp == 10 and w.party[0].current_en == 2, "Injured party synced to HUD")
 	_check(w.party.size() == 2 and w.party[1].current_hp == 5, "Recruited Yoch synced to HUD")
 
+	# Tutorial da 1ª conversa (criador 2026-11-26) fica de fora: visto só na memória da cena.
+	w._meta_cache = SurvivalMeta.data()
+	w._meta_cache["keeper_intro"] = true
 	_check(w.talk(), "Z opens unified Healer & Shop option bar")
 	_check(w.service_open, "Service bar is open")
 	_check(w.service_options().size() == 9, "Service bar has HEAL, SHOP, RELICS, HIRE, RESERVE, NEW RUN, DAILY, TITLE, LEAVE")

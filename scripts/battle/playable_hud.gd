@@ -190,8 +190,10 @@ const SHAKE_SECONDS := 0.4
 const SHAKE_PX := 4.0
 const SHAKE_HZ := 30.0
 var impact_left := 0.0
-var shake_unit: BattleUnit = null
-var shake_age := 99.0
+## Per-unit shake ages (seconds) so several units can shake at once. A unit also shakes
+## whenever its HP drops (damage from any source), with the same 4 px / 30 Hz / 0.4 s.
+var _shakes: Dictionary = {}
+var _hp_last: Dictionary = {}
 
 
 func _ready() -> void:
@@ -392,7 +394,10 @@ func _process(delta: float) -> void:
 	_sp_anim.age += delta
 	track_sp()
 	impact_left = maxf(0.0, impact_left - delta)
-	shake_age += delta
+	for sid in _shakes.keys():
+		_shakes[sid] += delta
+		if _shakes[sid] >= SHAKE_SECONDS: _shakes.erase(sid)
+	_track_hp_shake()
 	for key in _unit_seen:
 		_unit_seen[key].sp_age += delta
 		_unit_seen[key].acts_age += delta
@@ -452,14 +457,22 @@ func impact_flash() -> void:
 
 
 func shake(unit: BattleUnit) -> void:
-	shake_unit = unit
-	shake_age = 0.0
+	if unit != null: _shakes[unit.id] = 0.0
+
+
+## Damage shake: any unit whose HP went down since the last frame shakes.
+func _track_hp_shake() -> void:
+	for unit in players + opponents:
+		var last: int = int(_hp_last.get(unit.id, unit.current_hp))
+		_hp_last[unit.id] = unit.current_hp
+		if unit.current_hp < last: shake(unit)
 
 
 ## Horizontal shake offset for a unit's sprite or card.
 func shake_offset(unit: BattleUnit) -> Vector2:
-	if unit == null or unit != shake_unit or shake_age >= SHAKE_SECONDS: return Vector2.ZERO
-	return Vector2(SHAKE_PX if int(shake_age * SHAKE_HZ) % 2 == 0 else -SHAKE_PX, 0)
+	if unit == null or not _shakes.has(unit.id): return Vector2.ZERO
+	var age: float = _shakes[unit.id]
+	return Vector2(SHAKE_PX if int(age * SHAKE_HZ) % 2 == 0 else -SHAKE_PX, 0)
 
 
 ## D-049 rails: [top = opponent (red), bottom = player (white)].

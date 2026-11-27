@@ -27,6 +27,33 @@ const HASNEH_HABOER := &"hasneh_haboer"
 const SHALHEVET := &"shalhevet"
 const NOGAH := &"nogah"
 const LIOR := &"lior"
+## D-118 Lotes 2-4 (creator 2026-11-27): Esh/Meir/Ur Esh, Seraf/Nitzotz/Esh Ochelet/Gever, Gabriel skills.
+const ESH := &"esh"
+const MEIR := &"meir"
+const UR_ESH := &"ur_esh"
+const SERAF := &"seraf"
+const NITZOTZ := &"nitzotz"
+const ESH_OCHELET := &"esh_ochelet"
+const GEVER := &"gever"
+const ANGEL_HUG := &"angel_hug"
+const GODS_MESSAGE := &"gods_message"
+const ADIN := &"adin"
+const ADINA := &"adina"
+const ADINUT := &"adinut"
+
+const ESH_BASE_DAMAGE := 20
+const ESH_BURN_CHANCE := 30
+const ESH_BURN_CHANCE_PER_PP := 10
+const UR_ESH_BURNING_BONUS := 40
+const SERAF_SP := 20
+const NITZOTZ_DAMAGE := 20
+const NITZOTZ_BURN_POWER := 10
+const ESH_OCHELET_DAMAGE := 30
+const GEVER_STAGES := 4
+const ANGEL_HUG_ACTS := 3
+const GODS_MESSAGE_STAGES := 3
+## Skills that only appear in the menu by evolving from another one (next round after use).
+const EVOLUTIONS := {&"esh": &"ur_esh", &"adin": &"adina", &"adina": &"adinut"}
 
 const ESH_SINAI_HIT_DAMAGE := 30
 const ESH_SINAI_FOLLOWUP_HITS := 3
@@ -92,6 +119,31 @@ const SPELLS := {
 		"info": "Nogah (2 PP / 3 ACT): blinding starlight that blinds all foes until the end of the next round."},
 	&"lior": {"name": "Lior", "hebrew": "לִיאוֹר", "cost": 2, "acts": 1, "target": "self", "reactable": false, "extra": true,
 		"info": "Lior (2 PP / 1 ACT): light shroud around the caster healing 5 + 5 per PP over the next 5 actions."},
+		# D-118 Lotes 2-4 (creator 2026-11-27).
+		&"esh": {"name": "Esh", "hebrew": "אֵשׁ", "cost": 1, "acts": 2, "target": "enemy", "reactable": false, "extra": true,
+			"info": "Esh (1 PP / 2 ACT): burns one foe for 20 + MAK - MEF, 30% (+10% per extra PP) chance of BURN."},
+		&"meir": {"name": "Meir", "hebrew": "מֵאִיר", "cost": 2, "acts": 1, "target": "self", "reactable": false, "extra": false,
+			"info": "Meir (2 PP / 1 ACT): taunt; every foe can only attack the caster until the end of the round."},
+		&"ur_esh": {"name": "Ur Esh", "hebrew": "אוּר אֵשׁ", "cost": 3, "en": 15, "acts": 2, "target": "enemy", "reactable": false, "extra": false, "angelic": true,
+			"info": "Ur Esh (3 PP or 15 EN / 2 ACT): 20 + MAK - MEF and a guaranteed BURN; +40 damage on a foe already burning. Esh evolves into it."},
+		&"seraf": {"name": "Seraf", "hebrew": "שָׂרָף", "cost": 2, "en": 10, "acts": 2, "target": "self", "reactable": false, "extra": false, "angelic": true,
+			"info": "Seraf (2 PP or 10 EN / 2 ACT): heals the caster by its MAK and grants +20 SP."},
+		&"nitzotz": {"name": "Nitzotz", "hebrew": "נִיצוֹץ", "cost": 3, "en": 15, "acts": 2, "target": "enemy", "reactable": false, "extra": false, "angelic": true,
+			"info": "Nitzotz (3 PP or 15 EN / 2 ACT): 20 magic damage to a BURNING foe and BURN rises to 10 damage per round."},
+		&"esh_ochelet": {"name": "Esh Ochelet", "hebrew": "אֵשׁ אֹכֶלֶת", "cost": 5, "en": 30, "acts": 4, "target": "enemy", "reactable": false, "immediate": true, "extra": false, "angelic": true,
+			"info": "Esh Ochelet (5 PP or 30 EN / 4 ACT, IMMEDIATE): 30 magic damage for every action the foe takes in its next turn; never interrupts."},
+		&"gever": {"name": "Gever", "hebrew": "גֶּבֶר", "cost": 4, "en": 20, "acts": 3, "target": "self", "reactable": false, "extra": false, "angelic": true,
+			"info": "Gever (4 PP or 20 EN / 3 ACT): +4 ATK stages until the end of the next round."},
+		&"angel_hug": {"name": "Angel Hug", "hebrew": "מַלְאָךְ", "cost": 0, "en": 5, "acts": 2, "target": "enemy", "reactable": false, "immediate": true, "extra": false, "gabriel": true,
+			"info": "Angel Hug (5 EN / 2 ACT, IMMEDIATE): paralyzes the target for 3 acts (it can neither act nor react)."},
+		&"gods_message": {"name": "God's Message", "hebrew": "דְּבַר אֵל", "cost": 0, "en": 5, "acts": 1, "target": "enemy", "reactable": false, "immediate": true, "extra": false, "gabriel": true,
+			"info": "God's Message (5 EN / 1 ACT, IMMEDIATE): on its next turn the target loses 3 stages of a random stat."},
+		&"adin": {"name": "Adin", "hebrew": "עָדִין", "cost": 0, "en": 0, "acts": 2, "target": "self", "reactable": false, "extra": false, "gabriel": true,
+			"info": "Adin (0 EN / 2 ACT): recovers 15 EN. Next round it evolves into Adina."},
+		&"adina": {"name": "Adina", "hebrew": "עֲדִינָה", "cost": 0, "en": 0, "acts": 2, "target": "self", "reactable": false, "extra": false, "gabriel": true,
+			"info": "Adina (0 EN / 2 ACT): recovers 25 EN and 25 HP. Next round it evolves into Adinut."},
+		&"adinut": {"name": "Adinut", "hebrew": "עֲדִינוּת", "cost": 0, "en": 0, "acts": 1, "target": "self", "reactable": false, "immediate": true, "extra": false, "gabriel": true,
+			"info": "Adinut (0 EN / 1 ACT, IMMEDIATE): recovers 30 EN and 30 HP at once."},
 }
 ## Default campaign spells of Yoch (D-048).
 const SPELL_ORDER: Array[StringName] = [&"refuah", &"haganah", &"raam"]
@@ -102,6 +154,8 @@ const ALL_BOOK_ORDER: Array[StringName] = [
 	&"sanverim", &"nechamah", &"cherav",
 	&"chaki", &"shachar", &"lehavah", &"esh_sinai", &"hasneh_haboer",
 	&"shalhevet", &"nogah", &"lior",
+	&"esh", &"meir", &"ur_esh", &"seraf", &"nitzotz", &"esh_ochelet", &"gever",
+	&"angel_hug", &"gods_message", &"adin",
 ]
 ## D-107: subset of human prayers also mirrored in SkillBook for enemy human AI.
 const HUMAN_SPELLS := {
@@ -178,6 +232,65 @@ static func is_immediate(id: StringName) -> bool:
 	return bool(entry(id).get("immediate", false))
 
 
+## D-118: true when `unit` pays `id` in EN instead of PP (EN-only skills, or angelic spells cast by a non-praying unit).
+static func uses_en(id: StringName, unit: BattleUnit) -> bool:
+	var e := entry(id)
+	if e.is_empty():
+		return false
+	var en := int(e.get("en", 0))
+	if en <= 0:
+		return false
+	return int(e.get("cost", 0)) == 0 or (unit != null and not unit.prays)
+
+
+## Spells that appear in a menu only through evolution (Adina, Adinut).
+static func is_evolution_only(id: StringName) -> bool:
+	return id == ADINA or id == ADINUT
+
+
+## D-118 Esh: (20 + MAK - MEF) magic damage.
+static func esh_damage(caster_mak: int, target_mef: int = 0) -> int:
+	return maxi(0, ESH_BASE_DAMAGE + maxi(0, caster_mak) - maxi(0, target_mef))
+
+
+## D-118 Esh: 30% BURN chance, +10% per extra PP (and +20% per ZAHAV boost, when it exists).
+static func esh_burn_chance(extra_pp: int) -> int:
+	return clampi(ESH_BURN_CHANCE + ESH_BURN_CHANCE_PER_PP * maxi(0, extra_pp), 0, 100)
+
+
+## D-118 Ur Esh: (20 + MAK [+40 if already burning] - MEF) magic damage.
+static func ur_esh_damage(caster_mak: int, target_mef: int, target_burning: bool) -> int:
+	var raw := ESH_BASE_DAMAGE + maxi(0, caster_mak) + (UR_ESH_BURNING_BONUS if target_burning else 0)
+	return maxi(0, raw - maxi(0, target_mef))
+
+
+## D-118 Nitzotz: 20 magic damage (MEF applies).
+static func nitzotz_damage(target_mef: int = 0) -> int:
+	return maxi(0, NITZOTZ_DAMAGE - maxi(0, target_mef))
+
+
+## D-118 Esh Ochelet: 30 magic damage per foe action (MEF applies).
+static func esh_ochelet_damage(target_mef: int = 0) -> int:
+	return maxi(0, ESH_OCHELET_DAMAGE - maxi(0, target_mef))
+
+
+## D-118 Seraf: heals the caster by its MAK.
+static func seraf_heal(caster_mak: int) -> int:
+	return maxi(0, caster_mak)
+
+
+## D-118 Adin chain: {"en", "hp"} recovered by Adin / Adina / Adinut.
+static func adin_recovery(id: StringName) -> Dictionary:
+	match id:
+		ADIN:
+			return {"en": 15, "hp": 0}
+		ADINA:
+			return {"en": 25, "hp": 25}
+		ADINUT:
+			return {"en": 30, "hp": 30}
+	return {"en": 0, "hp": 0}
+
+
 ## D-112 Gevurah: +15% damage + 5% per extra PP on the ally's next attack.
 static func gevurah_bonus(extra_pp: int) -> float:
 	return 0.15 + 0.05 * float(maxi(0, extra_pp))
@@ -188,26 +301,23 @@ static func mishpat_damage(target_last_damage: int) -> int:
 	return maxi(0, target_last_damage) + 15
 
 
-## D-118 Shachar: (30 + MAK - MEF) * affinity damage to every living foe at the start of the next round.
-static func shachar_damage(caster_mak: int, target_mef: int = 0,
-		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+## D-118 Shachar: (30 + MAK - MEF) damage to every living foe at the start of the next round.
+static func shachar_damage(caster_mak: int, target_mef: int = 0) -> int:
 	var base := maxi(0, 30 + maxi(0, caster_mak) - maxi(0, target_mef))
-	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
+	return base
 
 
-## D-118 Lehavah: (40 + MAK - MEF) * affinity light-and-fire explosion damage on one foe (+ blind).
-static func lehavah_damage(caster_mak: int, target_mef: int = 0,
-		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+## D-118 Lehavah: (40 + MAK - MEF) light-and-fire explosion damage on one foe (+ blind).
+static func lehavah_damage(caster_mak: int, target_mef: int = 0) -> int:
 	var base := maxi(0, 40 + maxi(0, caster_mak) - maxi(0, target_mef))
-	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
+	return base
 
 
 ## D-118 Esh Sinai (creator 2026-11-26): immediate damage does NOT ignore defenses;
-## each of the 4 strikes applies (30 - MEF) * affinity.
-static func esh_sinai_hit_damage(target_mef: int = 0,
-		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+## each of the 4 strikes applies (30 - MEF).
+static func esh_sinai_hit_damage(target_mef: int = 0) -> int:
 	var base := maxi(0, ESH_SINAI_HIT_DAMAGE - maxi(0, target_mef))
-	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
+	return base
 
 
 ## D-118 Hasneh Habo'er: Burning Bush deals 2x damage against an already burning target (12 base / 24 burning).
@@ -216,11 +326,10 @@ static func hasneh_bush_damage(target_burning: bool, base_dmg: int = HASNEH_BUSH
 	return base * 2 if target_burning else base
 
 
-## D-118 Shalhevet: (30 + MAK - MEF) * affinity fire damage to every living foe (50% BURN).
-static func shalhevet_damage(caster_mak: int, target_mef: int = 0,
-		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+## D-118 Shalhevet: (30 + MAK - MEF) fire damage to every living foe (50% BURN).
+static func shalhevet_damage(caster_mak: int, target_mef: int = 0) -> int:
 	var base := maxi(0, 30 + maxi(0, caster_mak) - maxi(0, target_mef))
-	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
+	return base
 
 
 ## D-118 Lior: heals 5 + 5 per PP allocated (base 2 PP = 15 HP) per action over 5 actions.
@@ -304,16 +413,16 @@ static func raam_base(extra_pp: int, caster_mak: int, target_mef: int) -> int:
 	return 10 + caster_mak + 10 * maxi(0, extra_pp) - target_mef
 
 
-## Ra'am damage. Like ATTACK (creator 2026-11-23): SP roll, variation, critical and the
-## affinity multiplier; BEAM halving and Press Turn are applied by the caller like ATTACK.
+## Ra'am damage. Like ATTACK (creator 2026-11-23): SP roll, variation and critical;
+## BEAM halving is applied by the caller like ATTACK.
 ## No effect at all against angels.
-## Result keys: amount, base, crit, affinity, sp_roll, variation, angel.
+## Result keys: amount, base, crit, sp_roll, variation, angel.
 static func raam_damage(extra_pp: int, caster_mak: int, caster_agi: int, target_mef: int,
-		caster_sp: int, target_sp: int, affinity: BattleMath.Affinity, target_race: StringName,
+		caster_sp: int, target_sp: int, target_race: StringName,
 		rng: RandomNumberGenerator) -> Dictionary:
 	var base := float(raam_base(extra_pp, caster_mak, target_mef))
 	if target_race == ANGEL:
-		return {"amount": 0, "base": base, "crit": false, "affinity": affinity, "sp_roll": 0,
+		return {"amount": 0, "base": base, "crit": false, "sp_roll": 0,
 			"variation": 0.0, "angel": true}
 	var difference := caster_sp - target_sp
 	var sp_roll := BattleMath.sp_bonus_roll(difference, rng)  # D-108: só a vantagem soma
@@ -323,9 +432,8 @@ static func raam_damage(extra_pp: int, caster_mak: int, caster_agi: int, target_
 	amount *= 1.0 + variation
 	if crit:
 		amount *= BattleMath.CRIT_MULTIPLIER
-	amount *= BattleMath.affinity_multiplier(affinity)
 	return {"amount": maxi(0, int(round(amount))), "base": base, "crit": crit,
-		"affinity": affinity, "sp_roll": sp_roll, "variation": variation, "angel": false}
+		"sp_roll": sp_roll, "variation": variation, "angel": false}
 
 
 ## Projected PP after a planned queue, resolving in order. Each entry is a Dictionary

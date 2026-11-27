@@ -45,6 +45,13 @@ func _run() -> void:
 	await process_frame
 	_key(KEY_ENTER)
 	await create_timer(0.9).timeout
+	# D-121: run nova passa pela cutscene do Kazfiel; aqui só importa o mapa, então ela é
+	# pulada direto para a cena do mundo.
+	_check(current_scene != null and current_scene.scene_file_path == "res://scenes/survival/SurvivalIntro.tscn",
+		"run nova abre a cutscene do Kazfiel")
+	change_scene_to_file(SurvivalData.WORLD_SCENE)
+	await scene_changed
+	await process_frame
 	var dungeon := current_scene
 	_check(dungeon != null and dungeon.scene_file_path == SurvivalData.WORLD_SCENE
 		and dungeon.has_method("request"),
@@ -113,18 +120,23 @@ func _run() -> void:
 	change_scene_to_file(SurvivalData.WORLD_SCENE)
 	await scene_changed
 	dungeon = current_scene
+	_check(dungeon._location_title().begins_with("SATURNINE NECROPOLIS"), "estrato 1 mostra o nome em inglês (SATURNINE NECROPOLIS)")
 	_check(dungeon.cell == a and dungeon.enemies.at(finish).is_empty(), "retorno conserva a posição e a vitória")
 	dungeon.cell = start
 	dungeon.facing = 0
 	dungeon._snap_to_state()
-	_check(dungeon.talk(), "menu do santuário abre no Pórtico")
+	# O tutorial da 1ª conversa (criador 2026-11-26) não é o foco aqui: marcado como visto só
+	# na memória desta cena, sem gravar no perfil do jogador.
+	dungeon._meta_cache = SurvivalMeta.data()
+	dungeon._meta_cache["keeper_intro"] = true
+	_check(dungeon.talk() and dungeon.service_open, "menu do santuário abre no Pórtico")
 	dungeon.service_index = dungeon.service_index_of("descend")
 	_check(dungeon.service_index >= 0, "vitória habilita DESCEND")
 	dungeon.confirm_service_option()
 	dungeon.confirm_service_option()
 	await process_frame
 	await process_frame
-	_check(SurvivalState.stratum() == 2 and not current_scene._location_title().contains("SATURNINA")
+	_check(SurvivalState.stratum() == 2 and not current_scene._location_title().contains("SATURNINE")
 		and current_scene.grid == SurvivalStrata.maze(int(SurvivalState.data().seed), 2),
 		"segundo estrato continua usando sua geração")
 	print("NECROPOLE ", rooms, " salas / ", reached.size(), " células / ", checks - failures,

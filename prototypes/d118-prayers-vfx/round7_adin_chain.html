@@ -1,0 +1,599 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="angel_hug" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Angel Hug v2 <span class="opacity-80">מלאך</span>
+        </button>
+        <button data-spell="gods_message" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          God's Message <span class="opacity-80">דבר אל</span>
+        </button>
+        <button data-spell="adin_chain" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Adin → Adina → Adinut <span class="opacity-80">עדין</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="400" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    const ANGEL_PALETTE = ['#ffffff', '#fffce0', '#ffd84a'];
+    const MSG_PALETTE = ['#ffd84a', '#ffffff', '#e86868'];
+    const ADIN_PALETTE = ['#8ad8ff', '#b8f5a2', '#ffd84a', '#ffffff'];
+
+    const SPELLS = {
+      angel_hug: {
+        title: 'ANGEL HUG (v2) · GABRIEL · 2 ACT / 5 EN · ASAS ABERTAS BATEM COMO PALMAS -> IMPACTO PARALISA 3 ATOS',
+        log: [
+          'GABRIEL spreads immense wings of Hebrew light wide around YOCH...',
+          'CLAP! The wings slam shut — shockwave PARALYZES YOCH for 3 ACTS!'
+        ],
+        duration: 3.1
+      },
+      gods_message: {
+        title: "GOD'S MESSAGE · GABRIEL · 1 ACT / 5 EN · IMEDIATO · -3 ESTÁGIOS EM STATUS ALEATÓRIO NO PRÓXIMO TURNO",
+        log: [
+          "GABRIEL speaks GOD'S MESSAGE (IMMEDIATE) — decree seals onto YOCH (mark ד)!",
+          'Next turn! The decree triggers: YOCH loses -3 stages of a random stat!'
+        ],
+        duration: 3.3
+      },
+      adin_chain: {
+        title: 'ADIN → ADINA → ADINUT · GABRIEL · 0 EN · EVOLUÇÃO DE RECUPERAÇÃO (+15 EN → +25/+25 → +30/+30 IMEDIATO)',
+        log: [
+          'ADIN (2 ACT): +15 EN — evolves to ADINA next round...',
+          'ADINA (2 ACT): +25 EN & +25 HP — evolves to ADINUT next round...',
+          'ADINUT (1 ACT · IMMEDIATE): +30 EN & +30 HP instantly!'
+        ],
+        duration: 4.5
+      }
+    };
+
+    let activeSpell = 'angel_hug';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'angel_hug') {
+        // Asas bem abertas (envergadura ampla) que se fecham como palmas em t=0.46 -> impacto + paralisia!
+        fx.wings = [];
+        for (let side of [-1, 1]) {
+          for (let row = 0; row < 4; row++) {
+            const count = 11 - row;
+            for (let i = 0; i < count; i++) {
+              const frac = i / (count - 1);
+              fx.wings.push({
+                side,
+                row,
+                frac,
+                ch: i % 3 === 0 ? 'מלאך'[i % 4] : randGlyph(),
+                size: 13 + (3 - row) * 2,
+                colorIdx: (i + row) % 3
+              });
+            }
+          }
+        }
+        fx.shockwave = [];
+        for (let i = 0; i < 32; i++) {
+          const a = (i / 32) * Math.PI * 2;
+          const spd = 90 + Math.random() * 190;
+          fx.shockwave.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.52,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 8,
+            colorIdx: i % 3,
+            life: 0.45 + Math.random() * 0.4
+          });
+        }
+        fx.seals = [0, 1, 2].map(i => ({ a: (i / 3) * Math.PI * 2, ch: 'מלא'[i] }));
+      } else if (id === 'gods_message') {
+        // Ondas de proclamação descendo de Gabriel (408, 160) até YOCH (414, 344) + quebra de -3 estágios
+        fx.waves = [];
+        for (let w = 0; w < 3; w++) {
+          const glyphs = [];
+          for (let i = 0; i < 14; i++) {
+            const ang = Math.PI * 0.15 + (i / 13) * Math.PI * 0.7;
+            glyphs.push({
+              ang,
+              ch: i % 4 === 0 ? 'דבראל'[i % 5] : randGlyph(),
+              size: 13 + (i % 3) * 2,
+              colorIdx: i % 2
+            });
+          }
+          fx.waves.push({ delay: w * 0.16, glyphs });
+        }
+        fx.shatter = [];
+        for (let i = 0; i < 24; i++) {
+          fx.shatter.push({
+            xOff: (Math.random() - 0.5) * 220,
+            vy: 45 + Math.random() * 85,
+            vx: (Math.random() - 0.5) * 65,
+            ch: randGlyph(),
+            size: 12 + Math.random() * 6,
+            life: 0.55 + Math.random() * 0.4
+          });
+        }
+      } else if (id === 'adin_chain') {
+        // 3 fases sobre Gabriel: Adin (0..1.45), Adina (1.45..2.95), Adinut (2.95..4.5)
+        fx.motes = [];
+        for (let i = 0; i < 40; i++) {
+          fx.motes.push({
+            a: (i / 40) * Math.PI * 2,
+            rad: 36 + Math.random() * 64,
+            rise: 50 + Math.random() * 75,
+            phase: Math.random() * 6.28,
+            ch: i % 5 === 0 ? 'עדינות'[i % 6] : randGlyph(),
+            size: 12 + Math.random() * 6,
+            colorIdx: i % 4
+          });
+        }
+        fx.burst3 = [];
+        for (let i = 0; i < 36; i++) {
+          const a = (i / 36) * Math.PI * 2;
+          const spd = 85 + Math.random() * 175;
+          fx.burst3.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.75,
+            ch: i % 4 === 0 ? 'עדינות'[i % 6] : randGlyph(),
+            size: 13 + Math.random() * 8,
+            colorIdx: i % 4,
+            life: 0.55 + Math.random() * 0.45
+          });
+        }
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 26 + i * 42 + Math.sin(time * 0.8 + i * 1.1) * 12;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 26);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 278, W, 2);
+    }
+
+    function drawGabriel(glowAlpha, labelText, labelColor) {
+      const gx = 408, gy = 160;
+      ctx.save();
+      ctx.fillStyle = glowAlpha > 0.05 ? `rgba(255, 248, 210, ${0.25 + glowAlpha * 0.65})` : '#1b1428';
+      ctx.fillRect(gx - 22, gy - 68, 44, 30);
+      ctx.fillRect(gx - 36, gy - 34, 72, 68);
+      ctx.fillRect(gx - 86, gy - 48, 46, 56);
+      ctx.fillRect(gx + 40, gy - 48, 46, 56);
+      ctx.fillRect(gx - 18, gy + 34, 36, 36);
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd84a';
+      ctx.fillText('GABRIEL', gx, gy - 78);
+      if (labelText) {
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = labelColor || '#8ad8ff';
+        ctx.fillText(labelText, gx, gy + 88);
+      }
+      ctx.restore();
+    }
+
+    function drawWordPalette(word, cx, cy, px, alpha, palette) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const startX = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        if (ch === ' ') return;
+        ctx.fillStyle = palette[i % palette.length];
+        ctx.fillText(ch, startX - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, yochMark, yochSub, cmdText, cmdColor) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45 (PP 5/8)', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(topTag, W - 16, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 286, W - 32, 44);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 286, W - 32, 1);
+      ctx.fillRect(16, 329, W - 32, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 313);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff', mark: null },
+        { x: 286, name: '▸ YOCH', hp: 'HP 68/74', res: yochSub || 'PP 5/8', col: '#f5f58c', mark: yochMark || null }
+      ];
+      panels.forEach(p => {
+        ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(p.x, 338, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, p.x + 12, 357);
+        if (p.mark) {
+          ctx.font = 'bold 14px "Times New Roman", serif';
+          ctx.fillStyle = p.mark.col || '#ffd84a';
+          ctx.fillText(p.mark.glyph, p.x + 86, 357);
+          if (p.mark.suffix) {
+            ctx.font = 'bold 11px monospace';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(p.mark.suffix, p.x + 100, 357);
+          }
+        }
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, p.x + 12, 376);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, p.x + 128, 376);
+      });
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 338, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = cmdColor || '#f5f58c';
+      ctx.fillText(cmdText || 'GABRIEL', 568, 366);
+    }
+
+    function renderAngelHug() {
+      const clapT = 0.48; // momento exato em que as duas asas abertas batem como palmas!
+      const clapped = t >= clapT;
+      const cAge = Math.max(0, t - clapT);
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cx = cardX + cardW * 0.5;
+      const cy = cardY + cardH * 0.5;
+
+      let shakeX = 0, shakeY = 0;
+      if (clapped && cAge < 0.28) {
+        const m = 9 * (1 - cAge / 0.28);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+      const dark = t < 2.4 ? 0.36 * Math.min(1, t / 0.25) : Math.max(0, 0.36 * (1 - (t - 2.4) / 0.6));
+      ctx.fillStyle = `rgba(10, 6, 20, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+      drawGabriel(0, null, null);
+      ctx.restore();
+
+      const mark = clapped ? { glyph: 'ע', suffix: '3 ACT', col: '#fffce0' } : null;
+      drawHud(SPELLS.angel_hug.log[clapped ? 1 : 0], clapped ? 'CLAP IMPACT · PARALYZED (3 ACTS)' : 'WINGS OPENING WIDE...', mark, clapped ? 'PARALYZED' : 'PP 5/8', 'GABRIEL ▸ ANGEL HUG');
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      ctx.textAlign = 'center';
+
+      // Fase 1 (0..clapT): asas BEM abertas se fechando aceleradas (ease-in) como bater de palmas!
+      // Fase 2 (clapT+): asas fechadas travadas ao redor de YOCH + onda de choque + flash APENAS no impacto!
+      const closeP = Math.min(1, t / clapT);
+      const accel = closeP < 0.35 ? closeP * 0.2 : Math.pow((closeP - 0.35) / 0.65, 2.4);
+      const holdA = t < 2.5 ? 0.96 : Math.max(0, 0.96 * (1 - (t - 2.5) / 0.55));
+
+      fx.wings.forEach(w => {
+        // Bem abertas nas bordas laterais (±370px) -> batem fechando totalmente sobre o centro (±4..118px)
+        const openX = cx + w.side * (110 + w.frac * 265);
+        const openY = cy - 42 - Math.sin(w.frac * Math.PI * 0.75) * (95 - w.row * 16) + w.row * 22;
+        const shutX = cx + w.side * (118 * (1 - w.frac) - 10 * w.frac);
+        const shutY = cy - 4 + (w.row - 1.5) * 14;
+        const px = openX + (shutX - openX) * accel;
+        const py = openY + (shutY - openY) * accel;
+        ctx.save();
+        ctx.globalAlpha = holdA * (0.55 + 0.45 * closeP);
+        ctx.font = `bold ${w.size}px "Times New Roman", serif`;
+        ctx.fillStyle = ANGEL_PALETTE[w.colorIdx];
+        ctx.fillText(w.ch, px, py);
+        ctx.restore();
+      });
+
+      if (clapped) {
+        // Onda de choque de letras-penas explodindo no impacto das palmas
+        fx.shockwave.forEach(s => {
+          if (cAge > s.life) return;
+          const a = Math.max(0, 1 - cAge / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = ANGEL_PALETTE[s.colorIdx];
+          ctx.fillText(s.ch, cx + s.vx * cAge, cy - 6 + s.vy * cAge);
+          ctx.restore();
+        });
+
+        // 3 selos orbitais dos 3 atos de paralisia
+        const sa = Math.min(1, cAge / 0.25) * holdA;
+        fx.seals.forEach(s => {
+          const ang = s.a + t * 1.1;
+          ctx.save();
+          ctx.globalAlpha = sa;
+          ctx.font = 'bold 17px "Times New Roman", serif';
+          ctx.fillStyle = '#ffd84a';
+          ctx.fillText(s.ch, cx + Math.cos(ang) * 72, cardY - 26 + Math.sin(ang) * 12);
+          ctx.restore();
+        });
+
+        if (cAge < 1.6) {
+          drawWordPalette('מלאך', cx, cardY - 56, 30, Math.max(0, 1 - Math.max(0, cAge - 0.9) / 0.7), ANGEL_PALETTE);
+        }
+
+        // Flash APENAS no impacto das palmas (sem flash no início!)
+        if (cAge < 0.085) {
+          ctx.fillStyle = `rgba(255, 252, 232, ${(1 - cAge / 0.085) * 0.62})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function renderGodsMessage() {
+      const trigT = 1.95; // demonstração do próximo turno perdendo -3 estágios
+      const trig = t >= trigT;
+      const tAge = Math.max(0, t - trigT);
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cx = cardX + cardW * 0.5;
+
+      let shakeX = 0, shakeY = 0;
+      if (trig && tAge < 0.22) {
+        const m = 6 * (1 - tAge / 0.22);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+      const dark = t < 2.6 ? 0.34 : Math.max(0, 0.34 * (1 - (t - 2.6) / 0.6));
+      ctx.fillStyle = `rgba(10, 4, 18, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+      drawGabriel(t < 0.5 ? 1 - t / 0.5 : 0, null, null);
+      ctx.restore();
+
+      const mark = !trig ? { glyph: 'ד', suffix: 'NEXT', col: '#ffd84a' } : { glyph: 'ד', suffix: '-3', col: '#ff6464' };
+      drawHud(SPELLS.gods_message.log[trig ? 1 : 0], trig ? 'STAT DROP: -3 STAGES!' : 'IMMEDIATE DECREE (NEXT TURN)', mark, 'PP 5/8', "GABRIEL ▸ GOD'S MESSAGE");
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      ctx.textAlign = 'center';
+
+      // Ondas sonoras/proclamação de letras descendo de Gabriel (408, 160) até YOCH (414, 344)
+      fx.waves.forEach(w => {
+        const age = t - w.delay;
+        if (age < 0 || age > 1.05) return;
+        const p = age / 1.05;
+        const yCenter = 165 + p * 185;
+        const spread = 24 + p * 125;
+        const a = Math.sin(p * Math.PI);
+        w.glyphs.forEach(g => {
+          ctx.save();
+          ctx.globalAlpha = a * 0.95;
+          ctx.font = `bold ${g.size}px "Times New Roman", serif`;
+          ctx.fillStyle = MSG_PALETTE[g.colorIdx];
+          ctx.fillText(g.ch, 408 + Math.cos(g.ang) * spread, yCenter + Math.sin(g.ang) * 26);
+          ctx.restore();
+        });
+      });
+
+      if (t < 1.55) {
+        const wa = t < 0.25 ? t / 0.25 : Math.max(0, 1 - (t - 0.95) / 0.6);
+        drawWordPalette('דבר אל', 408, 225, 30, wa, ANGEL_PALETTE);
+      }
+
+      // Selo pulsante aguardando o próximo turno sobre YOCH
+      if (t > 0.65 && !trig) {
+        const pulse = 0.65 + 0.35 * Math.sin(t * 9);
+        drawWordPalette('דבר אל', cx, cardY - 22, 22, pulse, ANGEL_PALETTE);
+      }
+
+      // No próximo turno: o selo estilhaça para baixo em letras vermelhas (-3 DEF / ATK / AGI)
+      if (trig) {
+        fx.shatter.forEach(s => {
+          if (tAge > s.life) return;
+          const a = Math.max(0, 1 - tAge / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = '#ff6464';
+          ctx.fillText(s.ch, cx + s.xOff + s.vx * tAge, cardY + s.vy * tAge);
+          ctx.restore();
+        });
+        if (tAge < 1.15) {
+          const da = Math.max(0, 1 - tAge / 1.15);
+          ctx.save();
+          ctx.globalAlpha = da;
+          ctx.font = 'bold 18px monospace';
+          ctx.fillStyle = '#ff6464';
+          ctx.fillText('-3 ATK STAGES!', cx, cardY - 16 + tAge * 18);
+          ctx.restore();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function renderAdinChain() {
+      // 3 estágios: 0..1.45 Adin (+15 EN), 1.45..2.95 Adina (+25 EN / +25 HP), 2.95..4.5 Adinut (+30/+30 IMEDIATO)
+      const stage = t < 1.45 ? 0 : (t < 2.95 ? 1 : 2);
+      const localT = stage === 0 ? t : (stage === 1 ? t - 1.45 : t - 2.95);
+      const gx = 408, gy = 160;
+
+      ctx.save();
+      drawPlasmaBg(t);
+
+      const glow = stage === 2 ? Math.max(0, 1 - localT / 0.5) : 0.25 * Math.sin(Math.min(1, localT / 1.2) * Math.PI);
+      const label = stage === 0 ? '+15 EN' : (stage === 1 ? '+25 EN · +25 HP' : '+30 EN · +30 HP (IMMEDIATE!)');
+      const labelCol = stage === 0 ? '#8ad8ff' : (stage === 1 ? '#b8f5a2' : '#ffd84a');
+      drawGabriel(glow, label, labelCol);
+
+      ctx.textAlign = 'center';
+      // Partículas ascendentes escalando em densidade e cor por evolução
+      const count = stage === 0 ? 16 : (stage === 1 ? 28 : 40);
+      for (let i = 0; i < count; i++) {
+        const m = fx.motes[i];
+        const cyc = (localT * (0.7 + stage * 0.25) + m.phase) % 1.0;
+        const ang = m.a + t * (1.2 + stage * 0.8);
+        const rad = m.rad * (0.85 + stage * 0.25) * (1 - cyc * 0.3);
+        const px = gx + Math.cos(ang) * rad;
+        const py = gy + 45 - cyc * (m.rise + stage * 28);
+        const col = stage === 0 ? '#8ad8ff' : (stage === 1 ? (i % 2 === 0 ? '#8ad8ff' : '#b8f5a2') : ADIN_PALETTE[m.colorIdx]);
+        ctx.save();
+        ctx.globalAlpha = Math.sin(cyc * Math.PI) * 0.95;
+        ctx.font = `bold ${(m.size + stage * 2) | 0}px "Times New Roman", serif`;
+        ctx.fillStyle = col;
+        ctx.fillText(m.ch, px, py);
+        ctx.restore();
+      }
+
+      // Explosão imediata serena no estágio 3 (Adinut)
+      if (stage === 2) {
+        fx.burst3.forEach(b => {
+          if (localT > b.life) return;
+          const a = Math.max(0, 1 - localT / b.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${b.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = ADIN_PALETTE[b.colorIdx];
+          ctx.fillText(b.ch, gx + b.vx * localT, gy + b.vy * localT);
+          ctx.restore();
+        });
+        if (localT < 0.08) {
+          ctx.fillStyle = `rgba(240, 255, 225, ${(1 - localT / 0.08) * 0.45})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      const words = ['עדין', 'עדינה', 'עדינות'];
+      const pals = [['#8ad8ff', '#ffffff'], ['#8ad8ff', '#b8f5a2', '#ffffff'], ADIN_PALETTE];
+      drawWordPalette(words[stage], gx, gy - 98, 26 + stage * 5, 0.95, pals[stage]);
+
+      ctx.restore();
+      const cmds = ['GABRIEL ▸ ADIN', 'GABRIEL ▸ ADINA', 'ZAHAV ▸ ADINUT'];
+      const tags = ['STAGE 1/3 · ADIN', 'STAGE 2/3 · ADINA', 'STAGE 3/3 · ADINUT (IMMEDIATE)'];
+      drawHud(SPELLS.adin_chain.log[stage], tags[stage], null, 'PP 5/8', cmds[stage], stage === 2 ? '#ffd84a' : '#f5f58c');
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'angel_hug') renderAngelHug();
+      else if (activeSpell === 'gods_message') renderGodsMessage();
+      else renderAdinChain();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'angel_hug');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

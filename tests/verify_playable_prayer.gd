@@ -118,12 +118,10 @@ func _run() -> void:
 	check(int(PrayerBook.simulate(8, [{"cmd": "PRAY"}]).pp) == 8, "PP cap 8")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 48
-	var angel := PrayerBook.raam_damage(2, 9, 5, 0, 30, 30, BattleMath.Affinity.NORMAL, PrayerBook.ANGEL, rng)
+	var angel := PrayerBook.raam_damage(2, 9, 5, 0, 30, 30, PrayerBook.ANGEL, rng)
 	check(int(angel.amount) == 0 and bool(angel.angel), "Ra'am has no effect on angels")
-	var nulled := PrayerBook.raam_damage(2, 9, 5, 0, 30, 30, BattleMath.Affinity.NULL, &"", rng)
-	check(int(nulled.amount) == 0, "NULL affinity zeroes Ra'am like ATTACK")
 	for i in 200:
-		var r := PrayerBook.raam_damage(0, 2, 0, 2, 30, 30, BattleMath.Affinity.NORMAL, &"", rng)
+		var r := PrayerBook.raam_damage(0, 2, 0, 2, 30, 30, &"", rng)
 		check(int(r.amount) >= 9 and int(r.amount) <= 11 and not bool(r.crit), "Equal SP, AGI 0: 10 +/-10%% (got %d)" % int(r.amount))
 	var unit_stats := UnitStats.new()
 	unit_stats.max_hp = 11; unit_stats.max_en = 0; unit_stats.atk = 5; unit_stats.mak = 2
@@ -265,7 +263,7 @@ func _run() -> void:
 	check(y.current_pp == 0 and y.current_hp < y_hp, "D-109: enemy white mark hits (50%%) and interrupts the PRAY (PP %d, HP %d -> %d)" % [y.current_pp, y_hp, y.current_hp])
 	battle.queue_free(); await process_frame
 
-	# ---- Ra'am, no counter: rail like ATTACK, base 10 + MAK - MEF, WEAK x1.5 and +1 act.
+	# ---- Ra'am, no counter: rail like ATTACK, base 10 + MAK - MEF (D-119: no affinity, no extra act).
 	battle = fresh(4)
 	y = yoch(battle)
 	foes = battle.hud.opponents.duplicate()
@@ -283,7 +281,7 @@ func _run() -> void:
 	check(battle.hud.mode == "continue", "No act and no PP left: the plan runs")
 	var line := last_line(battle, "Ra'am base")
 	check(line.contains("Ra'am base %d" % (10 + y.stats.mak + 10 - weak.stats.mef)), "Ra'am base with 1 extra PP: %s" % line)
-	check(line.contains("affinity WEAK") and 999 - weak.current_hp > 0 and y.acts_available == 1 and y.current_pp == 0, "WEAK: x1.5 damage and +1 act (%s, acts %d)" % [line, y.acts_available])
+	check(999 - weak.current_hp > 0 and y.acts_available == 0 and y.current_pp == 0, "Ra'am deals damage and grants no extra act (%s, acts %d)" % [line, y.acts_available])
 	battle.queue_free(); await process_frame
 
 	# ---- Ra'am: D-109, trilha branca = 50%, lateral = 80%.

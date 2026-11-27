@@ -156,7 +156,7 @@ func _create_units() -> void:
 		# D-101: os inimigos acompanham o SP atual do Fallen (com o herói no esperado, nada muda).
 		SurvivalData.follow_hero(enemy_stats, _fallen.stats.sp_value(), SurvivalStrata.par_sp(maxi(1, SurvivalStrata.stratum_of(String(def.id)))))
 		# D-111: na luta-teste o candidato vem "como na luta" (sem elite, guardião nem OMEN).
-		var power := {"skills": [], "affinity": int(def.get("affinity", BattleMath.Affinity.NORMAL)), "tag": ""} \
+		var power := {"skills": [], "tag": ""} \
 				if duel else SurvivalData.empower(enemy_stats, String(def.id), run_seed, omen_level)
 		var label := String(def.name) if duel else SurvivalData.battle_label(String(def.id), run_seed, omen_level)
 		var enemy := BattleUnit.new(StringName("foe_%d" % i), label, enemy_stats, false)
@@ -169,7 +169,6 @@ func _create_units() -> void:
 			if not enemy_skills.has(sk):
 				enemy_skills.append(sk)
 		enemy.skills = enemy_skills
-		enemy.affinity = int(power.affinity)
 		_foe_base[enemy.id] = SurvivalAllies.stats_dict(enemy_stats)
 		if bool(def.get("human", false)):
 			# D-107: humans pray with PP like Yoch (no EN), start with 0 PP and cannot be absorbed.
@@ -415,6 +414,7 @@ func _burn_tick() -> void:
 	for pair in _relic_pairs():
 		if SurvivalRelics.has_perk(pair[1], "burn_immune"):
 			(pair[0] as BattleUnit).burns.clear()
+			(pair[0] as BattleUnit).burn_power = 0
 	await super._burn_tick()
 
 
@@ -974,10 +974,12 @@ func _revive_party_for_continue() -> void:
 	_fallen.current_hp = _fallen.stats.max_hp
 	_fallen.current_en = _fallen.stats.max_en
 	_fallen.burns.clear()
+	_fallen.burn_power = 0
 	_fallen.restore_sp()
 	for u in _members:
 		u.current_hp = u.stats.max_hp
 		u.burns.clear()
+		u.burn_power = 0
 		u.restore_sp()
 	waiting_players.clear()
 	_planned.clear()
@@ -1140,7 +1142,6 @@ func _unit_from_member(m: Dictionary, slot: int, s: Dictionary) -> BattleUnit:
 	var u := BattleUnit.new(StringName("ally_%d" % slot), String(m.name), st, true)
 	u.set_meta("ally_id", String(m.id))
 	u.set_meta("ally_kind", String(m.kind))
-	u.affinity = int(m.get("affinity", BattleMath.Affinity.NORMAL))
 	u.sprite_path = String(m.get("picture", ""))
 	var skills: Array[StringName] = []
 	for sk in m.get("skills", []):
@@ -1590,7 +1591,6 @@ func member_from_foe(u: BattleUnit) -> Dictionary:
 		for x in u.skills:
 			sk.append(String(x))
 		m["skills"] = sk
-	m["affinity"] = u.affinity
 	m["hp"] = int(stats.get("max_hp", 1))
 	m["en"] = int(stats.get("max_en", 0))
 	m["pp"] = PrayerBook.MAX_PP if SurvivalAllies.prays(m) else 0

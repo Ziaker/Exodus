@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EXODUS · Protótipos Visuais D-118 (100% Letras Hebraicas D-113)</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: #0b0714; color: #f2eefc;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .app { display: grid; grid-template-columns: 270px 1fr; height: 100vh; }
+    .sidebar {
+      background: #120c22; border-right: 1px solid #2b2045;
+      padding: 16px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+    }
+    .brand h1 { margin: 0; font-size: 15px; letter-spacing: 0.08em; color: #ffd84a; }
+    .brand p { margin: 4px 0 0; font-size: 11px; color: #b8aecf; }
+    .group-title {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #8f82b0; margin: 0 0 6px 6px; font-weight: 700;
+    }
+    .list { display: flex; flex-direction: column; gap: 4px; }
+    .item {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      width: 100%; text-align: left; cursor: pointer;
+      background: #18112b; border: 1px solid #2c2246; border-radius: 6px;
+      padding: 7px 9px; color: #e8e2f8; font-size: 12px; transition: 0.12s;
+    }
+    .item:hover { background: #22193b; border-color: #463670; }
+    .item.active {
+      background: #ffd84a; color: #120b1e; border-color: #ffd84a; font-weight: 700;
+    }
+    .heb { font-family: "Times New Roman", serif; font-size: 13px; opacity: 0.85; }
+    .tag {
+      font-size: 9px; font-family: monospace; padding: 1px 5px; border-radius: 4px;
+      border: 1px solid currentColor; opacity: 0.8; flex-shrink: 0;
+    }
+    .tag.done { color: #5ee389; }
+    .item.active .tag.done { color: #120b1e; }
+    .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 18px; background: #120c22; border-bottom: 1px solid #2b2045;
+      font-size: 12px; color: #cfc7e2;
+    }
+    .topbar strong { color: #ffd84a; }
+    .viewer { flex: 1; padding: 16px; overflow: auto; display: flex; justify-content: center; align-items: flex-start; }
+    iframe {
+      width: 100%; max-width: 860px; height: 520px; border: 1px solid #2b2045;
+      border-radius: 8px; background: #0e0a1a;
+    }
+    .note { font-size: 11px; color: #8f82b0; padding: 8px 6px 0; border-top: 1px solid #251b3d; line-height: 1.45; }
+    @media (max-width: 820px) {
+      .app { grid-template-columns: 1fr; height: auto; }
+      .sidebar { border-right: none; border-bottom: 1px solid #2b2045; }
+      .main { height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>EXODUS · D-118 VFX</h1>
+        <p>Protótipos aprovados · 100% letras hebraicas (D-113)</p>
+      </div>
+      <div id="menu"></div>
+      <div class="note">
+        <strong>Nota:</strong> <em>Chaki</em> e <em>Shachar</em> já foram implementados em <code>pray_fx.gd</code> no commit <code>233c3db</code> (Round 1).
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <span id="current-label">Selecione uma magia</span>
+        <span id="current-file" style="font-family: monospace; opacity: 0.75;"></span>
+      </div>
+      <div class="viewer">
+        <iframe id="frame" title="EXODUS D-118 VFX Preview"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const GROUPS = [
+      {
+        title: 'Rezas Canônicas (6 protótipos)',
+        items: [
+          { name: 'Lehavah', heb: 'להבה', file: 'round2_esh_sinai_lehavah_hasneh.html', spell: 'lehavah', done: true },
+          { name: 'Esh (v3)', heb: 'אש', file: 'round5_esh_seraf.html', spell: 'esh', done: false },
+          { name: 'Shalhevet', heb: 'שלהבת', file: 'round3_shalhevet_nogah_lior.html', spell: 'shalhevet', done: false },
+          { name: 'Nogah', heb: 'נוגה', file: 'round3_shalhevet_nogah_lior.html', spell: 'nogah', done: false },
+          { name: 'Lior', heb: 'ליאור', file: 'round3_shalhevet_nogah_lior.html', spell: 'lior', done: false },
+          { name: 'Meir (v2)', heb: 'מאיר', file: 'round4_v2_meir_esh_ochelet.html', spell: 'meir', done: false }
+        ]
+      },
+      {
+        title: 'Magias Angelicais (6)',
+        items: [
+          { name: 'Esh Sinai (v2)', heb: 'אש סיני', file: 'round2_esh_sinai_lehavah_hasneh.html', spell: 'esh_sinai', done: true },
+          { name: 'Ur Esh', heb: 'אור אש', file: 'round4_ur_esh.html', spell: 'ur_esh', done: false },
+          { name: 'Seraf', heb: 'שרף', file: 'round5_esh_seraf.html', spell: 'seraf', done: false },
+          { name: 'Nitzotz (v2)', heb: 'ניצוץ', file: 'round6_nitzotz_gever.html', spell: 'nitzotz', done: false },
+          { name: 'Esh Ochelet', heb: 'אש אוכלת', file: 'round4_v2_meir_esh_ochelet.html', spell: 'esh_ochelet', done: false },
+          { name: 'Gever', heb: 'גבר', file: 'round6_nitzotz_gever.html', spell: 'gever', done: false }
+        ]
+      },
+      {
+        title: 'Habilidades de Gabriel (6)',
+        items: [
+          { name: "Hasneh Habo'er", heb: 'הסנה הבוער', file: 'round2_esh_sinai_lehavah_hasneh.html', spell: 'hasneh', done: true },
+          { name: 'Angel Hug (v3)', heb: 'מלאך', file: 'round7_v2_angel_hug_gods_message.html', spell: 'angel_hug', done: false },
+          { name: "God's Message (v2)", heb: 'דבר אל', file: 'round7_v2_angel_hug_gods_message.html', spell: 'gods_message', done: false },
+          { name: 'Adin → Adina → Adinut', heb: 'עדין', file: 'round7_adin_chain.html', spell: 'adin_chain', done: false }
+        ]
+      }
+    ];
+
+    const menu = document.getElementById('menu');
+    const frame = document.getElementById('frame');
+    const currentLabel = document.getElementById('current-label');
+    const currentFile = document.getElementById('current-file');
+    let firstBtn = null;
+
+    GROUPS.forEach(group => {
+      const wrap = document.createElement('div');
+      const h = document.createElement('div');
+      h.className = 'group-title';
+      h.textContent = group.title;
+      wrap.appendChild(h);
+
+      const list = document.createElement('div');
+      list.className = 'list';
+      group.items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'item';
+        btn.innerHTML = `<span>${item.name} <span class="heb">${item.heb}</span></span>`
+          + (item.done ? '<span class="tag done">IN-GAME</span>' : '<span class="tag">APROV.</span>');
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.item').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          frame.src = `${item.file}?spell=${encodeURIComponent(item.spell)}`;
+          currentLabel.innerHTML = `<strong>${item.name}</strong> · ${item.heb}`;
+          currentFile.textContent = `${item.file}?spell=${item.spell}`;
+        });
+        if (!firstBtn) firstBtn = btn;
+        list.appendChild(btn);
+      });
+      wrap.appendChild(list);
+      menu.appendChild(wrap);
+    });
+
+    if (firstBtn) firstBtn.click();
+  </script>
+</body>
+</html>

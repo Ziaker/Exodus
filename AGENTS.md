@@ -40,6 +40,10 @@ o autor decidir explicitamente.
     `docs/DECISIONS.md` (índice canônico). Conflito com ID usado por outra sessão sobe
     ao autor; nunca renomear decisão alheia.
 
+11. **Commit imediato ao concluir (D-120).** Concluído o trabalho de forma perfeita
+    (auditado, testes passando, sem defeito identificável), commitar e dar push no mesmo
+    instante, sem esperar nova autorização; seguir antes a obrigação 8 (fetch/status).
+
 ## Evidência mínima por tipo de trabalho
 
 - **Código:** comando de parse/teste + saída real + hash do diff antes de declarar pronto.

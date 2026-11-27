@@ -1,0 +1,615 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="esh_sinai" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Esh Sinai <span class="opacity-80">אש סיני</span>
+        </button>
+        <button data-spell="lehavah" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Lehavah <span class="opacity-80">להבה</span>
+        </button>
+        <button data-spell="hasneh" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Hasneh Habo'er <span class="opacity-80">הסנה הבוער</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="420" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    // 3 cores do fogo sagrado (laranja, amarelo, branco)
+    const FIRE_PALETTE = ['#ff7a1f', '#ffd84a', '#ffffff'];
+
+    const SPELLS = {
+      esh_sinai: {
+        title: 'ESH SINAI (v2) · 4 ACT / 6 PP · 3 CORES (LARANJA/AMARELO/BRANCO) · FLASH SÓ NO 1º',
+        log: [
+          'YOCH casts ESH SINAI (IMMEDIATE)! 30 DMG!',
+          'Sinai pillar strikes again — I: 30 · II: 30 · III: 30 (no screen flash)'
+        ],
+        duration: 3.15
+      },
+      lehavah: {
+        title: 'LEHAVAH · 2 ACT / 3 PP · EXPLOSÃO DE LUZ E FOGO (40 + MAK) + CEGUEIRA',
+        log: [
+          'YOCH casts LEHAVAH on MAZIK B — light & flame converge!',
+          'LEHAVAH explodes: 40 + MAK DMG! MAZIK B is BLINDED (mark ס)!'
+        ],
+        duration: 3.1
+      },
+      hasneh: {
+        title: "HASNEH HABO'ER · GABRIEL · 4 ACT / 30 EN · INVOCA SARÇA ARDENTE (10 HP)",
+        log: [
+          "GABRIEL invokes HASNEH HABO'ER — sacred fire gathers in the soil...",
+          'BURNING BUSH (10 HP) manifests! Attacks inflict BURN & deal 2x vs burning foes.'
+        ],
+        duration: 3.8
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 218, y: 188, w: 68, h: 112 },
+      { id: 'B', name: 'MAZIK B', x: 408, y: 180, w: 76, h: 124 },
+      { id: 'C', name: 'MAZIK C', x: 598, y: 188, w: 68, h: 112 }
+    ];
+
+    let activeSpell = 'esh_sinai';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'esh_sinai') {
+        const hitTimes = [0.0, 0.72, 1.32, 1.92];
+        fx.hits = hitTimes.map((ht, idx) => {
+          const col = [];
+          const count = idx === 0 ? 60 : 44;
+          const tilt = idx === 0 ? 0 : (idx === 1 ? -18 : idx === 2 ? 18 : 0);
+          for (let i = 0; i < count; i++) {
+            col.push({
+              frac: i / count,
+              jitterX: (Math.random() - 0.5) * (idx === 0 ? 54 : 38),
+              ch: i % 5 === 0 ? 'אשסיני'[i % 6] : randGlyph(),
+              size: idx === 0 ? 15 + Math.random() * 14 : 13 + Math.random() * 11,
+              colorIdx: i % 3 // 0=laranja, 1=amarelo, 2=branco
+            });
+          }
+          const embers = [];
+          for (let i = 0; i < (idx === 0 ? 34 : 22); i++) {
+            const ang = -Math.PI * 0.15 - Math.random() * Math.PI * 0.7;
+            const spd = 75 + Math.random() * 185;
+            embers.push({
+              vx: Math.cos(ang) * spd * (Math.random() < 0.5 ? 1 : -1) * 0.9,
+              vy: Math.sin(ang) * spd - 35,
+              ch: randGlyph(),
+              size: 11 + Math.random() * 9,
+              life: 0.45 + Math.random() * 0.55,
+              colorIdx: i % 3
+            });
+          }
+          return { ht, idx, tilt, col, embers };
+        });
+      } else if (id === 'lehavah') {
+        // Convergência de luz+fogo -> explosão dupla (fogo laranja/amarelo/branco + anel de cegueira branco-ouro)
+        fx.inward = [];
+        for (let i = 0; i < 28; i++) {
+          const a = (i / 28) * Math.PI * 2;
+          fx.inward.push({
+            a,
+            rad: 95 + Math.random() * 65,
+            ch: randGlyph(),
+            size: 12 + Math.random() * 6,
+            colorIdx: i % 3
+          });
+        }
+        fx.blast = [];
+        for (let i = 0; i < 48; i++) {
+          const a = (i / 48) * Math.PI * 2 + (Math.random() - 0.5) * 0.15;
+          const spd = 95 + Math.random() * 210;
+          fx.blast.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.78,
+            ch: i % 4 === 0 ? 'להבה'[i % 4] : randGlyph(),
+            size: 13 + Math.random() * 11,
+            colorIdx: i % 3,
+            life: 0.55 + Math.random() * 0.5
+          });
+        }
+        fx.blindRing = [];
+        for (let i = 0; i < 20; i++) {
+          const a = (i / 20) * Math.PI * 2;
+          fx.blindRing.push({ a, ch: randGlyph(), size: 15 + (i % 2) * 3 });
+        }
+      } else if (id === 'hasneh') {
+        // Sarça ardente de Gabriel: ramos verdes de letras hebraicas que crescem do chão + chamas vivas 3 cores sem consumir
+        fx.branches = [];
+        const branchAngles = [-1.15, -0.78, -0.42, -0.1, 0.22, 0.58, 0.96, 1.25];
+        branchAngles.forEach((ang, bi) => {
+          const segs = 7 + (bi % 3);
+          for (let s = 0; s < segs; s++) {
+            const frac = (s + 1) / segs;
+            const curve = Math.sin(frac * 2.4 + bi) * 14;
+            fx.branches.push({
+              xOff: Math.sin(ang) * (frac * 62) + curve,
+              yOff: -Math.cos(ang * 0.7) * (frac * 82) - 6,
+              ch: randGlyph(),
+              size: 13 + (s % 3) * 2,
+              delay: frac * 0.55 + (bi % 2) * 0.08,
+              phase: Math.random() * 6.28
+            });
+          }
+        });
+        fx.flames = [];
+        for (let i = 0; i < 42; i++) {
+          fx.flames.push({
+            xOff: (Math.random() - 0.5) * 105,
+            baseY: -10 - Math.random() * 68,
+            rise: 28 + Math.random() * 48,
+            ch: i % 5 === 0 ? 'הסנההבוער'[i % 9] : randGlyph(),
+            size: 12 + Math.random() * 10,
+            colorIdx: i % 3,
+            speed: 1.4 + Math.random() * 1.4,
+            phase: Math.random() * 6.28
+          });
+        }
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 30 + i * 44 + Math.sin(time * 0.8 + i * 1.1) * 14;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 28);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 294, W, 2);
+    }
+
+    function drawFoe(foe, flashAlpha, markChar, markColor, damageLabel) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = flashAlpha > 0.05 ? `rgba(255, 252, 230, ${0.4 + flashAlpha * 0.6})` : '#06030a';
+      ctx.fillRect(x - foe.w * 0.24, y - foe.h * 0.52, foe.w * 0.48, foe.h * 0.22);
+      ctx.fillRect(x - foe.w * 0.44, y - foe.h * 0.26, foe.w * 0.88, foe.h * 0.46);
+      ctx.fillRect(x - foe.w * 0.16, y + foe.h * 0.20, foe.w * 0.32, foe.h * 0.32);
+      ctx.fillRect(x - foe.w * 0.56, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+      ctx.fillRect(x + foe.w * 0.44, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.62);
+
+      if (markChar) {
+        ctx.font = 'bold 16px "Times New Roman", serif';
+        ctx.fillStyle = markColor;
+        ctx.fillText(markChar, x + 44, y - foe.h * 0.61);
+      }
+      if (damageLabel) {
+        ctx.font = 'bold 20px monospace';
+        ctx.fillStyle = '#fff3b0';
+        ctx.fillText(damageLabel.text, x, y - 24 - damageLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 24);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45 (PP 6/8)', 14, 16);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText(topTag, W - 16, 16);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 304, W - 32, 48);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 304, W - 32, 1);
+      ctx.fillRect(16, 351, W - 32, 1);
+      ctx.font = '13px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 333);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff' },
+        { x: 286, name: '▸ YOCH', hp: 'HP 68/74', res: 'PP 6/8', col: '#f5f58c' }
+      ];
+      panels.forEach(p => {
+        ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(p.x, 360, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, p.x + 12, 379);
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, p.x + 12, 398);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, p.x + 128, 398);
+      });
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 360, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f5f58c';
+      const label = activeSpell === 'hasneh' ? "GABRIEL ▸ HASNEH HABO'ER" : 'PRAY ▸ ' + activeSpell.toUpperCase().replace('_', ' ');
+      ctx.fillText(label, 568, 388);
+    }
+
+    // Desenha palavra hebraica com 3 cores alternadas (laranja, amarelo, branco) por glifo
+    function drawTriColorWord(word, cx, cy, px, alpha) {
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      // Hebraico é RTL: primeiro caractere fica mais à direita
+      const startX = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        if (ch === ' ') return;
+        ctx.fillStyle = FIRE_PALETTE[i % 3];
+        ctx.fillText(ch, startX - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function renderEshSinai() {
+      const target = FOES[1];
+      let shakeX = 0, shakeY = 0;
+      let flashFoe = 0;
+      let screenFlash = 0;
+      let dmg = null;
+      let logIdx = 0;
+
+      fx.hits.forEach(h => {
+        const age = t - h.ht;
+        if (age >= 0 && age < 0.22) {
+          const mag = (h.idx === 0 ? 10 : 6) * (1 - age / 0.22);
+          shakeX += (Math.random() - 0.5) * mag * 2;
+          shakeY += (Math.random() - 0.5) * mag * 2;
+          flashFoe = Math.max(flashFoe, 1 - age / 0.22);
+          // Piscada de tela APENAS no primeiro impacto (idx === 0)
+          if (h.idx === 0 && age < 0.085) {
+            screenFlash = (1 - age / 0.085) * 0.62;
+          }
+        }
+        if (age >= 0 && age < 0.58) {
+          const tag = h.idx === 0 ? '30 (IMMEDIATE)' : `30 (${['', 'I', 'II', 'III'][h.idx]})`;
+          dmg = { text: tag, rise: age * 34 };
+        }
+        if (h.idx >= 1 && age >= 0) logIdx = 1;
+      });
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = t < 2.5 ? 0.44 : Math.max(0, 0.44 * (1 - (t - 2.5) / 0.6));
+      ctx.fillStyle = `rgba(8, 2, 12, ${dark})`;
+      ctx.fillRect(0, 24, W, 272);
+
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flashFoe : 0, null, null, i === 1 ? dmg : null));
+
+      ctx.textAlign = 'center';
+      fx.hits.forEach(h => {
+        const age = t - h.ht;
+        if (age < 0 || age > 0.72) return;
+        const alpha = age < 0.08 ? 1.0 : Math.max(0, 1 - (age - 0.08) / 0.58);
+
+        // Coluna vertical em 3 cores distintas: laranja (#ff7a1f), amarelo (#ffd84a), branco (#ffffff)
+        h.col.forEach(p => {
+          const py = 26 + p.frac * 260;
+          const px = target.x + p.jitterX * (0.4 + p.frac * 0.7) + h.tilt * (1 - p.frac);
+          ctx.save();
+          ctx.globalAlpha = alpha * (p.colorIdx === 2 ? 1.0 : 0.92);
+          ctx.font = `bold ${p.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[p.colorIdx];
+          ctx.fillText(p.ch, px, py);
+          ctx.restore();
+        });
+
+        // Palavra אש סיני com as 3 cores alternadas (laranja, amarelo, branco)
+        drawTriColorWord('אש סיני', target.x + h.tilt * 0.4, 118 + age * 40, h.idx === 0 ? 34 : 26, alpha);
+
+        // Brasas em 3 cores
+        h.embers.forEach(e => {
+          if (age > e.life) return;
+          const ea = Math.max(0, 1 - age / e.life);
+          ctx.save();
+          ctx.globalAlpha = ea;
+          ctx.font = `bold ${e.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[e.colorIdx];
+          ctx.fillText(e.ch, target.x + e.vx * age, target.y + 40 + e.vy * age + 130 * age * age);
+          ctx.restore();
+        });
+      });
+
+      if (screenFlash > 0.01) {
+        ctx.fillStyle = `rgba(255, 245, 210, ${screenFlash})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      ctx.restore();
+      drawHud(SPELLS.esh_sinai.log[logIdx], 'FLASH: 1ST HIT ONLY');
+    }
+
+    function renderLehavah() {
+      const target = FOES[1];
+      const boomT = 0.62;
+      const boomed = t >= boomT;
+      const bAge = Math.max(0, t - boomT);
+      let shakeX = 0, shakeY = 0;
+      if (boomed && bAge < 0.26) {
+        const m = 9 * (1 - bAge / 0.26);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = !boomed ? 0.36 * (t / boomT) : Math.max(0, 0.36 * (1 - bAge / 1.4));
+      ctx.fillStyle = `rgba(10, 3, 14, ${dark})`;
+      ctx.fillRect(0, 24, W, 272);
+
+      const flashFoe = boomed && bAge < 0.24 ? 1 - bAge / 0.24 : 0;
+      const blindPulse = boomed ? `rgba(230, 86, 86, ${0.65 + 0.35 * Math.sin(t * 7)})` : null;
+      const dmg = boomed && bAge < 1.1 ? { text: '40 + MAK · BLIND', rise: bAge * 30 } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flashFoe : 0, i === 1 && boomed ? 'ס' : null, blindPulse, i === 1 ? dmg : null));
+
+      ctx.textAlign = 'center';
+      if (!boomed) {
+        // Convergência em espiral de letras de luz e fogo
+        const p = t / boomT;
+        fx.inward.forEach(pt => {
+          const r = pt.rad * Math.pow(1 - p, 1.4);
+          const ang = pt.a + p * 3.2;
+          ctx.save();
+          ctx.globalAlpha = 0.3 + 0.7 * p;
+          ctx.font = `bold ${pt.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[pt.colorIdx];
+          ctx.fillText(pt.ch, target.x + Math.cos(ang) * r, target.y + Math.sin(ang) * r * 0.72);
+          ctx.restore();
+        });
+        drawTriColorWord('להבה', target.x, target.y - 36, 18 + p * 12, p);
+      } else {
+        // Explosão de fogo em 3 cores + anel externo branco-dourado de ofuscamento
+        fx.blast.forEach(p => {
+          if (bAge > p.life) return;
+          const a = Math.max(0, 1 - bAge / p.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${p.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[p.colorIdx];
+          ctx.fillText(p.ch, target.x + p.vx * bAge, target.y + p.vy * bAge + 55 * bAge * bAge);
+          ctx.restore();
+        });
+        if (bAge < 0.85) {
+          const ra = 1 - bAge / 0.85;
+          const rad = 22 + bAge * 175;
+          fx.blindRing.forEach(b => {
+            ctx.save();
+            ctx.globalAlpha = ra;
+            ctx.font = `bold ${b.size}px "Times New Roman", serif`;
+            ctx.fillStyle = '#fffce0';
+            ctx.fillText(b.ch, target.x + Math.cos(b.a + bAge * 1.4) * rad, target.y + Math.sin(b.a + bAge * 1.4) * rad * 0.62);
+            ctx.restore();
+          });
+        }
+        if (bAge < 0.95) {
+          drawTriColorWord('להבה', target.x, target.y - 24 - bAge * 26, 36, 1 - bAge / 0.95);
+        }
+        if (bAge < 0.08) {
+          ctx.fillStyle = `rgba(255, 250, 220, ${(1 - bAge / 0.08) * 0.65})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.lehavah.log[boomed ? 1 : 0], boomed ? 'BLIND: ס' : 'CONVERGING...');
+    }
+
+    function renderHasneh() {
+      const bushX = 565;
+      const bushY = 258;
+      const gabriel = { id: 'G', name: 'GABRIEL', x: 330, y: 174, w: 84, h: 132 };
+      const bloomT = 0.78;
+      const live = t >= bloomT;
+      const liveAge = Math.max(0, t - bloomT);
+
+      ctx.save();
+      drawPlasmaBg(t);
+
+      // Brilho quente sob a sarça
+      const warm = Math.min(0.28, t * 0.25);
+      ctx.fillStyle = `rgba(255, 130, 35, ${warm * 0.45})`;
+      ctx.fillRect(0, 24, W, 272);
+
+      // Gabriel no palco (silhueta alada maior, dourado-claro)
+      ctx.save();
+      ctx.fillStyle = '#1b1428';
+      ctx.fillRect(gabriel.x - 22, gabriel.y - 68, 44, 30); // cabeça/halo
+      ctx.fillRect(gabriel.x - 36, gabriel.y - 34, 72, 68); // manto
+      ctx.fillRect(gabriel.x - 86, gabriel.y - 48, 46, 56); // asa esq
+      ctx.fillRect(gabriel.x + 40, gabriel.y - 48, 46, 56); // asa dir
+      ctx.fillRect(gabriel.x - 18, gabriel.y + 34, 36, 36); // base
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd84a';
+      ctx.fillText('GABRIEL', gabriel.x, gabriel.y - 78);
+      ctx.restore();
+
+      ctx.textAlign = 'center';
+      // 1) Ramagem verde viva da sarça feita 100% de letras hebraicas que brotam do solo (não se consomem!)
+      fx.branches.forEach(br => {
+        const age = t - br.delay;
+        if (age < 0) return;
+        const grow = Math.min(1, age / 0.35);
+        const sway = live ? Math.sin(t * 2.6 + br.phase) * 2.5 : 0;
+        const bx = bushX + br.xOff * grow + sway;
+        const by = bushY + br.yOff * grow;
+        ctx.save();
+        ctx.globalAlpha = 0.35 + 0.65 * grow;
+        ctx.font = `bold ${br.size}px "Times New Roman", serif`;
+        ctx.fillStyle = '#5ee389'; // verde vivo intocado pelo fogo
+        ctx.fillText(br.ch, bx, by);
+        ctx.restore();
+      });
+
+      // 2) Chamas vivas em 3 cores (laranja, amarelo, branco) dançando continuamente sobre os ramos
+      if (t > 0.25) {
+        const fireAlpha = Math.min(1, (t - 0.25) / 0.5);
+        fx.flames.forEach(fl => {
+          const cyc = ((t * fl.speed + fl.phase) % 1.0);
+          const fxX = bushX + fl.xOff + Math.sin(t * 5 + fl.phase) * 7;
+          const fxY = bushY + fl.baseY - cyc * fl.rise;
+          const a = fireAlpha * (1 - cyc) * 0.95;
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${fl.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[fl.colorIdx];
+          ctx.fillText(fl.ch, fxX, fxY);
+          ctx.restore();
+        });
+      }
+
+      // Título הסנה הבוער no momento da manifestação
+      if (t > 0.35 && t < 2.2) {
+        const ta = t < 0.85 ? (t - 0.35) / 0.5 : Math.max(0, 1 - (t - 1.55) / 0.65);
+        drawTriColorWord('הסנה הבוער', bushX, bushY - 122, 24, ta);
+      }
+
+      // Nome e tag 10 HP da invocação viva
+      if (live) {
+        const a = Math.min(1, liveAge * 2.5);
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.font = 'bold 11px monospace';
+        ctx.fillStyle = '#ffd84a';
+        ctx.fillText('BURNING BUSH  [10 HP]', bushX, bushY + 18);
+        ctx.restore();
+      }
+
+      // Clarão suave único na manifestação
+      if (live && liveAge < 0.08) {
+        ctx.fillStyle = `rgba(255, 232, 160, ${(1 - liveAge / 0.08) * 0.45})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.hasneh.log[live ? 1 : 0], live ? 'SUMMON: 10 HP · BURN' : 'SUMMONING...');
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'esh_sinai') renderEshSinai();
+      else if (activeSpell === 'lehavah') renderLehavah();
+      else renderHasneh();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'esh_sinai');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

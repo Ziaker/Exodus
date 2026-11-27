@@ -179,7 +179,7 @@ func _temperaments() -> void:
 			match affix:
 				"BRUTAL": _check(st.atk == int(ds.atk) + 7, "BRUTAL +3+4 ATK")
 				"SWIFT": _check(st.agi == int(ds.agi) + 5, "SWIFT +5 AGI")
-				"STONE": _check(int(p.affinity) == BattleMath.Affinity.RESIST and st.defense == int(ds.defense) + 6, "STONE resists, +6 DEF")
+				"STONE": _check(st.defense == int(ds.defense) + 6, "STONE +6 DEF")
 				"BURNING": _check((p.skills as Array).has(&"ember_touch"), "BURNING gains EMBER TOUCH")
 				"VAMPIRIC": _check((p.skills as Array).has(&"life_drain"), "VAMPIRIC gains LIFE DRAIN")
 	_check(seen_affix.size() == 5, "All 5 elite affixes occur (%d)" % seen_affix.size())

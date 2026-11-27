@@ -188,7 +188,7 @@ func _refresh_all() -> void:
 	hud.queue_redraw()
 
 
-## Complete diagnostics (rhythm, defense, crit, affinity, SP roll) for tests and debugging.
+## Complete diagnostics (rhythm, defense, crit, SP roll) for tests and debugging.
 ## D-057: it is no longer what the Battle Log shows; the player sees _event() lines.
 func _append_log(text: String) -> void:
 	log_history.append(text)
@@ -455,6 +455,7 @@ func run_battle() -> void:
 	while not state.is_over():
 		waiting_players.clear()
 		state.start_round()
+		prayer.round_start()
 		if state.round_number > 1:
 			hud.announce("ROUND %02d" % state.round_number)
 			_event("ROUND %02d" % state.round_number)
@@ -475,6 +476,7 @@ func run_battle() -> void:
 				await _player_turn(unit)
 			else:
 				await _enemy_turn(unit)
+			prayer.turn_end(unit)
 			_refresh_all()
 			if state.is_over(): break
 			unit = _next_live_actor()
@@ -863,6 +865,13 @@ func _player_turn(unit: BattleUnit) -> void:
 				# D-057: declined (the target fell and X was pressed): this command and the
 				# following ones do not run and spend no act; the hero plans again.
 				break
+			# D-118 Lior: heal on each completed action (not on the cast of Lior itself).
+			var is_lior_cast: bool = command == "PRAY" and StringName(detail.get("pray", &"")) == PrayerBook.LIOR
+			if not _player_interrupted and not is_lior_cast and unit.is_alive():
+				prayer.tick_lior(unit)
+			# D-118 Esh Ochelet: the marked hero is bitten after each action it completes.
+			if not _player_interrupted and unit.is_alive():
+				prayer.tick_ochelet(unit)
 			# Creator 2026-11-25: the rail leaves the screen as soon as no hit follows on it
 			# (the target died, the hero was interrupted or this was the last command); it
 			# used to stay through the result pause, over the empty spot of a dead enemy.
@@ -946,10 +955,11 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		_enemy_interrupted = false
 		_interrupt_gainer = null
 		_clear_roles()
-		var skill := _enemy_choice(unit, 2 - used)
+		var skill := &"" if unit.kind == &"burning_bush" else _enemy_choice(unit, 2 - used)
 		if skill != &"":
 			used += int(SkillBook.def(skill).acts)
 			await _enemy_skill(unit, skill)
+			prayer.tick_ochelet(unit)
 			if _enemy_interrupted:
 				var lost: Array[String] = []
 				for _rest in mini(2 - used, unit.acts_available):
@@ -986,7 +996,12 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		# A reaction can defeat the announced attacker before its action resolves.
 		# D-049: a counter-attack exchange already resolved (or interrupted) this attack.
 		if not _counter_resolved and unit.is_alive() and defender.is_alive():
-			await _perform_attack(unit, defender, basic_power, false, defense_paid, not reaction_declared)
+			if unit.kind == &"burning_bush":
+				var res: Dictionary = prayer.burning_bush_attack_unit(unit, defender)
+				fx.play("RAAM", defender, int(res.get("damage", 0)), unit)
+			else:
+				await _perform_attack(unit, defender, basic_power, false, defense_paid, not reaction_declared)
+		prayer.tick_ochelet(unit)
 		if _enemy_interrupted:
 			var following: Array[String] = []
 			for _rest in mini(2 - used, unit.acts_available):
@@ -999,6 +1014,8 @@ func _enemy_turn(unit: BattleUnit) -> void:
 
 func short_name(unit: BattleUnit) -> String:
 	if unit == null: return ""
+	if unit.kind == &"burning_bush":
+		return unit.display_name
 	var index: int = hud.opponents.find(unit)
 	return "FOE " + char(65 + index) if index >= 0 else unit.display_name
 
@@ -1033,7 +1050,7 @@ func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, ma
 	hud.message = "%s -> %s: %s, %d damage" % [short_name(attacker), short_name(defender), outcome, damage]
 	hud.feedback = "%s | %s HP %d/%d%s | %s: %d ACTS left" % [outcome, short_name(defender), defender.current_hp, defender.stats.max_hp, " DOWN" if not defender.is_alive() else "", short_name(attacker), attacker.acts_available]
 	# D-057: the result as plain event sentences (who dodged, who blocked, who hit whom,
-	# who fell, who gained an act); the old rhythm/def/crit/affinity/SP numbers stay only
+	# who fell, who gained an act); the old rhythm/def/crit/SP numbers stay only
 	# in log_history.
 	if defense_result != BattleMath.RhythmResult.MISS and (not defender.is_player or roles.get(defender.id, "") == "DEFEND"):
 		_set_role(defender, "DEFEND")
@@ -1050,8 +1067,6 @@ func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, ma
 			_pending_down.append(defender)
 		else:
 			_event("%s is down." % short_name(defender))
-	if contact and not magic and BattleMath.press_turn_acts(defender.affinity) > 0 and attacker.is_alive():
-		_event("%s gains %d act." % [short_name(attacker), BattleMath.press_turn_acts(defender.affinity)])
 	phase_text = "RESULT: " + outcome
 	fx.stop_cues()
 	var cue := "DODGE" if outcome.begins_with("DODGE") else ("MISS" if outcome.begins_with("MISS") else ("BLOCK" if outcome.begins_with("BLOCK") else ("CRITICAL" if outcome.contains("CRITICAL") else "HIT")))
@@ -1786,11 +1801,13 @@ func _burn_tick() -> void:
 	for unit in state.units:
 		if not unit.is_alive() or unit.burns.is_empty():
 			continue
-		var applied := unit.take_damage(SkillBook.BURN_DAMAGE * unit.burns.size())
+		var applied := unit.take_damage(unit.burn_round_damage())
 		for i in range(unit.burns.size() - 1, -1, -1):
 			unit.burns[i] -= 1
 			if unit.burns[i] <= 0:
 				unit.burns.remove_at(i)
+		if unit.burns.is_empty():
+			unit.burn_power = 0
 		action_attacker = unit
 		action_defender = unit
 		fx.play("BURN", unit, applied)
@@ -1949,7 +1966,7 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		if drained > 0:
 			_append_log("%s drains %d HP." % [attacker.display_name, drained])
 	if fxd.get("detonate", false) and was_burning and defender.is_alive():
-		var blast := defender.take_damage(SkillBook.BURN_DAMAGE * defender.burns.size())
+		var blast := defender.take_damage(defender.burn_round_damage())
 		_append_log("%s detonates: %s burns for %d now." % [attacker.display_name, defender.display_name, blast])
 		_event("%s's burns detonate: %d damage." % [short_name(defender), blast])
 	if defender.is_alive():

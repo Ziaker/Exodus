@@ -208,7 +208,7 @@
   mostra uma linha por acontecimento, em inglês (``FALLEN attacks FOE A.``, ``FOE A
   counter-attacks!``, ``FALLEN blocks: 5 damage.``, ``FOE A is down.``, ``FALLEN gains 1 act.``,
   ``FALLEN loses 1 queued command.``), sem instruções de tecla nem números internos (ritmo, def,
-  crit, afinidade e SP roll ficam só em `log_history`, para diagnóstico). Explicações de menu e o
+  crit e SP roll ficam só em `log_history`, para diagnóstico). Explicações de menu e o
   contador da absorção continuam transitórios. **Delegado ao agente, aguardando o julgamento
   visual do criador:** linhas não lidas aparecem da mais antiga para a mais nova e cada Z mostra
   as próximas antes de a batalha seguir (também antes de qualquer outra entrada), então uma
@@ -257,7 +257,7 @@
   **adiado** ao estoque (`stored_acts`), limitado a 4, e pode reaparecer em rodada
   posterior. Atos novos e bônus entram primeiro; o que sobrar volta ao estoque.
 - **D-057 (criador, 2026-11-25): o turno vai até zerar os atos.** Depois da fila, os atos
-  que sobraram (não planejados, ganhos com WEAK ou devolvidos por recusa de novo alvo) são
+  que sobraram (não planejados ou devolvidos por recusa de novo alvo) são
   planejados de novo **no mesmo turno**; o turno só acaba com 0 atos, com REST ou com PASS (D-105). Isso substitui
   a frase ``se sobrar ato, ele planeja de novo quando o ciclo voltar`` abaixo; a ordem por AGI
   entre combatentes continua. **IMPLEMENTADO** em `PlayableController._player_turn()`.
@@ -417,13 +417,11 @@
   foi implementada.
 
 ## Press Turn
-- Acerto em fraqueza: **+1 ato** para quem acertou.
-- **D-057 (criador, 2026-11-25): afinidade nunca tira ato.** O antigo ``Resistido / nulo /
-  absorvido: -1 ato`` foi removido: o criador declarou que nunca definiu roubo de ato, só ganho.
-  **IMPLEMENTADO** em `BattleMath.press_turn_acts()` (RESIST/NULL/ABSORB = 0).
-- **Consequência de D-005:** o +1 por fraqueza também respeita o teto de 4 atos
-  disponíveis; o excedente é adiado ao estoque.
-- Afinidades consideradas: Weak, Normal, Resist, Null, Absorb.
+- **D-119 (criador, 2026-11-27): toda a afinidade foi removida.** Não existe mais fraqueza,
+  resistência, nulo nem absorção: o dano não depende de afinidade, acertar não dá ato extra
+  nem SP extra. `BattleMath.Affinity`, `affinity_multiplier()` e `press_turn_acts()` deixaram
+  de existir. Supera D-057 ("só WEAK dá +1") e a parte "fraqueza" de D-109. Nenhuma regra
+  de compensação foi criada.
 
 ## Dano (sem magia neste protótipo)
 - Físico: `poder × ATK ÷ DEF`.
@@ -448,12 +446,12 @@
   e o teto final passou a 50%. O histórico da D-019 é preservado; os
   números vigentes são os da D-021 acima.
 - SP **não** multiplica o dano diretamente.
-- Ganho de SP: **+1** por crítico, desvio perfeito, acerto em fraqueza e reação.
+- Ganho de SP: **+1** por crítico, desvio perfeito e reação (D-119: não há mais ganho por fraqueza).
 - **D-019 (Rodada 3, 4C):** manter essas fontes existentes e seus
   ganhos de **+1 SP**, sem introduzir limite extra por batalha nem
   ganhos decrescentes. O balanceamento da influência do SP deve
   ocorrer nas fórmulas; a mecânica de ganho continua igual.
-- Crítico, Press Turn e ganhos de SP por fraqueza/crítico só são aplicados quando
+- Crítico e ganhos de SP por crítico só são aplicados quando
   há **contato** (ritmo de ataque diferente de Falha e defesa diferente de Desvio).
   Ataques que falham não consomem rolagens de dano.
 - **D-016 (2026-11-21, histórico):** limitou o bônus de SP a +30 p.p. e manteve
@@ -639,8 +637,7 @@
   centro da barra de defesa (0 de dano, D-015); defesa na faixa lateral = **50%**, qualquer que
   seja o marco do ataque; defesa nas pontas não reduz. Vale para ATTACK, habilidades físicas,
   magias, Ra'am e os golpes da troca de contra-ataque (empate na trilha branca: os dois acertam
-  50%), do jogador e dos inimigos. O golpe na trilha branca conta como acerto para crítico, +1 ACT
-  em fraqueza e SP. O inimigo paga 1 ACT **sempre** que defende, dê certo ou não. As cores da barra
+  50%), do jogador e dos inimigos. O golpe na trilha branca conta como acerto para crítico e SP. O inimigo paga 1 ACT **sempre** que defende, dê certo ou não. As cores da barra
   não mudaram. `BattleMath.strike_multiplier()` / `scaled_damage()` (arredonda, golpe de 1 não vira
   0).
 - Tecla: **Z / Enter**.
@@ -1370,7 +1367,7 @@ D-039 organiza Fase 1 temporal antes da Fase 2 especial, Fase 3 de dano e Fase 4
   **Yoch** (0 PP no início da batalha) e reiniciar significa Fallen completamente
   recuperado, com HP cheio, e o SP atual continua **cortado pela metade** (confirmado
   pelo criador em 2026-11-23).
-- Absorção tutorial: fraqueza indicada por chacoalhar; todas as opções viram ABSORB;
+- Absorção tutorial: todas as opções viram ABSORB (D-119: sem fraqueza para indicar);
   +2 MEF do primeiro inimigo, depois +2 MAK com mash; permanentes.
 - **PENDENTES** (lista completa no roteiro): "dano o bastante" e detalhes do resgate.
   Estágios de ATK, dano mágico, IGNI, burn e EN extra foram definidos pelo criador em
@@ -1500,7 +1497,7 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
   (até o mesmo ponto do round seguinte). Usado de novo, **acumula**. Com **4 HP ou menos**,
   não pode ser usado.
 - **Heat wave** (2 ACT, 6 EN): dano mágico **5×MAK÷MEF** (mesma fórmula da física) em todos
-  os oponentes. O **IGNI vale ×1 para todos** até existirem afinidades elementais. O atacante
+  os oponentes. O **IGNI vale ×1 para todos** (D-119: sem afinidades). O atacante
   faz **uma barra**, e cada alvo defende por conta própria. Cada acerto tem **25% de burn**:
   3 de dano **no início de cada round**, por 3 rounds. Burns **acumulam**.
 - **Energeat** *(antes Energy Eat; D-117)* (1 ACT, 6 EN): cura **5 HP + 1 por EN extra**. O jogador escolhe o extra
@@ -1597,8 +1594,8 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     (a parte não coberta fica devida e é paga quando esse PRAY resolve); PP reservados saem do
     disponível.
   - **Ra'am:** dano = **10 + MAK + 10 por PP extra − MEF do alvo**, com barra de ritmo como o
-    ATTACK (D-109: marco 50/80/100%, desvio só com defesa no centro, defesa na lateral = metade), crítico, rolagem de SP, variação, multiplicador de
-    afinidade e ±1 ato como o ATTACK. Anjo: sem efeito (nenhum anjo existe ainda).
+    ATTACK (D-109: marco 50/80/100%, desvio só com defesa no centro, defesa na lateral = metade), crítico, rolagem de SP, variação, e o mesmo
+    tratamento de ato do ATTACK (sem afinidade, D-119). Anjo: sem efeito (nenhum anjo existe ainda).
   - **IA:** cada inimigo com ato de reação ataca o PRAY com **33%**; o inimigo atingido pelo
     Ra'am contra-ataca com **33%** (barra dupla da D-049). Vários inimigos: **todos atacam**;
     qualquer contato (POINT ou **BEAM**) interrompe; só o **primeiro** que acertou ganha os atos

@@ -108,7 +108,8 @@ func _enemy_defs() -> Array:
 
 func _location_title() -> String:
 	var stratum := SurvivalState.stratum()
-	var name := "NECRÓPOLE SATURNINA" if stratum == 1 else SurvivalData.LOCATION_NAME
+	# Criador 2026-11-27: todo texto do Survival em inglês (era "NECRÓPOLE SATURNINA").
+	var name := "SATURNINE NECROPOLIS" if stratum == 1 else SurvivalData.LOCATION_NAME
 	return "%s — STRATUM %d/%d" % [name, stratum, SurvivalStrata.COUNT]
 
 
@@ -133,6 +134,14 @@ func _ready() -> void:
 	_overlay.draw.connect(_draw_overlay)
 	_overlay_layer.add_child(_overlay)
 	add_child(_overlay_layer)
+	# Vindo da cutscene de entrada: o Fallen acorda piscando por cima do mapa real.
+	if Engine.has_meta("exodus_survival_wake_blink"):
+		Engine.remove_meta("exodus_survival_wake_blink")
+		var blink_layer := CanvasLayer.new()
+		blink_layer.layer = 100
+		blink_layer.name = "WakeBlink"
+		blink_layer.add_child(preload("res://scripts/survival/survival_wake_blink.gd").new())
+		add_child(blink_layer)
 	var s := SurvivalState.data()
 	if not String(s.get("last_loot", "")).is_empty():
 		loot_toast = "RELIC FOUND: %s — equip it at RELICS" % SurvivalRelics.name_of(String(s.last_loot))
@@ -254,6 +263,17 @@ func talk() -> bool:
 	if npc.is_empty():
 		return false
 	var role := String(npc.get("role", ""))
+	if role == "sanctuary" and not bool(meta().get("keeper_intro", false)):
+		# 1ª conversa (no perfil): o curandeiro ensina o modo; a barra abre quando a fala acaba.
+		talk_count += 1
+		talking_npc = npc
+		_show_picture(npc)
+		keeper_intro_active = true
+		var pages: Array[String] = []
+		pages.assign(KEEPER_INTRO)
+		dialogue.open(String(npc.name), pages)
+		_redraw()
+		return true
 	if role == "sanctuary":
 		talk_count += 1
 		talking_npc = npc
@@ -286,6 +306,38 @@ func talk() -> bool:
 		_redraw()
 		return true
 	return super.talk()
+
+
+## Criador 2026-11-26: na 1ª vez que fala com o curandeiro, ele apresenta as mecânicas do
+## modo de forma didática (texto em inglês, como todo o Survival). Texto PLACEHOLDER: o
+## criador revisa. Cada página cabe nas 2 linhas da caixa.
+const KEEPER_INTRO := [
+	"Welcome, Fallen. This is the SANCTUARY: no demon can enter it. Rest here whenever you need.",
+	"Below lie 5 STRATA. In each one a WARDEN waits in the deepest cell, framed in gold on your map.",
+	"Demons hunt you. Within 6 steps, each step you take they take one too. Touch one and the battle begins.",
+	"In battle, ABSORB costs 2 ACT. If it works, pick 1 of 3 offers: stronger stats or a new skill.",
+	"If you fall, you may CONTINUE 3 times per run, with HP and EN restored. With none left, the run ends.",
+	"Talk to me for help. HEAL is free once per stratum. SHOP sells items and relics.",
+	"RELICS: equip what you find, 1 per ally. HIRE buys allies; RESERVE swaps who fights with you.",
+	"Defeat the WARDEN and DESCEND opens. Clear all 5 strata to finish the run. Left/Right: choose  Z: confirm  X: leave.",
+]
+var keeper_intro_active := false
+
+
+## Fecha o tutorial: grava no perfil e abre a barra do santuário normalmente.
+func _on_dialogue_toggled() -> void:
+	if dialogue.is_open or not keeper_intro_active:
+		super._on_dialogue_toggled()
+		return
+	keeper_intro_active = false
+	var m := SurvivalMeta.data()
+	m["keeper_intro"] = true
+	SurvivalMeta.save(m)
+	_meta_cache = {}
+	var npc := talking_npc
+	super._on_dialogue_toggled()
+	if not npc.is_empty() and npc_near() == npc:
+		talk()
 
 
 var _trimmed_pictures := {}

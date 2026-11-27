@@ -97,10 +97,10 @@ func _run() -> void:
 					var zero := 0
 					var hero_zero := 0
 					for n in SAMPLES:
-						var a := BattleMath.physical_damage(POWER, float(h.atk), h.agi, es.defense, h.sp_value(), es.sp_value(), BattleMath.Affinity.NORMAL, rng)
+						var a := BattleMath.physical_damage(POWER, float(h.atk), h.agi, es.defense, h.sp_value(), es.sp_value(), rng)
 						dealt += float(a.amount)
 						if int(a.amount) == 0: hero_zero += 1
-						var b := BattleMath.physical_damage(POWER, float(es.atk), es.agi, h.defense, es.sp_value(), h.sp_value(), BattleMath.Affinity.NORMAL, rng)
+						var b := BattleMath.physical_damage(POWER, float(es.atk), es.agi, h.defense, es.sp_value(), h.sp_value(), rng)
 						taken += float(b.amount)
 						if int(b.amount) == 0: zero += 1
 					dealt /= SAMPLES
@@ -154,8 +154,8 @@ func _run() -> void:
 				SurvivalData.empower(e, id, 1, omen)
 				var zeros := 0
 				for n in 400:
-					if int(BattleMath.physical_damage(POWER, float(top.atk), top.agi, e.defense, top.sp_value(), e.sp_value(), BattleMath.Affinity.NORMAL, rng).amount) == 0: zeros += 1
-					if int(BattleMath.physical_damage(POWER, float(e.atk), e.agi, top.defense, e.sp_value(), top.sp_value(), BattleMath.Affinity.NORMAL, rng).amount) == 0: zeros += 1
+					if int(BattleMath.physical_damage(POWER, float(top.atk), top.agi, e.defense, top.sp_value(), e.sp_value(), rng).amount) == 0: zeros += 1
+					if int(BattleMath.physical_damage(POWER, float(e.atk), e.agi, top.defense, e.sp_value(), top.sp_value(), rng).amount) == 0: zeros += 1
 				check(zeros == 0, "D-108 stratum %d %s OMEN %d: no basic blow deals 0 (%d did)" % [stratum, id, omen, zeros])
 
 	print("verify_survival_balance: %d checks OK" % checks)

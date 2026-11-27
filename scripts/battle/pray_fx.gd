@@ -56,6 +56,7 @@ func _process(delta: float) -> void:
 	for i in range(card_fx.size() - 1, -1, -1):
 		if time - float(card_fx[i].born) > float(card_fx[i].dur):
 			card_fx.remove_at(i)
+	_prune_d118()
 	queue_redraw()
 
 
@@ -72,7 +73,7 @@ func cast(unit: BattleUnit) -> void:
 
 
 func is_busy() -> bool:
-	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy() or chaki_busy() or shachar_busy() or esh_sinai_busy() or lehavah_busy() or hasneh_busy() or shalhevet_busy() or nogah_busy() or lior_busy()
+	return not letters.is_empty() or not card_fx.is_empty() or raam_busy() or mishpat_busy() or cherev_busy() or sanverim_busy() or chaki_busy() or shachar_busy() or esh_sinai_busy() or lehavah_busy() or hasneh_busy() or shalhevet_busy() or nogah_busy() or lior_busy() or d118_busy()
 
 
 func _draw() -> void:
@@ -89,6 +90,7 @@ func _draw() -> void:
 	_draw_esh_sinai()
 	_draw_shalhevet()
 	_draw_nogah()
+	_draw_d118()
 	var pulse := 0.55 + 0.45 * absf(sin(time * PULSE_HZ))
 	if shachar_pending:
 		_glyph(MARK_SHACHAR, Vector2(hud.SCREEN.x - 20.0, 18.0), MARK_PX + 2, Color(INK_HOT, 0.72 + 0.28 * pulse), Color(INK_DARK, 0.9))
@@ -109,6 +111,13 @@ func _draw() -> void:
 			_glyph(MARK_NECHAMAH, Vector2(em_x, em_y), MARK_PX, Color(PrayerBook.INK, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
 			if foe.mends.size() > 1:
 				_glyph("x%d" % foe.mends.size(), Vector2(em_x + 12.0, em_y), 10, Color(PrayerBook.INK, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
+			em_x += 20.0
+		if foe.paralyzed_acts > 0:
+			_glyph(MARK_ANGEL_HUG, Vector2(em_x, em_y), MARK_PX, Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
+			_glyph("x%d" % foe.paralyzed_acts, Vector2(em_x + 12.0, em_y), 10, Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
+			em_x += 20.0
+		if foe.has_status(&"gods_message"):
+			_glyph(MARK_GODS_MESSAGE, Vector2(em_x, em_y), MARK_PX, Color("ffd84a", 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
 	for i in hud.players.size():
 		var unit: BattleUnit = hud.players[i]
 		if not unit.is_alive():
@@ -133,6 +142,16 @@ func _draw() -> void:
 		if lior_active.has(unit) and int(lior_active[unit].actions) > 0:
 			marks.append({"glyph": MARK_LIOR, "color": Color(INK_HEAL, 0.72 + 0.28 * pulse), "jitter": 0.0,
 				"suffix": "x%d" % int(lior_active[unit].actions)})
+		if unit.has_status(&"taunt"):
+			marks.append({"glyph": MARK_MEIR, "color": Color(INK_ALERT, 0.75 + 0.25 * pulse), "jitter": 0.0})
+		if not unit.atk_stages.is_empty():
+			marks.append({"glyph": MARK_GEVER, "color": Color(GEVER_PALETTE[0], 0.75 + 0.25 * pulse), "jitter": 0.0,
+				"suffix": "x%d" % unit.atk_stages.size()})
+		if unit.paralyzed_acts > 0:
+			marks.append({"glyph": MARK_ANGEL_HUG, "color": Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), "jitter": 0.0,
+				"suffix": "x%d" % unit.paralyzed_acts})
+		if unit.has_status(&"gods_message"):
+			marks.append({"glyph": MARK_GODS_MESSAGE, "color": Color("ffd84a", 0.7 + 0.3 * pulse), "jitter": 0.0})
 		var x: float = card.position.x + 7 + hud._width(unit.display_name, 13, true) + 8
 		for m_idx in marks.size():
 			var mk: Dictionary = marks[m_idx]
@@ -306,6 +325,7 @@ func _shake_step() -> void:
 		var sm := 6.0 * (1.0 - absf(sh_age - 1.0) / 0.55)
 		if sm > 0.0:
 			amp = maxf(amp, sm)
+	amp = maxf(amp, _d118_shake())
 	if amp > 0.0:
 		if not _shaking:
 			_shaking = true
@@ -1955,3 +1975,802 @@ func _draw_lior() -> void:
 			var lpos := Vector2(cx, rect.position.y - 14.0 - ta * 26.0)
 			draw_string_outline(font, lpos, "+%d HP" % int(tk.healed), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, 4, Color(0.04, 0.03, 0.06, la))
 			draw_string(font, lpos, "+%d HP" % int(tk.healed), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(INK_HEAL, la))
+
+
+# ------------------------------------------------------------------ D-118 lotes 2-4 (100% Hebrew letters)
+## Esh, Meir, Ur Esh, Seraf, Nitzotz, Esh Ochelet, Gever, Angel Hug, God's Message and Adin -> Adina -> Adinut.
+## Ported from prototypes/d118-prayers-vfx (round4..round7), approved by the creator in the prototype.
+## Every effect is a Dictionary in `d118` with a start time (`at`), a duration (`dur`) and its own letters; the
+## common layers (dark stage, screen flash, foe whiten, shake) live in the effect so one dispatcher draws all.
+const MARK_MEIR := "א"
+const MARK_GEVER := "ב"
+const MARK_ANGEL_HUG := "ע"
+const MARK_GODS_MESSAGE := "ד"
+const INK_ALERT := Color("ff6464")
+const GEVER_PALETTE: Array[Color] = [Color("ff5a36"), Color("ffd84a"), Color("ffffff")]
+const SERAF_PALETTE: Array[Color] = [Color("ffffff"), Color("ffd84a"), Color("b8f5a2"), Color("ff7a1f")]
+const ANGEL_PALETTE: Array[Color] = [Color("ffffff"), Color("fffce0"), Color("ffd84a")]
+const ZAHAV_PALETTE: Array[Color] = [Color("ffd84a"), Color("ffffff"), Color("ff7a1f")]
+const PARA_PALETTE: Array[Color] = [Color("9ee8ff"), Color("ffffff"), Color("ffd84a")]
+const ADIN_PALETTE: Array[Color] = [Color("8ad8ff"), Color("b8f5a2"), Color("ffd84a"), Color("ffffff")]
+const ESH_HIT := 0.44
+const UR_ESH_BOOM := 0.85
+const NITZOTZ_SNAP := 0.56
+const ANGEL_HUG_OPEN := 0.32
+const ANGEL_HUG_CLAP := 0.70
+const GM_UNROLL := 0.45
+const GM_WRITE := 1.35
+const GM_SEAL := 1.65
+
+var d118: Array[Dictionary] = []
+var _ochelet_rings: Dictionary = {}
+
+
+func d118_busy() -> bool:
+	return not d118.is_empty()
+
+
+func _add_d118(e: Dictionary, delay: float = 0.0) -> Dictionary:
+	e["at"] = time + delay
+	d118.append(e)
+	return e
+
+
+func _prune_d118() -> void:
+	for i in range(d118.size() - 1, -1, -1):
+		if time - float(d118[i].at) > float(d118[i].dur):
+			d118.remove_at(i)
+
+
+func _center_of(unit: BattleUnit) -> Vector2:
+	var r := _unit_rect(unit)
+	if r.size.x > 0.0:
+		return r.get_center()
+	return Vector2(hud.SCREEN.x * 0.5, hud.STAGE_RECT.position.y + 120.0)
+
+
+## Where a cast leaves from: the top of a hero's status card, or the chest of a foe.
+func _source_of(unit: BattleUnit) -> Vector2:
+	var r := _unit_rect(unit)
+	if r.size.x <= 0.0:
+		return Vector2(hud.SCREEN.x * 0.5, hud.SCREEN.y - 60.0)
+	if hud.players.has(unit):
+		return Vector2(r.get_center().x, r.position.y + 6.0)
+	return r.get_center()
+
+
+func _bezier2(a: Vector2, c: Vector2, b: Vector2, k: float) -> Vector2:
+	var u := 1.0 - k
+	return a * (u * u) + c * (2.0 * u * k) + b * (k * k)
+
+
+func _glyph_a(glyph: String, pos: Vector2, px: int, color: Color, alpha: float) -> void:
+	if alpha <= 0.01:
+		return
+	_glyph(glyph, pos, px, Color(color, alpha), Color(INK_DARK, alpha * 0.8))
+
+
+func _white_of(unit: BattleUnit) -> Texture2D:
+	var idx: int = hud.opponents.find(unit)
+	return hud.silhouettes[idx] if (idx >= 0 and idx < hud.silhouettes.size()) else null
+
+
+func _burst_letters(count: int, word: String, spd_min: float, spd_max: float, vy_scale: float,
+		px_min: int, px_max: int, life_min: float, life_max: float, lift: float = 0.0) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for i in count:
+		var a := (float(i) / float(count)) * TAU + rng.randf_range(-0.12, 0.12)
+		var spd := rng.randf_range(spd_min, spd_max)
+		out.append({
+			"vx": cos(a) * spd,
+			"vy": sin(a) * spd * vy_scale - lift,
+			"glyph": word.substr(i % word.length(), 1) if (i % 4 == 0 and not word.is_empty()) else _letter(),
+			"px": rng.randi_range(px_min, px_max),
+			"color_idx": i % 3,
+			"life": rng.randf_range(life_min, life_max),
+		})
+	return out
+
+
+func _draw_burst(items: Array, origin: Vector2, age: float, palette: Array[Color], gravity: float) -> void:
+	for pt in items:
+		var life := float(pt.life)
+		if age > life:
+			continue
+		var a := maxf(0.0, 1.0 - age / life)
+		var pos := origin + Vector2(float(pt.vx) * age, float(pt.vy) * age + gravity * age * age)
+		_glyph_a(String(pt.glyph), pos, int(pt.px), palette[int(pt.color_idx) % palette.size()], a)
+
+
+## ---------------------------------------------------------------- Esh (אש)
+func play_esh(caster: BattleUnit, target: BattleUnit, burned: bool) -> void:
+	if hud == null or target == null:
+		return
+	var src := _source_of(caster)
+	var dst := _center_of(target)
+	var side := -1.0 if src.x >= dst.x - 1.0 else 1.0
+	var trail: Array[Dictionary] = []
+	for i in 30:
+		trail.append({
+			"frac": float(i) / 30.0,
+			"jitter": rng.randf_range(-6.0, 6.0),
+			"glyph": "אש".substr(i % 2, 1) if i % 3 == 0 else _letter(),
+			"px": 13 + (i % 4) * 3,
+			"color_idx": i % 3,
+		})
+	var licks: Array[Dictionary] = []
+	if burned:
+		for i in 16:
+			licks.append({
+				"x_off": rng.randf_range(-29.0, 29.0), "y_off": rng.randf_range(-38.0, 38.0),
+				"rise": rng.randf_range(24.0, 58.0), "phase": rng.randf_range(0.0, TAU),
+				"glyph": _letter(), "px": rng.randi_range(11, 16), "color_idx": i % 2,
+			})
+	_add_d118({
+		"kind": "esh", "dur": 2.75, "src": src, "dst": dst, "ctrl": (src + dst) * 0.5 + Vector2(side * 110.0, -30.0),
+		"trail": trail, "burst": _burst_letters(34, "אש", 75.0, 250.0, 0.85, 12, 22, 0.42, 0.87, 25.0),
+		"licks": licks, "burned": burned, "white": _white_of(target), "rect": _unit_rect(target),
+		"dark": 0.3, "dark_hold": 1.4, "dark_out": 0.7,
+		"shake": {"t": ESH_HIT, "dur": 0.22, "px": 6.5},
+		"flash": {"t": ESH_HIT, "dur": 0.065, "a": 0.36, "col": Color(1.0, 0.96, 0.82)},
+	})
+	await get_tree().create_timer(ESH_HIT).timeout
+
+
+func _draw_esh(e: Dictionary, age: float) -> void:
+	var dst: Vector2 = e.dst
+	if age < ESH_HIT + 0.22:
+		var prog := minf(1.0, age / ESH_HIT)
+		var fade := 1.0 if age <= ESH_HIT else maxf(0.0, 1.0 - (age - ESH_HIT) / 0.22)
+		for p in e.trail:
+			var frac := float(p.frac)
+			if frac > prog:
+				continue
+			var tail := prog - frac
+			if tail > 0.55:
+				continue
+			var pos := _bezier2(e.src, e.ctrl, dst, frac)
+			pos += Vector2(float(p.jitter) * (1.0 - frac * 0.4), float(p.jitter) * 0.5)
+			var col := Color.WHITE if tail < 0.12 else FIRE_PALETTE[int(p.color_idx)]
+			_glyph_a(String(p.glyph), pos, int(p.px), col, fade * maxf(0.0, 1.0 - tail / 0.55))
+	if age < ESH_HIT:
+		return
+	var h := age - ESH_HIT
+	_draw_burst(e.burst, dst + Vector2(0.0, 10.0), h, FIRE_PALETTE, 90.0)
+	if bool(e.burned):
+		var burn_a := 0.9 if h < 1.5 else maxf(0.0, 0.9 * (1.0 - (h - 1.5) / 0.7))
+		for bl in e.licks:
+			var cyc := fposmod(h * 1.8 + float(bl.phase), 1.0)
+			_glyph_a(String(bl.glyph), dst + Vector2(float(bl.x_off), float(bl.y_off) - cyc * float(bl.rise)),
+				int(bl.px), FIRE_PALETTE[int(bl.color_idx)], burn_a * (1.0 - cyc))
+	if h < 0.85:
+		_draw_palette_word("אש", dst + Vector2(0.0, -14.0 - h * 24.0), 34, 1.0 - h / 0.85, FIRE_PALETTE)
+	var white: Texture2D = e.white
+	if white != null and h < 0.24 and int(h * 30.0) % 2 == 0:
+		draw_texture_rect(white, e.rect, false, Color(1.0, 0.98, 0.88, 0.9))
+
+
+## ---------------------------------------------------------------- Ur Esh (אור אש)
+func play_ur_esh(_caster: BattleUnit, target: BattleUnit, was_burning: bool) -> void:
+	if hud == null or target == null:
+		return
+	var embers: Array[Dictionary] = []
+	for i in 14:
+		embers.append({"x_off": rng.randf_range(-28.0, 28.0), "phase": rng.randf_range(0.0, TAU),
+			"rise": rng.randf_range(28.0, 62.0), "glyph": _letter(), "px": rng.randi_range(11, 15)})
+	var descent: Array[Dictionary] = []
+	var ur_word := "אוראש"
+	for i in 42:
+		descent.append({
+			"a": (float(i) / 42.0) * TAU, "rad": rng.randf_range(80.0, 125.0),
+			"glyph": ur_word.substr(i % ur_word.length(), 1) if i % 5 == 0 else _letter(),
+			"px": rng.randi_range(13, 21), "color_idx": i % 3,
+		})
+	_add_d118({
+		"kind": "ur_esh", "dur": 3.1, "dst": _center_of(target), "was_burning": was_burning,
+		"embers": embers, "descent": descent, "burst": _burst_letters(56, ur_word, 110.0, 340.0, 0.8, 14, 25, 0.55, 1.05),
+		"white": _white_of(target), "rect": _unit_rect(target),
+		"dark": 0.42, "dark_in": UR_ESH_BOOM, "dark_hold": UR_ESH_BOOM, "dark_out": 1.4,
+		"shake": {"t": UR_ESH_BOOM, "dur": 0.28, "px": 9.0},
+		"flash": {"t": UR_ESH_BOOM, "dur": 0.085, "a": 0.62, "col": Color(1.0, 0.93, 0.69)},
+	})
+	await get_tree().create_timer(UR_ESH_BOOM).timeout
+
+
+func _draw_ur_esh(e: Dictionary, age: float) -> void:
+	var dst: Vector2 = e.dst
+	if age < UR_ESH_BOOM:
+		if bool(e.was_burning):
+			for eb in e.embers:
+				var cyc := fposmod(age * 1.4 + float(eb.phase), 1.0)
+				_glyph_a(String(eb.glyph), dst + Vector2(float(eb.x_off), 30.0 - cyc * float(eb.rise)), int(eb.px), FIRE_PALETTE[0], (1.0 - cyc) * 0.85)
+		var p := age / UR_ESH_BOOM
+		for d in e.descent:
+			var r := float(d.rad) * pow(1.0 - p, 1.5)
+			var ang := float(d.a) + p * 3.8
+			_glyph_a(String(d.glyph), dst + Vector2(cos(ang) * r, sin(ang) * r * 0.68), int(d.px),
+				ZAHAV_PALETTE[int(d.color_idx)], 0.25 + 0.75 * p)
+		var word := "אש" if p < 0.42 else "אור אש"
+		_draw_palette_word(word, dst + Vector2(0.0, -42.0), int(22.0 + p * 14.0), minf(1.0, p * 1.6), ZAHAV_PALETTE)
+		return
+	var b := age - UR_ESH_BOOM
+	_draw_burst(e.burst, dst, b, ZAHAV_PALETTE, 70.0)
+	if b < 1.0:
+		_draw_palette_word("אור אש", dst + Vector2(0.0, -26.0 - b * 26.0), 38, 1.0 - b, ZAHAV_PALETTE)
+	var white: Texture2D = e.white
+	if white != null and b < 0.26 and int(b * 30.0) % 2 == 0:
+		draw_texture_rect(white, e.rect, false, Color(1.0, 0.98, 0.88, 0.9))
+
+
+## ---------------------------------------------------------------- Meir (מאיר)
+func play_meir(caster: BattleUnit, foes: Array) -> void:
+	if hud == null or caster == null:
+		return
+	var card := _unit_rect(caster)
+	var pulse: Array[Dictionary] = []
+	for i in 20:
+		pulse.append({"a": (float(i) / 20.0) * TAU, "glyph": "מאיר".substr(i % 4, 1) if i % 4 == 0 else _letter(), "px": 13 + (i % 2) * 3})
+	var frame: Array[Dictionary] = []
+	for i in 16:
+		frame.append({"a": (float(i) / 16.0) * TAU, "glyph": _letter()})
+	var locks: Array[Dictionary] = []
+	var whites: Array[Dictionary] = []
+	for f in foes:
+		var foe: BattleUnit = f
+		if foe == null or not foe.is_alive():
+			continue
+		var fr := _unit_rect(foe)
+		if fr.size.x <= 0.0:
+			continue
+		var chain: Array[Dictionary] = []
+		for i in 12:
+			chain.append({"frac": float(i + 1) / 13.0, "glyph": "מאיר".substr(i % 4, 1) if i % 4 == 0 else _letter(), "px": 12 + (i % 2) * 2})
+		locks.append({"from": fr.get_center() + Vector2(0.0, -10.0), "top": fr.position.y, "x": fr.get_center().x, "chain": chain})
+		whites.append({"white": _white_of(foe), "rect": fr})
+	_add_d118({
+		"kind": "meir", "dur": 3.1, "card": card, "src": _source_of(caster), "pulse": pulse, "frame": frame, "locks": locks,
+		"whites": whites, "dark": 0.38, "dark_in": 0.25, "dark_hold": 2.3, "dark_out": 0.6,
+	})
+
+
+func _draw_meir(e: Dictionary, age: float) -> void:
+	var alert_t := 0.45
+	var lock_t := 0.85
+	var card: Rect2 = e.card
+	var src: Vector2 = e.src
+	var locked := age >= lock_t
+	if age < 0.75:
+		var p := age / 0.75
+		var r := 15.0 + p * 190.0
+		for pr in e.pulse:
+			_glyph_a(String(pr.glyph), src + Vector2(cos(float(pr.a)) * r, -absf(sin(float(pr.a))) * r * 0.75), int(pr.px), Color("fffce0"), 1.0 - p)
+	if age >= alert_t and age < 2.65:
+		var aa := 0.95 if age < 2.1 else maxf(0.0, 0.95 * (1.0 - (age - 2.1) / 0.55))
+		var bounce := absf(sin(age * 7.0)) * 4.0
+		for lk in e.locks:
+			_glyph_a(MARK_MEIR, Vector2(float(lk.x), float(lk.top) - 8.0 - bounce), 20, INK_ALERT, aa)
+		var wa := age - alert_t
+		if wa < 0.18:
+			for w in e.whites:
+				if w.white != null and int(wa * 30.0) % 2 == 0:
+					draw_texture_rect(w.white, w.rect, false, Color(1.0, 0.98, 0.88, 0.7))
+	if age >= alert_t and age < 2.8:
+		var prog := minf(1.0, (age - alert_t) / (lock_t - alert_t))
+		var fade := 1.0 if age < 2.2 else maxf(0.0, 1.0 - (age - 2.2) / 0.6)
+		for lk in e.locks:
+			var from: Vector2 = lk.from
+			var ci := 0
+			for c in lk.chain:
+				ci += 1
+				var frac := float(c.frac)
+				if frac > prog:
+					continue
+				var pf := frac + (fposmod(age * 0.45, 1.0 / 13.0) if locked else 0.0)
+				var col := INK_ALERT if frac < 0.45 else (Color("ffd84a") if frac < 0.8 else Color.WHITE)
+				_glyph_a(String(c.glyph), from.lerp(src, minf(1.0, pf)), int(c.px), col, fade * (0.65 + 0.35 * sin(age * 10.0 - float(ci))))
+	if locked and age < 2.95:
+		var fa := 0.95 if age < 2.4 else maxf(0.0, 0.95 * (1.0 - (age - 2.4) / 0.55))
+		var c0 := card.get_center()
+		var i := 0
+		for tf in e.frame:
+			var ang := float(tf.a) + age * 1.4
+			_glyph_a(String(tf.glyph), c0 + Vector2(cos(ang) * card.size.x * 0.52, sin(ang) * card.size.y * 0.62), 12,
+				INK_ALERT if i % 2 == 0 else Color("ffd84a"), fa)
+			i += 1
+	if age < 1.9:
+		var wa2 := age / 0.3 if age < 0.3 else maxf(0.0, 1.0 - (age - 1.25) / 0.65)
+		_draw_palette_word("מאיר", Vector2(card.get_center().x, card.position.y - 22.0), 28, wa2, LIGHT_PALETTE)
+
+
+## ---------------------------------------------------------------- Seraf (שרף)
+func play_seraf(unit: BattleUnit, healed: int) -> void:
+	if hud == null or unit == null:
+		return
+	var wings: Array[Dictionary] = []
+	for side in [-1, 1]:
+		for row in 3:
+			var count := 9 - row
+			for i in count:
+				var frac := float(i + 1) / float(count)
+				wings.append({
+					"side": float(side), "row": row, "frac": frac,
+					"glyph": "שרף".substr(i % 3, 1) if i % 3 == 0 else _letter(),
+					"px": 11 + (3 - row) * 2, "color_idx": 3 if frac > 0.72 else (1 if frac > 0.38 else 0),
+				})
+	var motes: Array[Dictionary] = []
+	for i in 20:
+		motes.append({"x_off": rng.randf_range(-105.0, 105.0), "vy": rng.randf_range(-90.0, -38.0),
+			"delay": rng.randf_range(0.35, 0.9), "glyph": _letter(), "px": rng.randi_range(11, 16)})
+	var orbs: Array[Dictionary] = []
+	var card := _unit_rect(unit)
+	for i in 12:
+		orbs.append({"sx": card.get_center().x + rng.randf_range(-80.0, 80.0), "sy": card.position.y + rng.randf_range(0.0, 40.0),
+			"delay": 0.45 + float(i) / 12.0 * 0.45, "glyph": _letter(), "px": 12 + (i % 3) * 2})
+	_add_d118({"kind": "seraf", "dur": 3.1, "card": card, "wings": wings, "motes": motes, "orbs": orbs, "healed": healed})
+
+
+func _draw_seraf(e: Dictionary, age: float) -> void:
+	var card: Rect2 = e.card
+	var cx := card.get_center().x
+	var cy := card.position.y + 6.0
+	var glow := sin(minf(1.0, age / 2.2) * PI) * 0.24 if age < 2.2 else 0.0
+	draw_rect(card, Color(1.0, 0.88, 0.5, glow))
+	var spread := minf(1.0, age / 0.65)
+	var wing_fade := 1.0 if age < 1.8 else maxf(0.0, 1.0 - (age - 1.8) / 0.9)
+	var flap := sin(age * 4.2) * 0.08
+	for w in e.wings:
+		var ang := (-0.25 - float(w.row) * 0.28 + flap) + float(w.frac) * 0.55
+		var reach := (24.0 + float(w.frac) * 105.0) * spread
+		var pos := Vector2(cx + float(w.side) * cos(ang) * reach, cy - 14.0 - sin(ang + 0.55) * reach * 0.72 + float(w.row) * 11.0)
+		_glyph_a(String(w.glyph), pos, int(w.px), SERAF_PALETTE[int(w.color_idx)], wing_fade * (0.45 + 0.55 * spread))
+	for m in e.motes:
+		var ma := age - float(m.delay)
+		if ma < 0.0 or ma > 1.0:
+			continue
+		_glyph_a(String(m.glyph), Vector2(cx + float(m.x_off), card.position.y + 14.0 + float(m.vy) * ma), int(m.px), INK_HEAL, 1.0 - ma)
+	var sp_target := Vector2(card.end.x - 56.0, card.position.y + 12.0)
+	for o in e.orbs:
+		var oa := age - float(o.delay)
+		if oa < 0.0 or oa > 0.75:
+			continue
+		var k := oa / 0.75
+		var pos := Vector2(lerpf(float(o.sx), sp_target.x, k), lerpf(float(o.sy), sp_target.y, k) - sin(k * PI) * 30.0)
+		_glyph_a(String(o.glyph), pos, int(o.px), Color("ffd84a"), sin(k * PI))
+	if age > 0.2 and age < 2.2:
+		var wa := (age - 0.2) / 0.4 if age < 0.6 else maxf(0.0, 1.0 - (age - 1.5) / 0.7)
+		_draw_palette_word("שרף", Vector2(cx, cy - 52.0), 28, wa, FIRE_PALETTE)
+	if age >= 0.9 and age < 2.2:
+		var ha := maxf(0.0, 1.0 - (age - 0.9) / 1.2)
+		var ly := card.position.y - 12.0 - (age - 0.9) * 22.0
+		draw_string_outline(font, Vector2(cx - 40.0, ly), "+%d HP" % int(e.healed), HORIZONTAL_ALIGNMENT_CENTER, -1, 15, 4, Color(0.04, 0.03, 0.06, ha))
+		draw_string(font, Vector2(cx - 40.0, ly), "+%d HP" % int(e.healed), HORIZONTAL_ALIGNMENT_CENTER, -1, 15, Color(INK_HEAL, ha))
+		draw_string_outline(font, Vector2(cx + 44.0, ly), "+%d SP" % PrayerBook.SERAF_SP, HORIZONTAL_ALIGNMENT_CENTER, -1, 15, 4, Color(0.04, 0.03, 0.06, ha))
+		draw_string(font, Vector2(cx + 44.0, ly), "+%d SP" % PrayerBook.SERAF_SP, HORIZONTAL_ALIGNMENT_CENTER, -1, 15, Color("ffd84a", ha))
+
+
+## ---------------------------------------------------------------- Nitzotz (ניצוץ)
+func play_nitzotz(caster: BattleUnit, target: BattleUnit) -> void:
+	if hud == null or target == null:
+		return
+	var offsets := [Vector2(-147.0, -56.0), Vector2(147.0, -56.0), Vector2(-102.0, -91.0), Vector2(102.0, -91.0), Vector2(-52.0, -108.0), Vector2(52.0, -108.0)]
+	var word := "ניצוץא"
+	var arcs: Array[Dictionary] = []
+	for idx in 6:
+		arcs.append({"glyph": word.substr(idx, 1), "off": offsets[idx], "delay": float(idx) * 0.03, "color_idx": idx % 3})
+	var flames: Array[Dictionary] = []
+	for i in 28:
+		flames.append({"x_off": rng.randf_range(-31.0, 31.0), "base_y": rng.randf_range(-32.0, 36.0), "rise": rng.randf_range(22.0, 58.0),
+			"phase": rng.randf_range(0.0, TAU), "glyph": "ניצוץ".substr(i % 5, 1) if i % 5 == 0 else _letter(),
+			"px": rng.randi_range(11, 17), "extra": i >= 12})
+	_add_d118({
+		"kind": "nitzotz", "dur": 3.1, "src": _source_of(caster), "dst": _center_of(target), "arcs": arcs, "flames": flames,
+		"burst": _burst_letters(36, "ניצוץ", 105.0, 320.0, 0.72, 12, 21, 0.35, 0.7),
+		"white": _white_of(target), "rect": _unit_rect(target),
+		"dark": 0.16, "dark_hold": 99.0,
+		"shake": {"t": NITZOTZ_SNAP, "dur": 0.22, "px": 7.0},
+		"flash": {"t": NITZOTZ_SNAP, "dur": 0.07, "a": 0.45, "col": Color(1.0, 0.96, 0.82)},
+	})
+	await get_tree().create_timer(NITZOTZ_SNAP).timeout
+
+
+func _draw_nitzotz(e: Dictionary, age: float) -> void:
+	var dst: Vector2 = e.dst
+	var src: Vector2 = e.src
+	var snapped := age >= NITZOTZ_SNAP
+	var s_age := maxf(0.0, age - NITZOTZ_SNAP)
+	var idx := 0
+	for fl in e.flames:
+		idx += 1
+		if bool(fl.extra) and not snapped:
+			continue
+		var spd := 2.4 if snapped else 1.1
+		var rise := float(fl.rise) * (2.1 if snapped else 1.0)
+		var cyc := fposmod(age * spd + float(fl.phase), 1.0)
+		var col: Color = FIRE_PALETTE[idx % 3] if snapped else FIRE_PALETTE[0]
+		_glyph_a(String(fl.glyph), dst + Vector2(float(fl.x_off) + sin(age * 7.0 + float(fl.phase)) * 5.0, float(fl.base_y) - cyc * rise),
+			int(fl.px) + (4 if snapped else 0), col, (1.0 - cyc) * (0.98 if snapped else 0.65))
+	var flight := 0.44
+	for arc in e.arcs:
+		var a_age := age - float(arc.delay)
+		if a_age < 0.0 or a_age > flight + 0.14:
+			continue
+		var prog := minf(1.0, a_age / flight)
+		var fade := 1.0 if a_age <= flight else maxf(0.0, 1.0 - (a_age - flight) / 0.14)
+		var ctrl := (src + dst) * 0.5 + (arc.off as Vector2)
+		for k in 4:
+			var pf := maxf(0.0, prog - float(k) * 0.065)
+			var col := Color.WHITE if k == 0 else FIRE_PALETTE[int(arc.color_idx)]
+			_glyph_a(String(arc.glyph), _bezier2(src, ctrl, dst, pf), 22 - k * 3, col, fade * (1.0 - float(k) * 0.24))
+	if snapped:
+		_draw_burst(e.burst, dst, s_age, FIRE_PALETTE, 0.0)
+		if s_age < 0.95:
+			_draw_palette_word("ניצוץ", dst + Vector2(0.0, -38.0 - s_age * 20.0), 32, 1.0 - s_age / 0.95, FIRE_PALETTE)
+		var white: Texture2D = e.white
+		if white != null and s_age < 0.24 and int(s_age * 30.0) % 2 == 0:
+			draw_texture_rect(white, e.rect, false, Color(1.0, 0.98, 0.88, 0.9))
+
+
+## ---------------------------------------------------------------- Esh Ochelet (אש אוכלת)
+func play_esh_ochelet(target: BattleUnit) -> void:
+	if hud == null or target == null:
+		return
+	_add_d118({
+		"kind": "ochelet_apply", "dur": 1.8, "dst": _center_of(target), "white": _white_of(target), "rect": _unit_rect(target),
+		"dark": 0.36, "dark_in": 0.2, "dark_hold": 1.2, "dark_out": 0.5,
+		"flash": {"t": 0.0, "dur": 0.075, "a": 0.48, "col": Color(1.0, 0.95, 0.78)},
+	})
+
+
+func play_ochelet_bite(target: BattleUnit) -> void:
+	if hud == null or target == null:
+		return
+	_add_d118({
+		"kind": "ochelet_bite", "dur": 1.0, "dst": _center_of(target), "unit": target, "white": _white_of(target), "rect": _unit_rect(target),
+		"burst": _burst_letters(24, "אשאוכלת", 70.0, 210.0, 0.75, 11, 19, 0.4, 0.75),
+		"shake": {"t": 0.0, "dur": 0.22, "px": 6.0},
+	})
+
+
+func _draw_ochelet_apply(e: Dictionary, age: float) -> void:
+	if age < 1.1:
+		_draw_palette_word("אש אוכלת", (e.dst as Vector2) + Vector2(0.0, -64.0), 26, maxf(0.0, 1.0 - maxf(0.0, age - 0.5) / 0.6), FIRE_PALETTE)
+	var white: Texture2D = e.white
+	if white != null and age < 0.18 and int(age * 30.0) % 2 == 0:
+		draw_texture_rect(white, e.rect, false, Color(1.0, 0.98, 0.88, 0.8))
+
+
+func _draw_ochelet_bite(e: Dictionary, age: float) -> void:
+	_draw_burst(e.burst, e.dst, age, FIRE_PALETTE, 0.0)
+	var white: Texture2D = e.white
+	if white != null and age < 0.22 and int(age * 30.0) % 2 == 0:
+		draw_texture_rect(white, e.rect, false, Color(1.0, 0.98, 0.88, 0.9))
+
+
+## Persistent crown / jaw of tricolor fire letters around every unit carrying Esh Ochelet; it closes at each bite.
+func _draw_ochelet_rings() -> void:
+	var marked: Array[BattleUnit] = []
+	for foe in hud.opponents:
+		if (foe as BattleUnit).is_alive() and (foe as BattleUnit).has_status(&"ochelet"):
+			marked.append(foe)
+	for hero in hud.players:
+		if (hero as BattleUnit).is_alive() and (hero as BattleUnit).has_status(&"ochelet"):
+			marked.append(hero)
+	for u in marked:
+		if not _ochelet_rings.has(u):
+			var glyphs: Array[Dictionary] = []
+			for i in 26:
+				glyphs.append({"a": (float(i) / 26.0) * TAU, "glyph": "אשאוכלת".substr(i % 7, 1) if i % 4 == 0 else _letter(),
+					"px": 13 + (i % 3) * 2, "color_idx": i % 3})
+			_ochelet_rings[u] = glyphs
+		var squeeze := 1.0
+		for e in d118:
+			if String(e.kind) == "ochelet_bite" and e.unit == u:
+				var b_age := time - float(e.at)
+				if b_age >= 0.0 and b_age < 0.35:
+					squeeze = minf(squeeze, 1.0 - 0.55 * sin(b_age / 0.35 * PI))
+		var rect := _unit_rect(u)
+		if rect.size.x <= 0.0:
+			continue
+		var c := rect.get_center()
+		var rx := maxf(34.0, rect.size.x * 0.6) * squeeze
+		var ry := maxf(44.0, rect.size.y * 0.58) * squeeze
+		for g in _ochelet_rings[u]:
+			var ang := float(g.a) + time * 2.2
+			_glyph_a(String(g.glyph), c + Vector2(cos(ang) * rx, sin(ang) * ry), int(g.px), FIRE_PALETTE[int(g.color_idx)], 0.92)
+
+
+## ---------------------------------------------------------------- Gever (גבר)
+func play_gever(unit: BattleUnit) -> void:
+	if hud == null or unit == null:
+		return
+	var card := _unit_rect(unit)
+	var surges: Array[Dictionary] = []
+	var starts := [0.15, 0.45, 0.75, 1.05]
+	for si in 4:
+		var cols: Array[Dictionary] = []
+		for i in 14:
+			cols.append({"x": (float(i) / 13.0 - 0.5) * card.size.x * 0.92, "rise": (62.0 + float(si) * 26.0 + rng.randf_range(0.0, 22.0)) * 0.8,
+				"glyph": "גבר".substr(i % 3, 1) if i % 3 == 0 else _letter(), "px": 12 + si * 2, "color_idx": (i + si) % 3})
+		surges.append({"st": starts[si], "si": si, "cols": cols})
+	var ring: Array[Dictionary] = []
+	for i in 20:
+		ring.append({"a": (float(i) / 20.0) * TAU, "glyph": _letter(), "px": 13 + (i % 2) * 3, "color_idx": i % 3})
+	_add_d118({"kind": "gever", "dur": 3.0, "card": card, "surges": surges, "ring": ring})
+
+
+func _draw_gever(e: Dictionary, age: float) -> void:
+	var card: Rect2 = e.card
+	var cx := card.get_center().x
+	var stages := 0
+	for s in e.surges:
+		if age >= float(s.st):
+			stages = int(s.si) + 1
+	if stages > 0:
+		var g := 0.07 * float(stages) * (1.0 if age < 2.2 else maxf(0.0, 1.0 - (age - 2.2) / 0.7))
+		draw_rect(card, Color(1.0, 0.47, 0.19, g))
+	for s in e.surges:
+		var s_age := age - float(s.st)
+		if s_age < 0.0 or s_age > 0.95:
+			continue
+		var k := s_age / 0.95
+		var a := k / 0.2 if k < 0.2 else maxf(0.0, 1.0 - (k - 0.2) / 0.8)
+		for c in s.cols:
+			_glyph_a(String(c.glyph), Vector2(cx + float(c.x), card.position.y + 12.0 - k * float(c.rise)), int(c.px), GEVER_PALETTE[int(c.color_idx)], a * 0.95)
+	if stages >= 4 and age < 2.8:
+		var ra := 0.95 if age < 2.1 else maxf(0.0, 0.95 * (1.0 - (age - 2.1) / 0.7))
+		for r in e.ring:
+			var ang := float(r.a) + age * 2.8
+			_glyph_a(String(r.glyph), Vector2(cx + cos(ang) * card.size.x * 0.52, card.get_center().y - 8.0 + sin(ang) * 24.0), int(r.px), GEVER_PALETTE[int(r.color_idx)], ra)
+	if age > 0.15 and age < 2.4:
+		var wa := (age - 0.15) / 0.3 if age < 0.45 else maxf(0.0, 1.0 - (age - 1.7) / 0.7)
+		_draw_palette_word("גבר", Vector2(cx, card.position.y - 44.0 - float(stages) * 5.0), 24 + stages * 3, wa, GEVER_PALETTE)
+	if stages > 0 and age < 2.5:
+		var txt := "+%d ATK" % stages
+		var col := Color("ffd84a") if stages >= 4 else Color("ff8a5c")
+		draw_string_outline(font, Vector2(cx, card.position.y - 14.0), txt, HORIZONTAL_ALIGNMENT_CENTER, -1, 16, 4, Color(0.04, 0.03, 0.06, 0.9))
+		draw_string(font, Vector2(cx, card.position.y - 14.0), txt, HORIZONTAL_ALIGNMENT_CENTER, -1, 16, col)
+
+
+## ---------------------------------------------------------------- Angel Hug (מלאך)
+func play_angel_hug(caster: BattleUnit, target: BattleUnit, landed: bool) -> void:
+	if hud == null or target == null:
+		return
+	var wings: Array[Dictionary] = []
+	var word := "מלאך"
+	for side in [-1, 1]:
+		for row in 5:
+			var count := 10 - row
+			for i in count:
+				wings.append({"side": float(side), "row": row, "frac": float(i + 1) / float(count),
+					"glyph": word.substr(i % 4, 1) if i % 3 == 0 else _letter(), "px": 12 + (4 - row) * 2, "color_idx": (i + row) % 3})
+	var rect := _unit_rect(target)
+	var statics: Array[Dictionary] = []
+	for i in 14:
+		statics.append({"x": rng.randf_range(-0.5, 0.5) * maxf(60.0, rect.size.x * 0.9), "y": rng.randf_range(-19.0, 19.0),
+			"glyph": _letter(), "phase": rng.randf_range(0.0, TAU)})
+	_add_d118({
+		"kind": "angel_hug", "dur": 3.1, "pivot": _source_of(caster) + Vector2(0.0, -8.0), "dst": rect.get_center(), "rect": rect,
+		"wings": wings, "burst": _burst_letters(34, "", 85.0, 280.0, 0.45, 11, 19, 0.42, 0.77), "statics": statics, "landed": landed,
+		"dark": 0.32, "dark_in": 0.25, "dark_hold": 1.9, "dark_out": 0.7,
+		"shake": {"t": ANGEL_HUG_CLAP, "dur": 0.28, "px": 9.5},
+		"flash": {"t": ANGEL_HUG_CLAP, "dur": 0.085, "a": 0.62, "col": Color(1.0, 0.99, 0.91)},
+	})
+	await get_tree().create_timer(ANGEL_HUG_CLAP).timeout
+
+
+func _draw_angel_hug(e: Dictionary, age: float) -> void:
+	var pivot: Vector2 = e.pivot
+	var dst: Vector2 = e.dst
+	var clapped := age >= ANGEL_HUG_CLAP
+	var c_age := maxf(0.0, age - ANGEL_HUG_CLAP)
+	if age < ANGEL_HUG_CLAP + 0.55:
+		var open_k := minf(1.0, age / ANGEL_HUG_OPEN)
+		var sweep_k := 0.0 if age <= ANGEL_HUG_OPEN else minf(1.0, (age - ANGEL_HUG_OPEN) / (ANGEL_HUG_CLAP - ANGEL_HUG_OPEN))
+		var ease_k := pow(sweep_k, 2.2)
+		var wing_a := maxf(0.0, 1.0 - c_age / 0.55) if clapped else (0.35 + 0.65 * open_k)
+		for w in e.wings:
+			var side := float(w.side)
+			var row := int(w.row)
+			var frac := float(w.frac)
+			var open_ang := -0.28 + float(row) * 0.16
+			var length := (36.0 + frac * (130.0 - float(row) * 11.0)) * open_k
+			var open_pos := pivot + Vector2(side * cos(open_ang) * length, sin(open_ang) * length)
+			var close_pos := pivot.lerp(dst, 0.25 + 0.75 * frac) + Vector2(side * (10.0 + float(row) * 5.0) * (1.0 - frac * 0.6), 0.0)
+			var col := Color.WHITE if (clapped and c_age < 0.14) else ANGEL_PALETTE[int(w.color_idx)]
+			_glyph_a(String(w.glyph), open_pos.lerp(close_pos, ease_k), int(w.px), col, wing_a)
+	if not clapped:
+		return
+	_draw_burst(e.burst, dst + Vector2(0.0, -14.0), c_age, PARA_PALETTE, 0.0)
+	if bool(e.landed):
+		var static_a := 0.9 if c_age < 1.9 else maxf(0.0, 0.9 * (1.0 - (c_age - 1.9) / 0.5))
+		var i := 0
+		for ps in e.statics:
+			if sin(age * 24.0 + float(ps.phase)) >= 0.15:
+				_glyph_a(String(ps.glyph), dst + Vector2(float(ps.x), float(ps.y)), 13, PARA_PALETTE[0] if i % 2 == 0 else PARA_PALETTE[2], static_a)
+			i += 1
+
+
+## ---------------------------------------------------------------- God's Message (דבר אל)
+func play_gods_message(caster: BattleUnit, target: BattleUnit, landed: bool) -> void:
+	if hud == null or target == null:
+		return
+	var border: Array[Dictionary] = []
+	for i in 14:
+		border.append({"frac": float(i) / 13.0, "top": _letter(), "bot": _letter(), "l": _letter(), "r": _letter()})
+	_add_d118({
+		"kind": "gods_message", "dur": 2.4, "caster": _source_of(caster), "dst": _center_of(target), "card": _unit_rect(target),
+		"scroll": Vector2(hud.SCREEN.x * 0.5, hud.STAGE_RECT.position.y + hud.STAGE_RECT.size.y * 0.42),
+		"border": border, "decree": "דבר אל", "landed": landed,
+		"dark": 0.44, "dark_in": 0.3, "dark_hold": 1.9, "dark_out": 0.5,
+	})
+	await get_tree().create_timer(GM_SEAL).timeout
+
+
+func _draw_gods_message(e: Dictionary, age: float) -> void:
+	var scroll: Vector2 = e.scroll
+	if age < 1.95:
+		var open_k := minf(1.0, age / GM_UNROLL)
+		var fade := 1.0 if age < 1.5 else maxf(0.0, 1.0 - (age - 1.5) / 0.45)
+		var half_w := 14.0 + open_k * 105.0
+		var half_h := 30.0
+		draw_rect(Rect2(scroll - Vector2(half_w, half_h), Vector2(half_w * 2.0, half_h * 2.0)), Color(1.0, 0.86, 0.47, 0.09 * open_k * fade))
+		for b in e.border:
+			var bx := scroll.x - half_w + float(b.frac) * half_w * 2.0
+			_glyph_a(String(b.top), Vector2(bx, scroll.y - half_h + 4.0), 11, Color("ffd84a"), 0.72 * fade)
+			_glyph_a(String(b.bot), Vector2(bx, scroll.y + half_h + 4.0), 11, Color("ffd84a"), 0.72 * fade)
+		for r in 5:
+			var ry := scroll.y - half_h + (float(r) / 4.0) * half_h * 2.0 + 4.0
+			_glyph_a(String(e.border[r].l), Vector2(scroll.x - half_w, ry), 15, Color.WHITE, 0.95 * fade)
+			_glyph_a(String(e.border[r].r), Vector2(scroll.x + half_w, ry), 15, Color.WHITE, 0.95 * fade)
+	if age < GM_UNROLL * 0.7:
+		return
+	var write_p := clampf((age - GM_UNROLL * 0.7) / (GM_WRITE - GM_UNROLL * 0.7), 0.0, 1.0)
+	var desc_p := 0.0
+	if bool(e.landed) and age > GM_WRITE:
+		desc_p = minf(1.0, (age - GM_WRITE) / (GM_SEAL - GM_WRITE))
+	var ease_k := desc_p * desc_p
+	var card: Rect2 = e.card
+	var seal_at := Vector2(card.get_center().x, card.position.y - 14.0)
+	var word_pos := (scroll + Vector2(0.0, 8.0)).lerp(seal_at, ease_k)
+	var out_a := 1.0
+	if not bool(e.landed) and age > GM_WRITE:
+		out_a = maxf(0.0, 1.0 - (age - GM_WRITE) / 0.4)
+	var px := int(round(28.0 - ease_k * 8.0))
+	var decree: String = e.decree
+	var n := decree.length()
+	var step := float(px) * 0.68
+	var start_x := word_pos.x + float(n - 1) * step * 0.5
+	for i in n:
+		var ch := decree.substr(i, 1)
+		if ch == " ":
+			continue
+		var threshold := float(i) / float(n)
+		if write_p < threshold:
+			continue
+		var char_age := (write_p - threshold) * float(n)
+		var pop := minf(1.0, char_age * 2.5)
+		var col := Color.WHITE if char_age < 0.35 else Color("ffd84a")
+		_glyph_a(ch, Vector2(start_x - float(i) * step, word_pos.y), int(round(float(px) * (1.28 - 0.28 * pop))), col, pop * out_a)
+
+
+func play_gods_message_fulfilled(unit: BattleUnit, stat_name: String) -> void:
+	if hud == null or unit == null:
+		return
+	var rect := _unit_rect(unit)
+	var sparks: Array[Dictionary] = []
+	for i in 28:
+		sparks.append({"x_off": rng.randf_range(-0.5, 0.5) * maxf(60.0, rect.size.x), "vy": rng.randf_range(35.0, 110.0),
+			"vx": rng.randf_range(-27.0, 27.0), "glyph": _letter(), "px": rng.randi_range(11, 17), "life": rng.randf_range(0.5, 0.95)})
+	_add_d118({
+		"kind": "gm_fulfil", "dur": 1.4, "rect": rect, "stat": stat_name, "sparks": sparks,
+		"shake": {"t": 0.0, "dur": 0.22, "px": 6.5},
+		"flash": {"t": 0.0, "dur": 0.07, "a": 0.38, "col": Color(1.0, 0.82, 0.7)},
+	})
+
+
+func _draw_gm_fulfil(e: Dictionary, age: float) -> void:
+	var rect: Rect2 = e.rect
+	for s in e.sparks:
+		if age > float(s.life):
+			continue
+		_glyph_a(String(s.glyph), Vector2(rect.get_center().x + float(s.x_off) + float(s.vx) * age, rect.position.y + float(s.vy) * age),
+			int(s.px), INK_ALERT, maxf(0.0, 1.0 - age / float(s.life)))
+	if age < 1.2:
+		var da := maxf(0.0, 1.0 - age / 1.2)
+		var txt := "-3 %s" % String(e.stat)
+		var pos := Vector2(rect.get_center().x, rect.position.y - 8.0 + age * 18.0)
+		draw_string_outline(font, pos, txt, HORIZONTAL_ALIGNMENT_CENTER, -1, 16, 4, Color(0.04, 0.03, 0.06, da))
+		draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(INK_ALERT, da))
+
+
+## ---------------------------------------------------------------- Adin -> Adina -> Adinut (עדין / עדינה / עדינות)
+func play_adin(unit: BattleUnit, stage: int) -> void:
+	if hud == null or unit == null:
+		return
+	var st := clampi(stage, 0, 2)
+	var counts := [16, 28, 40]
+	var motes: Array[Dictionary] = []
+	for i in int(counts[st]):
+		motes.append({"phase": rng.randf(), "a": (float(i) / float(counts[st])) * TAU, "rad": rng.randf_range(26.0, 66.0),
+			"rise": rng.randf_range(48.0, 92.0), "glyph": _letter(), "px": rng.randi_range(10, 14), "color_idx": i % 4})
+	var e := {"kind": "adin", "dur": 1.6, "stage": st, "rect": _unit_rect(unit), "motes": motes,
+		"burst": _burst_letters(40, "", 70.0, 230.0, 0.7, 12, 20, 0.5, 0.95)}
+	if st == 2:
+		e["flash"] = {"t": 0.0, "dur": 0.08, "a": 0.45, "col": Color(0.94, 1.0, 0.88)}
+	_add_d118(e)
+
+
+func _draw_adin(e: Dictionary, age: float) -> void:
+	var st := int(e.stage)
+	var rect: Rect2 = e.rect
+	var c := rect.get_center()
+	var fade := 1.0 if age < 1.2 else maxf(0.0, 1.0 - (age - 1.2) / 0.4)
+	var glow := (maxf(0.0, 1.0 - age / 0.5) if st == 2 else 0.25 * sin(minf(1.0, age / 1.2) * PI)) * 0.5
+	draw_rect(rect, Color(0.8, 1.0, 0.9, glow))
+	var pal: Array[Color] = ADIN_PALETTE
+	for m in e.motes:
+		var cyc := fposmod(age * (0.7 + float(st) * 0.25) + float(m.phase), 1.0)
+		var ang := float(m.a) + age * (1.2 + float(st) * 0.8)
+		var rad := float(m.rad) * (0.85 + float(st) * 0.25) * (1.0 - cyc * 0.3)
+		var pos := c + Vector2(cos(ang) * rad, rect.size.y * 0.35 - cyc * (float(m.rise) + float(st) * 20.0))
+		var col: Color = pal[int(m.color_idx)]
+		if st == 0:
+			col = pal[0]
+		elif st == 1:
+			col = pal[0] if int(m.color_idx) % 2 == 0 else pal[1]
+		_glyph_a(String(m.glyph), pos, int(m.px) + st * 2, col, sin(cyc * PI) * 0.95 * fade)
+	if st == 2:
+		_draw_burst(e.burst, c, age, ADIN_PALETTE, 0.0)
+	var words := ["עדין", "עדינה", "עדינות"]
+	var pals: Array = [[pal[0], pal[3]], [pal[0], pal[1], pal[3]], [pal[0], pal[1], pal[2], pal[3]]]
+	var word_pal: Array[Color] = []
+	for col2 in pals[st]:
+		word_pal.append(col2)
+	_draw_palette_word(String(words[st]), Vector2(c.x, rect.position.y - 20.0 - age * 8.0), 22 + st * 4, 0.95 * fade, word_pal)
+
+
+## ---------------------------------------------------------------- dispatcher / layers
+func _d118_shake() -> float:
+	var amp := 0.0
+	for e in d118:
+		if not e.has("shake"):
+			continue
+		var s: Dictionary = e.shake
+		var s_age := time - float(e.at) - float(s.t)
+		if s_age >= 0.0 and s_age < float(s.dur):
+			amp = maxf(amp, float(s.px) * pow(1.0 - s_age / float(s.dur), 2))
+	return amp
+
+
+func _draw_d118() -> void:
+	_draw_ochelet_rings()
+	for e in d118:
+		var age := time - float(e.at)
+		if age < 0.0 or age > float(e.dur):
+			continue
+		if e.has("dark"):
+			var peak := float(e.dark)
+			var d_in := float(e.get("dark_in", 0.2))
+			var d_hold := float(e.get("dark_hold", 1.0))
+			var d_out := float(e.get("dark_out", 0.5))
+			var dark := peak * minf(1.0, age / d_in) if age < d_hold else maxf(0.0, peak * (1.0 - (age - d_hold) / d_out))
+			if dark > 0.01:
+				draw_rect(hud.STAGE_RECT, Color(0.05, 0.016, 0.04, dark))
+		match String(e.kind):
+			"esh": _draw_esh(e, age)
+			"ur_esh": _draw_ur_esh(e, age)
+			"meir": _draw_meir(e, age)
+			"seraf": _draw_seraf(e, age)
+			"nitzotz": _draw_nitzotz(e, age)
+			"ochelet_apply": _draw_ochelet_apply(e, age)
+			"ochelet_bite": _draw_ochelet_bite(e, age)
+			"gever": _draw_gever(e, age)
+			"angel_hug": _draw_angel_hug(e, age)
+			"gods_message": _draw_gods_message(e, age)
+			"gm_fulfil": _draw_gm_fulfil(e, age)
+			"adin": _draw_adin(e, age)
+		if e.has("flash"):
+			var f: Dictionary = e.flash
+			var f_age := age - float(f.t)
+			if f_age >= 0.0 and f_age < float(f.dur):
+				draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(f.col, (1.0 - f_age / float(f.dur)) * float(f.a)))

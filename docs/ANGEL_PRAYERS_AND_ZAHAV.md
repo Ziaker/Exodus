@@ -14,7 +14,7 @@
 | Nome | Custo | Efeito |
 |---|---|---|
 | **Esh** | 2 ACT / 1 PP | Queima um alvo único causando **20 + MAK** de dano mágico, com **30% (+10% por PP extra alocado)** de chance de causar **BURN**. *(Ver evolução para **Ur Esh** na §2 e §5.)* |
-| **Shalhevet** *(IMPLEMENTADO)* | 3 ACT / 4 PP | Queima **todos os oponentes** causando **30 + MAK** de dano mágico (respeitando `MEF`/afinidade), com **50%** de chance de causar **BURN**. *(VFX 100% letras tricolor aprovado e portado em `pray_fx.gd`.)* |
+| **Shalhevet** *(IMPLEMENTADO)* | 3 ACT / 4 PP | Queima **todos os oponentes** causando **30 + MAK** de dano mágico (respeitando `MEF`), com **50%** de chance de causar **BURN**. *(VFX 100% letras tricolor aprovado e portado em `pray_fx.gd`.)* |
 | **Lehavah** *(IMPLEMENTADO)* | 2 ACT / 3 PP | Causa uma explosão de luz e fogo em um alvo: **40 + MAK** de dano e o **cega** (reduzindo o limiar de acerto do ponteiro) até o fim do próximo round. *(VFX 100% letras tricolor aprovado e portado em `pray_fx.gd`.)* |
 | **Nogah** *(IMPLEMENTADO)* | 3 ACT / 2 PP | Causa **cegueira** em **todos os inimigos** até o fim do próximo round (marca `ס`, respeitando `Haganah`). *(VFX 100% letras — clarão estelar 24 feixes + anéis — aprovado e portado em `pray_fx.gd`.)* |
 | **Chaki** *(IMPLEMENTADO)* | 3 ACT / 3 PP | Prende o alvo em um raio de luz, **impedindo-o de realizar ações** até o fim do round. *(VFX 100% letras aprovado e portado em `pray_fx.gd`.)* |
@@ -54,7 +54,7 @@
 
 ## 4. Palavra-chave `IMEDIATO`
 
-> **Regra:** toda magia ou reza marcada como **IMEDIATO** é resolvida **no exato momento em que é anunciada**, **sem possibilidade de reação**. **Dano imediato NÃO ignora defesas** (`MEF` e afinidade são aplicados normalmente, assim como nas demais magias de dano — confirmado pelo criador em 2026-11-26).
+> **Regra:** toda magia ou reza marcada como **IMEDIATO** é resolvida **no exato momento em que é anunciada**, **sem possibilidade de reação**. **Dano imediato NÃO ignora defesas** (`MEF` é aplicado normalmente, assim como nas demais magias de dano — confirmado pelo criador em 2026-11-26).
 
 * Aplica-se a: `Esh Ochelet`, 1º impacto de `Esh Sinai` (os 3 golpes subsequentes permitem reação), `Angel Hug`, `God's Message` e `Adinut`.
 

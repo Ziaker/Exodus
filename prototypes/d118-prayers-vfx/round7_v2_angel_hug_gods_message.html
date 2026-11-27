@@ -1,0 +1,551 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="angel_hug" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Angel Hug v3 <span class="opacity-80">מלאך</span>
+        </button>
+        <button data-spell="gods_message" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          God's Message v2 <span class="opacity-80">דבר אל</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="400" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    const ANGEL_PALETTE = ['#ffffff', '#fffce0', '#ffd84a'];
+    const PARA_PALETTE = ['#ffd84a', '#ffffff', '#9ee8ff'];
+
+    const SPELLS = {
+      angel_hug: {
+        title: 'ANGEL HUG (v3) · GABRIEL · ASAS SAEM DE GABRIEL, VARREM EM ARCO E BATEM COMO PALMAS ATÉ YOCH (PARALISIA 3 ATOS)',
+        log: [
+          'GABRIEL unfurls massive wings of Hebrew light from his shoulders...',
+          'CLAP! The wings slam together onto YOCH — shockwave PARALYZES for 3 ACTS!'
+        ],
+        duration: 3.1
+      },
+      gods_message: {
+        title: "GOD'S MESSAGE (v2) · GABRIEL · PERGAMINHO CELESTE INSCREVE O DECRETO LETRA A LETRA -> -3 ESTÁGIOS NO PRÓXIMO TURNO",
+        log: [
+          "GABRIEL unrolls a celestial scroll — GOD'S MESSAGE is inscribed in gold!",
+          'Decree sealed on YOCH! Next turn: -3 stages of a random stat!'
+        ],
+        duration: 3.5
+      }
+    };
+
+    let activeSpell = 'angel_hug';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'angel_hug') {
+        // Asas saindo das costas/ombros de Gabriel (gx=408, gy=152), em coordenadas polares locais (r, angLocal)
+        // Na posição aberta: apontando para os lados/cima; na varredura: giram em arco para baixo; no CLAP: batem juntas alcançando YOCH!
+        fx.wings = [];
+        for (let side of [-1, 1]) {
+          // 5 camadas de penas formando o formato triangular/leque largo que o autor desenhou
+          for (let row = 0; row < 5; row++) {
+            const count = 10 - row;
+            for (let i = 0; i < count; i++) {
+              const frac = (i + 1) / count; // 0 = ombro de Gabriel, 1 = ponta da asa
+              fx.wings.push({
+                side,
+                row,
+                frac,
+                ch: i % 3 === 0 ? 'מלאך'[i % 4] : randGlyph(),
+                size: 12 + (4 - row) * 2,
+                colorIdx: (i + row) % 3
+              });
+            }
+          }
+        }
+        // Onda de choque paralisante (faíscas/letras estáticas sobre o cartão de YOCH, sem prisão!)
+        fx.paraSparks = [];
+        for (let i = 0; i < 34; i++) {
+          const a = (i / 34) * Math.PI * 2;
+          const spd = 85 + Math.random() * 195;
+          fx.paraSparks.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.45,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 8,
+            colorIdx: i % 3,
+            life: 0.42 + Math.random() * 0.35
+          });
+        }
+        fx.paraStatic = [];
+        for (let i = 0; i < 14; i++) {
+          fx.paraStatic.push({
+            xOff: (Math.random() - 0.5) * 236,
+            yOff: (Math.random() - 0.5) * 38,
+            ch: randGlyph(),
+            phase: Math.random() * 6.28
+          });
+        }
+      } else if (id === 'gods_message') {
+        // Pergaminho celeste: 2 rolos verticais de letras que se abrem + decreto inscrito letra por letra (RTL)
+        fx.scrollBorder = [];
+        for (let i = 0; i < 14; i++) {
+          fx.scrollBorder.push({
+            frac: i / 13,
+            chTop: randGlyph(),
+            chBot: randGlyph(),
+            chL: randGlyph(),
+            chR: randGlyph()
+          });
+        }
+        // Frase solene em hebraico: "דבר יה" / "דבר אל" (Palavra de Deus) inscrita letra por letra
+        fx.decree = [...'דבר אל'];
+        fx.inkSparks = [];
+        for (let i = 0; i < 28; i++) {
+          fx.inkSparks.push({
+            xOff: (Math.random() - 0.5) * 200,
+            vy: 35 + Math.random() * 75,
+            vx: (Math.random() - 0.5) * 55,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 6,
+            life: 0.5 + Math.random() * 0.45
+          });
+        }
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 26 + i * 42 + Math.sin(time * 0.8 + i * 1.1) * 12;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 26);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 278, W, 2);
+    }
+
+    function drawGabriel(glowAlpha) {
+      const gx = 408, gy = 148;
+      ctx.save();
+      ctx.fillStyle = glowAlpha > 0.05 ? `rgba(255, 248, 210, ${0.25 + glowAlpha * 0.65})` : '#1b1428';
+      ctx.fillRect(gx - 22, gy - 66, 44, 28);
+      ctx.fillRect(gx - 34, gy - 34, 68, 66);
+      ctx.fillRect(gx - 82, gy - 46, 44, 52);
+      ctx.fillRect(gx + 38, gy - 46, 44, 52);
+      ctx.fillRect(gx - 18, gy + 32, 36, 34);
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd84a';
+      ctx.fillText('GABRIEL', gx, gy - 76);
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, yochMark, yochSub, cmdText, yochNudgeX) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45 (PP 5/8)', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(topTag, W - 16, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 286, W - 32, 44);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 286, W - 32, 1);
+      ctx.fillRect(16, 329, W - 32, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 313);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff', mark: null, nx: 0 },
+        { x: 286, name: '▸ YOCH', hp: 'HP 68/74', res: yochSub || 'PP 5/8', col: '#f5f58c', mark: yochMark || null, nx: yochNudgeX || 0 }
+      ];
+      panels.forEach(p => {
+        const px = p.x + p.nx;
+        ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(px, 338, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, px + 12, 357);
+        if (p.mark) {
+          ctx.font = 'bold 14px "Times New Roman", serif';
+          ctx.fillStyle = p.mark.col || '#ffd84a';
+          ctx.fillText(p.mark.glyph, px + 86, 357);
+          if (p.mark.suffix) {
+            ctx.font = 'bold 11px monospace';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(p.mark.suffix, px + 100, 357);
+          }
+        }
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, px + 12, 376);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, px + 128, 376);
+      });
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 338, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText(cmdText || 'GABRIEL', 568, 366);
+    }
+
+    function renderAngelHug() {
+      // Storyboard exato do autor:
+      // 0.00..0.32s: Asas enormes se abrem a partir dos ombros de GABRIEL (gx=408, gy=148)
+      // 0.32..0.70s: Asas giram em arco amplo descendo para frente em direção a YOCH (414, 358)
+      // 0.70s: CLAP! As duas asas batem juntas no centro alcançando YOCH -> impacto (flash + shake + estática paralisante), asas se dissipam!
+      const openEnd = 0.32;
+      const clapT = 0.70;
+      const clapped = t >= clapT;
+      const cAge = Math.max(0, t - clapT);
+
+      const gx = 408, gy = 148;
+      const cardCx = 414, cardCy = 362;
+
+      let shakeX = 0, shakeY = 0;
+      if (clapped && cAge < 0.28) {
+        const m = 9.5 * (1 - cAge / 0.28);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+      // Tremor sutil de paralisia elétrica no cartão de YOCH logo após o impacto
+      const paraJitter = clapped && cAge < 1.5 && Math.floor(t * 28) % 5 === 0 ? (Math.random() - 0.5) * 4 : 0;
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+      const dark = t < 1.9 ? 0.32 * Math.min(1, t / 0.25) : Math.max(0, 0.32 * (1 - (t - 1.9) / 0.7));
+      ctx.fillStyle = `rgba(10, 6, 20, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+      drawGabriel(0);
+      ctx.restore();
+
+      const mark = clapped ? { glyph: 'ע', suffix: '3 ACT', col: '#9ee8ff' } : null;
+      drawHud(SPELLS.angel_hug.log[clapped ? 1 : 0], clapped ? 'CLAP IMPACT · PARALYZED (3 ACTS)' : 'WINGS SWEEPING FROM GABRIEL...', mark, clapped ? 'PARALYZED' : 'PP 5/8', 'GABRIEL ▸ ANGEL HUG', paraJitter);
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      ctx.textAlign = 'center';
+
+      // Asas nascem nos ombros de Gabriel e giram em arco até baterem juntas sobre YOCH!
+      // Após o clap (cAge > 0), as asas se dissipam rapidamente (não ficam prendendo como prisão!)
+      if (t < clapT + 0.55) {
+        const openK = Math.min(1, t / openEnd);
+        const sweepK = t <= openEnd ? 0 : Math.min(1, (t - openEnd) / (clapT - openEnd));
+        const sweepEase = Math.pow(sweepK, 2.2); // acelera no final como um bater de palmas!
+        const wingAlpha = clapped ? Math.max(0, 1 - cAge / 0.55) : (0.35 + 0.65 * openK);
+
+        fx.wings.forEach(w => {
+          // Pivô no ombro de Gabriel (gx ± 28, gy - 8)
+          const pivotX = gx + w.side * (28 * (1 - sweepEase * 0.75));
+          const pivotY = gy - 8;
+
+          // Ângulo aberto: -0.25 rad (para os lados/levemente cima) -> ângulo fechado: +1.50 rad (apontando para baixo, batendo juntas no centro!)
+          const spreadAngle = (-0.28 + w.row * 0.16) * (1 - sweepEase) + (1.52 - w.row * 0.045) * sweepEase;
+          // Comprimento da asa: 225px bem aberta, estendendo-se até 235px ao alcançar o cartão de YOCH!
+          const len = (50 + w.frac * (185 - w.row * 16)) * openK * (1 + sweepEase * 0.12);
+          const wx = pivotX + w.side * Math.cos(spreadAngle) * len;
+          const wy = pivotY + Math.sin(spreadAngle) * len;
+
+          ctx.save();
+          ctx.globalAlpha = wingAlpha;
+          ctx.font = `bold ${w.size}px "Times New Roman", serif`;
+          ctx.fillStyle = clapped && cAge < 0.14 ? '#ffffff' : ANGEL_PALETTE[w.colorIdx];
+          ctx.fillText(w.ch, wx, wy);
+          ctx.restore();
+        });
+      }
+
+      // Impacto do CLAP: onda de choque + flash APENAS no impacto + estática de paralisia sobre YOCH
+      if (clapped) {
+        fx.paraSparks.forEach(s => {
+          if (cAge > s.life) return;
+          const a = Math.max(0, 1 - cAge / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = PARA_PALETTE[s.colorIdx];
+          ctx.fillText(s.ch, cardCx + s.vx * cAge, cardCy - 14 + s.vy * cAge);
+          ctx.restore();
+        });
+
+        // Estática paralisante (glifos piscando/travando sobre o cartão de YOCH — paralisação, não jaula!)
+        const staticA = cAge < 1.9 ? 0.9 : Math.max(0, 0.9 * (1 - (cAge - 1.9) / 0.5));
+        fx.paraStatic.forEach((ps, i) => {
+          if (Math.sin(t * 24 + ps.phase) < 0.15) return;
+          ctx.save();
+          ctx.globalAlpha = staticA;
+          ctx.font = 'bold 13px "Times New Roman", serif';
+          ctx.fillStyle = i % 2 === 0 ? '#9ee8ff' : '#ffd84a';
+          ctx.fillText(ps.ch, cardCx + ps.xOff, cardCy + ps.yOff);
+          ctx.restore();
+        });
+
+        if (cAge < 1.35) {
+          const wa = Math.max(0, 1 - Math.max(0, cAge - 0.65) / 0.7);
+          ctx.save();
+          ctx.globalAlpha = wa;
+          ctx.font = 'bold 16px monospace';
+          ctx.fillStyle = '#9ee8ff';
+          ctx.fillText('PARALYZED · 3 ACTS', cardCx, cardCy - 36 - cAge * 14);
+          ctx.restore();
+        }
+
+        // Flash APENAS no impacto do CLAP!
+        if (cAge < 0.085) {
+          ctx.fillStyle = `rgba(255, 252, 232, ${(1 - cAge / 0.085) * 0.62})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function renderGodsMessage() {
+      // Pergaminho celeste:
+      // 0.00..0.45s: 2 rolos de letras se abrem horizontalmente no céu formando um pergaminho vivo
+      // 0.45..1.35s: Decreto "דבר אל" é escrito letra por letra (RTL) em ouro incandescente
+      // 1.35..1.90s: A sentença desce selando o cartão de YOCH (marca ד)
+      // 2.05s+: Próximo turno — o decreto quebra com impacto derrubando -3 estágios em vermelho!
+      const unrollEnd = 0.45;
+      const writeEnd = 1.35;
+      const sealT = 1.65;
+      const trigT = 2.15;
+      const trig = t >= trigT;
+      const tAge = Math.max(0, t - trigT);
+
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cx = cardX + cardW * 0.5;
+      const scrollY = 195;
+
+      let shakeX = 0, shakeY = 0;
+      if (trig && tAge < 0.22) {
+        const m = 6.5 * (1 - tAge / 0.22);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+      const dark = t < 2.8 ? 0.44 * Math.min(1, t / 0.3) : Math.max(0, 0.44 * (1 - (t - 2.8) / 0.6));
+      ctx.fillStyle = `rgba(8, 3, 14, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+      drawGabriel(t < 0.6 ? 0.6 * (1 - t / 0.6) : 0);
+      ctx.restore();
+
+      const mark = t >= sealT ? { glyph: 'ד', suffix: trig ? '-3' : 'NEXT', col: trig ? '#ff6464' : '#ffd84a' } : null;
+      drawHud(SPELLS.gods_message.log[trig ? 1 : 0], trig ? 'DECREE FULFILLED: -3 STAGES!' : 'CELESTIAL DECREE INSCRIBING...', mark, 'PP 5/8', "GABRIEL ▸ GOD'S MESSAGE");
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      ctx.textAlign = 'center';
+
+      // 1) Pergaminho feito 100% de letras hebraicas se desenrolando no centro (0..1.75s)
+      if (t < 1.95) {
+        const openK = Math.min(1, t / unrollEnd);
+        const fade = t < 1.5 ? 1 : Math.max(0, 1 - (t - 1.5) / 0.45);
+        const halfW = 18 + openK * 150;
+        const halfH = 38;
+
+        // Fundo translúcido quente dentro do pergaminho (rect preenchido)
+        ctx.fillStyle = `rgba(255, 220, 120, ${0.09 * openK * fade})`;
+        ctx.fillRect(408 - halfW, scrollY - halfH, halfW * 2, halfH * 2);
+
+        // Bordas superior/inferior e rolos laterais feitos exclusivamente de letras hebraicas!
+        fx.scrollBorder.forEach(b => {
+          const bx = (408 - halfW) + b.frac * (halfW * 2);
+          ctx.save();
+          ctx.globalAlpha = 0.72 * fade;
+          ctx.font = 'bold 11px "Times New Roman", serif';
+          ctx.fillStyle = '#ffd84a';
+          ctx.fillText(b.chTop, bx, scrollY - halfH + 4);
+          ctx.fillText(b.chBot, bx, scrollY + halfH + 4);
+          ctx.restore();
+        });
+        for (let r = 0; r < 5; r++) {
+          const ry = scrollY - halfH + (r / 4) * (halfH * 2) + 4;
+          ctx.save();
+          ctx.globalAlpha = 0.95 * fade;
+          ctx.font = 'bold 15px "Times New Roman", serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(fx.scrollBorder[r].chL, 408 - halfW, ry);
+          ctx.fillText(fx.scrollBorder[r].chR, 408 + halfW, ry);
+          ctx.restore();
+        }
+      }
+
+      // 2) Decreto "דבר אל" inscrito letra por letra da direita para a esquerda (RTL), depois desce e carimba YOCH!
+      if (t >= unrollEnd * 0.7 && !trig) {
+        const writeP = Math.max(0, Math.min(1, (t - unrollEnd * 0.7) / (writeEnd - unrollEnd * 0.7)));
+        const descendP = t <= writeEnd ? 0 : Math.min(1, (t - writeEnd) / (sealT - writeEnd));
+        const descEase = descendP * descendP;
+        const wordY = scrollY + 10 + (cardY - 18 - (scrollY + 10)) * descEase;
+        const wordX = 408 + (cx - 408) * descEase;
+        const px = Math.round(34 - descEase * 10);
+        const step = px * 0.68;
+        const n = fx.decree.length;
+        const startX = wordX + ((n - 1) * step) * 0.5;
+
+        fx.decree.forEach((ch, i) => {
+          if (ch === ' ') return;
+          const charThreshold = i / n;
+          if (writeP < charThreshold) return;
+          const charAge = (writeP - charThreshold) * n;
+          const pop = Math.min(1, charAge * 2.5);
+          ctx.save();
+          ctx.globalAlpha = pop;
+          ctx.font = `bold ${Math.round(px * (1.28 - 0.28 * pop))}px "Times New Roman", serif`;
+          ctx.fillStyle = charAge < 0.35 ? '#ffffff' : '#ffd84a';
+          ctx.fillText(ch, startX - i * step, wordY);
+          ctx.restore();
+        });
+      }
+
+      // 3) No próximo turno: decreto se cumpre com impacto seco -> -3 estágios caindo em letras vermelhas
+      if (trig) {
+        fx.inkSparks.forEach(s => {
+          if (tAge > s.life) return;
+          const a = Math.max(0, 1 - tAge / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = '#ff6464';
+          ctx.fillText(s.ch, cx + s.xOff + s.vx * tAge, cardY - 6 + s.vy * tAge);
+          ctx.restore();
+        });
+        if (tAge < 1.2) {
+          const da = Math.max(0, 1 - tAge / 1.2);
+          ctx.save();
+          ctx.globalAlpha = da;
+          ctx.font = 'bold 18px monospace';
+          ctx.fillStyle = '#ff6464';
+          ctx.fillText('-3 DEF STAGES!', cx, cardY - 14 + tAge * 18);
+          ctx.restore();
+        }
+        if (tAge < 0.07) {
+          ctx.fillStyle = `rgba(255, 210, 180, ${(1 - tAge / 0.07) * 0.38})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'angel_hug') renderAngelHug();
+      else renderGodsMessage();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'angel_hug');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

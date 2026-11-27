@@ -43,7 +43,6 @@ func _initialize() -> void:
 	# Frame 2: two chained attacks sharing one persistent rhythm line.
 	var chain := await _new_battle()
 	for enemy in [chain.state.units[2], chain.state.units[3]]:
-		enemy.affinity = BattleMath.Affinity.NORMAL
 		enemy.current_hp = 999
 		enemy.stats.max_hp = 999
 	for _i in range(30):

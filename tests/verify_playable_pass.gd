@@ -90,7 +90,7 @@ func _run() -> void:
 
 	# ---- 3. A queue may end with PASS: ATTACK, PASS spends one act and keeps the other.
 	battle.submit_plan(battle.hud.plan_options.find("FIGHT"))
-	# D-109: the white mark now lands; FOE B (RESIST) gives no WEAK +1 act, so the count stays exact.
+	# D-109: the white mark now lands; no affinity (D-119), so the act count stays exact.
 	battle.submit_target(1)
 	check(battle.hud.mode == "plan", "Back to planning after choosing the ATTACK target")
 	battle.submit_plan(battle.hud.plan_options.find("PASS"))

@@ -86,10 +86,9 @@ func _run() -> void:
 	key(battle, KEY_Z)
 	check(battle._planned.size() == 1 and battle._planned_targets[0] == battle.hud.opponents[0], "Z must commit one command, with its target, to the D-046 plan")
 	# D-109 (criador 2026-11-25): a trilha branca nao erra mais, acerta com 50% do dano. O alvo
-	# ganha HP e perde a fraqueza para o resto do fluxo (plano com o ACT que sobrou) seguir igual.
+	# ganha HP para o resto do fluxo (plano com o ACT que sobrou) seguir igual.
 	battle.hud.opponents[0].stats.max_hp = 999
 	battle.hud.opponents[0].current_hp = 999
-	battle.hud.opponents[0].affinity = BattleMath.Affinity.NORMAL
 	battle.exec_plan()
 	check(battle.hud.mode == "timing", "D-057: EXEC runs the plan without asking for the target again")
 	# HTML lab: the attack rail sits over the targeted enemy, above its name, clear of the log.

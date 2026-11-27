@@ -1,0 +1,644 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="shalhevet" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Shalhevet <span class="opacity-80">שלהבת</span>
+        </button>
+        <button data-spell="nogah" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Nogah <span class="opacity-80">נוגה</span>
+        </button>
+        <button data-spell="lior" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Lior <span class="opacity-80">ליאור</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="400" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    // 3 cores do fogo sagrado (laranja, amarelo, branco) + paleta de luz/cura
+    const FIRE_PALETTE = ['#ff7a1f', '#ffd84a', '#ffffff'];
+    const LIGHT_PALETTE = ['#ffffff', '#fffce0', '#f5f58c'];
+    const HEAL_PALETTE = ['#fffce0', '#f5f58c', '#b8f5a2'];
+
+    const SPELLS = {
+      shalhevet: {
+        title: 'SHALHEVET · 3 ACT / 4 PP · MARÉ DE FOGO EM TODOS INIMIGOS (30 + MAK · 50% BURN)',
+        log: [
+          'YOCH invokes SHALHEVET — a sweeping wave of sacred flame ignites!',
+          'SHALHEVET scorches all foes: 30 + MAK DMG! BURN inflicted!'
+        ],
+        duration: 3.1
+      },
+      nogah: {
+        title: 'NOGAH · 3 ACT / 2 PP · CLARÃO RADIADO QUE CEGA TODOS OS INIMIGOS (MARCA ס)',
+        log: [
+          'YOCH prays NOGAH — blinding brilliance gathers over the battlefield!',
+          'NOGAH floods all foes with light — all enemies BLINDED (mark ס)!'
+        ],
+        duration: 3.0
+      },
+      lior: {
+        title: 'LIOR · 1 ACT / 2 PP · MANTO DE LUZ CURATIVA NO USUÁRIO (5 + 5/PP POR 5 AÇÕES)',
+        log: [
+          'YOCH prays LIOR — a warm shroud of Hebrew light wraps around YOCH (5 actions)!',
+          'Action tick! LIOR heals YOCH +15 HP (4 actions remaining · mark ל x4).'
+        ],
+        duration: 3.4
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 218, y: 176, w: 68, h: 108 },
+      { id: 'B', name: 'MAZIK B', x: 408, y: 168, w: 76, h: 120 },
+      { id: 'C', name: 'MAZIK C', x: 598, y: 176, w: 68, h: 108 }
+    ];
+
+    let activeSpell = 'shalhevet';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'shalhevet') {
+        // Maré de chamas atravessando o campo da esquerda para a direita sobre todos os inimigos
+        fx.wave = [];
+        for (let i = 0; i < 110; i++) {
+          const frac = i / 110;
+          fx.wave.push({
+            frac,
+            yBase: 266 - Math.random() * 160,
+            amp: 14 + Math.random() * 28,
+            rise: 35 + Math.random() * 75,
+            ch: i % 5 === 0 ? 'שלהבת'[i % 5] : randGlyph(),
+            size: 13 + Math.random() * 13,
+            colorIdx: i % 3,
+            phase: Math.random() * 6.28
+          });
+        }
+        fx.pillars = FOES.map((f, fi) => {
+          const parts = [];
+          for (let i = 0; i < 24; i++) {
+            parts.push({
+              xOff: (Math.random() - 0.5) * 62,
+              yOff: (Math.random() - 0.5) * 90,
+              vy: -55 - Math.random() * 110,
+              vx: (Math.random() - 0.5) * 55,
+              ch: randGlyph(),
+              size: 12 + Math.random() * 9,
+              colorIdx: i % 3,
+              life: 0.5 + Math.random() * 0.55
+            });
+          }
+          return { foeIdx: fi, hitT: 0.58 + fi * 0.24, parts };
+        });
+      } else if (id === 'nogah') {
+        // Clarão estelar central + 3 anéis de letras + cortinas de ofuscamento sobre os 3 inimigos
+        fx.rays = [];
+        for (let r = 0; r < 24; r++) {
+          const ang = (r / 24) * Math.PI * 2;
+          const segs = [];
+          for (let k = 0; k < 6; k++) {
+            segs.push({
+              dist: 24 + k * 42,
+              ch: k % 3 === 0 ? 'נוגה'[k % 4] : randGlyph(),
+              size: 16 - k,
+              colorIdx: k % 3
+            });
+          }
+          fx.rays.push({ ang, segs });
+        }
+        fx.veils = FOES.map((f, fi) => {
+          const glyphs = [];
+          for (let i = 0; i < 16; i++) {
+            const ang = (i / 16) * Math.PI * 2;
+            glyphs.push({
+              ang,
+              ch: randGlyph(),
+              size: 12 + (i % 3) * 2,
+              rad: 36 + (i % 2) * 14
+            });
+          }
+          return { foeIdx: fi, glyphs };
+        });
+      } else if (id === 'lior') {
+        // Manto de luz em volta do cartão de YOCH (x: 286..542, y: 342..390) + 5 órbitas de letras + pulso de cura
+        fx.shroud = [];
+        for (let i = 0; i < 34; i++) {
+          fx.shroud.push({
+            xFrac: Math.random(),
+            delay: Math.random() * 0.45,
+            rise: 58 + Math.random() * 68,
+            sway: 6 + Math.random() * 12,
+            phase: Math.random() * 6.28,
+            ch: i % 4 === 0 ? 'ליאור'[i % 5] : randGlyph(),
+            size: 11 + Math.random() * 6,
+            colorIdx: i % 3
+          });
+        }
+        fx.orbits = [];
+        for (let i = 0; i < 5; i++) {
+          fx.orbits.push({
+            idx: i,
+            ang: (i / 5) * Math.PI * 2,
+            ch: 'ליאור'[i]
+          });
+        }
+        fx.healBurst = [];
+        for (let i = 0; i < 18; i++) {
+          fx.healBurst.push({
+            xOff: (Math.random() - 0.5) * 210,
+            vy: -42 - Math.random() * 54,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 5,
+            delay: Math.random() * 0.18
+          });
+        }
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 26 + i * 42 + Math.sin(time * 0.8 + i * 1.1) * 12;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 26);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 278, W, 2);
+    }
+
+    function drawFoe(foe, flashAlpha, markChar, markColor, damageLabel, burnTag) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = flashAlpha > 0.05 ? `rgba(255, 252, 230, ${0.4 + flashAlpha * 0.6})` : '#06030a';
+      ctx.fillRect(x - foe.w * 0.24, y - foe.h * 0.52, foe.w * 0.48, foe.h * 0.22);
+      ctx.fillRect(x - foe.w * 0.44, y - foe.h * 0.26, foe.w * 0.88, foe.h * 0.46);
+      ctx.fillRect(x - foe.w * 0.16, y + foe.h * 0.20, foe.w * 0.32, foe.h * 0.32);
+      ctx.fillRect(x - foe.w * 0.56, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+      ctx.fillRect(x + foe.w * 0.44, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.62);
+
+      if (markChar) {
+        ctx.font = 'bold 16px "Times New Roman", serif';
+        ctx.fillStyle = markColor;
+        ctx.fillText(markChar, x + 44, y - foe.h * 0.61);
+      }
+      if (burnTag) {
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = '#ff7a1f';
+        ctx.fillText('BURN', x, y + foe.h * 0.64);
+      }
+      if (damageLabel) {
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = '#fff3b0';
+        ctx.fillText(damageLabel.text, x, y - 20 - damageLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawWordPalette(word, cx, cy, px, alpha, palette) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const startX = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        if (ch === ' ') return;
+        ctx.fillStyle = palette[i % palette.length];
+        ctx.fillText(ch, startX - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, yochHpText, yochMark) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45 (PP 5/8)', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(topTag, W - 16, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 286, W - 32, 44);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 286, W - 32, 1);
+      ctx.fillRect(16, 329, W - 32, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 313);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff', mark: null },
+        { x: 286, name: '▸ YOCH', hp: yochHpText || 'HP 53/74', res: 'PP 5/8', col: '#f5f58c', mark: yochMark || null }
+      ];
+      panels.forEach(p => {
+        ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(p.x, 338, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, p.x + 12, 357);
+        if (p.mark) {
+          // Desenha glifo hebraico e sufixo ASCII separados (D-113 BiDi safe)
+          ctx.font = 'bold 14px "Times New Roman", serif';
+          ctx.fillStyle = '#b8f5a2';
+          ctx.fillText(p.mark.glyph, p.x + 86, 357);
+          ctx.font = 'bold 11px monospace';
+          ctx.fillStyle = '#f5f58c';
+          ctx.fillText(p.mark.suffix, p.x + 100, 357);
+        }
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, p.x + 12, 376);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, p.x + 128, 376);
+      });
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 338, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('PRAY ▸ ' + activeSpell.toUpperCase(), 568, 366);
+    }
+
+    function renderShalhevet() {
+      const waveStart = 0.25;
+      const waveDur = 1.45;
+      const wp = Math.max(0, Math.min(1, (t - waveStart) / waveDur));
+      const headX = -60 + wp * (W + 180);
+
+      let shakeX = 0, shakeY = 0;
+      if (t >= 0.58 && t <= 1.45) {
+        const m = 6 * (1 - Math.abs(t - 1.0) / 0.55);
+        if (m > 0) {
+          shakeX = (Math.random() - 0.5) * m * 2;
+          shakeY = (Math.random() - 0.5) * m * 2;
+        }
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = t < 1.9 ? 0.36 * Math.min(1, t / 0.3) : Math.max(0, 0.36 * (1 - (t - 1.9) / 0.8));
+      ctx.fillStyle = `rgba(14, 4, 10, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      FOES.forEach((f, i) => {
+        const p = fx.pillars[i];
+        const age = t - p.hitT;
+        const flash = age >= 0 && age < 0.24 ? 1 - age / 0.24 : 0;
+        const dmg = age >= 0 && age < 1.05 ? { text: '30 + MAK', rise: age * 28 } : null;
+        drawFoe(f, flash, null, null, dmg, age >= 0.2 && i !== 1);
+      });
+
+      ctx.textAlign = 'center';
+      // Maré horizontal de letras flamejantes em 3 cores varrendo todos os inimigos
+      if (t >= waveStart && t < 2.4) {
+        fx.wave.forEach(w => {
+          const x = w.frac * (W + 80) - 40;
+          const dist = headX - x;
+          if (dist < 0 || dist > 250) return;
+          const local = dist / 250;
+          const alpha = local < 0.2 ? local / 0.2 : Math.max(0, 1 - (local - 0.2) / 0.8);
+          const y = w.yBase - local * w.rise + Math.sin(t * 9 + w.phase) * w.amp * 0.4;
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.95;
+          ctx.font = `bold ${w.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[w.colorIdx];
+          ctx.fillText(w.ch, x, y);
+          ctx.restore();
+        });
+      }
+
+      // Erupções de brasas em cada inimigo atingido
+      fx.pillars.forEach(p => {
+        const age = t - p.hitT;
+        if (age < 0) return;
+        const foe = FOES[p.foeIdx];
+        p.parts.forEach(pt => {
+          if (age > pt.life) return;
+          const a = Math.max(0, 1 - age / pt.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${pt.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[pt.colorIdx];
+          ctx.fillText(pt.ch, foe.x + pt.xOff + pt.vx * age, foe.y + pt.yOff + pt.vy * age);
+          ctx.restore();
+        });
+      });
+
+      // Palavra שלהבת tricolor acompanhando a crista da onda
+      if (t >= 0.25 && t < 2.0) {
+        const wa = t < 0.55 ? (t - 0.25) / 0.3 : Math.max(0, 1 - (t - 1.3) / 0.7);
+        const wx = Math.min(W * 0.5, 140 + wp * 340);
+        drawWordPalette('שלהבת', wx, 84, 34, wa, FIRE_PALETTE);
+      }
+
+      // Flash único suave no centro da onda
+      if (t >= 0.82 && t < 0.90) {
+        ctx.fillStyle = `rgba(255, 228, 170, ${(1 - (t - 0.82) / 0.08) * 0.42})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.shalhevet.log[t > 0.85 ? 1 : 0], 'AOE FIRE · 50% BURN');
+    }
+
+    function renderNogah() {
+      const burstT = 0.72;
+      const burst = t >= burstT;
+      const bAge = Math.max(0, t - burstT);
+
+      ctx.save();
+      drawPlasmaBg(t);
+
+      const dark = !burst ? 0.4 * (t / burstT) : Math.max(0, 0.4 * (1 - bAge / 1.5));
+      ctx.fillStyle = `rgba(10, 6, 18, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      const flashFoe = burst && bAge < 0.26 ? 1 - bAge / 0.26 : 0;
+      const blindColor = burst ? `rgba(230, 86, 86, ${0.65 + 0.35 * Math.sin(t * 7)})` : null;
+      const lbl = burst && bAge < 1.1 ? { text: 'BLINDED', rise: bAge * 26 } : null;
+      FOES.forEach(f => drawFoe(f, flashFoe, burst ? 'ס' : null, blindColor, lbl, false));
+
+      ctx.textAlign = 'center';
+      const starX = W * 0.5;
+      const starY = 82;
+
+      if (!burst) {
+        // Convergência luminosa no topo central formando נוגה
+        const p = t / burstT;
+        fx.rays.forEach(ray => {
+          ray.segs.forEach((s, si) => {
+            const dist = s.dist * (1.2 - p * 0.85);
+            const ang = ray.ang + p * 1.4;
+            ctx.save();
+            ctx.globalAlpha = 0.25 + 0.75 * p;
+            ctx.font = `bold ${s.size}px "Times New Roman", serif`;
+            ctx.fillStyle = LIGHT_PALETTE[s.colorIdx];
+            ctx.fillText(s.ch, starX + Math.cos(ang) * dist, starY + Math.sin(ang) * dist * 0.42);
+            ctx.restore();
+          });
+        });
+        drawWordPalette('נוגה', starX, starY + 10, 20 + p * 14, p, LIGHT_PALETTE);
+      } else {
+        // Explosão radiante de 24 feixes de letras + anéis de ofuscamento em todos os 3 inimigos
+        if (bAge < 1.35) {
+          const ra = Math.max(0, 1 - bAge / 1.35);
+          fx.rays.forEach(ray => {
+            ray.segs.forEach(s => {
+              const dist = s.dist * (0.4 + bAge * 1.75);
+              const x = starX + Math.cos(ray.ang) * dist * 1.45;
+              const y = starY + Math.sin(ray.ang) * dist * 0.65;
+              if (y < 24 || y > 274) return;
+              ctx.save();
+              ctx.globalAlpha = ra * 0.9;
+              ctx.font = `bold ${s.size}px "Times New Roman", serif`;
+              ctx.fillStyle = LIGHT_PALETTE[s.colorIdx];
+              ctx.fillText(s.ch, x, y);
+              ctx.restore();
+            });
+          });
+          drawWordPalette('נוגה', starX, starY + 12 - bAge * 12, 36, ra, LIGHT_PALETTE);
+        }
+
+        // Anéis de letras fechando sobre os olhos de cada inimigo
+        if (bAge < 1.25) {
+          const va = Math.max(0, 1 - bAge / 1.25);
+          fx.veils.forEach(v => {
+            const foe = FOES[v.foeIdx];
+            v.glyphs.forEach(g => {
+              const r = g.rad * (1.2 - Math.min(0.65, bAge * 0.8));
+              const ang = g.ang + bAge * 2.2;
+              ctx.save();
+              ctx.globalAlpha = va;
+              ctx.font = `bold ${g.size}px "Times New Roman", serif`;
+              ctx.fillStyle = bAge < 0.35 ? '#ffffff' : '#f5f58c';
+              ctx.fillText(g.ch, foe.x + Math.cos(ang) * r, foe.y - 24 + Math.sin(ang) * r * 0.48);
+              ctx.restore();
+            });
+          });
+        }
+
+        // Flash curto e suave
+        if (bAge < 0.085) {
+          ctx.fillStyle = `rgba(255, 252, 232, ${(1 - bAge / 0.085) * 0.58})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.nogah.log[burst ? 1 : 0], burst ? 'ALL FOES BLINDED (ס)' : 'GATHERING LIGHT...');
+    }
+
+    function renderLior() {
+      const tickT = 1.85;
+      const ticked = t >= tickT;
+      const tickAge = Math.max(0, t - tickT);
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cardCx = cardX + cardW * 0.5;
+      const cardCy = cardY + cardH * 0.5;
+
+      ctx.save();
+      drawPlasmaBg(t);
+      FOES.forEach(f => drawFoe(f, 0, null, null, null, false));
+      ctx.restore();
+
+      const hpStr = ticked ? 'HP 68/74' : 'HP 53/74';
+      const actionsLeft = ticked ? 4 : 5;
+      const yochMark = t > 0.35 ? { glyph: 'ל', suffix: 'x' + actionsLeft } : null;
+      drawHud(SPELLS.lior.log[ticked ? 1 : 0], 'HEAL OVER 5 ACTIONS · ל x' + actionsLeft, hpStr, yochMark);
+
+      // VFX desenhado sobre o HUD (igual PrayFX com z_index = 100)
+      ctx.save();
+      ctx.textAlign = 'center';
+
+      // Brilho suave no cartão de YOCH
+      const glow = 0.14 + 0.08 * Math.sin(t * 4.5);
+      ctx.fillStyle = `rgba(245, 245, 140, ${glow})`;
+      ctx.fillRect(cardX, cardY, cardW, cardH);
+
+      // Véu ascendente de letras dourado-verde envolvendo YOCH
+      fx.shroud.forEach(s => {
+        const age = (t - s.delay);
+        if (age < 0) return;
+        const cyc = (age * 0.55) % 1.0;
+        const px = cardX + 14 + s.xFrac * (cardW - 28) + Math.sin(t * 3.5 + s.phase) * s.sway;
+        const py = cardY + cardH - 6 - cyc * s.rise;
+        const a = Math.sin(cyc * Math.PI) * 0.9;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+        ctx.fillStyle = HEAL_PALETTE[s.colorIdx];
+        ctx.fillText(s.ch, px, py);
+        ctx.restore();
+      });
+
+      // 5 letras orbitais de ליאור representando as 5 ações restantes (1 se apaga no tick)
+      fx.orbits.forEach(o => {
+        if (ticked && o.idx === 4) return;
+        const ang = o.ang + t * 1.9;
+        const ox = cardCx + Math.cos(ang) * 114;
+        const oy = cardCy - 24 + Math.sin(ang) * 20;
+        ctx.save();
+        ctx.globalAlpha = 0.92;
+        ctx.font = 'bold 15px "Times New Roman", serif';
+        ctx.fillStyle = '#fffce0';
+        ctx.fillText(o.ch, ox, oy);
+        ctx.restore();
+      });
+
+      // Palavra ליאור flutuando sobre o painel do usuário no cast
+      if (t < 1.55) {
+        const wa = t < 0.35 ? t / 0.35 : Math.max(0, 1 - (t - 0.9) / 0.65);
+        drawWordPalette('ליאור', cardCx, cardY - 26 - t * 10, 26, wa, HEAL_PALETTE);
+      }
+
+      // Pulso de cura ao completar uma ação (tickT)
+      if (ticked && tickAge < 1.2) {
+        fx.healBurst.forEach(h => {
+          const ha = tickAge - h.delay;
+          if (ha < 0 || ha > 0.9) return;
+          const a = 1 - ha / 0.9;
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${h.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = '#b8f5a2';
+          ctx.fillText(h.ch, cardCx + h.xOff, cardY + 12 + h.vy * ha);
+          ctx.restore();
+        });
+        const ta = Math.max(0, 1 - tickAge / 1.1);
+        ctx.save();
+        ctx.globalAlpha = ta;
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = '#b8f5a2';
+        ctx.fillText('+15 HP', cardCx, cardY - 12 - tickAge * 28);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'shalhevet') renderShalhevet();
+      else if (activeSpell === 'nogah') renderNogah();
+      else renderLior();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'shalhevet');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

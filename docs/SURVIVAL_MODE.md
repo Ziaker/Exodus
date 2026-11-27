@@ -4,6 +4,21 @@ Não faz parte da lore nem da campanha. Sandbox de combate e exploração para
 testar os **35 demônios**, 27 habilidades placeholder, itens e continues. A
 entrada é o comando `Survival` do menu do título.
 
+## Entrada, texto e tutorial (D-121 a D-123, criador 2026-11-27)
+
+- **Cutscene de entrada (D-121):** run nova pelo título abre `scenes/survival/SurvivalIntro.tscn`
+  (`scripts/survival/survival_intro_cutscene.gd`, sobre o protótipo `prototypes/survival-intro`,
+  opção D). Letras hebraicas formam o Kazfiel amarelo de letras, o mostrador das 8 portas (א–ח)
+  e a moldura da caixa; a fala "adormece"; as letras se espalham e o mapa real abre com a
+  piscada de quem acorda (`scripts/survival/survival_wake_blink.gd`). Z mostra a fala inteira e
+  depois pula. Run retomada vai direto ao mapa. Falas placeholder.
+- **Texto (D-122):** todo texto do Survival em inglês; nome do anjo em hebraico (קפציאל). O
+  estrato 1 é **SATURNINE NECROPOLIS** no HUD.
+- **Tutorial do curandeiro (D-123):** a 1ª conversa com o SANCTUARY KEEPER (uma vez por perfil,
+  `keeper_intro` no meta) mostra 8 páginas sobre o modo e depois abre a barra.
+- Verificação: `tools/capture_survival_intro_flow.gd` (fluxo real título → cutscene → mapa) e
+  `tests/verify_survival_extra.gd` (tutorial).
+
 ## Aliados (D-111, criador 2026-11-26)
 
 Especificação: `docs/plans/2026-11-26-survival-aliados.md`. Regras puras em
@@ -96,7 +111,7 @@ As seções abaixo descrevem a base anterior; onde divergem, vale o bloco acima.
 - **35 demônios SMT** (`scripts/survival/survival_data.gd`) espalhados pelo mapa.
   Cada um tem sprite real de `assets/graphics/battlers/`, 7 atributos próprios,
   2–3 habilidades placeholder distintas (`SkillBook.DEFS`, sem mexer no
-  `KIND_SKILLS` da campanha), afinidade e recompensa em Macca (25–95M).
+  `KIND_SKILLS` da campanha), e recompensa em Macca (25–95M).
   No corredor aparece só a **silhueta escura com contorno vermelho**, extraída
   do battler por `tools/generate_survival_silhouettes.py`; a arte colorada fica
   só na batalha.

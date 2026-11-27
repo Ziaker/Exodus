@@ -81,8 +81,10 @@ func _run() -> void:
 	_check(survival_title.busy, "Survival starts the mode")
 	await create_timer(survival_title.FADE_TIME + 0.3).timeout
 	await process_frame
-	_check(current_scene != null and current_scene.scene_file_path == SurvivalData.WORLD_SCENE,
-			"Survival opens the big overworld (got %s)" % (current_scene.scene_file_path if current_scene else "null"))
+	# D-121: run nova abre primeiro a cutscene do Kazfiel; ela termina no mapa
+	# (fluxo completo em tools/capture_survival_intro_flow.gd).
+	_check(current_scene != null and current_scene.scene_file_path == "res://scenes/survival/SurvivalIntro.tscn",
+			"New Survival run opens the Kazfiel cutscene (got %s)" % (current_scene.scene_file_path if current_scene else "null"))
 	_check(int(SurvivalState.data().continues) == SurvivalData.MAX_CONTINUES, "A new run starts with 3 continues")
 	_check(int(SurvivalState.data().macca) == SurvivalData.STARTING_MACCA, "A new run resets Macca")
 	SurvivalState.clear()

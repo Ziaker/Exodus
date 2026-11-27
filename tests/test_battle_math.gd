@@ -54,25 +54,10 @@ func test_rhythm_zones() -> void:
 	assert_eq(BattleMath.rhythm_zone(0.10), BattleMath.RhythmResult.MISS)
 
 
-func test_physical_damage_uses_ratio_and_affinity() -> void:
-	var result: Dictionary = BattleMath.physical_damage(100, 10, 6, 5, 10, 5,
-		BattleMath.Affinity.NORMAL, _rng)
+func test_physical_damage_uses_ratio() -> void:
+	var result: Dictionary = BattleMath.physical_damage(100, 10, 6, 5, 10, 5, _rng)
 	assert_gt(int(result.amount), 0)
 	assert_eq(int(result.base), 200)
-
-	var nullified: Dictionary = BattleMath.physical_damage(100, 10, 6, 5, 10, 5,
-		BattleMath.Affinity.NULL, _rng)
-	assert_eq(int(nullified.amount), 0)
-
-
-func test_press_turn_act_delta() -> void:
-	# D-057 (creator 2026-11-25): an affinity only gives an act (WEAK +1), never takes one.
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.WEAK), 1)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.RESIST), 0)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), 0)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.ABSORB), 0)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NORMAL), 0)
-
 
 func test_extra_block_rolls() -> void:
 	assert_eq(BattleMath.extra_block_rolls(0), 0)
@@ -139,15 +124,12 @@ func test_critical_roll_is_deterministic_with_seed() -> void:
 
 
 func test_sp_roll_sign_follows_superiority() -> void:
-	var stronger := BattleMath.physical_damage(100, 10, 6, 5, 40, 10,
-		BattleMath.Affinity.NORMAL, _rng)
+	var stronger := BattleMath.physical_damage(100, 10, 6, 5, 40, 10, _rng)
 	assert_gt(int(stronger.sp_roll), 0)
 	# D-108: ter menos SP nao tira dano; so a vantagem soma.
-	var weaker := BattleMath.physical_damage(100, 10, 6, 5, 10, 40,
-		BattleMath.Affinity.NORMAL, _rng)
+	var weaker := BattleMath.physical_damage(100, 10, 6, 5, 10, 40, _rng)
 	assert_eq(int(weaker.sp_roll), 0)
-	var equal := BattleMath.physical_damage(100, 10, 6, 5, 20, 20,
-		BattleMath.Affinity.NORMAL, _rng)
+	var equal := BattleMath.physical_damage(100, 10, 6, 5, 20, 20, _rng)
 	assert_eq(int(equal.sp_roll), 0)
 
 
@@ -158,7 +140,7 @@ func test_low_sp_attacker_still_damages_high_defense() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 2026
 	for i in 2000:
-		var r := BattleMath.physical_damage(10, 5.0, 0, 16, 40, 100, BattleMath.Affinity.NORMAL, rng)
+		var r := BattleMath.physical_damage(10, 5.0, 0, 16, 40, 100, rng)
 		assert_eq(int(r.sp_roll), 0)
 		assert_between(float(r.variation), -0.1, 0.1)
 		assert_gt(int(r.amount), 0, "golpe %d deu 0" % i)
@@ -170,18 +152,10 @@ func test_variation_is_fixed_ten_percent() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 19
 	for i in 500:
-		var up := BattleMath.physical_damage(10, 10.0, 0, 10, 200, 10, BattleMath.Affinity.NORMAL, rng)
-		var down := BattleMath.physical_damage(10, 10.0, 0, 10, 10, 200, BattleMath.Affinity.NORMAL, rng)
+		var up := BattleMath.physical_damage(10, 10.0, 0, 10, 200, 10, rng)
+		var down := BattleMath.physical_damage(10, 10.0, 0, 10, 10, 200, rng)
 		assert_between(float(up.variation), -0.1, 0.1)
 		assert_between(float(down.variation), -0.1, 0.1)
-
-
-func test_affinity_interacts_with_damage() -> void:
-	var weak := BattleMath.physical_damage(100, 10, 6, 5, 20, 20,
-		BattleMath.Affinity.WEAK, _rng)
-	var resist := BattleMath.physical_damage(100, 10, 6, 5, 20, 20,
-		BattleMath.Affinity.RESIST, _rng)
-	assert_gt(int(weak.amount), int(resist.amount))
 
 
 func test_dominance_ratio_requires_seventy_percent_share() -> void:
@@ -190,12 +164,6 @@ func test_dominance_ratio_requires_seventy_percent_share() -> void:
 	assert_almost_eq(BattleMath.dominance_ratio(60, 10), 0.8571, 0.001)
 	assert_almost_eq(BattleMath.dominance_ratio(10, 60), 0.1429, 0.001)
 	assert_almost_eq(BattleMath.dominance_ratio(0, 0), 0.0, 0.001)
-
-
-func test_press_turn_uses_contact_semantics() -> void:
-	# The formula itself is unchanged; the controller applies it only on contact.
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.WEAK), 1)
-	assert_eq(BattleMath.press_turn_acts(BattleMath.Affinity.NULL), 0)
 
 
 ## D-049: counter-attack exchange rules.

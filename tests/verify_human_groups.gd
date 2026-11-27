@@ -156,7 +156,7 @@ func _run() -> void:
 	b.rng.seed = 11
 	var rng_probe := RandomNumberGenerator.new()
 	rng_probe.seed = 11
-	var probe := PrayerBook.raam_damage(0, h1.stats.mak, h1.stats.agi, hero.stats.mef, h1.current_sp, hero.current_sp, BattleMath.Affinity.NORMAL, hero.race, rng_probe)
+	var probe := PrayerBook.raam_damage(0, h1.stats.mak, h1.stats.agi, hero.stats.mef, h1.current_sp, hero.current_sp, hero.race, rng_probe)
 	b._magic_hit(h1, hero, &"cherav", false, R.POINT, R.MISS)
 	check(500 - hero.current_hp == int(probe.amount) or int(probe.amount) == 0, "CHERAV deals the prayer formula (%d, expected %d)" % [500 - hero.current_hp, int(probe.amount)])
 	check(float(probe.base) == float(10 + h1.stats.mak - hero.stats.mef), "Its base is 10 + MAK - MEF")

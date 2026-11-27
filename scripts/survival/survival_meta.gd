@@ -20,7 +20,9 @@ const OMEN_INFO := [
 
 static func _defaults() -> Dictionary:
 	return {"version": VERSION, "best": 0, "runs": 0,
-		"unlocked": [], "last_score": 0, "omen_unlocked": 0, "codex": [], "clears": 0}
+		"unlocked": [], "last_score": 0, "omen_unlocked": 0, "codex": [], "clears": 0,
+		# Criador 2026-11-26: a 1ª conversa com o curandeiro ensina o modo (uma vez por perfil).
+		"keeper_intro": false}
 
 
 static func data() -> Dictionary:

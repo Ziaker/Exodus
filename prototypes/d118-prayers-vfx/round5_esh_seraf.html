@@ -1,0 +1,635 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="esh" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Esh v3 <span class="opacity-80">אש</span>
+        </button>
+        <button data-spell="seraf" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Seraf <span class="opacity-80">שרף</span>
+        </button>
+        <button data-spell="nitzotz" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Nitzotz <span class="opacity-80">ניצוץ</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="400" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    const FIRE_PALETTE = ['#ff7a1f', '#ffd84a', '#ffffff'];
+    const SERAF_PALETTE = ['#ffffff', '#ffd84a', '#b8f5a2', '#ff7a1f'];
+
+    const SPELLS = {
+      esh: {
+        title: 'ESH (v3) · 2 ACT / 1 PP · ARCO DE FOGO SAINDO DO CARTÃO DE YOCH ATÉ O ALVO (20 + MAK · BURN)',
+        log: [
+          'YOCH launches ESH — an arc of radiant flame leaps from YOCH to MAZIK B!',
+          'ESH sears MAZIK B: 20 + MAK DMG! BURN ignited!'
+        ],
+        duration: 2.75
+      },
+      seraf: {
+        title: 'SERAF · ANGELICAL · 2 ACT / 2 PP OU 10 EN · ASAS SERAFINS CURAM MAK HP + CONCEDEM +20 SP',
+        log: [
+          'YOCH invokes SERAF — fiery seraph wings of Hebrew letters unfurl!',
+          'SERAF restores +MAK HP and surges +20 SP!'
+        ],
+        duration: 3.1
+      },
+      nitzotz: {
+        title: 'NITZOTZ · ANGELICAL · 2 ACT / 3 PP OU 15 EN · 20 DMG EM ALVO QUEIMANDO + BURN SOBE PARA 10/RND',
+        log: [
+          'YOCH snaps NITZOTZ — a searing spark strikes burning MAZIK B!',
+          'NITZOTZ deals 20 DMG and intensifies BURN to 10 DMG/round!'
+        ],
+        duration: 3.1
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 218, y: 176, w: 68, h: 108 },
+      { id: 'B', name: 'MAZIK B', x: 408, y: 168, w: 76, h: 120 },
+      { id: 'C', name: 'MAZIK C', x: 598, y: 176, w: 68, h: 108 }
+    ];
+
+    let activeSpell = 'esh';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'esh') {
+        // Arco parabólico saindo do cartão de YOCH (414, 344) curvando pela esquerda até MAZIK B (408, 168)
+        fx.arcTrail = [];
+        for (let i = 0; i < 30; i++) {
+          fx.arcTrail.push({
+            frac: i / 30,
+            jitter: (Math.random() - 0.5) * 12,
+            ch: i % 3 === 0 ? 'אש'[i % 2] : randGlyph(),
+            size: 13 + (i % 4) * 3,
+            colorIdx: i % 3
+          });
+        }
+        fx.burst = [];
+        for (let i = 0; i < 34; i++) {
+          const a = (i / 34) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+          const spd = 75 + Math.random() * 175;
+          fx.burst.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.85 - 25,
+            ch: i % 4 === 0 ? 'אש'[i % 2] : randGlyph(),
+            size: 12 + Math.random() * 10,
+            colorIdx: i % 3,
+            life: 0.42 + Math.random() * 0.45
+          });
+        }
+        fx.burnLicks = [];
+        for (let i = 0; i < 16; i++) {
+          fx.burnLicks.push({
+            xOff: (Math.random() - 0.5) * 58,
+            yOff: (Math.random() - 0.5) * 76,
+            rise: 24 + Math.random() * 34,
+            phase: Math.random() * 6.28,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 5,
+            colorIdx: i % 2
+          });
+        }
+      } else if (id === 'seraf') {
+        // Asas serafins (3 pares de penas de letras) abrindo-se sobre o cartão de YOCH + cura verde + centelhas SP
+        fx.wings = [];
+        for (let side of [-1, 1]) {
+          for (let row = 0; row < 3; row++) {
+            const count = 9 - row;
+            for (let i = 0; i < count; i++) {
+              const frac = (i + 1) / count;
+              fx.wings.push({
+                side,
+                row,
+                frac,
+                ch: i % 3 === 0 ? 'שרף'[i % 3] : randGlyph(),
+                size: 11 + (3 - row) * 2,
+                colorIdx: frac > 0.72 ? 3 : (frac > 0.38 ? 1 : 0)
+              });
+            }
+          }
+        }
+        fx.healMotes = [];
+        for (let i = 0; i < 20; i++) {
+          fx.healMotes.push({
+            xOff: (Math.random() - 0.5) * 210,
+            vy: -38 - Math.random() * 52,
+            delay: 0.35 + Math.random() * 0.55,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 5
+          });
+        }
+        fx.spOrbs = [];
+        for (let i = 0; i < 12; i++) {
+          fx.spOrbs.push({
+            startX: 414 + (Math.random() - 0.5) * 160,
+            startY: 344 - Math.random() * 45,
+            delay: 0.45 + (i / 12) * 0.45,
+            ch: randGlyph(),
+            size: 12 + (i % 3) * 2
+          });
+        }
+      } else if (id === 'nitzotz') {
+        // Centelha rápida que estala no alvo queimando e superaquece as chamas (3/rnd -> 10/rnd)
+        fx.baseFlames = [];
+        for (let i = 0; i < 28; i++) {
+          fx.baseFlames.push({
+            xOff: (Math.random() - 0.5) * 62,
+            baseY: 36 - Math.random() * 68,
+            rise: 22 + Math.random() * 36,
+            phase: Math.random() * 6.28,
+            ch: i % 5 === 0 ? 'ניצוץ'[i % 5] : randGlyph(),
+            size: 11 + Math.random() * 6,
+            isExtra: i >= 12
+          });
+        }
+        fx.sparkBurst = [];
+        for (let i = 0; i < 36; i++) {
+          const a = (i / 36) * Math.PI * 2;
+          const spd = 105 + Math.random() * 215;
+          fx.sparkBurst.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.72,
+            ch: i % 4 === 0 ? 'ניצוץ'[i % 5] : randGlyph(),
+            size: 12 + Math.random() * 9,
+            colorIdx: i % 3,
+            life: 0.35 + Math.random() * 0.35
+          });
+        }
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 26 + i * 42 + Math.sin(time * 0.8 + i * 1.1) * 12;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 26);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 278, W, 2);
+    }
+
+    function drawFoe(foe, flashAlpha, damageLabel, subTag, subColor) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = flashAlpha > 0.05 ? `rgba(255, 252, 230, ${0.4 + flashAlpha * 0.6})` : '#06030a';
+      ctx.fillRect(x - foe.w * 0.24, y - foe.h * 0.52, foe.w * 0.48, foe.h * 0.22);
+      ctx.fillRect(x - foe.w * 0.44, y - foe.h * 0.26, foe.w * 0.88, foe.h * 0.46);
+      ctx.fillRect(x - foe.w * 0.16, y + foe.h * 0.20, foe.w * 0.32, foe.h * 0.32);
+      ctx.fillRect(x - foe.w * 0.56, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+      ctx.fillRect(x + foe.w * 0.44, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.62);
+
+      if (subTag) {
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = subColor || '#ff7a1f';
+        ctx.fillText(subTag, x, y + foe.h * 0.64);
+      }
+      if (damageLabel) {
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = damageLabel.color || '#fff3b0';
+        ctx.fillText(damageLabel.text, x, y - 22 - damageLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawWordPalette(word, cx, cy, px, alpha, palette) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const startX = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        if (ch === ' ') return;
+        ctx.fillStyle = palette[i % palette.length];
+        ctx.fillText(ch, startX - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, yochHpText, yochSpVal) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      const spShow = yochSpVal != null ? yochSpVal : 45;
+      ctx.fillText(`ROUND 1   FALLEN SP 80   YOCH SP ${spShow} (PP 5/8)`, 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(topTag, W - 16, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 286, W - 32, 44);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 286, W - 32, 1);
+      ctx.fillRect(16, 329, W - 32, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 313);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff' },
+        { x: 286, name: '▸ YOCH', hp: yochHpText || 'HP 50/74', res: 'PP 5/8', col: '#f5f58c' }
+      ];
+      panels.forEach(p => {
+        ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(p.x, 338, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, p.x + 12, 357);
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, p.x + 12, 376);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, p.x + 128, 376);
+      });
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 338, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('PRAY ▸ ' + activeSpell.toUpperCase(), 568, 366);
+    }
+
+    function renderEsh() {
+      const target = FOES[1];
+      const hitT = 0.44;
+      const hit = t >= hitT;
+      const hAge = Math.max(0, t - hitT);
+
+      let shakeX = 0, shakeY = 0;
+      if (hit && hAge < 0.22) {
+        const m = 6.5 * (1 - hAge / 0.22);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = t < 1.4 ? 0.3 * Math.min(1, t / 0.2) : Math.max(0, 0.3 * (1 - (t - 1.4) / 0.7));
+      ctx.fillStyle = `rgba(12, 4, 10, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      const flash = hit && hAge < 0.24 ? 1 - hAge / 0.24 : 0;
+      const dmg = hit && hAge < 1.1 ? { text: '20 + MAK', rise: hAge * 28 } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flash : 0, i === 1 ? dmg : null, i === 1 && hit ? 'BURN' : null, '#ff7a1f'));
+      ctx.restore();
+
+      drawHud(SPELLS.esh.log[hit ? 1 : 0], hit ? 'HIT: 20 + MAK · BURN' : 'CASTING FROM YOCH...');
+
+      // Desenha o arco de fogo SOBRE o HUD (saindo do próprio cartão de YOCH: 414, 344 -> curvando -> MAZIK B)
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      ctx.textAlign = 'center';
+
+      const sx = 414, sy = 344;
+      const cx = 248, cy = 225; // ponto de controle criando arco amplo e expressivo
+      const ex = target.x, ey = target.y;
+
+      if (t < hitT + 0.22) {
+        const prog = Math.min(1, t / hitT);
+        const fade = t <= hitT ? 1 : Math.max(0, 1 - (t - hitT) / 0.22);
+        fx.arcTrail.forEach(p => {
+          if (p.frac > prog) return;
+          const tailDist = prog - p.frac;
+          if (tailDist > 0.55) return;
+          const u = 1 - p.frac;
+          const bx = u * u * sx + 2 * u * p.frac * cx + p.frac * p.frac * ex + p.jitter * (1 - p.frac * 0.4);
+          const by = u * u * sy + 2 * u * p.frac * cy + p.frac * p.frac * ey + p.jitter * 0.5;
+          const ta = fade * Math.max(0, 1 - tailDist / 0.55);
+          ctx.save();
+          ctx.globalAlpha = ta;
+          ctx.font = `bold ${p.size}px "Times New Roman", serif`;
+          ctx.fillStyle = tailDist < 0.12 ? '#ffffff' : FIRE_PALETTE[p.colorIdx];
+          ctx.fillText(p.ch, bx, by);
+          ctx.restore();
+        });
+      }
+
+      if (hit) {
+        fx.burst.forEach(p => {
+          if (hAge > p.life) return;
+          const a = Math.max(0, 1 - hAge / p.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${p.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[p.colorIdx];
+          ctx.fillText(p.ch, target.x + p.vx * hAge, target.y + p.vy * hAge + 90 * hAge * hAge);
+          ctx.restore();
+        });
+
+        const burnA = hAge < 1.5 ? 0.9 : Math.max(0, 0.9 * (1 - (hAge - 1.5) / 0.7));
+        fx.burnLicks.forEach(bl => {
+          const cyc = (hAge * 1.8 + bl.phase) % 1.0;
+          ctx.save();
+          ctx.globalAlpha = burnA * (1 - cyc);
+          ctx.font = `bold ${bl.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[bl.colorIdx];
+          ctx.fillText(bl.ch, target.x + bl.xOff, target.y + bl.yOff - cyc * bl.rise);
+          ctx.restore();
+        });
+
+        if (hAge < 0.85) {
+          drawWordPalette('אש', target.x, target.y - 14 - hAge * 24, 34, 1 - hAge / 0.85, FIRE_PALETTE);
+        }
+
+        if (hAge < 0.065) {
+          ctx.fillStyle = `rgba(255, 244, 210, ${(1 - hAge / 0.065) * 0.36})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function renderSeraf() {
+      const peakT = 0.9;
+      const healed = t >= peakT;
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cx = cardX + cardW * 0.5;
+      const cy = cardY + 6;
+
+      ctx.save();
+      drawPlasmaBg(t);
+      FOES.forEach(f => drawFoe(f, 0, null, null, null));
+      ctx.restore();
+
+      const spNow = healed ? 65 : 45;
+      drawHud(SPELLS.seraf.log[healed ? 1 : 0], healed ? '+MAK HP · +20 SP' : 'SERAPH WINGS UNFURLING...', healed ? 'HP 68/74' : 'HP 50/74', spNow);
+
+      ctx.save();
+      ctx.textAlign = 'center';
+
+      // Brilho dourado-verde sobre o cartão de YOCH
+      const glow = t < 2.2 ? Math.sin(Math.min(1, t / 2.2) * Math.PI) * 0.24 : 0;
+      ctx.fillStyle = `rgba(255, 224, 128, ${glow})`;
+      ctx.fillRect(cardX, cardY, cardW, cardH);
+
+      // Asas serafins de letras hebraicas abrindo-se acima de YOCH
+      const spread = Math.min(1, t / 0.65);
+      const wingFade = t < 1.8 ? 1 : Math.max(0, 1 - (t - 1.8) / 0.9);
+      const flap = Math.sin(t * 4.2) * 0.08;
+      fx.wings.forEach(w => {
+        const ang = (-0.25 - w.row * 0.28 + flap) + w.frac * 0.55;
+        const reach = (34 + w.frac * 145) * spread;
+        const wx = cx + w.side * Math.cos(ang) * reach;
+        const wy = cy - 18 - Math.sin(ang + 0.55) * reach * 0.72 + w.row * 16;
+        ctx.save();
+        ctx.globalAlpha = wingFade * (0.45 + 0.55 * spread);
+        ctx.font = `bold ${w.size}px "Times New Roman", serif`;
+        ctx.fillStyle = SERAF_PALETTE[w.colorIdx];
+        ctx.fillText(w.ch, wx, wy);
+        ctx.restore();
+      });
+
+      // Partículas de cura (+MAK HP) subindo do cartão
+      fx.healMotes.forEach(m => {
+        const age = t - m.delay;
+        if (age < 0 || age > 1.0) return;
+        const a = 1 - age / 1.0;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.font = `bold ${m.size | 0}px "Times New Roman", serif`;
+        ctx.fillStyle = '#b8f5a2';
+        ctx.fillText(m.ch, cx + m.xOff, cardY + 14 + m.vy * age);
+        ctx.restore();
+      });
+
+      // Centelhas douradas de +20 SP voando até o contador de SP no topo
+      fx.spOrbs.forEach(o => {
+        const age = t - o.delay;
+        if (age < 0 || age > 0.75) return;
+        const p = age / 0.75;
+        const ox = o.startX + (262 - o.startX) * p;
+        const oy = o.startY + (14 - o.startY) * p - Math.sin(p * Math.PI) * 35;
+        ctx.save();
+        ctx.globalAlpha = Math.sin(p * Math.PI);
+        ctx.font = `bold ${o.size}px "Times New Roman", serif`;
+        ctx.fillStyle = '#ffd84a';
+        ctx.fillText(o.ch, ox, oy);
+        ctx.restore();
+      });
+
+      if (t > 0.2 && t < 2.2) {
+        const wa = t < 0.6 ? (t - 0.2) / 0.4 : Math.max(0, 1 - (t - 1.5) / 0.7);
+        drawWordPalette('שרף', cx, cy - 68, 30, wa, FIRE_PALETTE);
+      }
+
+      if (healed && t < 2.2) {
+        const ha = Math.max(0, 1 - (t - peakT) / 1.2);
+        ctx.save();
+        ctx.globalAlpha = ha;
+        ctx.font = 'bold 17px monospace';
+        ctx.fillStyle = '#b8f5a2';
+        ctx.fillText('+MAK HP', cx - 54, cardY - 14 - (t - peakT) * 24);
+        ctx.fillStyle = '#ffd84a';
+        ctx.fillText('+20 SP', cx + 56, cardY - 14 - (t - peakT) * 24);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    function renderNitzotz() {
+      const target = FOES[1];
+      const snapT = 0.65;
+      const snapped = t >= snapT;
+      const sAge = Math.max(0, t - snapT);
+
+      let shakeX = 0, shakeY = 0;
+      if (snapped && sAge < 0.2) {
+        const m = 7 * (1 - sAge / 0.2);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = snapped && sAge < 1.2 ? 0.36 * (1 - sAge / 1.2) : 0.16;
+      ctx.fillStyle = `rgba(14, 4, 10, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      const flash = snapped && sAge < 0.24 ? 1 - sAge / 0.24 : 0;
+      const dmg = snapped && sAge < 1.2 ? { text: '20 DMG · BURN 10/RND!', rise: sAge * 26, color: '#ffd84a' } : null;
+      const burnTag = snapped ? 'BURN (10/RND!)' : 'BURN (3/RND)';
+      const burnCol = snapped ? '#ffd84a' : '#ff7a1f';
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flash : 0, i === 1 ? dmg : null, i === 1 ? burnTag : null, burnCol));
+
+      ctx.textAlign = 'center';
+
+      // Chamas do BURN no alvo: fracas antes de snapT, superaquecidas e altas depois!
+      fx.baseFlames.forEach((fl, i) => {
+        if (fl.isExtra && !snapped) return;
+        const spd = snapped ? 2.4 : 1.1;
+        const rise = snapped ? fl.rise * 2.1 : fl.rise;
+        const cyc = (t * spd + fl.phase) % 1.0;
+        const col = snapped ? FIRE_PALETTE[i % 3] : '#ff7a1f';
+        const px = snapped ? fl.size + 4 : fl.size;
+        ctx.save();
+        ctx.globalAlpha = (1 - cyc) * (snapped ? 0.98 : 0.65);
+        ctx.font = `bold ${px | 0}px "Times New Roman", serif`;
+        ctx.fillStyle = col;
+        ctx.fillText(fl.ch, target.x + fl.xOff + Math.sin(t * 7 + fl.phase) * 5, target.y + fl.baseY - cyc * rise);
+        ctx.restore();
+      });
+
+      // Centelha rápida em zigue-zague descendo até o núcleo do BURN antes de estalar
+      if (!snapped) {
+        const p = t / snapT;
+        const sx = 414 + (target.x - 414) * p + Math.sin(p * 18) * 18 * (1 - p);
+        const sy = 320 + (target.y - 320) * p;
+        drawWordPalette('ניצוץ', sx, sy, 18 + p * 10, 0.95, FIRE_PALETTE);
+      } else {
+        // Estalo radial de faíscas incandescendo o BURN
+        fx.sparkBurst.forEach(s => {
+          if (sAge > s.life) return;
+          const a = Math.max(0, 1 - sAge / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[s.colorIdx];
+          ctx.fillText(s.ch, target.x + s.vx * sAge, target.y + s.vy * sAge);
+          ctx.restore();
+        });
+        if (sAge < 0.95) {
+          drawWordPalette('ניצוץ', target.x, target.y - 38 - sAge * 20, 32, 1 - sAge / 0.95, FIRE_PALETTE);
+        }
+        if (sAge < 0.07) {
+          ctx.fillStyle = `rgba(255, 246, 210, ${(1 - sAge / 0.07) * 0.45})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.nitzotz.log[snapped ? 1 : 0], snapped ? 'BURN INTENSIFIED: 10/RND' : 'TARGET BURNING (3/RND)');
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'esh') renderEsh();
+      else if (activeSpell === 'seraf') renderSeraf();
+      else renderNitzotz();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'esh');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

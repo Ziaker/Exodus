@@ -9,7 +9,6 @@ var current_en: int
 var current_sp: int
 var acts_available: int = 0
 var stored_acts: int = 0
-var affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL
 var is_player: bool = false
 var is_fallen: bool = false
 var absorbed: bool = false
@@ -44,6 +43,10 @@ var def_stages: Array[int] = []
 var gevurah_bonus: float = 0.0
 ## D-112 MISHPAT: damage dealt by this unit in its last offensive action.
 var last_damage_dealt: int = 0
+## D-118 NITZOTZ: damage of each burn per round while superheated (0 = the default SkillBook.BURN_DAMAGE).
+var burn_power: int = 0
+## D-118 ANGEL HUG: acts this unit still has to lose (paralysis); taken from every grant of acts.
+var paralyzed_acts: int = 0
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 		player_side: bool, fallen: bool = false) -> void:
@@ -75,6 +78,24 @@ func change_pp(amount: int) -> int:
 	var applied := current_pp - before
 	add_sp(PrayerBook.SP_PER_PP * applied)
 	return applied
+
+## D-118: damage of one round of burns (NITZOTZ raises each burn from 3 to 10).
+func burn_round_damage() -> int:
+	var per_burn := burn_power if burn_power > 0 else SkillBook.BURN_DAMAGE
+	return per_burn * burns.size()
+
+
+## D-118 ANGEL HUG: removes up to `paralyzed_acts` of the acts available now; returns how many were lost.
+func apply_paralysis() -> int:
+	if paralyzed_acts <= 0:
+		return 0
+	var lost := mini(paralyzed_acts, acts_available)
+	acts_available -= lost
+	paralyzed_acts -= lost
+	if paralyzed_acts <= 0:
+		remove_status(&"paralyzed")
+	return lost
+
 
 ## ATK with the active stages applied (+25% per stage).
 func effective_atk() -> float:

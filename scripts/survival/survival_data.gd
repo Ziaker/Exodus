@@ -146,7 +146,6 @@ const DEMONS := [
 		"cell": Vector2i(12, 7),
 		"stats": {"max_hp": 18, "max_en": 10, "atk": 5, "mak": 7, "defense": 4, "mef": 6, "agi": 9},
 		"skills": [&"pixie_dust", &"mend"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "jack_frost", "name": "JACK FROST", "tier": 1, "macca": 25,
@@ -155,7 +154,6 @@ const DEMONS := [
 		"cell": Vector2i(12, 13),
 		"stats": {"max_hp": 22, "max_en": 12, "atk": 5, "mak": 8, "defense": 5, "mef": 7, "agi": 7},
 		"skills": [&"frost_breath", &"spirit_bolt"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "pyro_jack", "name": "PYRO JACK", "tier": 1, "macca": 30,
@@ -164,7 +162,6 @@ const DEMONS := [
 		"cell": Vector2i(7, 10),
 		"stats": {"max_hp": 24, "max_en": 12, "atk": 6, "mak": 9, "defense": 5, "mef": 6, "agi": 6},
 		"skills": [&"hellfire", &"howl"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "cerberus", "name": "CERBERUS", "tier": 2, "macca": 35,
@@ -173,7 +170,6 @@ const DEMONS := [
 		"cell": Vector2i(17, 10),
 		"stats": {"max_hp": 32, "max_en": 10, "atk": 10, "mak": 4, "defense": 8, "mef": 5, "agi": 8},
 		"skills": [&"fang_flurry", &"primal_roar"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "oni", "name": "ONI", "tier": 2, "macca": 35,
@@ -182,7 +178,6 @@ const DEMONS := [
 		"cell": Vector2i(7, 7),
 		"stats": {"max_hp": 38, "max_en": 10, "atk": 11, "mak": 3, "defense": 9, "mef": 4, "agi": 5},
 		"skills": [&"heavy_crush", &"howl"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "garuda", "name": "GARUDA", "tier": 2, "macca": 35,
@@ -191,7 +186,6 @@ const DEMONS := [
 		"cell": Vector2i(17, 7),
 		"stats": {"max_hp": 28, "max_en": 12, "atk": 8, "mak": 6, "defense": 6, "mef": 6, "agi": 12},
 		"skills": [&"spirit_bolt", &"shadow_bite"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "anubis", "name": "ANUBIS", "tier": 2, "macca": 40,
@@ -200,7 +194,6 @@ const DEMONS := [
 		"cell": Vector2i(7, 13),
 		"stats": {"max_hp": 34, "max_en": 14, "atk": 8, "mak": 7, "defense": 8, "mef": 7, "agi": 8},
 		"skills": [&"curse_ray", &"mend"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "chimera", "name": "CHIMERA", "tier": 2, "macca": 40,
@@ -209,7 +202,6 @@ const DEMONS := [
 		"cell": Vector2i(17, 13),
 		"stats": {"max_hp": 36, "max_en": 12, "atk": 10, "mak": 7, "defense": 7, "mef": 6, "agi": 7},
 		"skills": [&"hellfire", &"fang_flurry"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "andras", "name": "ANDRAS", "tier": 2, "macca": 40,
@@ -218,7 +210,6 @@ const DEMONS := [
 		"cell": Vector2i(10, 5),
 		"stats": {"max_hp": 30, "max_en": 11, "atk": 10, "mak": 5, "defense": 6, "mef": 5, "agi": 10},
 		"skills": [&"shadow_bite", &"curse_ray"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "succubus", "name": "SUCCUBUS", "tier": 2, "macca": 40,
@@ -227,7 +218,6 @@ const DEMONS := [
 		"cell": Vector2i(14, 5),
 		"stats": {"max_hp": 26, "max_en": 15, "atk": 5, "mak": 10, "defense": 5, "mef": 9, "agi": 9},
 		"skills": [&"pixie_dust", &"dark_siphon"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "ganesha", "name": "GANESHA", "tier": 3, "macca": 45,
@@ -236,7 +226,6 @@ const DEMONS := [
 		"cell": Vector2i(10, 15),
 		"stats": {"max_hp": 44, "max_en": 13, "atk": 9, "mak": 6, "defense": 10, "mef": 7, "agi": 4},
 		"skills": [&"heavy_crush", &"mend"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "vritra", "name": "VRITRA", "tier": 3, "macca": 45,
@@ -245,7 +234,6 @@ const DEMONS := [
 		"cell": Vector2i(14, 15),
 		"stats": {"max_hp": 46, "max_en": 14, "atk": 9, "mak": 10, "defense": 9, "mef": 8, "agi": 5},
 		"skills": [&"frost_breath", &"hellfire"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "wyvern", "name": "WYVERN", "tier": 3, "macca": 45,
@@ -254,7 +242,6 @@ const DEMONS := [
 		"cell": Vector2i(3, 10),
 		"stats": {"max_hp": 36, "max_en": 11, "atk": 9, "mak": 7, "defense": 7, "mef": 6, "agi": 9},
 		"skills": [&"fang_flurry", &"hellfire"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "lich", "name": "LICH", "tier": 3, "macca": 50,
@@ -263,7 +250,6 @@ const DEMONS := [
 		"cell": Vector2i(21, 10),
 		"stats": {"max_hp": 32, "max_en": 18, "atk": 5, "mak": 12, "defense": 6, "mef": 11, "agi": 6},
 		"skills": [&"curse_ray", &"dark_siphon"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "matador", "name": "MATADOR", "tier": 3, "macca": 55,
@@ -272,7 +258,6 @@ const DEMONS := [
 		"cell": Vector2i(3, 5),
 		"stats": {"max_hp": 42, "max_en": 14, "atk": 12, "mak": 6, "defense": 8, "mef": 6, "agi": 13},
 		"skills": [&"shadow_bite", &"primal_roar"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "mara", "name": "MARA", "tier": 4, "macca": 60,
@@ -281,7 +266,6 @@ const DEMONS := [
 		"cell": Vector2i(21, 5),
 		"stats": {"max_hp": 50, "max_en": 16, "atk": 12, "mak": 9, "defense": 10, "mef": 8, "agi": 7},
 		"skills": [&"hellfire", &"heavy_crush", &"howl"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "loki", "name": "LOKI", "tier": 4, "macca": 60,
@@ -290,7 +274,6 @@ const DEMONS := [
 		"cell": Vector2i(3, 15),
 		"stats": {"max_hp": 42, "max_en": 16, "atk": 9, "mak": 12, "defense": 7, "mef": 9, "agi": 11},
 		"skills": [&"frost_breath", &"spirit_bolt", &"shadow_bite"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "zouchouten", "name": "ZOUCHOUTEN", "tier": 4, "macca": 60,
@@ -299,7 +282,6 @@ const DEMONS := [
 		"cell": Vector2i(21, 15),
 		"stats": {"max_hp": 48, "max_en": 14, "atk": 13, "mak": 5, "defense": 11, "mef": 5, "agi": 6},
 		"skills": [&"heavy_crush", &"primal_roar", &"fang_flurry"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "lakshmi", "name": "LAKSHMI", "tier": 4, "macca": 65,
@@ -308,7 +290,6 @@ const DEMONS := [
 		"cell": Vector2i(1, 1),
 		"stats": {"max_hp": 38, "max_en": 20, "atk": 6, "mak": 12, "defense": 7, "mef": 11, "agi": 7},
 		"skills": [&"dark_siphon", &"spirit_bolt", &"pixie_dust"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "hel", "name": "HEL", "tier": 4, "macca": 75,
@@ -317,7 +298,6 @@ const DEMONS := [
 		"cell": Vector2i(23, 19),
 		"stats": {"max_hp": 54, "max_en": 18, "atk": 11, "mak": 13, "defense": 10, "mef": 10, "agi": 7},
 		"skills": [&"curse_ray", &"hellfire", &"dark_siphon"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "high_pixie", "name": "HIGH PIXIE", "tier": 3, "macca": 45,
@@ -326,7 +306,6 @@ const DEMONS := [
 		"cell": Vector2i(3, 1),
 		"stats": {"max_hp": 30, "max_en": 16, "atk": 6, "mak": 10, "defense": 6, "mef": 8, "agi": 10},
 		"skills": [&"spirit_wave", &"renew"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "nekomata", "name": "NEKOMATA", "tier": 3, "macca": 50,
@@ -335,7 +314,6 @@ const DEMONS := [
 		"cell": Vector2i(21, 1),
 		"stats": {"max_hp": 34, "max_en": 13, "atk": 9, "mak": 8, "defense": 7, "mef": 7, "agi": 10},
 		"skills": [&"twin_fang", &"venom_cloud"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "shuten_douji", "name": "SHUTEN-DOUJI", "tier": 4, "macca": 60,
@@ -344,7 +322,6 @@ const DEMONS := [
 		"cell": Vector2i(5, 3),
 		"stats": {"max_hp": 46, "max_en": 15, "atk": 12, "mak": 7, "defense": 10, "mef": 6, "agi": 7},
 		"skills": [&"crushing_blow", &"war_cry"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "phoenix", "name": "PHOENIX", "tier": 4, "macca": 65,
@@ -353,7 +330,6 @@ const DEMONS := [
 		"cell": Vector2i(19, 3),
 		"stats": {"max_hp": 40, "max_en": 18, "atk": 8, "mak": 12, "defense": 8, "mef": 11, "agi": 11},
 		"skills": [&"thunder_call", &"renew"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "barong", "name": "BARONG", "tier": 3, "macca": 50,
@@ -362,7 +338,6 @@ const DEMONS := [
 		"cell": Vector2i(11, 3),
 		"stats": {"max_hp": 42, "max_en": 12, "atk": 10, "mak": 6, "defense": 10, "mef": 6, "agi": 6},
 		"skills": [&"stone_grasp", &"war_cry"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "orobas", "name": "OROBAS", "tier": 3, "macca": 50,
@@ -371,7 +346,6 @@ const DEMONS := [
 		"cell": Vector2i(13, 3),
 		"stats": {"max_hp": 36, "max_en": 14, "atk": 8, "mak": 9, "defense": 8, "mef": 8, "agi": 9},
 		"skills": [&"soul_pierce", &"life_drain"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "incubus", "name": "INCUBUS", "tier": 3, "macca": 50,
@@ -380,7 +354,6 @@ const DEMONS := [
 		"cell": Vector2i(9, 7),
 		"stats": {"max_hp": 32, "max_en": 16, "atk": 7, "mak": 11, "defense": 6, "mef": 9, "agi": 9},
 		"skills": [&"mind_blast", &"dark_siphon"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "quetzalcoatl", "name": "QUETZALCOATL", "tier": 4, "macca": 65,
@@ -389,7 +362,6 @@ const DEMONS := [
 		"cell": Vector2i(15, 7),
 		"stats": {"max_hp": 48, "max_en": 16, "atk": 10, "mak": 11, "defense": 10, "mef": 9, "agi": 8},
 		"skills": [&"thunder_call", &"spirit_wave"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "leviathan", "name": "LEVIATHAN", "tier": 5, "macca": 80,
@@ -398,7 +370,6 @@ const DEMONS := [
 		"cell": Vector2i(3, 9),
 		"stats": {"max_hp": 56, "max_en": 18, "atk": 13, "mak": 10, "defense": 12, "mef": 9, "agi": 6},
 		"skills": [&"crushing_blow", &"void_gaze", &"renew"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "vampire", "name": "VAMPIRE", "tier": 4, "macca": 60,
@@ -407,7 +378,6 @@ const DEMONS := [
 		"cell": Vector2i(21, 9),
 		"stats": {"max_hp": 38, "max_en": 17, "atk": 9, "mak": 12, "defense": 7, "mef": 10, "agi": 10},
 		"skills": [&"life_drain", &"soul_pierce"],
-		"affinity": BattleMath.Affinity.WEAK,
 	},
 	{
 		"id": "white_rider", "name": "WHITE RIDER", "tier": 5, "macca": 85,
@@ -416,7 +386,6 @@ const DEMONS := [
 		"cell": Vector2i(3, 11),
 		"stats": {"max_hp": 52, "max_en": 16, "atk": 14, "mak": 7, "defense": 11, "mef": 7, "agi": 13},
 		"skills": [&"blade_dance", &"thunder_call"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "beelzebub", "name": "BEELZEBUB", "tier": 5, "macca": 95,
@@ -425,7 +394,6 @@ const DEMONS := [
 		"cell": Vector2i(19, 13),
 		"stats": {"max_hp": 60, "max_en": 20, "atk": 14, "mak": 14, "defense": 12, "mef": 11, "agi": 8},
 		"skills": [&"void_gaze", &"venom_cloud", &"renew"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 	{
 		"id": "pazuzu", "name": "PAZUZU", "tier": 4, "macca": 65,
@@ -434,7 +402,6 @@ const DEMONS := [
 		"cell": Vector2i(3, 13),
 		"stats": {"max_hp": 44, "max_en": 15, "atk": 10, "mak": 12, "defense": 9, "mef": 9, "agi": 12},
 		"skills": [&"ember_touch", &"frost_lance"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "isis", "name": "ISIS", "tier": 4, "macca": 65,
@@ -443,7 +410,6 @@ const DEMONS := [
 		"cell": Vector2i(21, 13),
 		"stats": {"max_hp": 42, "max_en": 20, "atk": 8, "mak": 13, "defense": 8, "mef": 12, "agi": 8},
 		"skills": [&"renew", &"mind_blast"],
-		"affinity": BattleMath.Affinity.NORMAL,
 	},
 	{
 		"id": "izanami", "name": "IZANAMI", "tier": 5, "macca": 90,
@@ -452,7 +418,6 @@ const DEMONS := [
 		"cell": Vector2i(12, 19),
 		"stats": {"max_hp": 58, "max_en": 19, "atk": 12, "mak": 14, "defense": 11, "mef": 11, "agi": 7},
 		"skills": [&"void_gaze", &"life_drain", &"venom_cloud"],
-		"affinity": BattleMath.Affinity.RESIST,
 	},
 ]
 
@@ -532,7 +497,7 @@ static func human_defs() -> Array:
 			_human_cache.append({
 				"id": ids[i], "name": String(sprite.name), "tier": stratum, "macca": HUMAN_MACCA,
 				"picture": String(sprite.picture),
-				"stats": stats.duplicate(), "skills": HUMAN_SKILLS, "affinity": BattleMath.Affinity.NORMAL,
+				"stats": stats.duplicate(), "skills": HUMAN_SKILLS,
 				"human": true,
 			})
 		var lead: Dictionary = HUMAN_SPRITES[0]
@@ -644,10 +609,9 @@ static func follow_hero(stats: UnitStats, hero_sp: int, par_sp: int) -> void:
 
 
 ## D-070/D-066/D-075: aplica elite, guardião e OMEN aos status do inimigo.
-## Retorna as habilidades extras e a afinidade (pode mudar com STONE).
+## Retorna as habilidades extras e a etiqueta (D-119: sem afinidade).
 static func empower(stats: UnitStats, id: String, seed: int, omen: int) -> Dictionary:
 	var extra: Array[StringName] = []
-	var affinity: int = int(demon_by_id(id).get("affinity", BattleMath.Affinity.NORMAL))
 	var tag := ""
 	if SurvivalStrata.is_warden(id):
 		tag = "WARDEN"
@@ -669,14 +633,12 @@ static func empower(stats: UnitStats, id: String, seed: int, omen: int) -> Dicti
 		match affix:
 			"BRUTAL": stats.atk += 4
 			"SWIFT": stats.agi += 5
-			"STONE":
-				stats.defense += 4
-				affinity = BattleMath.Affinity.RESIST
+			"STONE": stats.defense += 4
 			"BURNING": extra.append(&"ember_touch")
 			"VAMPIRIC": extra.append(&"life_drain")
 	if omen >= 1:
 		stats.max_hp = int(round(float(stats.max_hp) * 1.15))
-	return {"skills": extra, "affinity": affinity, "tag": tag}
+	return {"skills": extra, "tag": tag}
 
 
 static func battle_label(id: String, seed: int, omen: int) -> String:

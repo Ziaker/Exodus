@@ -316,7 +316,6 @@ func _create_units() -> void:
 		var enemy := BattleUnit.new(StringName("foe_%d" % i), ENEMY_NAMES[i], enemy_stats, false)
 		enemy.kind = ENEMY_KINDS[i]
 		enemy.skills = SkillBook.skills_of(enemy.kind)
-		enemy.affinity = BattleMath.Affinity.WEAK if i == 0 else BattleMath.Affinity.RESIST
 		state.add_unit(enemy)
 
 
@@ -466,7 +465,7 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 		is_reaction: bool, attack_timing: int, defense_timing: int, magic: bool = false) -> int:
 	if not defender.is_alive():
 		return -1
-	# No contact: skip damage, crit, affinity and SP rolls entirely. This also
+	# No contact: skip damage, crit and SP rolls entirely. This also
 	# avoids consuming random numbers for an outcome already determined.
 	var contact := BattleMath.has_contact(attack_timing, defense_timing)
 	if not contact:
@@ -476,9 +475,7 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 		_flash_feedback("DODGE")  # D-109: só o centro da defesa evita contato
 		return -1
 
-	# Creator 2026-11-23: magic = same formula with MAK/MEF; IGNI is normal (x1) for
-	# everyone until elemental affinities exist. ATK stages raise physical ATK only.
-	var affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL if magic else defender.affinity
+	# Creator 2026-11-23: magic = same formula with MAK/MEF. ATK stages raise physical ATK only.
 	var defence_stat: int = defender.stats.mef if magic else defender.effective_def()
 	var pierce := float(_hit_mods.get("pierce", 0.0))
 	if pierce > 0.0:
@@ -487,12 +484,11 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 	if bool(_hit_mods.get("prayer_base", false)):
 		# D-107 CHEREV (id &"cherav"): the prayer formula (10 + MAK - MEF), like Ra'am.
 		result = PrayerBook.raam_damage(0, attacker.stats.mak, attacker.stats.agi, defender.stats.mef,
-			attacker.current_sp, defender.current_sp, affinity, defender.race, rng)
+			attacker.current_sp, defender.current_sp, defender.race, rng)
 	else:
 		result = BattleMath.physical_damage(power,
 			float(attacker.stats.mak) if magic else attacker.effective_atk(), attacker.stats.agi,
-			defence_stat, attacker.current_sp, defender.current_sp,
-			affinity, rng)
+			defence_stat, attacker.current_sp, defender.current_sp, rng)
 
 	# D-109: the attack mark scales the hit (white 50%, grey 80%, yellow 100%; side defence halves).
 	var amount := BattleMath.scaled_damage(int(result.amount), attack_timing, defense_timing)
@@ -502,11 +498,7 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 
 	var applied := defender.take_damage(amount)
 	attacker.last_damage_dealt = applied
-	# Press Turn applies to a landed hit, not to a miss or a perfect dodge.
-	attacker.grant_acts(BattleMath.press_turn_acts(affinity))
 	if bool(result.crit):
-		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
-	if affinity == BattleMath.Affinity.WEAK and applied > 0:
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	if is_reaction:
 		attacker.add_sp(BattleMath.SP_GAIN_PER_EVENT)
@@ -520,10 +512,10 @@ func _apply_strike(attacker: BattleUnit, defender: BattleUnit, power: int,
 		outcome += " CRITICAL"
 	_flash_feedback(outcome)
 
-	_append_log("%s -> %s: %d dmg (%s, rhythm %s, def %s, crit %s, affinity %s, SP roll %+d)" % [
+	_append_log("%s -> %s: %d dmg (%s, rhythm %s, def %s, crit %s, SP roll %+d)" % [
 		attacker.display_name, defender.display_name, applied, outcome,
 		_rhythm_name(attack_timing), _rhythm_name(defense_timing),
-		"YES" if bool(result.crit) else "no", _affinity_name(affinity),
+		"YES" if bool(result.crit) else "no",
 		int(result.sp_roll)])
 	return applied
 
@@ -1014,20 +1006,6 @@ func _rhythm_name(result: int) -> String:
 			return "BEAM"
 		_:
 			return "MISS"
-
-
-func _affinity_name(affinity: BattleMath.Affinity) -> String:
-	match affinity:
-		BattleMath.Affinity.WEAK:
-			return "WEAK"
-		BattleMath.Affinity.RESIST:
-			return "RESIST"
-		BattleMath.Affinity.NULL:
-			return "NULL"
-		BattleMath.Affinity.ABSORB:
-			return "ABSORB"
-		_:
-			return "NORMAL"
 
 
 func _show_result() -> void:

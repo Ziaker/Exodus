@@ -18,7 +18,7 @@ const BLIND_ROUNDS := 2          # SANVERIM: until the end of the next round
 const MAGEN_ROUNDS := 2          # D-112 MAGEN: +1 physical DEF stage until the end of the next round
 const ZOHAR_ROUNDS := 2          # D-112 ZOHAR: wider POINT zone until the end of the next round
 ## Negative statuses cleared by Tahorah (D-112). Positive buffs (taunt, zohar, etc.) are preserved.
-const NEGATIVE_STATUSES: Array[StringName] = [&"blind", &"chill", &"weaken", &"mark", &"snare", &"break", &"sleep", &"slow", &"chaki"]
+const NEGATIVE_STATUSES: Array[StringName] = [&"blind", &"chill", &"weaken", &"mark", &"snare", &"break", &"sleep", &"slow", &"chaki", &"paralyzed"]
 
 ## Statuses that only change a stat (restored when they end).
 const STAT_STATUSES := [&"snare", &"break", &"berserk"]
@@ -96,6 +96,7 @@ static func tick(unit: BattleUnit) -> Dictionary:
 ## MEND: burns and bleeds go away.
 static func cleanse(unit: BattleUnit) -> void:
 	unit.burns.clear()
+	unit.burn_power = 0
 	unit.bleeds.clear()
 
 
@@ -104,11 +105,13 @@ static func cleanse(unit: BattleUnit) -> void:
 static func cleanse_all(unit: BattleUnit) -> int:
 	var removed := unit.burns.size() + unit.bleeds.size()
 	unit.burns.clear()
+	unit.burn_power = 0
 	unit.bleeds.clear()
 	for id in NEGATIVE_STATUSES:
 		if unit.has_status(id):
 			unit.remove_status(id)
 			removed += 1
+	unit.paralyzed_acts = 0
 	return removed
 
 

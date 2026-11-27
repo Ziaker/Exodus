@@ -25,10 +25,10 @@ func _run() -> void:
 			var zero_h := 0; var sum_h := 0.0; var zero_e := 0; var sum_e := 0.0
 			var n := 4000
 			for i in n:
-				var a := int(BattleMath.physical_damage(10, hero.atk, hero.agi, e.defense, hero.sp_value(), e.sp_value(), BattleMath.Affinity.NORMAL, rng).amount)
+				var a := int(BattleMath.physical_damage(10, hero.atk, hero.agi, e.defense, hero.sp_value(), e.sp_value(), rng).amount)
 				if a == 0: zero_h += 1
 				sum_h += a
-				var b := int(BattleMath.physical_damage(10, e.atk, e.agi, hero.defense, e.sp_value(), hero.sp_value(), BattleMath.Affinity.NORMAL, rng).amount)
+				var b := int(BattleMath.physical_damage(10, e.atk, e.agi, hero.defense, e.sp_value(), hero.sp_value(), rng).amount)
 				if b == 0: zero_e += 1
 				sum_e += b
 			print("  %-12s SP %3d ATK %2d DEF %2d HP %3d | Fallen->: media %5.1f, ZERO %3d%% | ->Fallen: media %5.1f, ZERO %3d%%" % [id, e.sp_value(), e.atk, e.defense, e.max_hp, sum_h / n, 100 * zero_h / n, sum_e / n, 100 * zero_e / n])

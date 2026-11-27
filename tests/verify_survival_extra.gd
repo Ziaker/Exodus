@@ -174,6 +174,32 @@ func _run() -> void:
 	restored.queue_free()
 	await process_frame
 
+	# Tutorial do curandeiro (criador 2026-11-26): perfil que nunca o viu -> a 1ª conversa
+	# mostra as páginas; ao fim abre a barra e grava no perfil; depois vai direto à barra.
+	# O perfil real é salvo e restaurado no fim do teste.
+	var meta_backup := FileAccess.get_file_as_string(SurvivalMeta.SAVE_PATH) if FileAccess.file_exists(SurvivalMeta.SAVE_PATH) else ""
+	var fresh_meta := SurvivalMeta.data()
+	fresh_meta["keeper_intro"] = false
+	SurvivalMeta.save(fresh_meta)
+	SurvivalState.reset()
+	var tut: Control = load(SurvivalData.WORLD_SCENE).instantiate()
+	tut.battle_scene = ""
+	root.add_child(tut)
+	await process_frame
+	_check(tut.talk() and tut.dialogue.is_open and not tut.service_open, "First keeper talk opens the tutorial, not the bar")
+	var tut_pages := 0
+	while tut.dialogue.is_open and tut_pages < 40:
+		tut.dialogue.shown_chars = 100000.0
+		tut.dialogue.advance()
+		tut_pages += 1
+	_check(tut_pages == tut.KEEPER_INTRO.size(), "Tutorial shows %d pages (got %d)" % [tut.KEEPER_INTRO.size(), tut_pages])
+	_check(tut.service_open, "Service bar opens when the tutorial ends")
+	_check(bool(SurvivalMeta.data().get("keeper_intro", false)), "Tutorial is recorded in the profile")
+	tut.close_service()
+	_check(tut.talk() and tut.service_open and not tut.dialogue.is_open, "Second keeper talk goes straight to the bar")
+	tut.queue_free()
+	await process_frame
+
 	# NEW RUN zera Macca/continues e reinicia o mundo sem erro de current_scene.
 	SurvivalState.reset()
 	var nr: Control = load(SurvivalData.WORLD_SCENE).instantiate()

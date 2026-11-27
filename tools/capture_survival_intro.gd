@@ -12,7 +12,7 @@ const INSTANTS := {
 	"a": [0.3, 1.8, 5.0, 8.6, 9.8, 13.0, 16.4, 21.0, 25.2, 27.0, 28.6, 31.0],
 	"b": [1.2, 4.0, 9.5, 13.6, 17.0, 21.5, 22.8, 24.0, 25.4, 26.6, 27.8, 30.0],
 	"c": [1.0, 4.0, 7.3, 10.0, 14.5, 15.1, 18.0, 21.8, 22.3, 23.0, 23.8, 26.0],
-	"d": [1.2, 2.4, 3.6, 4.4, 5.4, 8.0, 11.2, 15.0, 18.2, 22.0, 25.2, 26.6, 27.6, 28.6, 29.4, 30.4, 31.4, 33.5],
+	"d": [1.2, 3.6, 5.4, 11.2, 18.2, 25.2, 26.6, 27.4, 28.0, 28.5, 29.0, 29.6, 30.6, 31.2, 31.5, 32.2, 33.0, 34.5],
 }
 
 
@@ -38,6 +38,33 @@ func _run() -> void:
 	await _frames(20)
 	root.get_texture().get_image().save_png(ProjectSettings.globalize_path(ART))
 	print("CAPTURED: ", ART)
+	# Tutorial do curandeiro (criador 2026-11-26): perfil novo -> 1ª conversa mostra as
+	# páginas; ao fim abre a barra e grava no perfil; a 2ª conversa vai direto à barra.
+	SurvivalMeta.save({})
+	w._meta_cache = {}
+	var opened: bool = w.talk()
+	var pages_seen := 0
+	var tut_ok: bool = opened and w.dialogue.is_open and not w.service_open
+	while w.dialogue.is_open and pages_seen < 30:
+		w.dialogue.shown_chars = 100000.0
+		await _frames(2)
+		pages_seen += 1
+		var shot := OUT + "keeper_tutorial_%02d.png" % pages_seen
+		root.get_texture().get_image().save_png(ProjectSettings.globalize_path(shot))
+		print("CAPTURED: ", shot)
+		w.dialogue.advance()
+	await _frames(2)
+	root.get_texture().get_image().save_png(ProjectSettings.globalize_path(OUT + "keeper_tutorial_bar.png"))
+	var flag: bool = bool(SurvivalMeta.data().get("keeper_intro", false))
+	tut_ok = tut_ok and w.service_open and flag
+	print("TUTORIAL: opened=%s pages=%d bar_after=%s flag=%s" % [opened, pages_seen, w.service_open, flag])
+	w.close_service()
+	await _frames(2)
+	var again: bool = w.talk()
+	var second_ok: bool = again and w.service_open and not w.dialogue.is_open
+	print("TUTORIAL second talk goes straight to bar: ", second_ok)
+	print("TUTORIAL RESULT: ", "OK" if tut_ok and second_ok else "FAIL")
+	w.close_service()
 	w.queue_free()
 	await _frames(3)
 	_restore(SurvivalState.SAVE_PATH, run_backup)

@@ -34,7 +34,6 @@ func _plan(battle: Control, commands: Array[int]) -> void:
 
 func test_player_attack_uses_manual_rhythm_and_spends_one_act() -> void:
 	var battle := await _fresh_battle()
-	battle.state.units[2].affinity = BattleMath.Affinity.NORMAL
 	battle._fallen.acts_available = 2
 	var before: int = battle._fallen.acts_available
 	await _plan(battle, [0])
@@ -301,7 +300,6 @@ func test_chain_bar_stays_visible_between_attacks() -> void:
 func test_chained_command_keeps_bar_and_restarts_marker() -> void:
 	var battle := await _fresh_battle()
 	var target: BattleUnit = battle.state.units[2]
-	target.affinity = BattleMath.Affinity.NORMAL
 	target.current_hp = 999
 	target.stats.max_hp = 999
 	battle._fallen.acts_available = 2

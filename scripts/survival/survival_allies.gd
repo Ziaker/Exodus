@@ -5,7 +5,7 @@ extends RefCounted
 ## Especificação completa: docs/plans/2026-11-26-survival-aliados.md.
 ##
 ## Um aliado é um dicionário guardado na run (grupo ou reserva):
-##   uid, kind ("demon" | "human" | "yoch"), id, name, picture, stats {7 atributos}, affinity,
+##   uid, kind ("demon" | "human" | "yoch"), id, name, picture, stats {7 atributos},
 ##   skills [String], spells [String] (rezas do Yoch que ele conhece), hp, en, pp, down,
 ##   relics [String], fights, auto.
 
@@ -108,7 +108,6 @@ static func new_member(uid: String, id: String, stats: Dictionary, seed: int = 0
 		"name": String(def.get("name", id)),
 		"picture": String(def.get("picture", "")),
 		"stats": stats.duplicate(),
-		"affinity": int(def.get("affinity", BattleMath.Affinity.NORMAL)),
 		"skills": skills,
 		"spells": spells,
 		"hp": int(stats.get("max_hp", 1)),
@@ -124,7 +123,7 @@ static func new_member(uid: String, id: String, stats: Dictionary, seed: int = 0
 static func yoch_member(uid: String) -> Dictionary:
 	return {
 		"uid": uid, "kind": "yoch", "id": "yoch", "name": "YOCH", "picture": YOCH_PICTURE,
-		"stats": {}, "affinity": BattleMath.Affinity.NORMAL, "skills": [],
+		"stats": {}, "skills": [],
 		"spells": ["refuah", "haganah", "raam"], "hp": -1, "en": 0,
 		"pp": int(SurvivalData.YOCH_BASE.pp), "down": false, "relics": [], "fights": 0, "auto": false,
 	}

@@ -44,15 +44,13 @@ func fresh() -> Control:
 	battle.offer_reserve = true  # creator 2026-11-24: REACT left the own-turn menu
 	root.add_child(battle)
 	# D-109 (criador 2026-11-25): a trilha branca agora acerta com 50%. Estes checks isolam a
-	# economia de atos, entao nenhum golpe pode matar nem dar +1 ACT por fraqueza.
+	# economia de atos, entao nenhum golpe pode matar.
 	for hero in battle.hud.players:
 		hero.stats.max_hp = 999
 		hero.current_hp = 999
 	for foe in battle.hud.opponents:
 		foe.stats.max_hp = 999
 		foe.current_hp = 999
-		if foe.affinity == BattleMath.Affinity.WEAK:
-			foe.affinity = BattleMath.Affinity.NORMAL
 	return battle
 
 func advance(battle: Control, frames: int = 60) -> void:
@@ -184,9 +182,9 @@ func _run() -> void:
 	battle = fresh()
 	battle.submit_command(0); battle.submit_target(1)
 	battle.rhythm._finish(BattleMath.RhythmResult.POINT)
-	# D-057 (creator 2026-11-25): an affinity never takes an act; RESIST spends only the action.
-	check(battle._fallen.acts_available == 1, "A landed resisted hit spends only its own act (no -1 penalty)")
-	check(not battle.hud.events.any(func(e: Dictionary) -> bool: return String(e.text).contains("loses")), "No act loss is told for a resisted hit")
+	# D-119: no affinity; a landed hit spends only its own act.
+	check(battle._fallen.acts_available == 1, "A landed hit spends only its own act (no -1 penalty)")
+	check(not battle.hud.events.any(func(e: Dictionary) -> bool: return String(e.text).contains("loses")), "No act loss is told for a landed hit")
 	battle.queue_free(); await process_frame
 	# D-022: declining the reaction makes the enemy attack an automatic hit.
 	battle = AutoHitBattle.new()

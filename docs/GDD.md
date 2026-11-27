@@ -1444,7 +1444,7 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 - **Implementação e respostas do criador (2026-11-23):** detalhes técnicos em
   `docs/COMBAT_SPEC.md` §Reza ("Implementação"). Resumo: PRAY após FIGHT abre submenu; alvo
   escolhido no plano (mesmo alvo = +1 PP, outro alvo = nova conjuração); PP saem ao
-  enfileirar; Ra'am = 10 + MAK + 10/PP extra − MEF com ritmo, crítico, SP e afinidade como o
+  enfileirar; Ra'am = 10 + MAK + 10/PP extra − MEF com ritmo, crítico e SP como o
   ATTACK; IA 33% contra PRAY e Ra'am; todos os inimigos atacam o PRAY, qualquer contato
   interrompe, o primeiro que acertou ganha os atos; Yoch sem barra contra ataque ao PRAY;
   Haganah como marca de 1 round (renova); Refuah só aliados; derrota zera os PP. Visual
@@ -3108,7 +3108,7 @@ Formato: ID · data · decisão · estado · impacto documental.
   atos e REST seguem a COMBAT_SPEC sem mudança. Impacto: `survival_battle.gd` (overrides de
   `_enemy_choice`, `_player_with_most_sp`, `_enemy_turn`; camada `IntentLayer`).
 - **D-070 · 2026-11-25 (liberdade criativa, Survival) — elites com efeito e saque.** Afixos com
-  efeito real: BRUTAL +4 ATK, SWIFT +5 AGI, STONE afinidade RESIST e +4 DEF, BURNING ganha
+  efeito real: BRUTAL +4 ATK, SWIFT +5 AGI, STONE +4 DEF (a resistência saiu na D-119), BURNING ganha
   EMBER TOUCH, VAMPIRIC ganha LIFE DRAIN (somados ao +12 HP/+3 ATK/+2 MAK/+2 DEF antigos). Elite
   derrotado dá 1 relíquia; guardião dá Macca ×2 e a escolha de 1 entre 3 relíquias ao voltar ao
   mapa. Impacto: `survival_data.gd`, `survival_battle.gd`, `survival_world.gd`.
@@ -3279,3 +3279,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   - **Palavra-chave `IMEDIATO`:** resolve no momento em que é anunciada, sem possibilidade de reação.
   - **Sistema `ZAHAV`:** canônico a partir da metade do jogo (acessível a Anjos e elites; indisponível a inimigos normais, humanos e maziks). Acionado segurando `A`, funciona como `+PP` em qualquer magia (+2 estágios de boost de dano e +20% de chance de efeito ao custo de 20 SP após a conclusão) e ativa versões evoluídas com novo nome (ex.: `Esh` → `Ur Esh`, `Adin` → `Adina`), trocando o texto das skills para amarelo (dourado nas que mudam de nome).
   Impacto: `docs/ANGEL_PRAYERS_AND_ZAHAV.md`, `docs/DECISIONS.md`, `docs/GDD.md` (§9.1 e Apêndice A), `docs/COMBAT_SPEC.md` (§Reza), `docs/CANON_BOUNDARY.md`, `docs/MAGIC_VOCABULARY_BACKLOG.md`.
+
+- **D-119 · 2026-11-27 (decisão do criador) — remoção total da afinidade.**
+  Fraqueza (WEAK), resistência (RESIST), nulo (NULL) e absorção (ABSORB) deixam de existir como mecânica. O dano de ataque, magia e rezas não tem multiplicador de afinidade; acertar não concede ato extra (Press Turn) nem SP extra; o campo `affinity` sai dos demônios, humanos, aliados e salvamentos (campo antigo é ignorado). O afixo STONE dos elites mantém só +4 DEF. Nenhuma regra de compensação foi definida (decisão explícita do criador). Supera D-057 ("só WEAK dá +1") e a parte "fraqueza" de D-109; as menções antigas a afinidade/Press Turn em decisões anteriores (D-033, D-036 etc.) ficam como histórico.
+  Impacto: `scripts/core/battle_math.gd`, `prayer_book.gd`, `scripts/battle/*`, `scripts/survival/*`, testes `tests/*`, `docs/COMBAT_SPEC.md` (§Press Turn), `docs/DECISIONS.md`.

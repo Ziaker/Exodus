@@ -261,7 +261,6 @@ func _run() -> void:
 	press_at(battle, [0.5])
 	await wait_mode(battle, "continue")
 	check(dmg_lines(battle, from, "FALLEN -> GENETIC FOE A").size() == 1 and dmg_lines(battle, from, "FALLEN -> GENETIC FOE B").size() == 1, "Heat wave hits both enemies")
-	check(dmg_lines(battle, from, "FALLEN -> GENETIC FOE A")[0].contains("affinity NORMAL"), "IGNI is normal for everyone (FOE A is WEAK physically)")
 	check(battle.hud.opponents[0].burns == [3] and battle.hud.opponents[1].burns == [3], "Burn applied for 3 rounds")
 	check(fallen.acts_available == 0 and fallen.current_en == fallen.stats.max_en - 6, "Heat wave costs 2 acts and 6 EN")
 	var hp_a: int = battle.hud.opponents[0].current_hp
@@ -273,7 +272,7 @@ func _run() -> void:
 	# ---- Magic formula: power 5 x MAK / MEF (variation only, no crit / SP roll here).
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1
-	var magic := BattleMath.physical_damage(5, 8.0, 0, 2, 10, 10, BattleMath.Affinity.NORMAL, rng)
+	var magic := BattleMath.physical_damage(5, 8.0, 0, 2, 10, 10, rng)
 	check(is_equal_approx(float(magic.base), 20.0), "5 x MAK 8 / MEF 2 = base 20")
 
 	# ---- Enemy Lunge with no reaction: guaranteed two hits on the hero.

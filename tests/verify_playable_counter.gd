@@ -151,7 +151,7 @@ func _run() -> void:
 	check(enemy.current_sp == maxi(0, enemy_sp - 4), "Winning interruption steals 4 SP from the enemy")
 	check(target.current_hp == target_hp, "An interrupted enemy attack deals no damage")
 	check(battle.log_history.any(func(l: String) -> bool: return l.begins_with(target.display_name + " ->")), "The winning counter strike resolves")
-	check(battle.hud.impact_left == 0.0 and battle.hud.shake_unit == null, "A normal interruption has no impact frame or shake")
+	check(battle.hud.impact_left == 0.0 and battle.hud._shakes.is_empty(), "A normal interruption has no impact frame or shake")
 	check(battle.hud.mode == "continue", "The exchange result pauses for reading")
 	confirm(battle)
 	check(lost_line(battle).contains("loses 1 queued") and lost_line(battle).contains("gains 1"), "Interrupted enemy loses its next combo attack; the interrupter gains an act (%s)" % lost_line(battle))
@@ -221,15 +221,22 @@ func _run() -> void:
 	check(battle.log_history.any(func(l: String) -> bool: return l.begins_with("PERFECT INTERRUPTION")), "Perfect interruption is logged")
 	check(battle.last_counter.player_timing == R.POINT, "The perfect strike counts as POINT")
 	check(is_equal_approx(battle.hud.impact_left, 3.0 / 60.0), "Impact frame lasts 3 frames")
-	check(battle.hud.shake_unit == enemy and absf(battle.hud.shake_offset(enemy).x) == 4.0 and battle.hud.shake_offset(enemy).y == 0.0, "The interrupted enemy sprite shakes 4 px horizontally")
+	check(battle.hud._shakes.has(enemy.id) and absf(battle.hud.shake_offset(enemy).x) == 4.0 and battle.hud.shake_offset(enemy).y == 0.0, "The interrupted enemy sprite shakes 4 px horizontally")
 	check(battle.hud.shake_offset(target) == Vector2.ZERO, "Only the interrupted unit shakes")
-	battle.hud.shake_age = 1.0 / 30.0 + 0.001
+	battle.hud._shakes[enemy.id] = 1.0 / 30.0 + 0.001
 	check(signf(battle.hud.shake_offset(enemy).x) == -1.0, "Shake alternates direction at 30 Hz")
-	battle.hud.shake_age = 0.0
+	battle.hud._shakes[enemy.id] = 0.0
 	await wait_seconds(0.1)
 	check(battle.hud.impact_left == 0.0, "The white scenery ends after its 3 frames")
 	await wait_seconds(0.4)
 	check(battle.hud.shake_offset(enemy) == Vector2.ZERO, "The shake ends after 0.4 s")
+	# Damage shake: any unit that loses HP shakes (same 4 px / 0.4 s), the others stay still.
+	target.current_hp = target.stats.max_hp
+	await wait_seconds(0.1)
+	check(battle.hud.shake_offset(target) == Vector2.ZERO, "No shake without damage")
+	target.take_damage(1)
+	await wait_seconds(0.02)
+	check(battle.hud._shakes.has(target.id) and absf(battle.hud.shake_offset(target).x) == 4.0, "A unit that takes damage shakes")
 	battle.queue_free(); await process_frame
 
 	# ---- Enemy counter on the hero's own plan: rails over the enemy, queue lost on defeat.

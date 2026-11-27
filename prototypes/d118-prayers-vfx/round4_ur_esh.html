@@ -1,0 +1,575 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="esh" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Esh <span class="opacity-80">אש</span>
+        </button>
+        <button data-spell="meir" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Meir <span class="opacity-80">מאיר</span>
+        </button>
+        <button data-spell="ur_esh" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Ur Esh <span class="opacity-80">אור אש</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="400" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    const FIRE_PALETTE = ['#ff7a1f', '#ffd84a', '#ffffff'];
+    const LIGHT_PALETTE = ['#ffffff', '#fffce0', '#f5f58c'];
+    const ZAHAV_PALETTE = ['#ffd84a', '#ffffff', '#ff7a1f'];
+
+    const SPELLS = {
+      esh: {
+        title: 'ESH · 2 ACT / 1 PP · CHAMA FOCADA EM ALVO ÚNICO (20 + MAK · 30% +10%/PP BURN)',
+        log: [
+          'YOCH casts ESH on MAZIK B — a tight spiral of sacred fire rises!',
+          'ESH burns MAZIK B: 20 + MAK DMG! BURN inflicted!'
+        ],
+        duration: 2.7
+      },
+      meir: {
+        title: 'MEIR · 1 ACT / 2 PP · FAROL DE PROVOCAÇÃO (FORÇA INIMIGOS A FOCAR O USUÁRIO · MARCA א)',
+        log: [
+          'YOCH prays MEIR — a radiant beacon of Hebrew light draws all eyes!',
+          'All foes are TAUNTED to target YOCH until end of round (mark א)!'
+        ],
+        duration: 3.0
+      },
+      ur_esh: {
+        title: 'UR ESH (EVOLUÇÃO ZAHAV DE ESH) · 2 ACT / 3 PP OU 15 EN · 20 + MAK + BURN (+40 SE QUEIMANDO)',
+        log: [
+          'ZAHAV! ESH evolves into UR ESH — primordial flame locks onto burning MAZIK B!',
+          'UR ESH detonates existing BURN: 20 + MAK + 40 EXTRA DMG!'
+        ],
+        duration: 3.1
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 218, y: 176, w: 68, h: 108 },
+      { id: 'B', name: 'MAZIK B', x: 408, y: 168, w: 76, h: 120 },
+      { id: 'C', name: 'MAZIK C', x: 598, y: 176, w: 68, h: 108 }
+    ];
+
+    let activeSpell = 'esh';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'esh') {
+        // Espiral de fogo ascendente focada e limpa (escala de 1 PP)
+        fx.flames = [];
+        for (let i = 0; i < 40; i++) {
+          fx.flames.push({
+            frac: i / 40,
+            angle: (i / 40) * Math.PI * 5,
+            rad: 42 * (1 - (i / 40) * 0.65),
+            ch: i % 4 === 0 ? 'אש'[i % 2] : randGlyph(),
+            size: 12 + (i % 4) * 3,
+            colorIdx: i % 3,
+            delay: (i / 40) * 0.42
+          });
+        }
+        fx.sparks = [];
+        for (let i = 0; i < 20; i++) {
+          fx.sparks.push({
+            vx: (Math.random() - 0.5) * 110,
+            vy: -70 - Math.random() * 120,
+            ch: randGlyph(),
+            size: 10 + Math.random() * 7,
+            colorIdx: i % 3,
+            life: 0.45 + Math.random() * 0.45
+          });
+        }
+      } else if (id === 'meir') {
+        // Farol saindo do cartão de YOCH (cx = 414, cy = 362) + fluxos de letras puxando foco dos 3 inimigos
+        fx.beacon = [];
+        for (let i = 0; i < 36; i++) {
+          fx.beacon.push({
+            xOff: (Math.random() - 0.5) * 86,
+            speed: 120 + Math.random() * 140,
+            delay: Math.random() * 0.45,
+            ch: i % 4 === 0 ? 'מאיר'[i % 4] : randGlyph(),
+            size: 12 + (i % 3) * 3,
+            colorIdx: i % 3
+          });
+        }
+        fx.pullStreams = FOES.map((f, fi) => {
+          const glyphs = [];
+          for (let i = 0; i < 9; i++) {
+            glyphs.push({
+              offset: i / 9,
+              ch: randGlyph(),
+              size: 11 + (i % 2) * 3
+            });
+          }
+          return { foeIdx: fi, glyphs };
+        });
+      } else if (id === 'ur_esh') {
+        // Evolução dourada de Esh -> Ur Esh + detonação solar sobre alvo já queimando (+40 extra)
+        fx.existingBurn = [];
+        for (let i = 0; i < 14; i++) {
+          fx.existingBurn.push({
+            xOff: (Math.random() - 0.5) * 56,
+            phase: Math.random() * 6.28,
+            rise: 28 + Math.random() * 34,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 4
+          });
+        }
+        fx.descent = [];
+        for (let i = 0; i < 42; i++) {
+          const a = (i / 42) * Math.PI * 2;
+          fx.descent.push({
+            a,
+            rad: 115 + Math.random() * 65,
+            ch: i % 5 === 0 ? 'אוראש'[i % 5] : randGlyph(),
+            size: 13 + Math.random() * 8,
+            colorIdx: i % 3
+          });
+        }
+        fx.detonation = [];
+        for (let i = 0; i < 56; i++) {
+          const a = (i / 56) * Math.PI * 2 + (Math.random() - 0.5) * 0.12;
+          const spd = 110 + Math.random() * 230;
+          fx.detonation.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.8,
+            ch: i % 5 === 0 ? 'אוראש'[i % 5] : randGlyph(),
+            size: 14 + Math.random() * 11,
+            colorIdx: i % 3,
+            life: 0.55 + Math.random() * 0.5
+          });
+        }
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 26 + i * 42 + Math.sin(time * 0.8 + i * 1.1) * 12;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 26);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 278, W, 2);
+    }
+
+    function drawFoe(foe, flashAlpha, damageLabel, burnTag, tauntTarget) {
+      ctx.save();
+      const x = foe.x, y = foe.y;
+      ctx.fillStyle = flashAlpha > 0.05 ? `rgba(255, 252, 230, ${0.4 + flashAlpha * 0.6})` : '#06030a';
+      ctx.fillRect(x - foe.w * 0.24, y - foe.h * 0.52, foe.w * 0.48, foe.h * 0.22);
+      ctx.fillRect(x - foe.w * 0.44, y - foe.h * 0.26, foe.w * 0.88, foe.h * 0.46);
+      ctx.fillRect(x - foe.w * 0.16, y + foe.h * 0.20, foe.w * 0.32, foe.h * 0.32);
+      ctx.fillRect(x - foe.w * 0.56, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+      ctx.fillRect(x + foe.w * 0.44, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.62);
+
+      if (burnTag) {
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = '#ff7a1f';
+        ctx.fillText('BURN', x, y + foe.h * 0.64);
+      }
+      if (tauntTarget) {
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = '#ffd84a';
+        ctx.fillText('FOCUS ▸ YOCH', x, y + foe.h * 0.64);
+      }
+      if (damageLabel) {
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = damageLabel.color || '#fff3b0';
+        ctx.fillText(damageLabel.text, x, y - 20 - damageLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawWordPalette(word, cx, cy, px, alpha, palette) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const startX = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        if (ch === ' ') return;
+        ctx.fillStyle = palette[i % palette.length];
+        ctx.fillText(ch, startX - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, yochMark, cmdColor) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45 (PP 5/8)', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(topTag, W - 16, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 286, W - 32, 44);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 286, W - 32, 1);
+      ctx.fillRect(16, 329, W - 32, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 313);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff', mark: null },
+        { x: 286, name: '▸ YOCH', hp: 'HP 68/74', res: 'PP 5/8', col: '#f5f58c', mark: yochMark || null }
+      ];
+      panels.forEach(p => {
+        ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(p.x, 338, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, p.x + 12, 357);
+        if (p.mark) {
+          ctx.font = 'bold 15px "Times New Roman", serif';
+          ctx.fillStyle = '#fffce0';
+          ctx.fillText(p.mark, p.x + 86, 357);
+        }
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, p.x + 12, 376);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, p.x + 128, 376);
+      });
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 338, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = cmdColor || '#f5f58c';
+      const label = activeSpell === 'ur_esh' ? 'ZAHAV ▸ UR ESH' : 'PRAY ▸ ' + activeSpell.toUpperCase();
+      ctx.fillText(label, 568, 366);
+    }
+
+    function renderEsh() {
+      const target = FOES[1];
+      const hitT = 0.42;
+      const hit = t >= hitT;
+      const hAge = Math.max(0, t - hitT);
+
+      ctx.save();
+      drawPlasmaBg(t);
+
+      const dark = t < 1.4 ? 0.25 * Math.min(1, t / 0.25) : Math.max(0, 0.25 * (1 - (t - 1.4) / 0.7));
+      ctx.fillStyle = `rgba(12, 4, 10, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      const flash = hit && hAge < 0.22 ? 1 - hAge / 0.22 : 0;
+      const dmg = hit && hAge < 1.05 ? { text: '20 + MAK', rise: hAge * 26 } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flash : 0, i === 1 ? dmg : null, i === 1 && hit, false));
+
+      ctx.textAlign = 'center';
+      // Espiral ascendente de fogo focado (sem flash de tela, escala de 1 PP)
+      fx.flames.forEach(fl => {
+        const age = t - fl.delay;
+        if (age < 0 || age > 1.15) return;
+        const k = age / 1.15;
+        const px = target.x + Math.cos(fl.angle + age * 5.2) * fl.rad * (1 - k * 0.45);
+        const py = target.y + 58 - k * 145;
+        const a = k < 0.15 ? k / 0.15 : Math.max(0, 1 - (k - 0.15) / 0.85);
+        ctx.save();
+        ctx.globalAlpha = a * 0.95;
+        ctx.font = `bold ${fl.size}px "Times New Roman", serif`;
+        ctx.fillStyle = FIRE_PALETTE[fl.colorIdx];
+        ctx.fillText(fl.ch, px, py);
+        ctx.restore();
+      });
+
+      if (hit) {
+        fx.sparks.forEach(s => {
+          if (hAge > s.life) return;
+          const a = Math.max(0, 1 - hAge / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[s.colorIdx];
+          ctx.fillText(s.ch, target.x + s.vx * hAge, target.y + 10 + s.vy * hAge + 95 * hAge * hAge);
+          ctx.restore();
+        });
+      }
+
+      if (t > 0.15 && t < 1.65) {
+        const wa = t < 0.45 ? (t - 0.15) / 0.3 : Math.max(0, 1 - (t - 1.0) / 0.65);
+        drawWordPalette('אש', target.x, target.y - 36 - Math.max(0, t - 0.4) * 18, 30, wa, FIRE_PALETTE);
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.esh.log[hit ? 1 : 0], '1 PP · SINGLE TARGET FIRE');
+    }
+
+    function renderMeir() {
+      const lockT = 0.65;
+      const locked = t >= lockT;
+      const cardCx = 286 + 128;
+      const cardTop = 338;
+
+      ctx.save();
+      drawPlasmaBg(t);
+
+      const dark = t < 2.2 ? 0.3 * Math.min(1, t / 0.3) : Math.max(0, 0.3 * (1 - (t - 2.2) / 0.6));
+      ctx.fillStyle = `rgba(8, 5, 18, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      FOES.forEach(f => drawFoe(f, 0, null, false, locked));
+      ctx.restore();
+
+      drawHud(SPELLS.meir.log[locked ? 1 : 0], locked ? 'TAUNT ACTIVE · MARK א' : 'LIGHTING BEACON...', locked ? 'א' : null);
+
+      ctx.save();
+      ctx.textAlign = 'center';
+
+      // Farol vertical de letras douradas subindo do cartão de YOCH
+      fx.beacon.forEach(b => {
+        const age = t - b.delay;
+        if (age < 0) return;
+        const cyc = (age * 0.72) % 1.0;
+        const bx = cardCx + b.xOff * (1 + cyc * 0.55);
+        const by = cardTop - cyc * 240;
+        const a = Math.sin(cyc * Math.PI) * (t < 2.3 ? 0.9 : Math.max(0, 1 - (t - 2.3) / 0.6));
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.font = `bold ${b.size}px "Times New Roman", serif`;
+        ctx.fillStyle = LIGHT_PALETTE[b.colorIdx];
+        ctx.fillText(b.ch, bx, by);
+        ctx.restore();
+      });
+
+      // Fluxos de letras puxando a atenção dos 3 inimigos em direção a YOCH
+      if (t > 0.35 && t < 2.65) {
+        const sa = t < 0.7 ? (t - 0.35) / 0.35 : Math.max(0, 1 - (t - 2.0) / 0.65);
+        fx.pullStreams.forEach(st => {
+          const foe = FOES[st.foeIdx];
+          st.glyphs.forEach(g => {
+            const p = (g.offset + t * 0.85) % 1.0;
+            const gx = foe.x + (cardCx - foe.x) * p;
+            const gy = (foe.y + 16) + (cardTop - (foe.y + 16)) * p;
+            ctx.save();
+            ctx.globalAlpha = sa * Math.sin(p * Math.PI) * 0.95;
+            ctx.font = `bold ${g.size}px "Times New Roman", serif`;
+            ctx.fillStyle = p > 0.65 ? '#ffffff' : '#f5f58c';
+            ctx.fillText(g.ch, gx, gy);
+            ctx.restore();
+          });
+        });
+      }
+
+      // Palavra מאיר acima do cartão de YOCH
+      if (t < 2.2) {
+        const wa = t < 0.35 ? t / 0.35 : Math.max(0, 1 - (t - 1.5) / 0.7);
+        drawWordPalette('מאיר', cardCx, cardTop - 44, 30, wa, LIGHT_PALETTE);
+      }
+
+      ctx.restore();
+    }
+
+    function renderUrEsh() {
+      const target = FOES[1];
+      const boomT = 0.85;
+      const boomed = t >= boomT;
+      const bAge = Math.max(0, t - boomT);
+
+      let shakeX = 0, shakeY = 0;
+      if (boomed && bAge < 0.28) {
+        const m = 9 * (1 - bAge / 0.28);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = !boomed ? 0.42 * (t / boomT) : Math.max(0, 0.42 * (1 - bAge / 1.4));
+      ctx.fillStyle = `rgba(14, 4, 12, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      const flash = boomed && bAge < 0.26 ? 1 - bAge / 0.26 : 0;
+      const dmg = boomed && bAge < 1.2 ? { text: '20 + MAK + 40!', rise: bAge * 30, color: '#ffd84a' } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flash : 0, i === 1 ? dmg : null, i === 1, false));
+
+      ctx.textAlign = 'center';
+
+      // Brasas de BURN já existentes no alvo antes da detonação
+      if (!boomed) {
+        fx.existingBurn.forEach(eb => {
+          const cyc = (t * 1.4 + eb.phase) % 1.0;
+          ctx.save();
+          ctx.globalAlpha = (1 - cyc) * 0.85;
+          ctx.font = `bold ${eb.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = '#ff7a1f';
+          ctx.fillText(eb.ch, target.x + eb.xOff, target.y + 30 - cyc * eb.rise);
+          ctx.restore();
+        });
+
+        // Convergência dourada Zahav de אור אש
+        const p = t / boomT;
+        fx.descent.forEach(d => {
+          const r = d.rad * Math.pow(1 - p, 1.5);
+          const ang = d.a + p * 3.8;
+          ctx.save();
+          ctx.globalAlpha = 0.25 + 0.75 * p;
+          ctx.font = `bold ${d.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = ZAHAV_PALETTE[d.colorIdx];
+          ctx.fillText(d.ch, target.x + Math.cos(ang) * r, target.y + Math.sin(ang) * r * 0.68);
+          ctx.restore();
+        });
+        // Mostra evolução אש -> אור אש
+        const word = p < 0.42 ? 'אש' : 'אור אש';
+        drawWordPalette(word, target.x, target.y - 42, 22 + p * 14, Math.min(1, p * 1.6), ZAHAV_PALETTE);
+      } else {
+        // Detonação primordial de fogo dourado (+40 extra)
+        fx.detonation.forEach(d => {
+          if (bAge > d.life) return;
+          const a = Math.max(0, 1 - bAge / d.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${d.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = ZAHAV_PALETTE[d.colorIdx];
+          ctx.fillText(d.ch, target.x + d.vx * bAge, target.y + d.vy * bAge + 70 * bAge * bAge);
+          ctx.restore();
+        });
+
+        if (bAge < 1.0) {
+          drawWordPalette('אור אש', target.x, target.y - 26 - bAge * 26, 38, 1 - bAge / 1.0, ZAHAV_PALETTE);
+        }
+
+        // Flash único dourado suave
+        if (bAge < 0.085) {
+          ctx.fillStyle = `rgba(255, 238, 175, ${(1 - bAge / 0.085) * 0.62})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.ur_esh.log[boomed ? 1 : 0], boomed ? 'BURN DETONATION (+40)' : 'ZAHAV: ESH → UR ESH', null, '#ffd84a');
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'esh') renderEsh();
+      else if (activeSpell === 'meir') renderMeir();
+      else renderUrEsh();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'esh');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

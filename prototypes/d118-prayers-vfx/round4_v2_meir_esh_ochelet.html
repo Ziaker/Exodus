@@ -1,0 +1,654 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0e0a1a;
+      --card: #171128;
+      --card-border: #2c2246;
+      --border: #382b58;
+      --primary: #ffd84a;
+      --primary-foreground: #120b1e;
+      --secondary: #241b3d;
+      --foreground: #f2eefc;
+      --muted-foreground: #b8aecf;
+    }
+    html, body { background: var(--background); color: var(--foreground); font-family: system-ui, -apple-system, sans-serif; padding: 8px; margin: 0; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-2 select-none">
+    <!-- Barra de seleção compacta -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex items-center gap-1.5">
+        <button data-spell="esh" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Esh v2 <span class="opacity-80">אש</span>
+        </button>
+        <button data-spell="meir" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Meir v2 <span class="opacity-80">מאיר</span>
+        </button>
+        <button data-spell="esh_ochelet" class="spell-btn px-2.5 py-1 rounded font-medium border border-[var(--border)] transition">
+          Esh Ochelet <span class="opacity-80">אש אוכלת</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-replay" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">
+          ↻ Replay
+        </button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-2 py-1 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+          1.0×
+        </button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS compacto -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="400" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Legenda técnica -->
+    <div class="flex items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+      <span id="caption-text"></span>
+      <span class="font-mono text-[11px] opacity-75 shrink-0">D-113 · 100% letras hebraicas</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const ALPHABET = 'אבגדהוזחטיכלמנסעפצקרשת';
+    const randGlyph = () => ALPHABET[(Math.random() * ALPHABET.length) | 0];
+
+    const FIRE_PALETTE = ['#ff7a1f', '#ffd84a', '#ffffff'];
+    const LIGHT_PALETTE = ['#ffffff', '#fffce0', '#f5f58c'];
+
+    const SPELLS = {
+      esh: {
+        title: 'ESH (v2) · 2 ACT / 1 PP · LANÇA DE FOGO DE LUZ QUE ACERTA E INCENDEIA (20 + MAK · BURN)',
+        log: [
+          'YOCH launches ESH — a sharp bolt of radiant flame strikes MAZIK B!',
+          'ESH sears MAZIK B: 20 + MAK DMG! BURN ignited!'
+        ],
+        duration: 2.65
+      },
+      meir: {
+        title: 'MEIR (v2) · 1 ACT / 2 PP · PROVOCAÇÃO: ALERTA OS 3 INIMIGOS E TRAVA SUAS MIRAS EM YOCH',
+        log: [
+          'YOCH casts MEIR — blinding provocation draws every enemy gaze!',
+          'ALL FOES LOCKED ON YOCH! Enemies forced to target YOCH until round end.'
+        ],
+        duration: 3.1
+      },
+      esh_ochelet: {
+        title: 'ESH OCHELET · ANGELICAL · 4 ACT / 5 PP OU 30 EN · IMEDIATO · 30 DMG A CADA AÇÃO DO ALVO',
+        log: [
+          'ESH OCHELET (IMMEDIATE)! Devouring fire brand latches onto MAZIK B!',
+          'MAZIK B acts — ESH OCHELET bites for 30 DMG (does not interrupt)!'
+        ],
+        duration: 3.3
+      }
+    };
+
+    const FOES = [
+      { id: 'A', name: 'MAZIK A', x: 218, y: 176, w: 68, h: 108 },
+      { id: 'B', name: 'MAZIK B', x: 408, y: 168, w: 76, h: 120 },
+      { id: 'C', name: 'MAZIK C', x: 598, y: 176, w: 68, h: 108 }
+    ];
+
+    let activeSpell = 'esh';
+    let t = 0;
+    let speed = 1.0;
+    let loop = true;
+    let lastTs = performance.now();
+    let fx = {};
+
+    function initSpell(id) {
+      activeSpell = id;
+      t = 0;
+      fx = {};
+
+      if (id === 'esh') {
+        // Lança/feixe de fogo de luz descendo do alto-esquerda até MAZIK B -> impacto + combustão
+        fx.bolt = [];
+        for (let i = 0; i < 24; i++) {
+          fx.bolt.push({
+            frac: i / 24,
+            jitter: (Math.random() - 0.5) * 14,
+            ch: i % 3 === 0 ? 'אש'[i % 2] : randGlyph(),
+            size: 13 + (i % 4) * 3,
+            colorIdx: i % 3
+          });
+        }
+        fx.burst = [];
+        for (let i = 0; i < 34; i++) {
+          const a = (i / 34) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+          const spd = 75 + Math.random() * 175;
+          fx.burst.push({
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd * 0.85 - 25,
+            ch: i % 4 === 0 ? 'אש'[i % 2] : randGlyph(),
+            size: 12 + Math.random() * 10,
+            colorIdx: i % 3,
+            life: 0.42 + Math.random() * 0.45
+          });
+        }
+        fx.burnLicks = [];
+        for (let i = 0; i < 16; i++) {
+          fx.burnLicks.push({
+            xOff: (Math.random() - 0.5) * 58,
+            yOff: (Math.random() - 0.5) * 76,
+            rise: 24 + Math.random() * 34,
+            phase: Math.random() * 6.28,
+            ch: randGlyph(),
+            size: 11 + Math.random() * 5,
+            colorIdx: i % 2 // laranja e amarelo
+          });
+        }
+      } else if (id === 'meir') {
+        // Provocação: pulso no YOCH -> exclamação/alerta nos 3 inimigos -> 3 feixes-mira travando em YOCH
+        fx.pulseRing = [];
+        for (let i = 0; i < 20; i++) {
+          fx.pulseRing.push({
+            a: (i / 20) * Math.PI * 2,
+            ch: i % 4 === 0 ? 'מאיר'[i % 4] : randGlyph(),
+            size: 13 + (i % 2) * 3
+          });
+        }
+        fx.locks = FOES.map((f, fi) => {
+          const chain = [];
+          for (let i = 0; i < 12; i++) {
+            chain.push({
+              frac: (i + 1) / 13,
+              ch: i % 4 === 0 ? 'מאיר'[i % 4] : randGlyph(),
+              size: 12 + (i % 2) * 2
+            });
+          }
+          return { foeIdx: fi, chain };
+        });
+        fx.targetFrame = [];
+        for (let i = 0; i < 16; i++) {
+          fx.targetFrame.push({
+            a: (i / 16) * Math.PI * 2,
+            ch: randGlyph()
+          });
+        }
+      } else if (id === 'esh_ochelet') {
+        // Fogo devorador imediato: coroa de mandíbulas de fogo ao redor de MAZIK B que morde em t=1.05 e t=1.95
+        fx.ring = [];
+        for (let i = 0; i < 26; i++) {
+          fx.ring.push({
+            a: (i / 26) * Math.PI * 2,
+            ch: i % 4 === 0 ? 'אשאוכלת'[i % 7] : randGlyph(),
+            size: 13 + (i % 3) * 2,
+            colorIdx: i % 3
+          });
+        }
+        fx.bites = [1.05, 1.95].map((bt, bi) => {
+          const sparks = [];
+          for (let i = 0; i < 24; i++) {
+            const a = (i / 24) * Math.PI * 2;
+            const spd = 70 + Math.random() * 140;
+            sparks.push({
+              vx: Math.cos(a) * spd,
+              vy: Math.sin(a) * spd * 0.75,
+              ch: randGlyph(),
+              size: 11 + Math.random() * 8,
+              colorIdx: i % 3,
+              life: 0.4 + Math.random() * 0.35
+            });
+          }
+          return { bt, bi, sparks };
+        });
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.spell-btn').forEach(btn => {
+        const on = btn.dataset.spell === activeSpell;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? 'var(--primary-foreground)' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.getElementById('caption-text').textContent = SPELLS[activeSpell].title;
+    }
+
+    function drawPlasmaBg(time) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#12081e');
+      grad.addColorStop(0.55, '#1d0d2c');
+      grad.addColorStop(1, '#090510');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 6; i++) {
+        const y = 26 + i * 42 + Math.sin(time * 0.8 + i * 1.1) * 12;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 42, 118, 0.09)' : 'rgba(72, 34, 128, 0.08)';
+        ctx.fillRect(0, y, W, 26);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.07)';
+      ctx.fillRect(0, 278, W, 2);
+    }
+
+    function drawFoe(foe, flashAlpha, damageLabel, subTag, subColor, nudgeX, nudgeY) {
+      ctx.save();
+      const x = foe.x + (nudgeX || 0), y = foe.y + (nudgeY || 0);
+      ctx.fillStyle = flashAlpha > 0.05 ? `rgba(255, 252, 230, ${0.4 + flashAlpha * 0.6})` : '#06030a';
+      ctx.fillRect(x - foe.w * 0.24, y - foe.h * 0.52, foe.w * 0.48, foe.h * 0.22);
+      ctx.fillRect(x - foe.w * 0.44, y - foe.h * 0.26, foe.w * 0.88, foe.h * 0.46);
+      ctx.fillRect(x - foe.w * 0.16, y + foe.h * 0.20, foe.w * 0.32, foe.h * 0.32);
+      ctx.fillRect(x - foe.w * 0.56, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+      ctx.fillRect(x + foe.w * 0.44, y - foe.h * 0.16, foe.w * 0.12, foe.h * 0.28);
+
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dcd6e8';
+      ctx.fillText(foe.name, x, y - foe.h * 0.62);
+
+      if (subTag) {
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = subColor || '#ff7a1f';
+        ctx.fillText(subTag, x, y + foe.h * 0.64);
+      }
+      if (damageLabel) {
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = damageLabel.color || '#fff3b0';
+        ctx.fillText(damageLabel.text, x, y - 22 - damageLabel.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawWordPalette(word, cx, cy, px, alpha, palette) {
+      if (alpha <= 0.01) return;
+      ctx.save();
+      ctx.font = `bold ${px}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = alpha;
+      const chars = [...word];
+      const step = px * 0.62;
+      const startX = cx + ((chars.length - 1) * step) * 0.5;
+      chars.forEach((ch, i) => {
+        if (ch === ' ') return;
+        ctx.fillStyle = palette[i % palette.length];
+        ctx.fillText(ch, startX - i * step, cy);
+      });
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, yochMark, yochHighlight) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.78)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   FALLEN SP 80   YOCH SP 45 (PP 5/8)', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(topTag, W - 16, 15);
+      }
+
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.88)';
+      ctx.fillRect(16, 286, W - 32, 44);
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.35)';
+      ctx.fillRect(16, 286, W - 32, 1);
+      ctx.fillRect(16, 329, W - 32, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('* ' + logLine, 28, 313);
+
+      const panels = [
+        { x: 16, name: 'FALLEN', hp: 'HP 92/100', res: 'EN 24/32', col: '#8ad8ff', mark: null, hl: false },
+        { x: 286, name: '▸ YOCH', hp: 'HP 68/74', res: 'PP 5/8', col: '#f5f58c', mark: yochMark || null, hl: !!yochHighlight }
+      ];
+      panels.forEach(p => {
+        ctx.fillStyle = p.hl ? 'rgba(54, 24, 28, 0.95)' : 'rgba(14, 10, 26, 0.9)';
+        ctx.fillRect(p.x, 338, 256, 48);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#f2eefc';
+        ctx.fillText(p.name, p.x + 12, 357);
+        if (p.mark) {
+          ctx.font = 'bold 15px "Times New Roman", serif';
+          ctx.fillStyle = '#ffd84a';
+          ctx.fillText(p.mark, p.x + 86, 357);
+        }
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#9fe29f';
+        ctx.fillText(p.hp, p.x + 12, 376);
+        ctx.fillStyle = p.col;
+        ctx.fillText(p.res, p.x + 128, 376);
+      });
+
+      ctx.fillStyle = 'rgba(14, 10, 26, 0.9)';
+      ctx.fillRect(556, 338, 244, 48);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#f5f58c';
+      ctx.fillText('PRAY ▸ ' + activeSpell.toUpperCase().replace('_', ' '), 568, 366);
+    }
+
+    function renderEsh() {
+      const target = FOES[1];
+      const hitT = 0.34;
+      const hit = t >= hitT;
+      const hAge = Math.max(0, t - hitT);
+
+      let shakeX = 0, shakeY = 0;
+      if (hit && hAge < 0.22) {
+        const m = 6.5 * (1 - hAge / 0.22);
+        shakeX = (Math.random() - 0.5) * m * 2;
+        shakeY = (Math.random() - 0.5) * m * 2;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = t < 1.35 ? 0.32 * Math.min(1, t / 0.2) : Math.max(0, 0.32 * (1 - (t - 1.35) / 0.7));
+      ctx.fillStyle = `rgba(12, 4, 10, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      const flash = hit && hAge < 0.24 ? 1 - hAge / 0.24 : 0;
+      const dmg = hit && hAge < 1.1 ? { text: '20 + MAK', rise: hAge * 28 } : null;
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flash : 0, i === 1 ? dmg : null, i === 1 && hit ? 'BURN' : null, '#ff7a1f'));
+
+      ctx.textAlign = 'center';
+      // 1) Lança/feixe agressivo de fogo de luz disparando diagonalmente do alto até o peito do inimigo
+      const startX = target.x - 190, startY = 34;
+      if (t < hitT + 0.16) {
+        const prog = Math.min(1, t / hitT);
+        const fade = t <= hitT ? 1 : Math.max(0, 1 - (t - hitT) / 0.16);
+        fx.bolt.forEach(b => {
+          if (b.frac > prog) return;
+          const bx = startX + (target.x - startX) * b.frac + b.jitter * (1 - b.frac * 0.5);
+          const by = startY + (target.y - startY) * b.frac + b.jitter * 0.5;
+          ctx.save();
+          ctx.globalAlpha = fade;
+          ctx.font = `bold ${b.size}px "Times New Roman", serif`;
+          ctx.fillStyle = b.frac > prog - 0.18 ? '#ffffff' : FIRE_PALETTE[b.colorIdx];
+          ctx.fillText(b.ch, bx, by);
+          ctx.restore();
+        });
+      }
+
+      // 2) Explosão de impacto + labaredas lambendo o alvo (fogo ofensivo, não aura de buff)
+      if (hit) {
+        fx.burst.forEach(p => {
+          if (hAge > p.life) return;
+          const a = Math.max(0, 1 - hAge / p.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${p.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[p.colorIdx];
+          ctx.fillText(p.ch, target.x + p.vx * hAge, target.y + p.vy * hAge + 90 * hAge * hAge);
+          ctx.restore();
+        });
+
+        // Chamas de BURN lambendo o inimigo
+        const burnA = hAge < 1.5 ? 0.9 : Math.max(0, 0.9 * (1 - (hAge - 1.5) / 0.7));
+        fx.burnLicks.forEach(bl => {
+          const cyc = (hAge * 1.8 + bl.phase) % 1.0;
+          ctx.save();
+          ctx.globalAlpha = burnA * (1 - cyc);
+          ctx.font = `bold ${bl.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[bl.colorIdx];
+          ctx.fillText(bl.ch, target.x + bl.xOff, target.y + bl.yOff - cyc * bl.rise);
+          ctx.restore();
+        });
+
+        if (hAge < 0.85) {
+          drawWordPalette('אש', target.x, target.y - 12 - hAge * 24, 34, 1 - hAge / 0.85, FIRE_PALETTE);
+        }
+
+        // Flash leve e curto no impacto
+        if (hAge < 0.065) {
+          ctx.fillStyle = `rgba(255, 244, 210, ${(1 - hAge / 0.065) * 0.36})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.esh.log[hit ? 1 : 0], hit ? 'HIT: 20 + MAK · BURN' : 'LIGHT-FIRE BOLT');
+    }
+
+    function renderMeir() {
+      const alertT = 0.45;
+      const lockT = 0.85;
+      const alerted = t >= alertT;
+      const locked = t >= lockT;
+      const cardX = 286, cardY = 338, cardW = 256, cardH = 48;
+      const cardCx = cardX + cardW * 0.5;
+      const cardCy = cardY + cardH * 0.5;
+
+      ctx.save();
+      drawPlasmaBg(t);
+
+      const dark = t < 2.3 ? 0.38 * Math.min(1, t / 0.25) : Math.max(0, 0.38 * (1 - (t - 2.3) / 0.6));
+      ctx.fillStyle = `rgba(10, 4, 16, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      // Inimigos reagem com susto/alerta quando provocados e viram o foco para YOCH
+      FOES.forEach((f, i) => {
+        const reactAge = t - alertT;
+        const jitter = alerted && reactAge < 0.24 ? Math.sin(reactAge * 60 + i) * 4 : 0;
+        const flash = alerted && reactAge < 0.18 ? 0.7 * (1 - reactAge / 0.18) : 0;
+        drawFoe(f, flash, null, locked ? 'TARGET ▸ YOCH' : null, '#ff6464', jitter, 0);
+      });
+      ctx.restore();
+
+      drawHud(SPELLS.meir.log[locked ? 1 : 0], locked ? 'TAUNT: ALL FOES → YOCH' : 'PROVOKING FOES...', locked ? 'א' : null, locked);
+
+      ctx.save();
+      ctx.textAlign = 'center';
+
+      // 1) Pulso expansivo de provocação partindo de YOCH (0.0s..0.65s)
+      if (t < 0.75) {
+        const p = t / 0.75;
+        const r = 20 + p * 260;
+        const a = 1 - p;
+        fx.pulseRing.forEach(pr => {
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${pr.size}px "Times New Roman", serif`;
+          ctx.fillStyle = '#fffce0';
+          ctx.fillText(pr.ch, cardCx + Math.cos(pr.a) * r, cardY - Math.abs(Math.sin(pr.a)) * r * 0.75);
+          ctx.restore();
+        });
+      }
+
+      // 2) Sinal de alerta de letras hebraicas (א) acendendo sobre a cabeça dos 3 inimigos
+      if (alerted && t < 2.65) {
+        const aa = t < 2.1 ? 0.95 : Math.max(0, 0.95 * (1 - (t - 2.1) / 0.55));
+        FOES.forEach(f => {
+          const bounce = Math.abs(Math.sin(t * 7)) * 4;
+          ctx.save();
+          ctx.globalAlpha = aa;
+          ctx.font = 'bold 20px "Times New Roman", serif';
+          ctx.fillStyle = '#ff6464';
+          ctx.fillText('א', f.x, f.y - f.h * 0.78 - bounce);
+          ctx.restore();
+        });
+      }
+
+      // 3) 3 feixes-mira tensos de letras ligando os olhos de cada inimigo diretamente ao cartão de YOCH!
+      if (alerted && t < 2.8) {
+        const prog = Math.min(1, (t - alertT) / (lockT - alertT));
+        const fade = t < 2.2 ? 1 : Math.max(0, 1 - (t - 2.2) / 0.6);
+        fx.locks.forEach(lk => {
+          const foe = FOES[lk.foeIdx];
+          const sx = foe.x, sy = foe.y - 16;
+          lk.chain.forEach((c, ci) => {
+            if (c.frac > prog) return;
+            const pulseFrac = (c.frac + (locked ? (t * 0.45) % (1 / 13) : 0));
+            const px = sx + (cardCx - sx) * Math.min(1, pulseFrac);
+            const py = sy + (cardY - sy) * Math.min(1, pulseFrac);
+            ctx.save();
+            ctx.globalAlpha = fade * (0.65 + 0.35 * Math.sin(t * 10 - ci));
+            ctx.font = `bold ${c.size}px "Times New Roman", serif`;
+            // Vermelho nos olhos do inimigo -> dourado-branco travando na mira sobre YOCH
+            ctx.fillStyle = c.frac < 0.45 ? '#ff6464' : (c.frac < 0.8 ? '#ffd84a' : '#ffffff');
+            ctx.fillText(c.ch, px, py);
+            ctx.restore();
+          });
+        });
+      }
+
+      // 4) Mira/halo de letras travada ao redor do cartão de YOCH (deixando óbvio que ELE virou o alvo)
+      if (locked && t < 2.95) {
+        const fa = t < 2.4 ? 0.95 : Math.max(0, 0.95 * (1 - (t - 2.4) / 0.55));
+        fx.targetFrame.forEach((tf, i) => {
+          const ang = tf.a + t * 1.4;
+          const rx = 136, ry = 28;
+          ctx.save();
+          ctx.globalAlpha = fa;
+          ctx.font = 'bold 12px "Times New Roman", serif';
+          ctx.fillStyle = i % 2 === 0 ? '#ff6464' : '#ffd84a';
+          ctx.fillText(tf.ch, cardCx + Math.cos(ang) * rx, cardCy + Math.sin(ang) * ry);
+          ctx.restore();
+        });
+      }
+
+      if (t < 1.9) {
+        const wa = t < 0.3 ? t / 0.3 : Math.max(0, 1 - (t - 1.25) / 0.65);
+        drawWordPalette('מאיר', cardCx, cardY - 36, 28, wa, LIGHT_PALETTE);
+      }
+
+      ctx.restore();
+    }
+
+    function renderEshOchelet() {
+      const target = FOES[1];
+      let shakeX = 0, shakeY = 0;
+      let flashFoe = 0;
+      let dmg = null;
+      let logIdx = 0;
+      let foeNudgeY = 0;
+
+      // Impacto imediato na aplicação (t=0) + 2 mordidas de fogo quando o alvo tenta agir (1.05s e 1.95s)
+      if (t < 0.18) {
+        flashFoe = 0.8 * (1 - t / 0.18);
+      }
+      fx.bites.forEach(b => {
+        const age = t - b.bt;
+        if (age >= -0.15 && age < 0.15) {
+          // Alvo se move para realizar ação
+          foeNudgeY = Math.sin(((age + 0.15) / 0.3) * Math.PI) * 14;
+        }
+        if (age >= 0) logIdx = 1;
+        if (age >= 0 && age < 0.22) {
+          const m = 6 * (1 - age / 0.22);
+          shakeX += (Math.random() - 0.5) * m * 2;
+          shakeY += (Math.random() - 0.5) * m * 2;
+          flashFoe = Math.max(flashFoe, 1 - age / 0.22);
+        }
+        if (age >= 0 && age < 0.7) {
+          dmg = { text: `30 DMG (ACT ${b.bi + 1})`, rise: age * 30, color: '#ffd84a' };
+        }
+      });
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      drawPlasmaBg(t);
+
+      const dark = t < 2.6 ? 0.36 : Math.max(0, 0.36 * (1 - (t - 2.6) / 0.6));
+      ctx.fillStyle = `rgba(14, 3, 10, ${dark})`;
+      ctx.fillRect(0, 22, W, 256);
+
+      FOES.forEach((f, i) => drawFoe(f, i === 1 ? flashFoe : 0, i === 1 ? dmg : null,
+        i === 1 ? 'ESH OCHELET ACTIVE' : null, '#ff7a1f', 0, i === 1 ? foeNudgeY : 0));
+
+      ctx.textAlign = 'center';
+      // Coroa/mandíbula contínua de fogo devorador ao redor do alvo (se fecha a cada ação!)
+      let squeeze = 1.0;
+      fx.bites.forEach(b => {
+        const age = t - b.bt;
+        if (age >= 0 && age < 0.35) {
+          squeeze = Math.min(squeeze, 1 - 0.55 * Math.sin((age / 0.35) * Math.PI));
+        }
+      });
+      const ringA = t < 2.7 ? 0.92 : Math.max(0, 0.92 * (1 - (t - 2.7) / 0.55));
+      fx.ring.forEach(r => {
+        const ang = r.a + t * 2.2;
+        const rx = 64 * squeeze;
+        const ry = 76 * squeeze;
+        ctx.save();
+        ctx.globalAlpha = ringA;
+        ctx.font = `bold ${r.size}px "Times New Roman", serif`;
+        ctx.fillStyle = FIRE_PALETTE[r.colorIdx];
+        ctx.fillText(r.ch, target.x + Math.cos(ang) * rx, target.y + Math.sin(ang) * ry);
+        ctx.restore();
+      });
+
+      // Brasas disparadas em cada mordida de ação (sem flash de tela repetido!)
+      fx.bites.forEach(b => {
+        const age = t - b.bt;
+        if (age < 0) return;
+        b.sparks.forEach(s => {
+          if (age > s.life) return;
+          const a = Math.max(0, 1 - age / s.life);
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.font = `bold ${s.size | 0}px "Times New Roman", serif`;
+          ctx.fillStyle = FIRE_PALETTE[s.colorIdx];
+          ctx.fillText(s.ch, target.x + s.vx * age, target.y + s.vy * age);
+          ctx.restore();
+        });
+      });
+
+      if (t < 1.1) {
+        drawWordPalette('אש אוכלת', target.x, target.y - 86, 26, Math.max(0, 1 - Math.max(0, t - 0.5) / 0.6), FIRE_PALETTE);
+      }
+
+      // Flash único somente na aplicação imediata (t=0)
+      if (t < 0.075) {
+        ctx.fillStyle = `rgba(255, 242, 200, ${(1 - t / 0.075) * 0.48})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      ctx.restore();
+      drawHud(SPELLS.esh_ochelet.log[logIdx], 'IMMEDIATE · 30 DMG / FOE ACTION');
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000) * speed;
+      lastTs = now;
+      t += dt;
+      const dur = SPELLS[activeSpell].duration;
+      if (t > dur) {
+        if (loop) initSpell(activeSpell);
+        else t = dur;
+      }
+
+      if (activeSpell === 'esh') renderEsh();
+      else if (activeSpell === 'meir') renderMeir();
+      else renderEshOchelet();
+
+      requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.spell-btn').forEach(btn => {
+      btn.addEventListener('click', () => initSpell(btn.dataset.spell));
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => initSpell(activeSpell));
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    document.getElementById('btn-speed').addEventListener('click', e => {
+      speed = speed === 1.0 ? 0.5 : 1.0;
+      e.target.textContent = speed.toFixed(1) + '×';
+    });
+    window.addEventListener('themechange', updateUI);
+
+    const __q = new URLSearchParams(location.search).get('spell'); initSpell(__q && SPELLS[__q] ? __q : 'esh');
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

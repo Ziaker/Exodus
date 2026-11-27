@@ -72,7 +72,7 @@ func _run() -> void:
 	for _page in 5:
 		if battle.hud.mode != "continue": break
 		battle.handle_confirm()
-	# D-057 (creator 2026-11-25): the act left (WEAK +1) is planned in the same turn.
+	# D-057 (creator 2026-11-25): the act left is planned in the same turn.
 	check(battle.active_actor == battle._fallen and battle.hud.mode == "plan", "After the effect Fallen plans the act left in the same turn")
 	battle.queue_free(); await process_frame
 	battle = fresh(); fx = battle.get_node("BattleEffects")

@@ -59,7 +59,7 @@ const TIMING := {
 	"a": {"lines": [[3.6, 9.0], [10.2, 15.4], [17.6, 23.8]], "outro": 24.0, "dungeon": 27.6, "end": 32.0},
 	"b": {"lines": [[2.6, 8.0], [8.6, 14.0], [14.6, 20.6]], "outro": 21.0, "dungeon": 24.6, "end": 31.0},
 	"c": {"lines": [[2.2, 7.6], [8.2, 13.6], [15.4, 21.2]], "outro": 21.6, "dungeon": 23.0, "end": 28.0},
-	"d": {"lines": [[5.8, 11.8], [12.4, 18.6], [19.2, 25.6]], "outro": 26.0, "dungeon": 29.6, "end": 35.0},
+	"d": {"lines": [[5.8, 11.8], [12.4, 18.6], [19.2, 25.6]], "outro": 26.0, "dungeon": 29.9, "end": 35.0},
 }
 const TYPE_SPEED := 34.0
 const SLEEPY_SPEED := 17.0
@@ -209,6 +209,10 @@ func _line_text(index: int) -> String:
 	return text.replace("%n", ANGEL_NAME)
 
 
+## No jogo (scripts/survival/survival_intro_cutscene.gd) a etiqueta do protótipo some.
+var show_label := true
+
+
 func _process(delta: float) -> void:
 	if frozen: return
 	t += delta
@@ -237,6 +241,7 @@ func _draw() -> void:
 		"c": _draw_corridor()
 		"d": _draw_hebrew()
 		_: _draw_eyelid()
+	if not show_label: return
 	draw_string(font, Vector2(8, 14), "PROTOTYPE  survival intro  option %s  (1/2/3/4 switch, R restart, Z skip text)" % option.to_upper(),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 1, 1, 0.4))
 
@@ -703,7 +708,9 @@ func _build_hebrew() -> void:
 			glyph = GATES[int(target.index)]
 		target.merge({"glyph": glyph, "rest": Vector2(rng.randf_range(12, W - 12), rng.randf_range(24, H - 10)),
 			"appear": rng.randf_range(0.2, D_ENTER - 0.3), "fly": rng.randf_range(0.0, 0.9),
-			"swap": rng.randf_range(2.0, 9.0), "phase": rng.randf()})
+			"swap": rng.randf_range(2.0, 9.0), "phase": rng.randf(),
+			"scatter": Vector2.from_angle(rng.randf_range(0, TAU)) * rng.randf_range(60, 300),
+			"scatter_delay": rng.randf_range(0.0, 0.6), "spin": rng.randf_range(-3.0, 3.0)})
 		d_letters.append(target)
 
 
@@ -754,19 +761,24 @@ func _draw_hebrew() -> void:
 	var o: float = _timing().outro
 	var d: float = _timing().dungeon
 	if t >= d:
+		# a volta: o Fallen pisca e acorda na dungeon (pálpebra da opção A)
 		_draw_dungeon(1.0)
-		_draw_letter_dissolve(_phase(d, d + 3.2))
+		var open := _wake_blink(t - d)
+		if open < 1.0:
+			draw_rect(Rect2(0, 0, W, H), Color(AMEIXA, (1.0 - open) * 0.45))
+		_draw_lids(open)
 		return
-	_draw_sky(AMEIXA, VINHO, Color(0.08, 0.03, 0.04), _ease(_phase(D_ENTER, D_FLY + 1.0)))
+	var sc := _scatter_phase()
+	_draw_sky(AMEIXA, VINHO, Color(0.08, 0.03, 0.04), _ease(_phase(D_ENTER, D_FLY + 1.0)) * (1.0 - _ease(sc)))
 	var spin := _d_spin()
 	var settled := _phase(D_FLY, D_FLY + 0.6)
 	# círculos finos do mostrador
-	var ring_a := 0.45 * settled
+	var ring_a := 0.45 * settled * (1.0 - _ease(sc * 2.0))
 	draw_arc(D_CENTER, RING_R + 16, 0, TAU, 128, Color(OCRE, ring_a), 1.0)
 	draw_arc(D_CENTER, RING_R - 14, 0, TAU, 128, Color(OCRE, ring_a), 1.0)
 	draw_arc(D_CENTER, GATE_R - 16, 0, TAU, 128, Color(FERRUGEM, ring_a * 0.7), 1.0)
 	# ponteiro fixo no alto
-	var hand := Color(OURO, 0.75 * settled)
+	var hand := Color(OURO, 0.75 * settled * (1.0 - _ease(sc * 2.0)))
 	var tip := D_CENTER + Vector2(0, -RING_R - 30)
 	draw_colored_polygon(PackedVector2Array([tip + Vector2(-7, -8), tip + Vector2(7, -8), tip + Vector2(0, 4)]), hand)
 	var dim_others := 1.0 - _phase(o + 0.8, o + 2.0)
@@ -775,7 +787,7 @@ func _draw_hebrew() -> void:
 	for l in d_letters:
 		if l.kind != "box":
 			_draw_d_letter(l, spin, dim_others, box_life)
-	_draw_letter_sand(o, d, box_life)
+	_draw_letter_sand(o, box_life, sc)
 	# a caixa fica por cima da areia (é interface)
 	draw_rect(BOX, Color(0, 0, 0, _phase(D_FLY - 0.4, D_FLY + 0.2) * box_life))
 	for l in d_letters:
@@ -807,9 +819,37 @@ func _draw_d_letter(l: Dictionary, spin: float, dim_others: float, box_life: flo
 	if l.kind == "sil" and t > D_FLY:
 		var n := int((t + float(l.phase) * float(l.swap)) / float(l.swap))
 		glyph = ALPHABET[(ALPHABET.find(String(l.glyph)) + n) % ALPHABET.length()]
+	var sc := _scatter_phase()
+	if sc > 0.0:
+		# as letras se espalham, giram e somem (como no fim do prólogo)
+		var own := clampf((sc * SCATTER_TIME - float(l.scatter_delay)) / (SCATTER_TIME - 0.6), 0.0, 1.0)
+		var away := (l.scatter as Vector2)
+		if l.kind == "sil" or l.kind == "ring" or l.kind == "gate":
+			away += (pos - D_CENTER).normalized() * 120.0
+		pos += away * _ease(own)
+		angle += float(l.spin) * own
+		ink.a *= 1.0 - own
+	if ink.a <= 0.0: return
 	draw_set_transform(pos, angle)
 	draw_string(font, Vector2(-px * 0.32, px * 0.36), glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, int(round(px)), ink)
 	draw_set_transform(Vector2.ZERO)
+
+
+## Espalhamento das letras: começa depois de o mostrador travar.
+const SCATTER_TIME := 2.0
+
+
+func _scatter_phase() -> float:
+	var start: float = float(_timing().outro) + 1.6
+	return _phase(start, start + SCATTER_TIME)
+
+
+## Piscada de quem acorda: abre um pouco, fecha de novo e abre de vez.
+func _wake_blink(age: float) -> float:
+	if age < 0.4: return 0.0
+	if age < 1.2: return 0.5 * _ease((age - 0.4) / 0.8)
+	if age < 1.5: return 0.5 - 0.42 * _ease((age - 1.2) / 0.3)
+	return minf(1.0, 0.08 + 0.92 * _ease((age - 1.5) / 1.3))
 
 
 func _d_px(l: Dictionary) -> float:
@@ -828,16 +868,14 @@ func _d_ink(l: Dictionary) -> Color:
 	return LETTER_INK
 
 
-## Areia de letras: caem o tempo todo e se empilham embaixo; no desfecho viram cascata e
-## enchem a tela (a ampulheta vira).
-func _draw_letter_sand(o: float, d: float, box_life: float) -> void:
-	var pour := _ease(_phase(o + 1.6, d))
-	var pile := lerpf(clampf(t - D_FLY, 0.0, o) * 1.6, H + 20.0, pour)
+## Areia de letras: caem o tempo todo e se empilham embaixo; no desfecho, o monte e as
+## letras no ar se espalham com o resto.
+func _draw_letter_sand(o: float, box_life: float, sc: float) -> void:
+	var pile := clampf(minf(t, o) - D_FLY, 0.0, o) * 1.6
 	var floor_y := H - pile
-	var density := 0.18 + 0.82 * _phase(o, o + 1.6)
 	var start := _phase(D_FLY - 0.5, D_FLY + 1.0)
 	for i in sand.size():
-		if float(i) / sand.size() > density * start: continue
+		if float(i) / sand.size() > 0.18 * start: continue
 		var g: Dictionary = sand[i]
 		var fall_time: float = 4.2 * float(g.speed)
 		var p: float = fmod(t / fall_time + float(g.phase), 1.0)
@@ -847,34 +885,30 @@ func _draw_letter_sand(o: float, d: float, box_life: float) -> void:
 		# não cai por cima do texto enquanto a caixa existe
 		if box_life > 0.0 and BOX.grow(6.0).has_point(Vector2(x, y)): continue
 		var glyph := ALPHABET[i % ALPHABET.length()]
-		draw_string(font, Vector2(x, y), glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, int(9 + float(g.size) * 2.0), Color(AREIA, 0.7))
+		var a := 0.7 * (1.0 - _ease(sc * 1.5))
+		if a <= 0.0: continue
+		draw_string(font, Vector2(x, y), glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, int(9 + float(g.size) * 2.0), Color(AREIA, a))
 	if pile > 0.5:
-		_draw_letter_wall(maxf(floor_y, 0.0))
+		_draw_letter_wall(floor_y, sc)
 
 
-## Parede de letras (o monte de areia): grade de letras sobre fundo bege escuro.
-func _draw_letter_wall(from_y: float) -> void:
+## Monte de areia: grade de letras; no desfecho cada letra voa para um lado e some.
+func _draw_letter_wall(from_y: float, sc: float) -> void:
 	var cols := int(ceil(W / CELL))
-	draw_rect(Rect2(0, from_y, W, H - from_y), AREIA.darkened(0.55))
+	if sc <= 0.0:
+		draw_rect(Rect2(0, from_y, W, H - from_y), AREIA.darkened(0.55))
 	for r in range(int(floor(from_y / CELL)), int(ceil(H / CELL))):
 		var y := r * CELL + CELL - 1.0
 		if y - CELL < from_y - 2.0: continue
 		for c in cols:
 			var idx := r * cols + c
 			var glyph := ALPHABET[(idx * 7 + r) % ALPHABET.length()]
-			draw_string(font, Vector2(c * CELL + 1.0, y), glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, CELL, AREIA.darkened(0.05 * float(idx % 3)))
-
-
-## A parede de letras se desfaz em ordem embaralhada revelando a dungeon; cada letra
-## escurece antes de sumir.
-func _draw_letter_dissolve(p: float) -> void:
-	var cols := int(ceil(W / CELL))
-	var total := dissolve_order.size()
-	var gone := int(p * total)
-	for k in range(gone, total):
-		var c := dissolve_order[k]
-		var pos := Vector2((c % cols) * CELL, (c / cols) * CELL)
-		var fade := clampf(float(k - gone) / (total * 0.08), 0.0, 1.0)
-		draw_rect(Rect2(pos, Vector2(CELL, CELL)), Color(AREIA.darkened(0.55), fade))
-		var glyph := ALPHABET[(c * 7 + c / cols) % ALPHABET.length()]
-		draw_string(font, pos + Vector2(1, CELL - 1), glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, CELL, Color(AREIA, fade))
+			var pos := Vector2(c * CELL + 1.0, y)
+			var ink := AREIA.darkened(0.05 * float(idx % 3))
+			if sc > 0.0:
+				var h := float((idx * 2654435761) % 1000) / 1000.0
+				var own := clampf((sc * SCATTER_TIME - h * 0.6) / (SCATTER_TIME - 0.6), 0.0, 1.0)
+				pos += Vector2.from_angle(-PI * (0.15 + 0.7 * h)) * (80.0 + 220.0 * h) * _ease(own)
+				ink.a = 1.0 - own
+				if ink.a <= 0.0: continue
+			draw_string(font, pos, glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, CELL, ink)

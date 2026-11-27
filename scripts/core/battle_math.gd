@@ -3,7 +3,6 @@ extends RefCounted
 
 ## Pure combat formulas from docs/COMBAT_SPEC.md. No scene dependencies.
 
-enum Affinity { WEAK, NORMAL, RESIST, NULL, ABSORB }
 enum RhythmResult { POINT, BEAM, MISS }
 
 const SP_GAIN_PER_EVENT: int = 1
@@ -79,17 +78,6 @@ static func absorb_gain_options(stats: UnitStats) -> Array[Dictionary]:
 			options.append({"label": "+1 %s / +1 %s" % [STAT_LABELS[eligible[i]], STAT_LABELS[eligible[j]]],
 				"gains": {eligible[i]: 1, eligible[j]: 1}})
 	return options
-
-static func affinity_multiplier(affinity: Affinity) -> float:
-	match affinity:
-		Affinity.WEAK:
-			return 1.5
-		Affinity.RESIST:
-			return 0.5
-		Affinity.NULL, Affinity.ABSORB:
-			return 0.0
-		_:
-			return 1.0
 
 ## D-021: +2 percentage points per SP advantage, capped at +20, and a final
 ## chance of at most 50%. A disadvantage never lowers the AGI base.
@@ -230,12 +218,12 @@ static func extra_block_rolls(advantage: int) -> int:
 		return 0
 	return advantage / BLOCK_ROLLS_PER_SP
 
-## Result keys: amount, crit, affinity, sp_roll, variation, base.
+## Result keys: amount, crit, sp_roll, variation, base. D-119: no affinity.
 ## Magic damage uses the same formula with MAK for ATK and MEF for DEF (creator 2026-11-23).
 ## attacker_atk is a float so ATK stages (+25% each) keep their fraction.
 static func physical_damage(power: int, attacker_atk: float, attacker_agi: int,
 		defender_defense: int, attacker_sp: int, defender_sp: int,
-		affinity: Affinity, rng: RandomNumberGenerator) -> Dictionary:
+		rng: RandomNumberGenerator) -> Dictionary:
 	var difference := attacker_sp - defender_sp
 	var base := float(power) * float(attacker_atk) / maxf(float(defender_defense), 1.0)
 
@@ -243,18 +231,15 @@ static func physical_damage(power: int, attacker_atk: float, attacker_agi: int,
 	var variation := rng.randf_range(-BASE_VARIATION, BASE_VARIATION)
 
 	var crit := critical_roll(attacker_agi, attacker_sp, defender_sp, rng)
-	var multiplier := affinity_multiplier(affinity)
 	var amount := base + float(sp_roll)
 	amount *= 1.0 + variation
 	if crit:
 		amount *= CRIT_MULTIPLIER
-	amount *= multiplier
 
 	return {
 		"amount": maxi(0, int(round(amount))),
 		"base": base,
 		"crit": crit,
-		"affinity": affinity,
 		"sp_roll": sp_roll,
 		"variation": variation,
 	}
@@ -270,12 +255,3 @@ static func sp_bonus_roll(difference: int, rng: RandomNumberGenerator) -> int:
 static func critical_roll(attacker_agi: int, attacker_sp: int, defender_sp: int,
 		rng: RandomNumberGenerator) -> bool:
 	return rng.randf_range(0.0, 100.0) < crit_chance(attacker_agi, attacker_sp - defender_sp)
-
-## D-057 (creator 2026-11-25): an affinity only ever GIVES an act (WEAK +1). The old
-## RESIST / NULL / ABSORB -1 act was never defined by the creator and is gone.
-static func press_turn_acts(affinity: Affinity) -> int:
-	match affinity:
-		Affinity.WEAK:
-			return 1
-		_:
-			return 0
