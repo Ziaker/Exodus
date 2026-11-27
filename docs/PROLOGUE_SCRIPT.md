@@ -7,6 +7,8 @@ diz fica na lista de pendências e **não** deve ser inventado em código, arte 
 
 ---
 
+**Nota de lore posterior (D-128; GDD §15.4):** Deviron foi expulso do céu pelos anjos por inveja e medo de sua capacidade; Maesto não tem relação com ele além da criação. A identidade da silhueta que fala com ele permanece sem definição. O texto original abaixo não é alterado.
+
 ## Texto original do criador
 
 > Roteiro de cenas Exodus

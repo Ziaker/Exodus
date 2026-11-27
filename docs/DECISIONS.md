@@ -109,4 +109,6 @@ qualquer alteração em documentos ou código.
 
 | D-127 | 2026-11-27 (lore do criador) | THÉOS é Maesto, designação formal; Shaddai é possível nome humano da época. Autorizada a possibilidade de alguns Daemas de inspiração nos deuses egípcios, equivalentes aos animais de tier 4, sem grande impacto na história; a raça dos animais continua ausente. | `docs/GDD.md` §15 e Apêndice A |
 
-Total: 95 decisões indexadas.
+| D-128 | 2026-11-27 (lore do criador) | Cosmologia: Maesto cria toda vida e energia; religiões multirraciais, Shaddai/THÉOS; Daemas e demônios são raças distintas; regeneração a cada 8 dias e assimilação definitiva dos devilmen; tiers animais 0–4 por antropomorfização; Maziks criados por anjos a partir de humanos; rezas ensinadas nos templos (fogo por Gabriel); Deviron simétrico e expulso pelos anjos por inveja/medo; desfecho de EXODUS contribui para a transição de época. | `docs/GDD.md` §§1, 9, 10, 13–15 e Apêndice A |
+
+Total: 96 decisões indexadas.

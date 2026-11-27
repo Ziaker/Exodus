@@ -9,6 +9,8 @@
 
 ---
 
+**Lore (D-128; GDD §9.1):** as magias de reza são aprendidas pelos ensinamentos dos anjos em seus templos; todas as magias de fogo são ensinadas por Gabriel. A distribuição e o desbloqueio mecânico continuam sujeitos às decisões de campanha, sem alteração das regras D-118.
+
 ## 1. Novas Rezas Canônicas (8 — custo em ACT / PP)
 
 | Nome | Custo | Efeito |

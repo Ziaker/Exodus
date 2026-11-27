@@ -1623,9 +1623,10 @@ Número de decisão ainda não atribuído no `DECISIONS.md`.
     (hoje: sem efeito, ato gasto, PP voltam).
 
 ## Raças — D-048; DESIGN, NÃO IMPLEMENTADO
-- Em **Maesto**: humanos, animais, monstros e demônios (classificação do universo, D-048). Na época de EXODUS, animais ainda não estão presentes (D-126, GDD §15). No jogo, também a
+- Em **Maesto**: humanos, animais, monstros e demônios (lista anterior D-048, não exaustiva); Daema é outra raça, distinta da raça demônio (D-128). Na época de EXODUS, animais ainda não estão presentes (D-126, GDD §15). No jogo, também a
   "raça" mecânica **Mazik** (inimigos mais genéricos).
-- Fallen (Deviron/Samael): Daema, primeiro devilman. Todos os anjos são Daemas na lore (D-126), sem mudança de classificação mecânica. Yoch: humano. Efeitos de raça além da Reza: **PENDENTE**.
+- Fallen (Deviron/Samael): Daema, primeiro devilman. Todos os anjos são Daemas na lore (D-126/D-128), sem mudança de classificação mecânica. Yoch: humano. Efeitos de raça além da Reza: **PENDENTE**.
+- **Lore (D-128; GDD §15.4):** corpos dos Daemas desaparecem em energia, regeneram de 8 em 8 dias; só os devilmen podem obliterar sua existência por assimilação permanente. Rezas são aprendidas nos templos através dos anjos; todas magias de fogo são ensinadas por Gabriel. Isso não muda as regras de absorção, alvos, aprendizado ou reza existentes.
 
 ## IA
 - Inimigos: aleatório ponderado entre ataque e habilidades.

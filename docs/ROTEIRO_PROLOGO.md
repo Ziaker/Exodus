@@ -8,6 +8,8 @@
 
 Este arquivo é **específico do roteiro do prólogo**. Não deve ser confundido com um protótipo técnico de mapa ou tomado como autorização para modificar a arquitetura, o combate, a cosmologia ou outros documentos. As falas do diretor são preservadas como fornecidas, inclusive onde ainda demandam revisão linguística. As expressões em hebraico não foram inventadas nem preenchidas. As correções posteriores do diretor prevalecem sobre interpretações anteriores feitas durante a conversa; conflitos com decisões históricas são indicados sem editar retroativamente essas decisões.
 
+**Nota de lore posterior (D-128; GDD §15.4):** a expulsão de Deviron foi obra dos próprios anjos por inveja e medo de sua capacidade, não de Maesto, que não tem relação com ele além da criação. Não se identifica aqui a silhueta da abertura nem se alteram falas.
+
 ## 1. Fluxo principal
 
 **Play → cutscene de abertura → cutscene com diálogo → gameplay de exploração → encontro com humano e dois inimigos → primeiro combate → tutorial de absorção → despedida → exploração oeste/leste.**

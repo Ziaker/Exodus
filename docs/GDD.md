@@ -81,9 +81,8 @@ EXODUS é um RPG autoral de fantasia sombria com referências visuais e conceitu
 Shin Megami Tensei I e II. As referências não devem ser reproduzidas integralmente;
 a identidade do projeto depende de seus próprios sistemas, narrativa, atmosfera e conflitos.
 
-O protagonista, **Fallen**, é **Deviron**, também chamado de **Samael**, o primeiro devilman (D-126). O momento de revelação de seu nome na narrativa permanece pendente.
-Ele cai do céu e afunda em um mar de areia branca, sob um céu vermelho-escuro, em um
-mundo fantasioso e desolado. Sua existência é marcada por uma vontade insaciável de se
+O protagonista, **Fallen**, é **Deviron**, também chamado de **Samael**, um Daema e o primeiro devilman (D-126, D-128). Ele é o primeiro demônio real, no sentido de ser o Daema do primeiro demônio, sem confundir a raça Daema com a raça demônio. O momento de revelação de seu nome na narrativa permanece pendente.
+Expulso do céu pelos próprios anjos por inveja e medo de sua capacidade (D-128), ele cai e afunda em um mar de areia branca, sob um céu vermelho-escuro, em um mundo fantasioso e desolado. Sua existência é marcada por uma vontade insaciável de se
 tornar superior. Fallen promete a **THÉOS** que absorverá todos os anjos e retornará ao céu.
 
 A narrativa utiliza releituras fantasiosas, caóticas e autorais dos três reis magos,
@@ -1404,6 +1403,8 @@ jogo. **PENDENTE.**
 
 Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 
+**Origem narrativa da Reza (D-128):** a magia de reza é aprendida pelos ensinamentos dos próprios anjos em seus templos. Todas as magias de fogo são ensinadas por Gabriel. Isso não redefine custos, aprendizado mecânico ou desbloqueios de campanha já aprovados.
+
 - **Quem usa:** para conjurar **magias de luz**, os **personagens humanos** abrem
   mão de ações para rezar, em vez de usar EN. Yoch é humano.
 - **Fluxo:** botão **PRAY** → ganha **1 Pray Point (PP)** por ato gasto → as magias
@@ -1460,6 +1461,8 @@ Valores e regras técnicas em `docs/COMBAT_SPEC.md` §Reza.
 
 ## 10. Absorção e progressão sem níveis — **CONFIRMADO (conceito)**
 
+**Lore (D-128):** a absorção dos devilmen é permanente e constitui assimilação; os devilmen são a única espécie capaz de obliterar a existência de um Daema. A regeneração dos Daemas (§15.4) não se aplica aos obliterados pela assimilação. A regra narrativa não altera custos, requisitos de alvo ou fórmulas de combate.
+
 Fallen absorve adversários. **D-051 (correção do criador, 2026-11-22; IMPLEMENTADO no
 combate jogável, commit `dd0813e`):**
 os ganhos vêm dos atributos do inimigo que são múltiplos de 8, até +2 em um atributo ou
@@ -1511,10 +1514,10 @@ Fallen tem identidade definida pela D-126 (§15); THÉOS é Maesto, o criador, c
 - **Yoch** é o nome do aliado jogável a partir de 2026-11-22 (antes "Ally"/"aliado
   placeholder"). Raça: **humano**. Usa o sistema de Reza (§9.1).
 - **Fallen (Deviron/Samael)** é um Daema, o primeiro devilman (D-126).
-- A classificação de Maesto em quatro raças (humanos, animais, monstros e demônios) é a definição anterior D-048 para o universo; animais ainda não estão presentes na época de EXODUS (D-126).
-- Todos os anjos de Maesto são Daemas (D-126; §15). Essa classificação de lore não altera categorias mecânicas.
+- A lista anterior D-048 (humanos, animais, monstros e demônios) não é exaustiva: **Daema** é outra raça, distinta da raça **demônio** (D-128). Animais ainda não estão presentes na época de EXODUS (D-126).
+- Todos os anjos de Maesto são Daemas (D-126/D-128; §15), criados para testes de criação de demônios. Deviron é o Daema do primeiro demônio. Essa classificação de lore não altera categorias mecânicas.
 - No jogo existe ainda a "raça" mecânica dos **Maziks**, os inimigos mais genéricos.
-  A raça Mazik é uma categoria de mecânica.
+  A raça Mazik é uma categoria de mecânica; sua origem narrativa foi definida pela D-128 (§14.2).
 - **PENDENTE:** efeitos mecânicos de cada raça (exceto a Reza dos humanos), a serem discutidos depois.
 
 ---
@@ -1523,8 +1526,7 @@ Fallen tem identidade definida pela D-126 (§15); THÉOS é Maesto, o criador, c
 
 A premissa do §1.1 está **CONFIRMADO**. A promessa de Fallen a THÉOS, a queda, o mar
 de areia branca e o céu vermelho-escuro são fatos canônicos até nova decisão.
-Ato, cena, arco, final, consequências das escolhas e a relação entre Fallen e as
-figuras bíblicas reimaginadas permanecem sem decisão.
+Ato, cena, arco, detalhes do final, consequências das escolhas e a relação entre Fallen e as figuras bíblicas reimaginadas permanecem sem decisão. D-128: o desfecho de EXODUS contribui para a transformação do universo nas épocas posteriores.
 
 ### 14.1 D-050 — roteiro do prólogo — **CONFIRMADO como roteiro; NÃO IMPLEMENTADO**
 
@@ -1543,13 +1545,15 @@ e **SP atual pela metade** (confirmado pelo criador em 2026-11-23);
 absorção por disputa de SP (D-029 revogada). Conflito restante: fichas dos inimigos
 versus o protótipo atual.
 
+**D-128 (lore posterior):** a expulsão do céu foi causada pelos próprios anjos, por inveja e medo da capacidade de Deviron; Maesto não tem relação com Deviron além de sua criação. A identidade da silhueta que fala no prólogo não foi definida nesta decisão. Não se alteram as falas originais.
+
 ### 14.2 Temas centrais e simetria dos Maziks — **CONFIRMADO PELO DIRETOR (2026-11-25)**
 
 A história de **EXODUS** aborda **simetria**, **perfeição** e **falsos Messias**. O diretor confirmou a presença de **um falso Jesus** e de **anjos caídos** na narrativa.
 
 **Sentido da perfeição:** a perfeição consiste na **imperfeição** e na **não simetria** das coisas. Assim, a simetria não deve ser tratada como sinônimo da perfeição verdadeira.
 
-**Maziks:** os Maziks são os **inimigos de silhueta** e possuem **simetria perfeita**. A perfeição simétrica dos Maziks deve ser distinguida do sentido de perfeição acima estabelecido. Essa definição descreve sua característica visual/temática; **não** determina origem, natureza espiritual, comportamento, hierarquia ou novas regras de combate.
+**Maziks:** os Maziks são os **inimigos de silhueta** e possuem **simetria perfeita**. A perfeição simétrica dos Maziks deve ser distinguida do sentido de perfeição acima estabelecido. D-128: são seres que ousam atingir a superioridade, criados pelos anjos pela manipulação de corpos humanos, com os Qu de *All Tomorrows* como referência autoral. Usuários de magia também podem se tornar Maziks. A população não conhece a origem real: recebe dos anjos a informação de que são vítimas das tentações. Deviron é perfeitamente simétrico assim como os Maziks. Isso não o classifica como Mazik nem cria novas regras mecânicas.
 
 **PENDENTE:** identidade, origem, função e relação do falso Jesus com outras figuras ou THÉOS; natureza específica, origem e relação dos anjos caídos com as raças existentes, respeitando a classificação dos anjos como Daemas (D-126); explicação cosmológica da simetria dos Maziks; consequências narrativas ou mecânicas desses temas. Não converter interpretações editoriais anteriores (por exemplo, Maziks sem alma, produto de uma força criadora ou falso Messias necessariamente simétrico) em cânone sem aprovação explícita.
 
@@ -1559,8 +1563,8 @@ A história de **EXODUS** aborda **simetria**, **perfeição** e **falsos Messia
 
 ### 15.1 D-126 — Cosmologia e identidade de Deviron — **CONFIRMADO PELO DIRETOR (2026-11-25)**
 
-- **Maesto** é tanto o nome do universo quanto o de seu criador. Na época de EXODUS, sua existência ainda é desconhecida. Maesto estava testando a criação dos humanos em seu próprio universo, por serem uma raça nova em experimentação. Os anjos também são experimentos.
-- **Daemas** são os demônios reais de Maesto: seres únicos e imortais. O termo Daema ainda não existe na época de EXODUS. Todos os anjos de Maesto também são Daemas.
+- **Maesto** é tanto o nome do universo quanto o de seu criador. Na época de EXODUS, as religiões o chamam de Shaddai sem saber se existe; apenas Daemas o chamam de THÉOS (D-128). Maesto estava testando a criação dos humanos em seu próprio universo, por serem uma raça nova em experimentação. Os anjos também são experimentos.
+- **Daemas** são seres únicos e imortais, de raça própria, distinta da raça demônio (D-128 esclarece a redação anterior de D-126, "demônios reais"). O termo Daema ainda não existe na época de EXODUS. Todos os anjos de Maesto também são Daemas.
 - Os Daemas dão origem a espécies de outras raças ao procriarem. Essas espécies herdam uma versão mais fraca da capacidade do Daema original, denominada capacidade de espécie em épocas posteriores. O termo capacidade de espécie ainda não existe na época de EXODUS.
 - **Deviron**, também chamado **Samael** (Fallen), é o primeiro devilman, um Daema e o primeiro teste de Maesto de um demônio baseado em humano. Normalmente os demônios são baseados em animais. A capacidade de Deviron é a absorção e o fundimento/fusão com outros seres.
 - A raça dos animais ainda não está presente nessa época, pois o foco era unicamente o teste de criação de humanos.
@@ -1568,13 +1572,37 @@ A história de **EXODUS** aborda **simetria**, **perfeição** e **falsos Messia
 
 ### 15.2 Questões não definidas — **PENDENTE**
 
-**THÉOS** é Maesto, conforme D-127 (§15.3). Seus atributos, hierarquia celestial e relação entre céu, areia e superioridade permanecem pendentes. Também permanecem indefinidos o momento de revelação dos nomes de Deviron, o mecanismo detalhado de procriação dos Daemas e o destino de um Daema imortal após a absorção/fusão. Esta decisão não altera as regras de combate ou de absorção existentes.
+**THÉOS** é Maesto, conforme D-127 (§15.3) e D-128 (§15.4). Seus limites de poder e a hierarquia celestial não foram especificados. O momento de revelação dos nomes de Deviron permanece pendente. O mecanismo detalhado de procriação dos Daemas é irrelevante para o plot de EXODUS e não será aprofundado nesta etapa. O céu terá menções vagas; sua definição real é indescritível e irrelevante para o plot. O destino dos Daemas assimilados foi definido pela D-128. Não se alteram as regras mecânicas existentes.
 
 ### 15.3 D-127 — Designações do criador e referências egípcias — **CONFIRMADO / POSSIBILIDADE AUTORIZADA**
 
-- **CONFIRMADO:** THÉOS é Maesto; THÉOS é como o chamam e se referem a ele formalmente. Esta definição resolve a identidade anteriormente pendente, sem determinar quem conhece sua condição de criador ou o nome Maesto.
-- **POSSIBILIDADE AUTORIZADA:** Shaddai pode ser um nome atribuído a ele pelos humanos na época de EXODUS. Não foi definida sua adoção universal nem a existência de um culto específico.
-- **POSSIBILIDADE AUTORIZADA:** alguns Daemas podem ser baseados nos deuses egípcios. A noção autoral é que os equivalentes aos deuses egípcios sejam equivalentes aos animais de tier 4. Sua participação não deve ter grande importância a ponto de mudar substancialmente a história. A ausência da raça dos animais estabelecida na D-126 permanece; essa possibilidade diz respeito aos Daemas, não à introdução da fauna. A definição exata de tier 4, os indivíduos, suas capacidades e sua presença efetiva ficam pendentes; nenhuma escala mecânica é criada por esta decisão.
+- **CONFIRMADO:** THÉOS é Maesto; THÉOS é como os Daemas (exclusivamente) se referem a ele formalmente, conforme D-128.
+- **CONFIRMADO pela D-128:** as religiões da época chamam-no de Shaddai, sem saber se existe ou não. Não foi definida a existência de um culto específico.
+- **POSSIBILIDADE AUTORIZADA:** alguns Daemas podem ser baseados nos deuses egípcios. A noção autoral é que os equivalentes aos deuses egípcios sejam equivalentes aos animais de tier 4. Sua participação não deve ter grande importância a ponto de mudar substancialmente a história. A ausência da raça dos animais estabelecida na D-126 permanece; essa possibilidade diz respeito aos Daemas, não à introdução da fauna. A definição de tier 4 foi esclarecida pela D-128 (§15.5); os indivíduos, suas capacidades e sua presença efetiva ficam pendentes; nenhuma escala mecânica é criada por esta decisão.
+
+### 15.4 D-128 — Leis da existência, religiões e queda de Deviron — **CONFIRMADO**
+
+- **Maesto:** criador de tudo, de absolutamente todo ser vivo e também do conceito de energia. O diretor estabelece: "Todo o restante é ato religioso". Religião equivale a um conjunto de seres de diferentes raças. Não se presume onipotência nem se define o funcionamento dos atos religiosos além dessa declaração.
+- **Nomes:** apenas Daemas o chamam de THÉOS. As religiões da época o chamam de Shaddai, sem saber se existe ou não.
+- **Raças:** demônio é uma raça; Daema é outra raça. Anjos são Daemas e existem para testes de criação de demônios. Deviron é o real primeiro demônio, mesmo sendo o Daema do primeiro demônio. Mantém-se a descrição de D-126 quanto a ele ser o primeiro devilman.
+- **Imortalidade:** os corpos dos Daemas desaparecem em energia e eles se regeneram de 8 em 8 dias. A absorção dos devilmen é permanente; essa é a única espécie capaz de obliterar a existência de um Daema, por assimilação. Não se define o marco inicial da contagem de 8 dias, nem se presume transferência de consciência.
+- **Deviron:** é perfeitamente simétrico, assim como os Maziks. Maesto não tem relação com ele além de sua criação. Quem o expulsou do céu foram os próprios anjos, por inveja e medo de sua capacidade de espécie. Essa decisão não identifica o emissor das falas da abertura.
+- **Maziks:** origem e conhecimento público conforme §14.2; magia de reza aprendida através dos ensinamentos dos anjos em seus templos; todas as magias de fogo ensinadas por Gabriel (§9.1).
+- **Limites do plot:** reprodução detalhada dos Daemas é irrelevante ao plot; o céu terá vagas menções e sua definição real é indescritível. Não aprofundar esses tópicos como requisitos da campanha. O desfecho de EXODUS contribui para a transformação do universo nas épocas futuras (resposta 12D); o evento concreto não foi especificado.
+
+### 15.5 D-128 — Tiers dos animais — **CONFIRMADO**
+
+Os tiers equivalem ao nível de antropomorfização dos animais: à medida que se tornam mais semelhantes aos humanos, perdem características animalescas e ganham características humanas, por exemplo a locomoção bípede. Não é uma escala de força de combate.
+
+| Tier | Definição autoral |
+|---|---|
+| 0 | Animal por completo. |
+| 1 | Animal falante. |
+| 2 | Primeira instância de antropomorfização. |
+| 3 | Antropomorfização mais avançada; por exemplo, um elefante tier 3 pode andar de duas ou de quatro patas. |
+| 4 | Mais antropomorfizado, perdendo certas capacidades animalescas; pássaros tier 4 não voam, diferentemente dos tier 2 e 3, e ainda são maiores. |
+
+Pássaros tier 2 e 3 mantêm mais capacidades e anatomia animalescas e conseguem voar. A possibilidade autorizada de Daemas de inspiração nos deuses egípcios (D-127) corresponde a animais de tier 4; a raça dos animais permanece ausente nessa época. Não foi especificado se há tiers acima de 4, nem generalizada uma regra de tamanho para todas as espécies.
 
 ---
 
@@ -3315,3 +3343,7 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
 
 - **D-127 · 2026-11-27 (lore do criador) — THÉOS/Maesto, Shaddai e Daemas de inspiração egípcia.**
   **CONFIRMADO:** THÉOS é Maesto, designação formal pela qual se referem a ele. **POSSIBILIDADES AUTORIZADAS:** Shaddai pode ser um nome que os humanos lhe dão nessa época; alguns Daemas podem ser baseados nos deuses egípcios, sendo os equivalentes a esses deuses os equivalentes aos animais de tier 4, sem grande importância para a história a ponto de alterá-la substancialmente. A ausência da raça dos animais (D-126) permanece. A relação THÉOS/Maesto deixa de ser pendente; a extensão do conhecimento dos personagens, a adoção de Shaddai, a definição de tier 4 e a seleção/participação dos Daemas específicos não foram fechadas. Não altera mecânicas. Impacto: `docs/GDD.md` (§§13, 15 e Apêndice A), `docs/DECISIONS.md`, `docs/CANON_BOUNDARY.md`, `docs/ART_DIRECTION.md`.
+
+- **D-128 · 2026-11-27 (respostas do criador à rodada de worldbuilding 1) — leis fundamentais de Maesto.**
+  **CONFIRMADO:** Maesto cria tudo, absolutamente todo ser vivo e o conceito de energia; todo o restante é ato religioso, sendo religião um conjunto de seres de diferentes raças. Apenas Daemas o chamam THÉOS; as religiões da época chamam-no Shaddai, sem saber se existe. Daema e demônio são raças distintas; anjos são Daemas de testes de criação de demônios; Deviron é o real primeiro demônio, embora seja o Daema do primeiro demônio. Daemas se regeneram de 8 em 8 dias, seus corpos desaparecem em energia; a assimilação dos devilmen é permanente e só essa espécie é capaz de obliterar um Daema. Tiers animais medem antropomorfização: 0 animal completo; 1 falante; 2 primeira instância antropomórfica; pássaros 2/3 voam, 4 não e ainda são maiores; elefante 3 anda de duas/quatro patas. Maziks são seres que ousam atingir a superioridade, criados pelos anjos manipulando corpos humanos (referência: Qu de All Tomorrows); usuários de magia podem se tornar Maziks; população ignora sua origem e ouve dos anjos que são vítimas das tentações. Rezas são ensinadas pelos anjos em seus templos; toda magia de fogo por Gabriel. Deviron é perfeitamente simétrico como os Maziks; os anjos o expulsaram por inveja e medo da capacidade de espécie, e Maesto não tem relação com ele além da criação. Resposta 12D: o desfecho contribui para transformar o universo nas épocas posteriores.
+  **Limites:** reprodução detalhada dos Daemas e definição do céu são irrelevantes ao plot; céu indescritível, com vagas menções. Não foram escolhidos limites de poder de Maesto, detalhes do fim, identidade da voz da abertura, nem novos efeitos mecânicos. A classificação de D-048 e a redação de D-126/D-127 cedem às clarificações acima nos pontos de conflito. Impacto: `docs/GDD.md` (§§1, 9, 10, 13–15 e Apêndice A), `docs/DECISIONS.md`, `docs/CANON_BOUNDARY.md`, `docs/ART_DIRECTION.md`, `docs/COMBAT_SPEC.md`, `docs/PROLOGUE_SCRIPT.md`, `docs/ROTEIRO_PROLOGO.md`, `docs/ANGEL_PRAYERS_AND_ZAHAV.md`.
