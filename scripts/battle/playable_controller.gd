@@ -1499,17 +1499,18 @@ func _on_absorb_break(_unit: BattleUnit, defender: BattleUnit) -> void:
 
 
 ## D-051: with two or more eligible attributes the player picks the gain.
-func _choose_absorb_gain(options: Array[Dictionary]) -> int:
+func _choose_absorb_gain(options: Array[Dictionary]) -> void:
+	_absorb_gain_pick = 0
 	if options.size() <= 1:
-		return 0
+		return
 	var labels: Array[String] = []
 	for option in options:
 		labels.append(String(option.label))
 	var pick := -1
-	while pick < 0:
+	while pick < 0 and is_inside_tree():
 		hud.message = "ABSORBED: choose the gain. Z: confirm."
 		pick = await _wait_command(labels)
-	return pick
+	_absorb_gain_pick = maxi(0, pick)
 
 
 func _pause_result() -> void:

@@ -651,7 +651,10 @@ func _perform_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	await _on_absorb_break(actor, target)
 	if not is_inside_tree(): return
 	var options := BattleMath.absorb_gain_options(target.stats)
-	var pick: int = await _choose_absorb_gain(options)
+	_absorb_gain_pick = 0
+	await _choose_absorb_gain(options)
+	if not is_inside_tree(): return
+	var pick: int = _absorb_gain_pick
 	var chosen: Dictionary = options[clampi(pick, 0, options.size() - 1)]
 	var gains: Dictionary = chosen["gains"]
 	absorb_gain_label = str(chosen.get("label", ""))
@@ -802,9 +805,13 @@ func _on_absorb_break(_actor: BattleUnit, _target: BattleUnit) -> void:
 	pass
 
 
+var _absorb_gain_pick := 0
+
 ## Overridable: which gain option the player takes (the playable HUD asks).
-func _choose_absorb_gain(_options: Array[Dictionary]) -> int:
-	return 0
+## Uses a -> void hook + _absorb_gain_pick instead of returning int from an overridden
+## coroutine, avoiding a Godot 4.7 GDScriptFunctionState refcount leak on exit.
+func _choose_absorb_gain(_options: Array[Dictionary]) -> void:
+	_absorb_gain_pick = 0
 
 
 func _wait_command(options: Array[String]) -> int:

@@ -279,6 +279,8 @@ func _verify_human_example_battle() -> void:
 	check(human.atk_stages.size() == 1 and human.mak_stages.size() == 1, "VERDANT MIGHT gives HUMAN A +1 ATK & +1 MAK stage")
 	check(eye_a.atk_stages.is_empty() and eye_b.atk_stages.is_empty() and eye_a.mak_stages.is_empty() and eye_b.mak_stages.is_empty(),
 			"Floater Eyes NEVER receive VERDANT MIGHT")
+	check(String(b.hud.events.back().text) == "Floater Eye A → Human A  ATK ↑  MAK ↑",
+			"D-110 telegraphic log for VERDANT MIGHT (got %s)" % String(b.hud.events.back().text))
 
 	var en1 := eye_a.current_en
 	await b._enemy_skill(eye_a, &"verdant_shell")
@@ -287,6 +289,8 @@ func _verify_human_example_battle() -> void:
 	check(human.effective_def() > human.stats.defense and human.effective_mef() > human.stats.mef,
 			"VERDANT SHELL raises HUMAN A effective DEF/MEF (%d>%d, %d>%d)" % [human.effective_def(), human.stats.defense, human.effective_mef(), human.stats.mef])
 	check(eye_a.def_round_stages.is_empty() and eye_b.def_round_stages.is_empty(), "Floater Eyes NEVER receive VERDANT SHELL")
+	check(String(b.hud.events.back().text) == "Floater Eye A → Human A  DEF ↑  MEF ↑",
+			"D-110 telegraphic log for VERDANT SHELL (got %s)" % String(b.hud.events.back().text))
 
 	var agi_before := human.stats.agi
 	var sp_base_before := human.sp_base()
@@ -299,6 +303,8 @@ func _verify_human_example_battle() -> void:
 			"KEEN GAZE raises effective_agi() by +4 (%d -> %d) and grants HIGH SPEED" % [agi_before, human.effective_agi()])
 	check(eye_a.agi_buffs.is_empty() and eye_b.agi_buffs.is_empty() and not eye_a.next_attack_high_speed,
 			"Floater Eyes NEVER receive KEEN GAZE")
+	check(String(b.hud.events.back().text) == "Floater Eye A → Human A  +4 AGI  HIGH SPEED",
+			"D-110 telegraphic log for KEEN GAZE (got %s)" % String(b.hud.events.back().text))
 
 	var sp_before := human.current_sp
 	var en_b0 := eye_b.current_en
@@ -307,6 +313,8 @@ func _verify_human_example_battle() -> void:
 	check(eye_b.current_en == en_b0 - 10, "ETHER LINK consumes 10 EN (%d -> %d)" % [en_b0, eye_b.current_en])
 	check(human.current_sp == sp_before + 6 and human.sp_buffs.size() == 1, "ETHER LINK grants HUMAN A +6 temporary SP")
 	check(eye_a.sp_buffs.is_empty() and eye_b.sp_buffs.is_empty(), "Floater Eyes NEVER receive ETHER LINK")
+	check(String(b.hud.events.back().text) == "Floater Eye B → Human A  +6 SP",
+			"D-110 telegraphic log for ETHER LINK (got %s)" % String(b.hud.events.back().text))
 
 	# 5º buff: AEGIS IRIS (1 ACT / 8 EN, escudo de status não-reza por 1 rodada cheia)
 	var en_b1 := eye_b.current_en
@@ -315,6 +323,8 @@ func _verify_human_example_battle() -> void:
 	check(not human.haganah.is_empty() and bool(human.haganah.get("non_prayer", false)),
 			"AEGIS IRIS grants HUMAN A non-prayer status shield (haganah)")
 	check(eye_a.haganah.is_empty() and eye_b.haganah.is_empty(), "Floater Eyes NEVER receive AEGIS IRIS")
+	check(String(b.hud.events.back().text) == "Floater Eye B → Human A  STATUS SHIELD",
+			"D-110 telegraphic log for AEGIS IRIS (got %s)" % String(b.hud.events.back().text))
 	# Prova que o escudo bloqueia status (SNARE / BLEED / SLEEP)
 	human.current_hp = 999
 	human.stats.max_hp = 999
@@ -373,7 +383,11 @@ func _verify_mazik_example_battle() -> void:
 	b._self_skill(eye_b, &"verdant_might", 0, false)
 	check(eye_a.atk_stages.is_empty() and eye_b.atk_stages.is_empty(),
 			"Even forced cast never buffs a Floater Eye")
+	check(String(b.hud.events.back().text) == "Floater Eye B  NO ALLY",
+			"D-110 telegraphic log when no valid buff ally exists (got %s)" % String(b.hud.events.back().text))
 	b._execute_flee(eye_a)
+	check(String(b.hud.events.back().text) == "Floater Eye A  FLEE",
+			"D-110 telegraphic log for orphan Floater Eye flee (got %s)" % String(b.hud.events.back().text))
 	b._execute_flee(eye_b)
 	check(eye_a.fled and eye_b.fled and not eye_a.is_alive() and not eye_b.is_alive(),
 			"Orphan Floater Eyes mark fled=true and leave combat")
