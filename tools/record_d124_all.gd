@@ -112,22 +112,25 @@ func _run() -> void:
 	ally.start_praying(5)
 	_reset(all)
 	await _secs(0.8)
-	var only := OS.get_cmdline_user_args()
+	var only: Array = Array(OS.get_cmdline_user_args())
+	var allies_only := only.has("aliados")
+	only.erase("aliados")
 	for skill in SKILLS:
 		if not only.is_empty() and not only.has(String(skill)): continue
 		var d := SkillBook.def(skill)
 		var dual := bool(d.get("dual", false))
-		print("SEG ", skill, " herói")
-		# 1) o herói usa a skill no inimigo
-		_reset(all)
-		ally.start_praying(5)
-		hero.skills.assign([skill])
-		if dual:
-			b.scripted_targets = [foe1] as Array[BattleUnit]
-		_done = false
-		_run_hero(hero, skill, foe0 if dual else foe1)
-		await _pump()
-		await _settle()
+		if not allies_only:
+			print("SEG ", skill, " herói")
+			# 1) o herói usa a skill no inimigo
+			_reset(all)
+			ally.start_praying(5)
+			hero.skills.assign([skill])
+			if dual:
+				b.scripted_targets = [foe1] as Array[BattleUnit]
+			_done = false
+			_run_hero(hero, skill, foe0 if dual else foe1)
+			await _pump()
+			await _settle()
 		print("SEG ", skill, " aliado")
 		# 2) o inimigo usa a mesma skill nos aliados (close-up: figura-substituta do tamanho de um inimigo)
 		_reset(all)

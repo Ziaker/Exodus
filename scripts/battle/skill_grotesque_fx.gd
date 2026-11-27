@@ -911,8 +911,8 @@ func play_dark_breath(caster: BattleUnit, targets: Array, dodged_ids: Array = []
 		my += float(gg.c.y)
 	k = (k - 1.0) / maxf(1.0, float(targets.size()))
 	my = my / maxf(1.0, float(targets.size()))
-	if not player_cast:
-		my = (stage_rect().position.y + stage_rect().size.y * 0.5) * DESIGN_SCALE  # a boca fica no meio do palco
+	# Alvos aliados: o sopro roda na linha dos CARTOES (a boca fica na borda direita, na altura dos cartoes), nunca sobre a
+	# figura do inimigo que ataca (ordem do criador).
 	var mx := 104.0 if player_cast else 816.0 - 104.0
 	var rng_b := RandomNumberGenerator.new()
 	rng_b.seed = 4242
