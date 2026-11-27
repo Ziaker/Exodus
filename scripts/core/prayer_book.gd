@@ -176,17 +176,29 @@ static func mishpat_damage(target_last_damage: int) -> int:
 	return maxi(0, target_last_damage) + 15
 
 
-## D-118 Shachar: 30 + MAK damage to every living foe at the start of the next round.
-static func shachar_damage(caster_mak: int) -> int:
-	return 30 + maxi(0, caster_mak)
+## D-118 Shachar: (30 + MAK - MEF) * affinity damage to every living foe at the start of the next round.
+static func shachar_damage(caster_mak: int, target_mef: int = 0,
+		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+	var base := maxi(0, 30 + maxi(0, caster_mak) - maxi(0, target_mef))
+	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
 
 
-## D-118 Lehavah: 40 + MAK light-and-fire explosion damage on one foe (+ blind).
-static func lehavah_damage(caster_mak: int) -> int:
-	return 40 + maxi(0, caster_mak)
+## D-118 Lehavah: (40 + MAK - MEF) * affinity light-and-fire explosion damage on one foe (+ blind).
+static func lehavah_damage(caster_mak: int, target_mef: int = 0,
+		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+	var base := maxi(0, 40 + maxi(0, caster_mak) - maxi(0, target_mef))
+	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
 
 
-## D-118 Hasneh Habo'er: Burning Bush deals 2x damage against an already burning target.
+## D-118 Esh Sinai (creator 2026-11-26): immediate damage does NOT ignore defenses;
+## each of the 4 strikes applies (30 - MEF) * affinity.
+static func esh_sinai_hit_damage(target_mef: int = 0,
+		affinity: BattleMath.Affinity = BattleMath.Affinity.NORMAL) -> int:
+	var base := maxi(0, ESH_SINAI_HIT_DAMAGE - maxi(0, target_mef))
+	return maxi(0, int(round(float(base) * BattleMath.affinity_multiplier(affinity))))
+
+
+## D-118 Hasneh Habo'er: Burning Bush deals 2x damage against an already burning target (12 base / 24 burning).
 static func hasneh_bush_damage(target_burning: bool, base_dmg: int = HASNEH_BUSH_BASE_DAMAGE) -> int:
 	var base := maxi(0, base_dmg)
 	return base * 2 if target_burning else base

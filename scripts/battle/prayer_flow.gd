@@ -266,6 +266,11 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 	if unit.acts_available < acts_needed:
 		_release(unit, d, "no act left")
 		return true
+	# Pre-check EN cost before spending ACTs (Hasneh Habo'er, or angels using Esh Sinai).
+	var needs_en := (id == PrayerBook.HASNEH_HABOER) or (id == PrayerBook.ESH_SINAI and not unit.prays)
+	if needs_en and unit.current_en < PrayerBook.en_cost(id):
+		_release(unit, d, "not enough EN")
+		return true
 	for _a in acts_needed:
 		unit.spend_act()
 	d["done"] = true
@@ -295,26 +300,23 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			await _cherev(unit, foes, d, reacting)
 	elif id == PrayerBook.SHACHAR:
 		_pending_shachar.append({"caster": unit, "round": battle.state.round_number,
-			"damage": PrayerBook.shachar_damage(unit.stats.mak)})
+			"caster_mak": unit.stats.mak})
 		fx.play_shachar()
-		_log("%s invokes Shachar: radiant dawn will strike all foes for %d damage at the start of the next round (%d PP)." % [
-			unit.display_name, PrayerBook.shachar_damage(unit.stats.mak), _cost(d)])
+		_log("%s invokes Shachar: radiant dawn will strike all foes (30 + %d MAK - MEF) at the start of the next round (%d PP)." % [
+			unit.display_name, unit.stats.mak, _cost(d)])
 		_event("%s invokes Shachar: dawn gathers above." % battle.short_name(unit))
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	elif id == PrayerBook.HASNEH_HABOER:
 		var en_needed := PrayerBook.en_cost(id)
-		if unit.current_en < en_needed:
-			_release(unit, d, "not enough EN")
-		else:
-			unit.current_en -= en_needed
-			var bush := _summon_burning_bush(unit)
-			fx.play_hasneh_haboer(unit, int(bush.hp))
-			_log("%s invokes Hasneh Habo'er: Burning Bush (%d HP) manifests (%d EN)." % [
-				unit.display_name, int(bush.hp), en_needed])
-			_event("%s summons the Burning Bush (%d HP)!" % [battle.short_name(unit), int(bush.hp)])
-			if reacting:
-				unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
+		unit.current_en -= en_needed
+		var bush := _summon_burning_bush(unit)
+		fx.play_hasneh_haboer(unit, int(bush.hp))
+		_log("%s invokes Hasneh Habo'er: Burning Bush (%d HP) manifests (%d EN)." % [
+			unit.display_name, int(bush.hp), en_needed])
+		_event("%s summons the Burning Bush (%d HP)!" % [battle.short_name(unit), int(bush.hp)])
+		if reacting:
+			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	else:
 		var target: BattleUnit = d.target
 		if not target.is_alive():
@@ -706,12 +708,12 @@ var _pending_shachar: Array[Dictionary] = []
 var burning_bushes: Array[Dictionary] = []
 
 
-## D-118 Lehavah: 40 + MAK light-and-fire explosion + blind (respecting Haganah) on explosion frame.
+## D-118 Lehavah: (40 + MAK - MEF) * affinity light-and-fire explosion + blind (respecting Haganah).
 func _lehavah(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
 	await fx.play_lehavah(target)
 	if not battle.is_inside_tree() or not target.is_alive():
 		return
-	var dmg := PrayerBook.lehavah_damage(unit.stats.mak)
+	var dmg := PrayerBook.lehavah_damage(unit.stats.mak, target.stats.mef, target.affinity)
 	var applied := target.take_damage(dmg)
 	unit.last_damage_dealt = applied
 	var blinded := false
@@ -729,18 +731,15 @@ func _lehavah(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: boo
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 
 
-## D-118 Esh Sinai: IMMEDIATE 30 magic damage, followed by 3 successive reactable 30-damage hits.
-## Angels pay 40 EN; Yoch pays 6 PP (handled by queue). Stops early if target falls.
-func _esh_sinai(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) -> void:
+## D-118 Esh Sinai: IMMEDIATE (30 - MEF) * affinity magic damage (does NOT ignore defenses),
+## followed by 3 successive reactable hits. Angels pay 40 EN; Yoch pays 6 PP.
+func _esh_sinai(unit: BattleUnit, target: BattleUnit, _d: Dictionary, reacting: bool) -> void:
 	if not unit.prays:
-		var en_needed := PrayerBook.en_cost(PrayerBook.ESH_SINAI)
-		if unit.current_en < en_needed:
-			_release(unit, d, "not enough EN")
-			return
-		unit.current_en -= en_needed
+		unit.current_en -= PrayerBook.en_cost(PrayerBook.ESH_SINAI)
 	fx.play_esh_sinai(target)
-	# Hit 0: IMMEDIATE (no delay, no reaction window)
-	var applied0 := target.take_damage(PrayerBook.ESH_SINAI_HIT_DAMAGE)
+	# Hit 0: IMMEDIATE (no delay, no reaction window; respects MEF & affinity)
+	var hit_dmg := PrayerBook.esh_sinai_hit_damage(target.stats.mef, target.affinity)
+	var applied0 := target.take_damage(hit_dmg)
 	unit.last_damage_dealt = applied0
 	battle.fx.play("RAAM", target, applied0, unit)
 	_log("%s casts Esh Sinai (IMMEDIATE) on %s: %d damage." % [unit.display_name, target.display_name, applied0])
@@ -762,7 +761,8 @@ func _esh_sinai(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: b
 		if not target.is_alive():
 			fx.cancel_esh_sinai_after(idx)
 			return
-		var applied := target.take_damage(PrayerBook.ESH_SINAI_HIT_DAMAGE)
+		var follow_dmg := PrayerBook.esh_sinai_hit_damage(target.stats.mef, target.affinity)
+		var applied := target.take_damage(follow_dmg)
 		unit.last_damage_dealt = applied
 		battle.fx.play("RAAM", target, applied, unit)
 		_log("%s's Esh Sinai (%s) hits %s: %d damage." % [unit.display_name, tags[idx], target.display_name, applied])
@@ -794,7 +794,7 @@ func living_burning_bushes() -> Array[Dictionary]:
 	return out
 
 
-## Damages a summoned Burning Bush; clears visual presence when all bushes fall.
+## Damages a summoned Burning Bush; updates its individual VFX entry and clears it at 0 HP.
 func damage_burning_bush(index: int, amount: int) -> int:
 	if index < 0 or index >= burning_bushes.size():
 		return 0
@@ -807,8 +807,7 @@ func damage_burning_bush(index: int, amount: int) -> int:
 		bush.alive = false
 		_log("The Burning Bush is extinguished.")
 		_event("The Burning Bush fades.")
-	var living := living_burning_bushes()
-	fx.set_hasneh_hp(int(living[0].hp) if not living.is_empty() else 0)
+	fx.set_hasneh_bush_hp(index, int(bush.hp))
 	return applied
 
 
@@ -862,7 +861,7 @@ func resolve_pending_shachar() -> int:
 			remaining.append(entry)
 			continue
 		var caster: BattleUnit = entry.caster
-		var dmg := int(entry.damage)
+		var caster_mak := int(entry.get("caster_mak", caster.stats.mak if caster != null else 0))
 		var foes: Array[BattleUnit] = []
 		for foe in battle.hud.opponents.duplicate():
 			if (foe as BattleUnit).is_alive():
@@ -870,9 +869,10 @@ func resolve_pending_shachar() -> int:
 		if foes.is_empty():
 			continue
 		fx.play_shachar_dawn()
-		_log("Shachar dawn strikes all foes for %d damage!" % dmg)
+		_log("Shachar dawn strikes all foes (30 + %d MAK - MEF)!" % caster_mak)
 		_event("Shachar radiates across all foes!")
 		for foe in foes:
+			var dmg := PrayerBook.shachar_damage(caster_mak, foe.stats.mef, foe.affinity)
 			var applied := foe.take_damage(dmg)
 			total_dealt += applied
 			if caster != null:

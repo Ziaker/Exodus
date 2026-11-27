@@ -45,7 +45,7 @@
 |---|---|---|
 | **Angel Hug** | 2 ACT / 5 EN | **Paralisa** o alvo (quem está paralisado **não pode agir nem reagir** a ações) durante **3 atos**. **IMEDIATO**. |
 | **God's Message** | 1 ACT / 5 EN | No próximo turno, o alvo perderá **3 estágios de um status aleatório**. **IMEDIATO**. |
-| **Hasneh Habo'er** *(IMPLEMENTADO)* | 4 ACT / 30 EN | Invoca um **arbusto vivo** incandescido pelo fogo divino (**10 HP**). Todos os ataques do arbusto causam **BURN** em quem ataca. Ao atacar um alvo já queimado, causa o **dobro de dano**. *(VFX 100% letras — ramos verdes + chamas tricolores — aprovado e portado em `pray_fx.gd`; dano base provisório `12` / `24` em alvo queimando.)* |
+| **Hasneh Habo'er** *(IMPLEMENTADO)* | 4 ACT / 30 EN | Invoca um **arbusto vivo** incandescido pelo fogo divino (**10 HP**). Todos os ataques do arbusto causam **BURN** em quem ataca. Ao atacar um alvo já queimado, causa o **dobro de dano** (**12** base / **24** em alvo queimando — aprovado pelo criador). Suporta múltiplas sarças simultâneas; VFX 100% letras (ramos verdes + chamas tricolores) portado em `pray_fx.gd`. |
 | **Adin** | 2 ACT / 0 EN | Recupera **15 MP** *(EN)*. No próximo round, esta skill evolui para **Adina**. |
 | **Adina** | 2 ACT / 0 EN | Recupera **25 MP** *(EN)* e **25 HP**. No próximo round, esta skill evolui para **Adinut**. |
 | **Adinut** | 1 ACT / 0 EN | **IMEDIATAMENTE** recupera **30 MP** *(EN)* e **30 HP**. |
@@ -54,7 +54,7 @@
 
 ## 4. Palavra-chave `IMEDIATO`
 
-> **Regra:** toda magia ou reza marcada como **IMEDIATO** é resolvida **no exato momento em que é anunciada**, **sem possibilidade de reação**.
+> **Regra:** toda magia ou reza marcada como **IMEDIATO** é resolvida **no exato momento em que é anunciada**, **sem possibilidade de reação**. **Dano imediato NÃO ignora defesas** (`MEF` e afinidade são aplicados normalmente, assim como nas demais magias de dano — confirmado pelo criador em 2026-11-26).
 
 * Aplica-se a: `Esh Ochelet`, 1º impacto de `Esh Sinai` (os 3 golpes subsequentes permitem reação), `Angel Hug`, `God's Message` e `Adinut`.
 

@@ -1406,6 +1406,7 @@ func _draw_lehavah() -> void:
 
 ## Hasneh Habo'er (הסנה הבוער): Gabriel's Burning Bush (10 HP) — living emerald-green Hebrew-letter
 ## branches interwoven with continuous 3-color flame letters that burn without consuming it.
+## Supports multiple simultaneous living bushes.
 const HASNEH_BLOOM := 0.78
 const HASNEH_INTRO_END := 2.25
 var hasneh_at := -99.0
@@ -1413,18 +1414,20 @@ var hasneh_hp := 0
 var hasneh_pos := Vector2.ZERO
 var hasneh_branches: Array[Dictionary] = []
 var hasneh_flames: Array[Dictionary] = []
+var hasneh_bushes: Array[Dictionary] = []
 
 
 func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUSH_HP) -> void:
 	if hud == null:
 		return
-	hasneh_hp = maxi(0, bush_hp)
+	var slot_idx := hasneh_bushes.size()
 	var rect := _unit_rect(caster)
+	var base_x: float = hud.SCREEN.x * 0.72
 	if rect.size.x > 0.0 and not caster.is_player:
-		hasneh_pos = Vector2(clampf(rect.get_center().x + 120.0, 88.0, hud.SCREEN.x - 88.0), hud.STAGE_RECT.end.y - 26.0)
-	else:
-		hasneh_pos = Vector2(hud.SCREEN.x * 0.72, hud.STAGE_RECT.end.y - 26.0)
-	hasneh_branches.clear()
+		base_x = rect.get_center().x + 120.0
+	var offset_x := float(slot_idx % 3) * -96.0 if slot_idx > 0 else 0.0
+	var pos := Vector2(clampf(base_x + offset_x, 88.0, hud.SCREEN.x - 88.0), hud.STAGE_RECT.end.y - 26.0)
+	var branches: Array[Dictionary] = []
 	var branch_angles: Array[float] = [-1.15, -0.78, -0.42, -0.1, 0.22, 0.58, 0.96, 1.25]
 	for bi in branch_angles.size():
 		var ang := branch_angles[bi]
@@ -1432,7 +1435,7 @@ func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUS
 		for s in segs:
 			var frac := float(s + 1) / float(segs)
 			var curve := sin(frac * 2.4 + float(bi)) * 14.0
-			hasneh_branches.append({
+			branches.append({
 				"x_off": sin(ang) * (frac * 56.0) + curve,
 				"y_off": -cos(ang * 0.7) * (frac * 74.0) - 6.0,
 				"glyph": _letter(),
@@ -1440,11 +1443,11 @@ func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUS
 				"delay": frac * 0.55 + float(bi % 2) * 0.08,
 				"phase": rng.randf_range(0.0, TAU),
 			})
-	hasneh_flames.clear()
+	var flames: Array[Dictionary] = []
 	var bush_word := "הסנההבוער"
 	for i in 42:
 		var ch := bush_word.substr(i % bush_word.length(), 1) if i % 5 == 0 else _letter()
-		hasneh_flames.append({
+		flames.append({
 			"x_off": rng.randf_range(-52.0, 52.0),
 			"base_y": rng.randf_range(-74.0, -10.0),
 			"rise": rng.randf_range(26.0, 72.0),
@@ -1454,11 +1457,42 @@ func play_hasneh_haboer(caster: BattleUnit, bush_hp: int = PrayerBook.HASNEH_BUS
 			"speed": rng.randf_range(1.4, 2.8),
 			"phase": rng.randf_range(0.0, TAU),
 		})
+	hasneh_bushes.append({
+		"born": time,
+		"hp": maxi(0, bush_hp),
+		"pos": pos,
+		"branches": branches,
+		"flames": flames,
+	})
 	hasneh_at = time
+	hasneh_pos = pos
+	hasneh_branches = branches
+	hasneh_flames = flames
+	_sync_hasneh_hp()
 
 
 func set_hasneh_hp(hp: int) -> void:
-	hasneh_hp = maxi(0, hp)
+	if not hasneh_bushes.is_empty():
+		hasneh_bushes[0].hp = maxi(0, hp)
+	_sync_hasneh_hp()
+
+
+func set_hasneh_bush_hp(index: int, hp: int) -> void:
+	if index >= 0 and index < hasneh_bushes.size():
+		hasneh_bushes[index].hp = maxi(0, hp)
+	_sync_hasneh_hp()
+
+
+func clear_hasneh_bushes() -> void:
+	hasneh_bushes.clear()
+	hasneh_hp = 0
+
+
+func _sync_hasneh_hp() -> void:
+	var total := 0
+	for b in hasneh_bushes:
+		total += maxi(0, int(b.hp))
+	hasneh_hp = total
 
 
 func hasneh_busy() -> bool:
@@ -1466,44 +1500,51 @@ func hasneh_busy() -> bool:
 
 
 func _draw_hasneh_haboer() -> void:
-	if hasneh_hp <= 0 and not hasneh_busy():
+	if hasneh_bushes.is_empty() or hasneh_hp <= 0:
 		return
-	var age := time - hasneh_at
-	if age < 0.0:
-		return
-	if hasneh_hp <= 0:
-		return
-	var live := age >= HASNEH_BLOOM
-	var live_age := maxf(0.0, age - HASNEH_BLOOM)
-	var warm := minf(0.24, age * 0.25) if age < HASNEH_INTRO_END else 0.08
-	if warm > 0.01:
-		draw_rect(hud.STAGE_RECT, Color(1.0, 0.51, 0.14, warm * 0.35))
-	# 1) Living emerald-green Hebrew-letter branches (never consumed by the fire)
-	for br in hasneh_branches:
-		var ba := age - float(br.delay)
-		if ba < 0.0:
+	var flash_alpha := 0.0
+	var warm_alpha := 0.0
+	for bush in hasneh_bushes:
+		var hp := int(bush.hp)
+		if hp <= 0:
 			continue
-		var grow := minf(1.0, ba / 0.35)
-		var sway := sin(time * 2.6 + float(br.phase)) * 2.5 if live else 0.0
-		var pos := hasneh_pos + Vector2(float(br.x_off) * grow + sway, float(br.y_off) * grow)
-		_glyph(String(br.glyph), pos, int(br.px), Color(INK_BUSH, 0.35 + 0.65 * grow), Color(INK_DARK, 0.85))
-	# 2) Continuous 3-color flame letters (orange, yellow, white)
-	if age > 0.25:
-		var fire_a := minf(1.0, (age - 0.25) / 0.5)
-		for fl in hasneh_flames:
-			var cyc := fposmod(time * float(fl.speed) + float(fl.phase), 1.0)
-			var pos := hasneh_pos + Vector2(float(fl.x_off) + sin(time * 5.0 + float(fl.phase)) * 7.0,
-				float(fl.base_y) - cyc * float(fl.rise))
-			var a := fire_a * (1.0 - cyc) * 0.95
-			_glyph(String(fl.glyph), pos, int(fl.px), Color(FIRE_PALETTE[int(fl.color_idx)], a), Color(INK_DARK, a * 0.75))
-	# 3) Tri-color Hebrew title during manifestation
-	if age > 0.35 and age < 2.2:
-		var ta := (age - 0.35) / 0.5 if age < 0.85 else maxf(0.0, 1.0 - (age - 1.55) / 0.65)
-		_draw_tricolor_word("הסנה הבוער", hasneh_pos + Vector2(0.0, -112.0), 22, ta)
-	# 4) Living summon HP tag (ASCII only, separate from Hebrew glyphs)
-	if live:
-		var tag_a := minf(1.0, live_age * 2.5)
-		_glyph("BUSH %d HP" % hasneh_hp, hasneh_pos + Vector2(0.0, 14.0), 11, Color(FIRE_PALETTE[1], tag_a), Color(INK_DARK, tag_a * 0.9))
-	# 5) Single soft warm flash on manifestation
-	if live and live_age < 0.08:
-		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.91, 0.63, (1.0 - live_age / 0.08) * 0.45))
+		var age := time - float(bush.born)
+		if age < 0.0:
+			continue
+		var pos: Vector2 = bush.pos
+		var live := age >= HASNEH_BLOOM
+		var live_age := maxf(0.0, age - HASNEH_BLOOM)
+		var warm := minf(0.24, age * 0.25) if age < HASNEH_INTRO_END else 0.08
+		warm_alpha = maxf(warm_alpha, warm)
+		# 1) Living emerald-green Hebrew-letter branches (never consumed by the fire)
+		for br in bush.branches:
+			var ba := age - float(br.delay)
+			if ba < 0.0:
+				continue
+			var grow := minf(1.0, ba / 0.35)
+			var sway := sin(time * 2.6 + float(br.phase)) * 2.5 if live else 0.0
+			var bpos := pos + Vector2(float(br.x_off) * grow + sway, float(br.y_off) * grow)
+			_glyph(String(br.glyph), bpos, int(br.px), Color(INK_BUSH, 0.35 + 0.65 * grow), Color(INK_DARK, 0.85))
+		# 2) Continuous 3-color flame letters (orange, yellow, white)
+		if age > 0.25:
+			var fire_a := minf(1.0, (age - 0.25) / 0.5)
+			for fl in bush.flames:
+				var cyc := fposmod(time * float(fl.speed) + float(fl.phase), 1.0)
+				var fpos := pos + Vector2(float(fl.x_off) + sin(time * 5.0 + float(fl.phase)) * 7.0,
+					float(fl.base_y) - cyc * float(fl.rise))
+				var a := fire_a * (1.0 - cyc) * 0.95
+				_glyph(String(fl.glyph), fpos, int(fl.px), Color(FIRE_PALETTE[int(fl.color_idx)], a), Color(INK_DARK, a * 0.75))
+		# 3) Tri-color Hebrew title during manifestation
+		if age > 0.35 and age < 2.2:
+			var ta := (age - 0.35) / 0.5 if age < 0.85 else maxf(0.0, 1.0 - (age - 1.55) / 0.65)
+			_draw_tricolor_word("הסנה הבוער", pos + Vector2(0.0, -112.0), 22, ta)
+		# 4) Living summon HP tag (ASCII only, separate from Hebrew glyphs)
+		if live:
+			var tag_a := minf(1.0, live_age * 2.5)
+			_glyph("BUSH %d HP" % hp, pos + Vector2(0.0, 14.0), 11, Color(FIRE_PALETTE[1], tag_a), Color(INK_DARK, tag_a * 0.9))
+		if live and live_age < 0.08:
+			flash_alpha = maxf(flash_alpha, (1.0 - live_age / 0.08) * 0.45)
+	if warm_alpha > 0.01:
+		draw_rect(hud.STAGE_RECT, Color(1.0, 0.51, 0.14, warm_alpha * 0.35))
+	if flash_alpha > 0.01:
+		draw_rect(Rect2(Vector2.ZERO, hud.SCREEN), Color(1.0, 0.91, 0.63, flash_alpha))
