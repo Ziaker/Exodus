@@ -141,6 +141,7 @@ Esta é a área com o **maior volume de conteúdo novo** ausente de `docs/plans/
 - **Magia Tradicional / Bruxaria (*Witchcraft*)** (`29/08/2025`) `[NOVO / CANDIDATO]`: manipula matéria e seres diretamente sem distorção de energia ("farmácia de manipulação"; alquimia = bruxaria). É **mais forte que magia de energia**, chegando perto do nível **Ubermage**. Exige 4 componentes: sangue menstrual (mulheres cis ou homens trans), caldeirão, chapéu e pet.
 
 ### 4.5 Catálogo Consolidado dos Elementos (`MAESTO.xlsx` + Atualizações 2024–2025)
+> **Nota canônica (`D-138`):** A sistematização abaixo pertence ao **mundo mais recente** de Maesto (não ao contexto primordial de EXODUS), **porém as magias prevalecem**. Elementos podem ter múltiplos nomes (ex.: **`TOXI` = `VENO`**). Em EXODUS não há influência nem afinidade elemental — elementos são delegados por raça (`D-119`/`D-138`).
 > Ordem de proficiência padronizada nesta tabela: **`Of / Df / Ut / Sp`** (na planilha original, a seção de sub-elementos invertia `Sp` e `Ut` nas linhas 11–12/17–18/23–24 — aqui todas as linhas já foram normalizadas para **`Of / Df / Ut / Sp`**!).
 
 | Grupo | Elem | Sub-elementos | Olímpio (`xlsx`) | Proficiência (`Of/Df/Ut/Sp`) | Notas de lore & atualizações 2024–2025 |
@@ -173,7 +174,7 @@ Esta é a área com o **maior volume de conteúdo novo** ausente de `docs/plans/
 | ↳ sub | `MOON` (dark) | de `DARK` | Selene | `8 / 0 / 8 / 0` | Vertente puramente ofensiva/utilitária da Lua (dupla entrada intencional na planilha). |
 | **Natureza** | **LEAF** | — | Demeter | `1 / 4 / 5 / 8` | **Composição de `AQUA + ROCK`** (`01/02/2025`). Proficiência fortemente **suportiva/utilitária/defensiva** (`8`/`5`/`4`), ataque direto baixo (`1`). Usado por Vecnalia e Traidor Agin (*Maduga Ray*). |
 | ↳ sub | `WOOD` | de `LEAF` | Persephone | `2 / 6 / 6 / 2` | Compensa defesa/utilidade de `LEAF`; base da *Bambúsia* de Teccilia e de Merrymen. |
-| **Natureza** | **TOXI** *(→ `VENO`?)* | — | Achlys | `8 / 0 / 8 / 0` | **Máxima ofensiva e utilidade (`8`/`8`), zero defesa/suporte.** Na reformulação de Vecnalia (`14/03/2025`, `28/08/2025`), gira em torno de **efeitos colaterais** (drogas = buffs, venenos = debuffs de stats), uniformes envenenados (imunidade ao próprio veneno) e **inversão de magia** (antídoto = inverso do veneno). **Nota crítica:** o código **`VENO`** não aparece na planilha nem no chat — somente `TOXI` e `Permavenom`! |
+| **Natureza** | **TOXI / VENO** | — | Achlys | `8 / 0 / 8 / 0` | **Máxima ofensiva e utilidade (`8`/`8`), zero defesa/suporte.** **`TOXI` e `VENO` são o mesmo elemento (`D-138` — elementos podem ter vários nomes).** Na reformulação de Vecnalia (`14/03/2025`, `28/08/2025`), gira em torno de **efeitos colaterais** (drogas = buffs, venenos = debuffs de stats), uniformes envenenados (imunidade ao próprio veneno) e **inversão de magia** (antídoto = inverso do veneno). |
 | ↳ sub | `FUNG` | de `TOXI` | Dionísio | `6 / 0 / 4 / 6` | Fungos/esporos; compensa `TOXI` trazendo **Suporte (`6`)** mantendo ataque (`6`). |
 | **Espacial** | **ETER** | — | Aether | `4 / 4 / 8 / 0` | Governa **Espaço E Sonhos** (`12/05/2025`). |
 | ↳ sub | `STAR` | de `ETER` | Hélio | `8 / 0 / 4 / 4` | Ofensiva estelar (`8`). |
@@ -244,16 +245,21 @@ Comparativo entre a planilha `MAESTO.xlsx` (sem data) e as reformulações de `2
 
 ## 7. Implicações Diretas para o EXODUS e os Animais do Modo Survival (`LEAF`, `VENO`, `AQUA`)
 
-Como o autor está criando agora a facção/grupo de **Animais no Modo Survival** usando combinações de 2 entre **`LEAF`**, **`VENO`** e **`AQUA`**, a auditoria revelou **5 pontos críticos** que impactam diretamente esse design:
+> **ATUALIZAÇÃO CANÔNICA (`D-138`, 2026-11-27):** Decisões fechadas pelo autor aplicadas abaixo:
+> - **Sinônimos elementais:** elementos podem ter vários nomes — **`TOXI` e `VENO` são o mesmo elemento**.
+> - **Era vs Magias:** a estrutura/classificação elemental de Maesto (Seção 4) pertence ao **mundo mais recente**, não ao contexto primordial de EXODUS — **porém as magias prevalecem**.
+> - **Sem influência nem afinidade elemental (`D-119` + `D-138`):** não existe mais influência nem afinidade elemental no jogo; elementos são **delegados especificamente às raças**. Por enquanto, **apenas os Animais** têm elementos definidos (`LEAF`, `VENO`/`TOXI`, `AQUA` — 2 por animal); as demais raças permanecem **PENDENTES**.
 
-1. **Nomenclatura `TOXI` vs `VENO`:** Em toda a base de Maesto (`MAESTO.xlsx` + 67.347 linhas de conversas), o elemento de veneno se chama **`TOXI`** (com sub-elementos `FUNG` e `ACID`, além do status especial **`Permavenom`**). **`VENO` não aparece em nenhum documento antigo** — é um nome novo introduzido agora pelo autor (provavelmente para clareza ou renomeação no EXODUS). **Decisão necessária:** adotar `VENO` como canônico no EXODUS (ou atualizar `TOXI → VENO` globalmente).
-2. **Perfis mecânicos reais dos 3 elementos segundo Maesto:**
-   - **`LEAF`** (`Of 1 / Df 4 / Ut 5 / Sp 8`, composição `AQUA + ROCK`): elemento **majoritariamente de suporte, cura/regeneração, defesa e controle de campo**, não de burst puro!
-   - **`AQUA`** (`Of 2 / Df 0 / Ut 6 / Sp 8`, assinatura ofensiva rara: `Escarudô`): também **fortíssimo em suporte e utilidade**, com ataque direto baixo salvo técnicas raras.
-   - **`TOXI` / `VENO`** (`Of 8 / Df 0 / Ut 8 / Sp 0`, reformulação de `08/2025`): **o motor ofensivo e disruptivo do trio** — venenos como **debuffs de atributos + dano contínuo**, drogas/toxinas como **buffs com efeito colateral** e **inversão** (veneno ↔ antídoto).
-   - **Alerta de balanceamento:** um animal **`LEAF + AQUA`** seguindo fielmente a planilha seria quase puro suporte/utilidade (`Of 1–2`), enquanto **`VENO + LEAF`** e **`VENO + AQUA`** teriam ofensiva alta (`Of 8`). Isso é ótimo para arquétipos distintos (curandeiro/tanque vs sabotador vs assassino tóxico), desde que `LEAF + AQUA` receba ao menos 1 golpe ofensivo marcante (tipo um equivalente primitivo de `Escarudô` ou construto de `WOOD`/`CRYO`).
-3. **Mecânica nativa de Marcas Elementais (`30/05/2024`):** Maesto já prevê **Marcas Elementais** acumuladas por acertos (4/8 hits) com **imunidade nativa** para usuários do mesmo elemento — encaixa perfeitamente no sistema de combate atual de EXODUS (que já implementou `Mark of Sun` em `D-131`!).
-4. **Identidade biológica dos Animais (`28/04/2025`):** confirmar que os 8–9 sprites SMT escolhidos respeitam a regra **Tiers 0–4 (sem Tier 5)** e definir se são *Animais* puros de Maesto ou *Demônios Organos*.
+Pontos ativos para a implementação dos **Animais no Modo Survival** (2 elementos entre **`LEAF`**, **`VENO`/`TOXI`** e **`AQUA`**):
+
+1. **Sinônimo `TOXI` = `VENO` (`[JÁ CANÔNICO — D-138]`):** `TOXI` e `VENO` designam o mesmo elemento; no EXODUS/Survival podemos usar `VENO` livremente preservando o repertório mágico de venenos/efeitos colaterais (`Permavenom`, debuffs, toxinas).
+2. **Repertório mágico de referência dos 3 elementos (`D-138` — magias prevalecem, sem afinidade/influência elemental):**
+   - **`LEAF`** (referência Maesto: `Of 1 / Df 4 / Ut 5 / Sp 8`): magias voltadas a **suporte, cura/regeneração, defesa e controle de campo** (e construtos vegetais/madeira).
+   - **`AQUA`** (referência Maesto: `Of 2 / Df 0 / Ut 6 / Sp 8`, assinatura ofensiva rara: `Escarudô`): magias de **suporte e utilidade**, com técnicas ofensivas pontuais (como equivalentes de `Escarudô`).
+   - **`VENO` / `TOXI`** (referência Maesto: `Of 8 / Df 0 / Ut 8 / Sp 0`): **o motor ofensivo e disruptivo do trio** — venenos como **debuffs de atributos + dano contínuo**, toxinas/drogas como **buffs com efeito colateral** e **inversão** (veneno ↔ antídoto).
+   - **Nota de design em batalha:** sem influência/afinidade elemental no jogo (`D-119`/`D-138`), o papel de cada elemento aparece exclusivamente no **kit de magias/efeitos** de cada animal; um animal **`LEAF + AQUA`** deve receber ao menos 1 magia ofensiva expressiva (ex.: equivalente de `Escarudô` ou espinhos/raízes) para não ficar passivo demais.
+3. **Mecânica de Marcas (`30/05/2024`):** opcional para kits de `LEAF`/`VENO`/`AQUA` sem criar imunidade/afinidade elemental automática (respeitando `D-119`/`D-138`).
+4. **Identidade biológica dos Animais (`28/04/2025`):** confirmar que os 8–9 sprites SMT escolhidos respeitam a regra **Tiers 0–4 (sem Tier 5)**.
 5. **Conflito de sprite já detectado no Survival:** dos 9 sprites escolhidos, **`Anubis`** (`Avatar Anubis.png`, id `"anubis"`) **já está cadastrado** como um dos 35 demônios do Survival em `scripts/survival/survival_data.gd` e `scripts/survival/survival_strata.gd`. Os outros 8 (`Neko Shogun`, `Bastet`, `Azumi`, `Sobek`, `Hamsa`, `Girimekhala`, `Camazotz`, `Flauros`) estão 100% livres.
 
 ---
@@ -262,7 +268,7 @@ Como o autor está criando agora a facção/grupo de **Animais no Modo Survival*
 
 | # | Tema | Situação atual | Pergunta / Decisão para o autor |
 | :-: | :--- | :--- | :--- |
-| **1** | **`TOXI` vs `VENO`** | Planilha/chat usam `TOXI`; pedido atual usa `VENO`. | `VENO` substitui `TOXI` no cânone de EXODUS (e/ou Maesto)? |
+| **1** | **`TOXI` vs `VENO`, era dos elementos e delegação por raça** | **`[DECIDIDO — D-138]`** Elementos têm múltiplos nomes (`TOXI = VENO`); classificações elementais são do mundo mais recente, mas as magias prevalecem; não há influência nem afinidade elemental no jogo; elementos são delegados por raça (por ora só **Animais**: `LEAF`, `VENO`/`TOXI`, `AQUA`). | **Pendente apenas:** definir futuramente a delegação elemental das demais raças (além dos Animais). |
 | **2** | **Magia na Era EXODUS** | Chat `01/01/2024` diz "só `HOLY` público, 5 min cast"; `D-118`/`D-124`/`D-131` e Survival usam vários elementos sem 5 min. | "Só HOLY + 5 min" fica só como lore de humanos comuns na campanha ou está descartado? |
 | **3** | **Origem de `IKNI`** | Chat `16/05/2024` = Deviron; chat `17/05/2024` = Inin. | Quem é o originador canônico de `IKNI` (ou nenhum dos dois)? |
 | **4** | **Herodes & `Permavenom`** | Citado em `26/04/2025`, pendente no `GDD.md` §13. | Promover Herodes (3 clérigos acorrentados + 1ª vítima de `Permavenom`) para cânone de EXODUS? |
@@ -270,5 +276,5 @@ Como o autor está criando agora a facção/grupo de **Animais no Modo Survival*
 | **6** | **Orcmen como raça humana** | `MAESTO.xlsx` inclui `Orcman`; `28/04/2025` lista só 3 raças humanas (Normais, Elfmen, Fishmen). | Orcmen (imunidade absoluta à magia) ainda existem e são humanos ou outra raça? |
 | **7** | **Regra da Cura Impossível & Escudo Mágico** | Chat `25/08/2024` (dano 100% não-mágico/congênito não cura com magia) e `16/05/2025` (Escudo Mágico como MP 2×). | Vale só para Maesto/Goetia ou também para o lore de EXODUS? |
 | **8** | **Cosmologia geral (THÉOS, Regra do 8, Linha Temporal Linear, Dimensão Daema/Uthópia, Bruxaria)** | 100% ausentes da doc atual de EXODUS. | Aprova promover o resumo cosmológico (Seções 2, 4 e 5) como **bíblia canônica do universo Maesto** em `docs/`? |
-| **9** | **Catálogo de Elementos (`LAVA` fora, `GENO→EMOT`, `LEAF=AQUA+ROCK`, Marcas Elementais)** | `docs/plans/maesto-referencia-extraida.md` estava desatualizado (tinha `LAVA` e `GENO`, sem `EMOT` nem regras de 2025). | Oficializar a lista atualizada (39 elementos, `EMOT`, sem `LAVA`, `LEAF=AQUA+ROCK`, Marcas Elementais)? |
+| **9** | **Catálogo de Elementos do mundo mais recente (`LAVA` fora, `GENO→EMOT`, `LEAF=AQUA+ROCK`)** | Segundo `D-138`, essa sistematização pertence ao **mundo mais recente** de Maesto (não à era EXODUS), enquanto as magias prevalecem. | Confirmar se vale manter a tabela da Seção 4.5 apenas como referência do mundo recente / banco de inspiração de magias. |
 | **10** | **`Anubis` nos Animais do Survival** | `Avatar Anubis.png` já é demônio no Survival. | Manter os 8 animais livres, migrar `Anubis` para Animais ou escolher um 9º substituto? |
