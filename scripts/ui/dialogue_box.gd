@@ -25,6 +25,8 @@ const SCREEN := Vector2(816, 624)
 ## Mesmas fontes e tamanhos do HUD de batalha / painel do teste.
 const MONO_INK := Color("f7f3ed")
 
+## Palavras-chave em MAIÚSCULAS que o dono quer coloridas (palavra -> cor); vazio = texto todo branco.
+var highlights: Dictionary = {}
 var style := "mono"
 ## Janela da caixa (o dono define com use_mono antes de abrir).
 var window_rect := Rect2(6, 502, 804, 116)
@@ -137,13 +139,26 @@ func _draw() -> void:
 	var origin := text_origin()
 	var ink := MONO_INK
 	for i in mini(lines.size(), lines_per_page):
-		draw_string(font, origin + Vector2(0, i * line_height()), lines[i],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, text_px(), ink)
+		_draw_line(origin + Vector2(0, i * line_height()), lines[i], ink)
 	if fully_shown():
 		var tip := Vector2(window_rect.end.x - 20.0, window_rect.end.y - 14.0)
 		draw_colored_polygon(PackedVector2Array([
 			tip, tip + Vector2(9, 0), tip + Vector2(4.5, 6),
 		]), ink)
+
+
+## Desenha a linha palavra por palavra; as palavras de `highlights` saem na cor delas (pontuação fica branca).
+func _draw_line(pos: Vector2, line: String, ink: Color) -> void:
+	if highlights.is_empty():
+		draw_string(font, pos, line, HORIZONTAL_ALIGNMENT_LEFT, -1, text_px(), ink)
+		return
+	var x := pos.x
+	var space := font.get_string_size(" ", HORIZONTAL_ALIGNMENT_LEFT, -1, text_px()).x
+	for word in line.split(" ", true):
+		var core := word.strip_edges().trim_suffix(".").trim_suffix(",").trim_suffix(":").trim_suffix(";")
+		var color: Color = highlights.get(core, ink)
+		draw_string(font, Vector2(x, pos.y), word, HORIZONTAL_ALIGNMENT_LEFT, -1, text_px(), color)
+		x += font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, text_px()).x + space
 
 
 ## P&B do teste: fundo preto opaco e a mesma linha fina da moldura da vista 3D.

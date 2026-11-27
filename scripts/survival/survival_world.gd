@@ -41,6 +41,9 @@ var _overlay: Control
 const FLOATER_EYE_HEIGHT := 0.24
 const FLOATER_EYE_INK := Color("36ce72")
 var floater_sprites: Dictionary = {}
+## Criador 2026-11-27 ("os NPCs têm que ser visíveis de longe, como os inimigos"): sprite 3D de cada NPC no corredor.
+const NPC_HEIGHT := 0.6
+var npc_sprites: Dictionary = {}  # id do NPC (String) -> Sprite3D
 var _floater_time: float = 0.0
 
 
@@ -71,6 +74,23 @@ func _build_world() -> void:
 ## voando ao lado do humano ou Mazik que eles acompanham.
 func _build_enemy_sprites(world: Node3D) -> void:
 	super._build_enemy_sprites(world)
+	npc_sprites.clear()
+	for npc in npcs:
+		var tex: Texture2D = load(String(npc.picture))
+		if tex == null:
+			continue
+		var sprite := Sprite3D.new()
+		sprite.name = "Npc:%s" % _npc_key(npc)
+		sprite.texture = tex
+		sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sprite.centered = true
+		sprite.shaded = false
+		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		var fit := NPC_HEIGHT / (float(tex.get_height()) * sprite.pixel_size)
+		sprite.scale = Vector3(fit, fit, fit)
+		sprite.position = Vector3(float(npc.cell.x), NPC_HEIGHT * 0.5, float(npc.cell.y))
+		world.add_child(sprite)
+		npc_sprites[_npc_key(npc)] = sprite
 	floater_sprites.clear()
 	var run_seed := int(SurvivalState.data().get("seed", 1))
 	var eye_tex: Texture2D = load(SurvivalData.FLOATER_EYE_PICTURE)
@@ -100,12 +120,45 @@ func _build_enemy_sprites(world: Node3D) -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
+	_pull_camera_from_rock(delta)
+	_update_npc_sprites()
 	_floater_time += delta
 	_update_floater_sprites()
 
 
+## Criador 2026-11-27 ("virar pra frente quando perto de uma parede quebra o visual, não é pra não conseguir ver nada"):
+## a câmera fica na borda de trás da célula; na Necrópole, quando a célula de TRÁS é parede, a rocha entra nessa borda e,
+## ao virar para a frente, a tela enche de rocha (preto). Nesse caso a câmera recua para o centro da célula (suave).
+func _pull_camera_from_rock(delta: float) -> void:
+	if camera == null or SurvivalState.stratum() != 1:
+		return
+	var target := 0.0 if is_wall(cell - DIRS[facing]) else 0.5
+	camera.position.z = move_toward(camera.position.z, target, delta * 2.5)
+
+
 ## Posiciona cada Floater Eye flutuando ao lado e acima do humano/Mazik acompanhado,
 ## acompanhando o eixo lateral da câmera para permanecer sempre visível no corredor.
+func _npc_key(npc: Dictionary) -> String:
+	return String(npc.get("id", "%d_%d" % [npc.cell.x, npc.cell.y]))
+
+
+## Some o sprite do NPC que já saiu (recrutado) e quando a figura grande dele já está na tela (de frente, 1 tile).
+func _update_npc_sprites() -> void:
+	var near_key := _npc_key(npc_near()) if (npc_picture.visible and not npc_near().is_empty()) else ""
+	for key in npc_sprites.keys():
+		var sprite: Sprite3D = npc_sprites[key]
+		var alive := false
+		for npc in npcs:
+			if _npc_key(npc) == key:
+				alive = true
+		if not alive or not is_instance_valid(sprite):
+			if is_instance_valid(sprite):
+				sprite.queue_free()
+			npc_sprites.erase(key)
+			continue
+		sprite.visible = key != near_key
+
+
 func _update_floater_sprites() -> void:
 	if floater_sprites.is_empty():
 		return
@@ -190,8 +243,20 @@ func meta() -> Dictionary:
 	return _meta_cache
 
 
+## Criador 2026-11-27 ("use cores para certas ações"): palavras de mecânica coloridas nas falas do curandeiro.
+## Lugares e chefe em dourado, descanso/cura em verde, ações de menu em azul (as mesmas cores do HUD do Survival).
+const KEYWORD_COLORS := {
+	"WARDEN": GOLD_INK, "STRATA": GOLD_INK, "STRATUM": GOLD_INK,
+	"SANCTUARY": GREEN_INK, "HEAL": GREEN_INK, "CONTINUE": GREEN_INK, "REST": GREEN_INK,
+	"ABSORB": BLUE_INK, "ACT": BLUE_INK, "SHOP": BLUE_INK, "RELICS": BLUE_INK, "HIRE": BLUE_INK,
+	"RESERVE": BLUE_INK, "DESCEND": BLUE_INK,
+}
+const INTRO_SCENE := "res://scenes/survival/SurvivalIntro.tscn"
+
+
 func _ready() -> void:
 	super._ready()
+	dialogue.highlights = KEYWORD_COLORS
 	_overlay_layer = CanvasLayer.new()
 	_overlay_layer.layer = 60
 	_overlay = Control.new()
@@ -530,7 +595,8 @@ func _start_run(seed: int) -> void:
 	SurvivalState.reset()
 	if seed >= 0:
 		SurvivalState.patch({"seed": seed, "relics": [SurvivalRelics.starting_relic(seed)]})
-	_reload_world()
+	# Run nova (NEW RUN ou diária) abre a cutscene de entrada, como a run nova pelo título.
+	get_tree().change_scene_to_file(INTRO_SCENE)
 
 
 func _go_title() -> void:

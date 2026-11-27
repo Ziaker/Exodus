@@ -46,7 +46,7 @@ func _run() -> void:
 	var expected_floaters := 0
 	for e in w.enemies.entries:
 		expected_floaters += SurvivalData.floater_eye_count(int(SurvivalState.data().seed), String(e.id))
-	_check(w.enemy_sprites.size() == SurvivalStrata.PER_STRATUM + 1 and w.viewport.find_children("*", "Sprite3D", true, false).size() == SurvivalStrata.PER_STRATUM + 1 + expected_floaters, "All 7 stratum demons, the human group and their Floater Eyes have 3D corridor silhouettes")
+	_check(w.enemy_sprites.size() == SurvivalStrata.PER_STRATUM + 1 and w.viewport.find_children("*", "Sprite3D", true, false).size() == SurvivalStrata.PER_STRATUM + 1 + expected_floaters + w.npc_sprites.size(), "All 7 stratum demons, the human group and their Floater Eyes (+ the NPC sprites) have 3D corridor silhouettes")
 	_check(w.cell == start and w.facing == 0, "Player starts at sanctuary facing North toward healer/vendor")
 	_check(w.npc_picture.visible, "Healer/vendor SMT portrait is visible directly ahead on spawn")
 	# Posições são embaralhadas pela semente: isola Pixie/Jack Frost para o teste de passo.
