@@ -23,6 +23,8 @@ static func of(u: BattleUnit) -> Array[Dictionary]:
 		_add(list, "mark_of_sun", "*", Kind.MARK, u.sun_mark_hits)
 	if u.has_status(&"mark"):
 		_add(list, "mark", "M", Kind.MARK)
+	if u.has_status(&"gods_message"):
+		_add(list, "gods_message", "ד", Kind.MARK)
 	if not u.bleeds.is_empty():
 		_add(list, "bleed", "B", Kind.STATUS, u.bleeds.size())
 	if not u.burns.is_empty():
@@ -35,6 +37,8 @@ static func of(u: BattleUnit) -> Array[Dictionary]:
 		_add(list, "paralyzed", "P", Kind.STATUS)
 	if u.has_status(&"blind"):
 		_add(list, "blind", "X", Kind.STATUS)
+	if u.has_status(&"chaki"):
+		_add(list, "chaki", "ח", Kind.STATUS)
 	if u.weaken_mef_penalty > 0:
 		_add(list, "weaken_mef", "M↓", Kind.DEBUFF, u.weaken_mef_penalty)
 	if u.weaken_mak_penalty > 0:

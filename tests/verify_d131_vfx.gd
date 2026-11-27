@@ -208,7 +208,10 @@ func _sun() -> void:
 		var card: Rect2 = sp.card
 		var reach := float(sp.r) * 1.35 + float(sp.ray_min) + float(sp.ray_var) + 4.0
 		check(sp.p.y - reach >= log_bottom, "%s: the sun and its rays are below the Battle Log (%.1f >= %.1f)" % [unit.display_name, sp.p.y - reach, log_bottom])
-		check(absf(sp.p.x - card.get_center().x) < 1.0 and absf(sp.p.y - card.end.y) < 1.0, "%s: the sun sits in the middle of the card's bottom border, spilling out" % unit.display_name)
+		check(absf(sp.p.x - card.end.x) < 1.0 and absf(sp.p.y - card.get_center().y) < 1.0, "%s: the sun sits at the horizontal midline on the card's extreme right edge" % unit.display_name)
+		var normal_reach := float(sp.r) + float(sp.ray_min) + float(sp.ray_var)
+		check(sp.p.y + reach <= b.hud.SCREEN.y * g.DESIGN_SCALE, "%s: the sun stays completely inside the screen vertically" % unit.display_name)
+		check(sp.p.y + normal_reach < card.end.y - b.hud.STATUS_ICON_INSET * g.DESIGN_SCALE, "%s: the sun stays clear above the status icon row" % unit.display_name)
 		var halo: ColorRect = g._fields[StringName("sunm_%s" % unit.id)].rect
 		check(halo.position.y * g.DESIGN_SCALE >= log_bottom - 0.5, "%s: the sun halo (Moire) never reaches the Battle Log" % unit.display_name)
 		unit.sun_mark_hits = 0

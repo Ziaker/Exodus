@@ -1702,10 +1702,11 @@ func _character(who: int, r: Rect2) -> void:
 	if not role_cue.is_empty() and bool(role_cue.show_label):
 		_str(String(role_cue.role), float(role_cue.label_right), bottom_line, Color(role_cue.ink),
 				int(role_cue.label_px), true, HORIZONTAL_ALIGNMENT_RIGHT, Color(0, 0, 0, 0.75))
-	draw_set_transform(Vector2.ZERO)
-	# Opção C do protótipo de ícones de status: fileira sobre a borda inferior do cartão (4 px dentro, 6 fora).
+	# Opção C do protótipo de ícones de status: fileira sobre a borda inferior do cartão (4 px dentro, 6 fora),
+	# desenhada dentro do transform do cartão para tremer junto no impacto.
 	if unit.is_alive():
 		_status_icon_row(unit, r.end.x - 6.0, r.end.y - STATUS_ICON_INSET, r.size.x - 12.0, false)
+	draw_set_transform(Vector2.ZERO)
 	# D-057 / D-135 / D-136: the hero's role cue lives inside the hero card now; the hidden
 	# _role_tags entry stays only as the animated arrows' endpoint (D-059).
 	var role := role_of(unit)

@@ -1761,14 +1761,15 @@ func _is_sun_key(key: StringName) -> bool:
 	return String(key).begins_with("sunm_")
 
 
-## Onde o sol de `u` fica. Inimigo: acima da cabeça (abaixo do HUD superior), escalado por k. Aliado: canto inferior-direito
-## do cartão, no MEIO da borda inferior, vazando para fora (ordem do criador) e `min_y` logo abaixo do Battle Log.
+## Onde o sol de `u` fica. Inimigo: acima da cabeça (abaixo do HUD superior), escalado por k. Aliado: no meio
+## horizontal no extremo canto direito do cartão (`card.end.x`, `card.get_center().y`), sem cortar na tela nem
+## invadir o Battle Log ou a fileira de ícones de status na borda inferior.
 func sun_spot(u: BattleUnit) -> Dictionary:
 	var g := unit_geom(u)
 	if u.is_player:
 		var card: Rect2 = g.card
 		var log_bottom: float = hud.BATTLE_LOG_RECT.end.y * DESIGN_SCALE
-		return {"p": Vector2(card.get_center().x, card.end.y), "r": 8.5, "ray_min": 4.5, "ray_var": 4.5, "ray_jit": 1.1, "ray_w": 1.4,
+		return {"p": Vector2(card.end.x, card.get_center().y), "r": 8.5, "ray_min": 4.5, "ray_var": 4.5, "ray_jit": 1.1, "ray_w": 1.4,
 			"disc_jit": 1.3, "disc_w": 1.8, "halo": Vector2(24.0, 18.0), "ally": true, "min_y": log_bottom + 2.0, "k": 1.0, "card": card}
 	var k: float = g.k
 	var top := maxf(float(g.c.y) - 80.0 * k, STAGE_TOP * DESIGN_SCALE + 34.0 * k)
@@ -1782,6 +1783,8 @@ func _draw_sun_body(spot: Dictionary, grow: float, pulse_env: float, hits: int, 
 	var p: Vector2 = spot.p
 	var pulse := 1.0 + sin(t * 9.0) * 0.05 + pulse_env * 0.28
 	var sr: float = float(spot.r) * grow * pulse
+	if sr < 0.8:
+		return
 	var ally: bool = spot.ally
 	for i in 12:
 		var a := (float(i) / 12.0) * TAU + floorf(t * 12.0) * 0.04
@@ -1804,7 +1807,9 @@ func _draw_sun_body(spot: Dictionary, grow: float, pulse_env: float, hits: int, 
 	_fill_poly(sketchy_pts(inner, f_idx + 31, 1.1), Color(core_col, core_col.a * alpha))
 	if ally and grow > 0.45:
 		var hi: Color = pal.hi
-		draw_string(font, p + Vector2(-16.0 - 30.0, 4.0), "×%d" % hits, HORIZONTAL_ALIGNMENT_RIGHT, 30.0, 10, Color(hi, hi.a * alpha))
+		var count_pos := p + Vector2(-16.0 - 30.0, 4.0)
+		draw_string_outline(font, count_pos, "×%d" % hits, HORIZONTAL_ALIGNMENT_RIGHT, 30.0, 10, 3, Color(0.04, 0.02, 0.02, 0.9 * alpha))
+		draw_string(font, count_pos, "×%d" % hits, HORIZONTAL_ALIGNMENT_RIGHT, 30.0, 10, Color(hi, hi.a * alpha))
 
 
 func _sun_field_spec(spot: Dictionary, grow: float, env: float) -> Dictionary:

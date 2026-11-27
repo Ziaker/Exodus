@@ -30,6 +30,10 @@ func _initialize() -> void:
 	u.sun_mark_hits = 0
 	u.remove_status(&"mark_of_sun")
 	check(not StatusIcons.of(u).any(func(i: Dictionary) -> bool: return i.id == "mark_of_sun"), "the icon goes away with the mark")
+	u.add_status(&"chaki", 2)
+	u.add_status(&"gods_message", 2)
+	var extra_ids: Array = StatusIcons.of(u).map(func(i: Dictionary) -> String: return i.id)
+	check(extra_ids.has("chaki") and extra_ids.has("gods_message"), "prayer statuses chaki and gods_message appear in StatusIcons (%s)" % [extra_ids])
 	var five: Array = [1, 2, 3, 4, 5]
 	var f2 := StatusIcons.fit(five, 100.0)
 	check(f2.shown.size() == 5 and f2.more == 0, "everything fits in a wide card")

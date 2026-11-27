@@ -94,77 +94,9 @@ func _draw() -> void:
 	var pulse := 0.55 + 0.45 * absf(sin(time * PULSE_HZ))
 	if shachar_pending:
 		_glyph(MARK_SHACHAR, Vector2(hud.SCREEN.x - 20.0, 18.0), MARK_PX + 2, Color(INK_HOT, 0.72 + 0.28 * pulse), Color(INK_DARK, 0.9))
-	for i in hud.opponents.size():
-		var foe: BattleUnit = hud.opponents[i]
-		if not foe.is_alive():
-			continue
-		var er: Rect2 = hud.enemy_sprite_rect(i)
-		var em_x := er.get_center().x + er.size.x * 0.35
-		var em_y := er.end.y + 12.0
-		if foe.has_status(&"blind"):
-			_glyph(MARK_SANVERIM, Vector2(em_x, em_y), MARK_PX, Color(INK_DEBUFF, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
-			em_x += 14.0
-		if foe.has_status(&"chaki"):
-			_glyph(MARK_CHAKI, Vector2(em_x, em_y), MARK_PX, Color(PrayerBook.INK, 0.70 + 0.30 * pulse), Color(INK_DARK, 0.9))
-			em_x += 14.0
-		if not foe.mends.is_empty():
-			_glyph(MARK_NECHAMAH, Vector2(em_x, em_y), MARK_PX, Color(PrayerBook.INK, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
-			if foe.mends.size() > 1:
-				_glyph("x%d" % foe.mends.size(), Vector2(em_x + 12.0, em_y), 10, Color(PrayerBook.INK, 0.65 + 0.35 * pulse), Color(INK_DARK, 0.85))
-			em_x += 28.0
-		if foe.paralyzed_acts > 0:
-			_glyph(MARK_ANGEL_HUG, Vector2(em_x, em_y), MARK_PX, Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
-			_glyph("x%d" % foe.paralyzed_acts, Vector2(em_x + 14.0, em_y), 10, Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
-			em_x += 32.0
-		if foe.has_status(&"gods_message"):
-			_glyph(MARK_GODS_MESSAGE, Vector2(em_x, em_y), MARK_PX, Color("ffd84a", 0.7 + 0.3 * pulse), Color(INK_DARK, 0.85))
-	for i in hud.players.size():
-		var unit: BattleUnit = hud.players[i]
-		if not unit.is_alive():
-			continue
-		var card: Rect2 = hud.status_rect(i)
-		var marks: Array[Dictionary] = []
-		if not unit.haganah.is_empty() and not bool(unit.haganah.get("non_prayer", false)):
-			marks.append({"glyph": MARK_GLYPH, "color": Color(PrayerBook.INK, pulse), "jitter": 0.0})
-		if not unit.def_stages.is_empty():
-			marks.append({"glyph": MARK_MAGEN, "color": Color(PrayerBook.INK, pulse), "jitter": 0.0})
-		if unit.gevurah_bonus > 0.0:
-			marks.append({"glyph": MARK_GEVURAH, "color": INK_HOT, "jitter": sin(time * 40.0) * 1.1})
-		if unit.has_status(&"zohar"):
-			marks.append({"glyph": MARK_ZOHAR, "color": INK_HOT, "jitter": 0.0})
-		if unit.has_status(&"blind"):
-			marks.append({"glyph": MARK_SANVERIM, "color": Color(INK_DEBUFF, 0.65 + 0.35 * pulse), "jitter": 0.0})
-		if unit.has_status(&"chaki"):
-			marks.append({"glyph": MARK_CHAKI, "color": Color(PrayerBook.INK, 0.70 + 0.30 * pulse), "jitter": 0.0})
-		if not unit.mends.is_empty():
-			marks.append({"glyph": MARK_NECHAMAH, "color": Color(PrayerBook.INK, pulse), "jitter": 0.0,
-				"suffix": "x%d" % unit.mends.size() if unit.mends.size() > 1 else ""})
-		if lior_active.has(unit) and int(lior_active[unit].actions) > 0:
-			marks.append({"glyph": MARK_LIOR, "color": Color(INK_HEAL, 0.72 + 0.28 * pulse), "jitter": 0.0,
-				"suffix": "x%d" % int(lior_active[unit].actions)})
-		if unit.has_status(&"taunt"):
-			marks.append({"glyph": MARK_MEIR, "color": Color(INK_ALERT, 0.75 + 0.25 * pulse), "jitter": 0.0})
-		if not unit.atk_stages.is_empty():
-			marks.append({"glyph": MARK_GEVER, "color": Color(GEVER_PALETTE[0], 0.75 + 0.25 * pulse), "jitter": 0.0,
-				"suffix": "x%d" % unit.atk_stages.size()})
-		if unit.paralyzed_acts > 0:
-			marks.append({"glyph": MARK_ANGEL_HUG, "color": Color(PARA_PALETTE[0], 0.7 + 0.3 * pulse), "jitter": 0.0,
-				"suffix": "x%d" % unit.paralyzed_acts})
-		if unit.has_status(&"gods_message"):
-			marks.append({"glyph": MARK_GODS_MESSAGE, "color": Color("ffd84a", 0.7 + 0.3 * pulse), "jitter": 0.0})
-		var x: float = card.position.x + 7 + hud._width(NameCase.of(unit.display_name), 13, true) + 8
-		var cursor := x
-		for m_idx in marks.size():
-			var mk: Dictionary = marks[m_idx]
-			var mx := cursor + float(mk.jitter)
-			draw_string(font, Vector2(mx, card.position.y + 18),
-				String(mk.glyph), HORIZONTAL_ALIGNMENT_LEFT, -1, MARK_PX, Color(mk.color))
-			var suf := String(mk.get("suffix", ""))
-			cursor += 16.0
-			if not suf.is_empty():
-				draw_string(font, Vector2(mx + 9.0, card.position.y + 18),
-					suf, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(mk.color))
-				cursor += font.get_string_size(suf, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 2.0
+	# Persistent per-unit status/buff indicators are now unified in StatusIcons (PlayableHUD),
+	# avoiding overlaps over hero SP values and under enemy sprites. Prayer casts, auras
+	# (Esh Ochelet, Lior, Hasneh Habo'er) and global Shachar remain rendered here in Hebrew.
 	for letter in letters:
 		var k := (time - float(letter.born)) / RISE_TIME
 		if k < 0.0 or k > 1.0:
