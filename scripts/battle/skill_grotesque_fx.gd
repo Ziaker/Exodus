@@ -84,6 +84,9 @@ class BackLayer extends Node2D:
 var _warps: Dictionary = {}
 ## Camada de trás (garganta do Dark Breath, que fica ATRÁS do cone de Moiré): {"back": Callable}.
 var _back_layer: Node2D
+## Sprites do warp dos inimigos: ficam na camada MAIS BAIXA do motor (z 47), atrás de qualquer efeito (regra do criador:
+## nenhum efeito aparece atrás da figura).
+var _warp_layer: Node2D
 var _shake_until := -1.0
 var _shake_px := 0.0
 var _shaking := false
@@ -95,6 +98,9 @@ func _ready() -> void:
 	font = SystemFont.new()
 	font.font_names = PackedStringArray(["Tahoma", "Arial", "David Libre"])
 	font.font_weight = 800
+	_warp_layer = Node2D.new()
+	_warp_layer.z_index = -3
+	add_child(_warp_layer)
 	_back_layer = BackLayer.new()
 	_back_layer.fx = self
 	_back_layer.z_index = -2  # atrás do Moiré
@@ -323,7 +329,7 @@ func trigger_target_warp(unit: BattleUnit, amp: float, dur: float, invert_dur: f
 		var mat := ShaderMaterial.new()
 		mat.shader = WARP_SHADER
 		sprite.material = mat
-		add_child(sprite)
+		_warp_layer.add_child(sprite)
 		entry.sprite = sprite
 		hud.warp_hidden[unit.id] = true
 	_warps[unit.id] = entry
@@ -603,9 +609,10 @@ func unit_geom(u: BattleUnit) -> Dictionary:
 	if u.is_player:
 		var idx: int = hud.players.find(u)
 		var card: Rect2 = hud.status_rect(maxi(0, idx))
-		# O alvo herói fica na coluna do cartão, mas na borda de baixo do PALCO: o VFX nunca cobre o cartão nem o Battle Log.
-		var c := Vector2(card.get_center().x * DESIGN_SCALE, (stage_rect().end.y - 22.0) * DESIGN_SCALE)
-		return {"c": c, "k": 1.3, "h": 90.0, "feet": c.y + 40.0, "origin": c}
+		# O herói não tem figura no palco, só o cartão: o efeito cai na coluna do cartão, rente ao fundo do PALCO, menor
+		# (k 0.85), para nunca cobrir o cartão nem o Battle Log (as mandíbulas do Mazz Bite chegam a ~92 px x k abaixo).
+		var c := Vector2(card.get_center().x * DESIGN_SCALE, stage_rect().end.y * DESIGN_SCALE - 90.0)
+		return {"c": c, "k": 0.85, "h": 90.0, "feet": c.y + 40.0, "origin": c}
 	var index: int = maxi(0, hud.opponents.find(u))
 	var rect: Rect2 = hud.enemy_sprite_rect(index)
 	var cc: Vector2 = to_design(rect.get_center())

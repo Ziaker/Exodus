@@ -58,6 +58,7 @@ func _run() -> void:
 	await _lifecycle()
 	await _sync()
 	await _mirror_and_geometry()
+	await _allies_and_layers()
 	print("VERIFY_D124_VFX_OK: %d checks; 8 choreographies run clean and end on their own, hit moments sync the mechanics, gold only with ZAHAV, Hebrew only in Ignoma Esh, effects stay on the stage" % checks)
 	ProgressStore.clear()
 	b.queue_free()
@@ -255,3 +256,45 @@ func _mirror_and_geometry() -> void:
 		e.at = g.time - float(g.DURATIONS[&"mazz_bite"]) + 0.05
 	await frames(40)
 	check(b.get_viewport().canvas_transform == base_t and not g.is_busy(), "the impact shake restores the screen")
+
+
+# --------------------------------------------------------------------------- aliados como alvo + ordem das camadas
+## Regra do criador: NENHUM efeito aparece atrás da figura. O sprite do warp fica na camada mais baixa do motor.
+func _allies_and_layers() -> void:
+	check(g._warp_layer.z_index < g._back_layer.z_index and g._back_layer.z_index < g._fields_layer.z_index and g._fields_layer.z_index < 0,
+		"layers, bottom to top: warp sprite < throat < Moire < sketches (the figure is never above an effect)")
+	check(g.z_index + g._warp_layer.z_index > 0, "even the lowest effect layer sits above the HUD figures (z 0)")
+	g.clear_all()
+	g.trigger_target_warp(foe0, 8.0, 5.0, 0.0)
+	await frames(3)
+	var sprite: Sprite2D = g._warps[foe0.id].sprite
+	check(sprite.get_parent() == g._warp_layer, "the enemy warp sprite lives in the lowest layer, under the eye / spikes / flames")
+	g.clear_all()
+	# todas as 8 skills com ALIADOS como alvo (o inimigo conjura contra Fallen e Yoch)
+	for id in SKILLS:
+		g.clear_all()
+		_start(id, foe0, hero, ally)
+		check(g.effect_count() == 1, "%s: starts on allies as targets" % id)
+		await frames(25)
+		var stage_end: float = g.stage_rect().end.y
+		for key in g._fields:
+			var r: ColorRect = g._fields[key].rect
+			check(r.position.y + r.size.y <= stage_end + 0.01, "%s on allies: Moire field '%s' stays above the Battle Log" % [id, key])
+		if id in [&"vuln_pierce", &"mazz_bite", &"fang_sting", &"umbral_gaze", &"ignoma"]:
+			check(g._warps.has(hero.id) and not b.hud.warp_hidden.has(hero.id), "%s on a hero: its card wobbles, no sprite overlay" % id)
+		for e in g._effects:
+			e.at = g.time - float(g.DURATIONS[id]) + 0.05
+		await frames(14)
+		check(g.effect_count() == 0 and g.warp_count() == 0 and g.field_count() == 0 and not b.hud.warp_card.has(hero.id) and not b.hud.warp_card.has(ally.id),
+			"%s on allies: ends clean (no wobble, field or warp left)" % id)
+	# Vuln Pierce / Fang Spine / Ignoma Esh em aliado: o efeito aparece junto da coluna do cartão
+	var geom_h: Dictionary = g.unit_geom(hero)
+	var geom_y: Dictionary = g.unit_geom(ally)
+	check(float(geom_h.c.x) != float(geom_y.c.x), "Fallen and Yoch have their own columns")
+	check(float(geom_h.c.y) + 125.0 * float(geom_h.k) / 1.3 <= g.stage_rect().end.y * g.DESIGN_SCALE, "a hero target leaves room for the widest effect (Mazz Bite jaws, 120 px) above the Battle Log")
+	# o mesmo efeito, aliado atacando inimigo: caster herói (origem no cartão) com alvos inimigos
+	g.clear_all()
+	_start(&"ignoma_esh", ally, foe0, foe1)
+	await frames(10)
+	check(g.effect_count() == 1, "an ally can cast Ignoma Esh on the enemies (Yoch as the caster)")
+	g.clear_all()
