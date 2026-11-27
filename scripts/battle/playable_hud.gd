@@ -1723,48 +1723,227 @@ func _character(who: int, r: Rect2) -> void:
 		hitboxes.append({"rect": r, "key": "reactor:" + str(who)})
 
 
-## Ícones de status (StatusIcons): `anchor_x` é a borda direita (herói) ou o centro (inimigo); `top` o y da caixa.
-const STATUS_ICON_BOX := 10.0
+## Indicadores adaptativos de status (StatusIcons: gravura monocromática + tags escuras progressivas).
+## `anchor_x` é a borda direita (herói) ou o centro (inimigo); `top` o y da caixa.
+const STATUS_ICON_BOX := 11.0
+const STATUS_TAG_H := 11.0
 const STATUS_ICON_GAP := 2.0
-const STATUS_ICON_INSET := 4.0   # quanto do ícone entra no cartão do herói (o resto fica abaixo da borda)
+const STATUS_ICON_INSET := 4.5   # quanto entra no cartão do herói (sobram 6.5 px abaixo da borda, 1.5 px acima da base da tela)
+const STATUS_TAG_PX := 6
+const STATUS_TAG_FILL := Color(10 / 255.0, 4 / 255.0, 7 / 255.0, 0.96)
+const STATUS_TAG_BORDER := Color(240 / 255.0, 225 / 255.0, 228 / 255.0, 0.50)
 
 
 func status_icon_row_rect(count: int, anchor_x: float, top: float, centered: bool) -> Rect2:
 	var w := float(count) * STATUS_ICON_BOX + float(maxi(0, count - 1)) * STATUS_ICON_GAP
 	var x := anchor_x - w * 0.5 if centered else anchor_x - w
-	return Rect2(x, top, w, STATUS_ICON_BOX)
+	return Rect2(x, top, w, STATUS_TAG_H)
+
+
+func _status_tag_width(icon: Dictionary, density: int) -> float:
+	if density == StatusIcons.Density.ICON:
+		return STATUS_ICON_BOX
+	var txt := StatusIcons.text_for(icon, density)
+	var pad := 14.5 if density == StatusIcons.Density.FULL else 13.0
+	return ceilf(pad + _width(txt, STATUS_TAG_PX, true))
 
 
 func _status_icon_row(unit: BattleUnit, anchor_x: float, top: float, max_w: float, centered: bool) -> void:
 	var icons := StatusIcons.of(unit)
 	if icons.is_empty():
 		return
-	var fit := StatusIcons.fit(icons, max_w, STATUS_ICON_BOX, STATUS_ICON_GAP)
-	var shown: Array = fit.shown
-	var more: int = fit.more
-	var total := shown.size() + (1 if more > 0 else 0)
-	var row := status_icon_row_rect(total, anchor_x, top, centered)
-	var x := row.position.x
-	for icon in shown:
-		_status_icon(Rect2(x, top, STATUS_ICON_BOX, STATUS_ICON_BOX), icon)
-		x += STATUS_ICON_BOX + STATUS_ICON_GAP
+	var plan := StatusIcons.layout(icons, max_w, _status_tag_width, STATUS_ICON_GAP, STATUS_ICON_BOX)
+	var density: int = int(plan.density)
+	var shown: Array = plan.shown
+	var widths: Array = plan.widths
+	var more: int = int(plan.more)
+	var total_w: float = float(plan.total_w)
+	var x := anchor_x - total_w * 0.5 if centered else anchor_x - total_w
+	for i in shown.size():
+		var w: float = float(widths[i])
+		_draw_status_badge(Rect2(x, top, w, STATUS_TAG_H), shown[i], density)
+		x += w + STATUS_ICON_GAP
 	if more > 0:
-		_status_icon(Rect2(x, top, STATUS_ICON_BOX, STATUS_ICON_BOX), {"label": "+%d" % more, "kind": -1, "count": 0})
+		_draw_status_more(Rect2(x, top, STATUS_ICON_BOX, STATUS_TAG_H), more)
 
 
-func _status_icon(r: Rect2, icon: Dictionary) -> void:
-	var fill: Color = StatusIcons.COLORS.get(int(icon.kind), StatusIcons.MORE_COLOR)
-	draw_rect(r, Color.BLACK)
-	draw_rect(r.grow(-1.0), fill)
-	var label := String(icon.label)
-	var px := 6 if label.length() > 1 else 7
-	var tw := _width(label, px, true)
-	_str(label, r.position.x + (r.size.x - tw) * 0.5, r.end.y - 2.5, Color.WHITE, px, true)
-	if int(icon.count) > 1:
-		var ct := str(int(icon.count))
-		var cw := _width(ct, 5, true)
-		draw_rect(Rect2(r.end.x - cw - 1.0, r.end.y - 5.0, cw + 2.0, 6.0), Color.BLACK)
-		_str(ct, r.end.x - cw, r.end.y + 0.5, Color.WHITE, 5, true)
+func _draw_status_badge(r: Rect2, icon: Dictionary, density: int) -> void:
+	var kind := int(icon.kind)
+	var accent: Color = StatusIcons.ACCENTS.get(kind, StatusIcons.MORE_ACCENT)
+	var text_ink: Color = StatusIcons.TEXT_INKS.get(kind, StatusIcons.MORE_TEXT)
+	draw_rect(r, STATUS_TAG_FILL)
+	draw_rect(Rect2(r.position + Vector2(0.5, 0.5), r.size - Vector2.ONE), STATUS_TAG_BORDER, false, 1.0)
+	if density == StatusIcons.Density.ICON:
+		# Modo mais compacto: só a gravura monocromática + filete sutil de 1 px na base
+		draw_rect(Rect2(r.position.x + 1.0, r.end.y - 2.0, r.size.x - 2.0, 1.0), accent)
+		_draw_status_glyph(String(icon.id), Rect2(r.position.x + 1.0, r.position.y + 0.5, r.size.x - 2.0, r.size.y - 2.0))
+		var ct := int(icon.get("count", 0))
+		if ct > 1:
+			var ct_str := str(ct)
+			var cw := _width(ct_str, 5, true)
+			draw_rect(Rect2(r.end.x - cw - 1.5, r.end.y - 5.5, cw + 1.5, 5.5), STATUS_TAG_FILL)
+			_str(ct_str, r.end.x - cw - 0.5, r.end.y - 0.5, Color("f7f3ed"), 5, true)
+		return
+	# Modos FULL e SHORT: filete fino esquerdo + gravura + rótulo legível
+	draw_rect(Rect2(r.position.x + 1.0, r.position.y + 1.0, 1.5, r.size.y - 2.0), accent)
+	_draw_status_glyph(String(icon.id), Rect2(r.position.x + 2.8, r.position.y + 1.0, 8.0, r.size.y - 2.0))
+	var txt := StatusIcons.text_for(icon, density)
+	var tx := r.position.x + (11.8 if density == StatusIcons.Density.FULL else 11.2)
+	_str(txt, tx, r.end.y - 2.8, text_ink, STATUS_TAG_PX, true)
+
+
+func _draw_status_more(r: Rect2, more: int) -> void:
+	draw_rect(r, STATUS_TAG_FILL)
+	draw_rect(Rect2(r.position + Vector2(0.5, 0.5), r.size - Vector2.ONE), Color(STATUS_TAG_BORDER, 0.38), false, 1.0)
+	var lbl := "+%d" % more
+	var tw := _width(lbl, 5, true)
+	_str(lbl, r.position.x + (r.size.x - tw) * 0.5, r.end.y - 2.8, StatusIcons.MORE_TEXT, 5, true)
+
+
+## Gravuras monocromáticas minimalistas desenhadas em espaço lógico (escala 1.5x na tela).
+func _draw_status_glyph(id: String, box: Rect2) -> void:
+	var c := box.get_center()
+	var s := minf(box.size.x, box.size.y)
+	var ink := StatusIcons.GLYPH_INK
+	match id:
+		"bleed":
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(c.x, box.position.y + 1.0),
+				Vector2(c.x + s * 0.30, c.y + s * 0.08),
+				Vector2(c.x + s * 0.22, box.end.y - 1.5),
+				Vector2(c.x, box.end.y - 0.8),
+				Vector2(c.x - s * 0.22, box.end.y - 1.5),
+				Vector2(c.x - s * 0.30, c.y + s * 0.08),
+			]), ink)
+		"burn":
+			# Chama assimétrica com língua principal e base cheia (evita silhueta de folha)
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(c.x + 0.4, box.position.y + 0.7),
+				Vector2(c.x + 2.6, c.y - 0.2),
+				Vector2(c.x + 2.2, box.end.y - 1.4),
+				Vector2(c.x, box.end.y - 0.7),
+				Vector2(c.x - 2.3, box.end.y - 1.5),
+				Vector2(c.x - 2.6, c.y + 0.3),
+				Vector2(c.x - 1.5, c.y - 1.6),
+				Vector2(c.x - 0.5, c.y - 0.2),
+			]), ink)
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(c.x + 0.2, c.y + 0.2),
+				Vector2(c.x + 1.1, box.end.y - 1.7),
+				Vector2(c.x, box.end.y - 1.2),
+				Vector2(c.x - 1.0, box.end.y - 1.7),
+			]), STATUS_TAG_FILL)
+		"blind":
+			var pts := PackedVector2Array([
+				Vector2(box.position.x + 1.0, c.y),
+				Vector2(c.x, box.position.y + 2.0),
+				Vector2(box.end.x - 1.0, c.y),
+				Vector2(c.x, box.end.y - 2.0),
+				Vector2(box.position.x + 1.0, c.y),
+			])
+			draw_polyline(pts, ink, 0.9)
+			draw_circle(c, 1.0, ink)
+			draw_line(Vector2(box.position.x + 1.4, box.end.y - 1.4), Vector2(box.end.x - 1.4, box.position.y + 1.4), ink, 1.0)
+		"sleep":
+			draw_arc(c, s * 0.34, 0.6, PI * 1.65, 8, ink, 1.1)
+			draw_arc(c + Vector2(1.2, -0.6), s * 0.24, 0.8, PI * 1.55, 6, STATUS_TAG_FILL, 1.2)
+		"trapped":
+			draw_rect(Rect2(c.x - 2.6, c.y - 2.6, 5.2, 5.2), ink, false, 0.9)
+			draw_line(Vector2(c.x - 2.6, c.y - 2.6), Vector2(c.x + 2.6, c.y + 2.6), ink, 0.85)
+			draw_line(Vector2(c.x + 2.6, c.y - 2.6), Vector2(c.x - 2.6, c.y + 2.6), ink, 0.85)
+		"paralyzed":
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x + 1.2, box.position.y + 1.0),
+				Vector2(c.x - 1.6, c.y),
+				Vector2(c.x + 1.4, c.y),
+				Vector2(c.x - 1.2, box.end.y - 1.0),
+			]), ink, 1.05)
+		"chaki":
+			var tw := _width("ח", 6, true)
+			_str("ח", c.x - tw * 0.5, box.end.y - 1.5, ink, 6, true)
+		"gods_message":
+			var tw := _width("ד", 6, true)
+			_str("ד", c.x - tw * 0.5, box.end.y - 1.5, ink, 6, true)
+		"mark":
+			draw_circle(c, s * 0.30, ink, false, 0.9)
+			draw_line(Vector2(c.x, box.position.y + 1.0), Vector2(c.x, box.end.y - 1.0), ink, 0.8)
+			draw_line(Vector2(box.position.x + 1.0, c.y), Vector2(box.end.x - 1.0, c.y), ink, 0.8)
+		"shield":
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x - 2.6, box.position.y + 1.4),
+				Vector2(c.x + 2.6, box.position.y + 1.4),
+				Vector2(c.x + 2.6, c.y + 0.6),
+				Vector2(c.x, box.end.y - 1.2),
+				Vector2(c.x - 2.6, c.y + 0.6),
+				Vector2(c.x - 2.6, box.position.y + 1.4),
+			]), ink, 0.95)
+		"atk_up", "weaken":
+			draw_line(Vector2(box.position.x + 1.8, box.end.y - 1.8), Vector2(box.end.x - 1.5, box.position.y + 1.5), ink, 1.05)
+			draw_line(Vector2(box.position.x + 2.0, box.end.y - 3.6), Vector2(box.position.x + 3.8, box.end.y - 1.8), ink, 0.9)
+			_draw_glyph_arrow(box, id == "atk_up")
+		"def_up", "break":
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x - 2.0, box.position.y + 2.0),
+				Vector2(c.x + 2.6, box.position.y + 2.0),
+				Vector2(c.x + 2.6, c.y + 0.8),
+				Vector2(c.x + 0.3, box.end.y - 1.4),
+				Vector2(c.x - 2.0, c.y + 0.8),
+				Vector2(c.x - 2.0, box.position.y + 2.0),
+			]), ink, 0.9)
+			_draw_glyph_arrow(box, id == "def_up")
+		"mef_up", "weaken_mef":
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x + 0.4, box.position.y + 1.4),
+				Vector2(box.end.x - 1.2, c.y),
+				Vector2(c.x + 0.4, box.end.y - 1.4),
+				Vector2(box.position.x + 2.0, c.y),
+				Vector2(c.x + 0.4, box.position.y + 1.4),
+			]), ink, 0.9)
+			_draw_glyph_arrow(box, id == "mef_up")
+		"mak_up", "weaken_mak":
+			draw_line(Vector2(c.x + 0.4, box.position.y + 1.4), Vector2(c.x + 0.4, box.end.y - 1.4), ink, 0.95)
+			draw_line(Vector2(box.position.x + 1.8, c.y), Vector2(box.end.x - 1.0, c.y), ink, 0.95)
+			_draw_glyph_arrow(box, id == "mak_up")
+		"agi_up", "high_speed":
+			draw_polyline(PackedVector2Array([Vector2(c.x - 2.4, c.y - 2.2), Vector2(c.x - 0.2, c.y), Vector2(c.x - 2.4, c.y + 2.2)]), ink, 0.95)
+			draw_polyline(PackedVector2Array([Vector2(c.x + 0.2, c.y - 2.2), Vector2(c.x + 2.4, c.y), Vector2(c.x + 0.2, c.y + 2.2)]), ink, 0.95)
+		"sp_up":
+			draw_circle(c + Vector2(0.5, 0.2), s * 0.26, ink, false, 0.9)
+			_draw_glyph_arrow(box, true)
+		"chill", "snare", "slow":
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x - 2.0, box.position.y + 1.5),
+				Vector2(c.x + 2.4, box.position.y + 1.5),
+				Vector2(c.x - 2.0, box.end.y - 1.5),
+				Vector2(c.x + 2.4, box.end.y - 1.5),
+			]), ink, 0.9)
+			_draw_glyph_arrow(box, false)
+		"gevurah":
+			draw_polyline(PackedVector2Array([Vector2(c.x - 2.4, c.y + 0.5), Vector2(c.x, c.y - 2.2), Vector2(c.x + 2.4, c.y + 0.5)]), ink, 0.95)
+			draw_polyline(PackedVector2Array([Vector2(c.x - 2.4, c.y + 2.8), Vector2(c.x, c.y + 0.2), Vector2(c.x + 2.4, c.y + 2.8)]), ink, 0.95)
+		"taunt":
+			draw_line(Vector2(c.x, box.position.y + 1.2), Vector2(c.x, c.y + 1.4), ink, 1.2)
+			draw_circle(Vector2(c.x, box.end.y - 1.6), 0.75, ink)
+		"zohar":
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x, box.position.y + 1.2), Vector2(box.end.x - 1.2, c.y),
+				Vector2(c.x, box.end.y - 1.2), Vector2(box.position.x + 1.2, c.y), Vector2(c.x, box.position.y + 1.2),
+			]), ink, 0.9)
+			draw_circle(c, 0.9, ink)
+		"regen":
+			draw_line(Vector2(c.x, box.position.y + 1.5), Vector2(c.x, box.end.y - 1.5), ink, 1.1)
+			draw_line(Vector2(box.position.x + 1.5, c.y), Vector2(box.end.x - 1.5, c.y), ink, 1.1)
+		_:
+			draw_circle(c, 1.6, ink)
+
+
+func _draw_glyph_arrow(box: Rect2, is_up: bool) -> void:
+	if is_up:
+		var tip := Vector2(box.position.x + 2.1, box.position.y + 0.9)
+		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(1.8, 2.2), tip + Vector2(-1.8, 2.2)]), StatusIcons.UP_INK)
+	else:
+		var tip := Vector2(box.position.x + 2.1, box.end.y - 0.9)
+		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(1.8, -2.2), tip + Vector2(-1.8, -2.2)]), StatusIcons.DOWN_INK)
 
 
 ## Small bar of a hero window: dark track with a light border, filled by `share`.
