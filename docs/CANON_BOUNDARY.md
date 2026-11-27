@@ -14,9 +14,9 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
 * **UI e feedback** (`D-053`, `D-055`–`D-060`, `D-100`, `D-102`): resolução base `816×624`, fundo D (plasma animado), Battle Log de 2 linhas (`D-056`), ordem de turno por AGI no topo, setas + cartões de papel persistentes (`ATTACK`/`TARGET`/`DEFEND`/`COUNTER`/`REACT`), nomes coloridos por papel no log, letras hebraicas flutuantes em toda mudança de SP (`D-100`).
 * **Cena principal de combate:** `scenes/battle/BattlePlayable.tscn`.
 
-### 1.2 Sistema de Reza e todas as 11 rezas (`D-048`, `D-107`, `D-112`, `D-113`, `D-115`)
+### 1.2 Sistema de Reza e todas as rezas — 11 do D-115 + as do D-118 (`D-048`, `D-107`, `D-112`, `D-113`, `D-115`)
 * **Mecânica de PP:** humanos rezam com PP no lugar da EN (teto 8, +2 SP por PP, persiste entre lutas); inimigos reagem apenas a `PRAY` e `Ra'am` (`reactable: true`).
-* **Catálogo canônico completo (11 rezas em `scripts/core/prayer_book.gd`):**
+* **Catálogo canônico (11 rezas do D-115; com o D-118 o `scripts/core/prayer_book.gd` tem 29 entradas, listadas abaixo):**
   * Iniciais do Yoch (`D-048`): **Refuah**, **Haganah**, **Ra'am**.
   * Criadas em `D-107` e confirmadas canônicas (`D-115`): **Sanverim**, **Nechamah**, **Cherev**.
   * Criadas em `D-112` e confirmadas canônicas (`D-115`): **Tahorah**, **Magen**, **Gevurah**, **Mishpat**, **Zohar**.
@@ -47,7 +47,7 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
 * **IA/combate exclusivo do Survival:** temperamentos/intenções (`BRUTE`, `CASTER`, `SUPPORT`, `HUNTER`, `TRICKSTER`), 5 afixos de elite (`BRUTAL`, `SWIFT`, `STONE`, `BURNING`, `VAMPIRIC`) e absorção roguelike com raridades `COMMON`/`RARE`/`EPIC`.
 * **Sistema de aliados do Survival (`D-111`, `scripts/survival/survival_allies.gd`):** run começa só com Fallen; recrutamento de demônios/humanos, Yoch raro (15%/estrato), reserva até 8, crescimento a cada 2 lutas, `MANUAL`/`AUTO`, 3 painéis estreitos.
 * **Inimigos exclusivos do Survival:** 35 demônios SMT (`PIXIE` até `IZANAMI`) e 5 grupos genéricos de humanos sem lore (`HUMAN A/B/C`).
-* **27 skills exclusivas do Survival (`D-106`, `SurvivalData.SURVIVAL_SKILLS`, valores ainda marcados como proposta; 5 promovidas/reworked para o cânone em `D-124`):**
+* **22 skills exclusivas do Survival (das 27 do `D-106`, `SurvivalData.SURVIVAL_SKILLS`, valores ainda marcados como proposta; 5 promovidas/reworked para o cânone em `D-124`):**
   * *10 físicas:* ~~`SHADOW BITE`~~ *(→ `Mazz Bite`, D-124)*, ~~`FANG FLURRY`~~ *(→ `Fang Sting`/`Fang Spine`, D-124)*, `HEAVY CRUSH`, ~~`SOUL PIERCE`~~ *(→ `Vuln Pierce`, D-124)*, `TWIN FANG`, `FROST LANCE`, `LIFE DRAIN`, `FINISHING BLOW` (`crushing_blow`), `BLADE DANCE`, `STONE GRASP`.
   * *11 mágicas (all foes):* `PIXIE DUST`, ~~`FROST BREATH`~~ *(→ `Dark Breath`, D-124)*, `HELLFIRE`, `SPIRIT BRAND` (`spirit_bolt`), `CURSE RAY`, `VENOM CLOUD`, `MIND DRAIN` (`mind_blast`), `THUNDER CALL`, `SOUL LEECH` (`spirit_wave`), `EMBER BURST` (`ember_touch`), ~~`VOID GAZE`~~ *(→ `Umbral Gaze`, D-124)*.
   * *6 suportes/curas:* `HOWL`, `PRIMAL ROAR`, `WAR CRY`, `MEND`, `DARK BOON` (`dark_siphon`), `RENEW`.

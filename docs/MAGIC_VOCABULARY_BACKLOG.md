@@ -180,7 +180,7 @@ Em vez de números ou sufixos arbitrários, explorar adjetivos/qualificadores he
 | Categoria | Identidade | Exemplos |
 |---|---|---|
 | **Elemental** | Fenômenos físicos | `Esh`, `Barak`, `Ruach` |
-| **Oração** | Conceitos religiosos | `Refuah`, `Berakhah`, `Chesed` *(e as 11 rezas canônicas)* |
+| **Oração** | Conceitos religiosos | `Refuah`, `Berakhah`, `Chesed` *(e as rezas canônicas do `PrayerBook`: 11 do D-115 + as do D-118)* |
 | **Metafísica** | Propriedades da existência | `Ayin`, `Hayah`, `Tehom`, `Berit`, `Kavod` |
 
 ### Pendências antes de promover qualquer item deste banco

@@ -1386,7 +1386,7 @@ nem o posicionamento da linha aprovado no §17.2.
 
 ---
 
-## 9. Magia, elementos, oração e afinidades — **PENDENTE** (Reza: **CONFIRMADO**, D-048)
+## 9. Magia, elementos, oração e afinidades — **PENDENTE** (Reza: **CONFIRMADO**, D-048; **afinidades REMOVIDAS pela D-119**)
 
 O diretor confirmou que magia, oração humana, elementos e afinidades são partes
 importantes do sistema, mas o protótipo atual os exclui explicitamente. Nomes de
