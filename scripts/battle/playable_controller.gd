@@ -1865,6 +1865,21 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 				recipient.haganah = {"round": state.round_number, "owner": turn_owner.id if turn_owner != null else &"", "non_prayer": true}
 				notes.append("STATUS SHIELD")
 			fx.play("BUFF", recipient, 0)
+			var popup_lines: Array[String] = []
+			if int(fxd.get("atk_stages", 0)) > 0 and int(fxd.get("mak_stages", 0)) > 0:
+				popup_lines.append("ATK/MAK UP")
+			elif int(fxd.get("def_stages", 0)) > 0 and int(fxd.get("mef_stages", 0)) > 0:
+				popup_lines.append("DEF/MEF UP")
+			elif agi_delta > 0:
+				popup_lines.append("AGI +%d" % agi_delta)
+				if bool(fxd.get("high_speed_next", false)):
+					popup_lines.append("HIGH SPEED")
+			elif sp_amt > 0:
+				popup_lines.append("SP +%d" % sp_amt)
+			elif bool(fxd.get("status_shield", false)):
+				popup_lines.append("STATUS SHIELD")
+			if not popup_lines.is_empty():
+				fx.label_override(recipient, popup_lines, fx._unit_rect(recipient), HUD_SCRIPT.FLOATER_EYE_GREEN)
 			_append_log("%s casts %s on %s: %s (EN %d/%d)." % [
 				unit.display_name, d.name, recipient.display_name, ", ".join(notes), unit.current_en, unit.stats.max_en])
 			_event("%s buffs %s (%s)." % [short_name(unit), short_name(recipient), ", ".join(notes)])
@@ -2165,8 +2180,9 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		reacting: bool, attack: int, defense: int, magic: bool, prev_applied: int = -1) -> int:
 	var fxd := SkillFx.fx_of(skill)
 	var mult := 1.0
-	# D-124 VULN PIERCE: x2 against a target doing a non-offensive action (stance) or defending.
-	if fxd.has("vs_passive") and (defender.passive_stance or _defender_defending):
+	# D-124/D-131 VULN PIERCE: x2 against any vulnerable target (non-offensive action, defending,
+	# or under an effect that forces PASS such as trap/paralysis/sleep).
+	if fxd.has("vs_passive") and defender.is_vulnerable(_defender_defending):
 		mult *= float(fxd.vs_passive)
 	if fxd.has("combo") and index > 0 and prev_applied >= 0:
 		mult *= 1.0 + float(fxd.combo)
@@ -2368,7 +2384,7 @@ func _gfx_start(attacker: BattleUnit, skill: StringName, victims: Array) -> floa
 		&"mazz_bite": return grotesque_fx.play_mazz_bite(attacker, first)
 		&"fang_sting": return grotesque_fx.play_fang_sting(attacker, first)
 		&"fang_spine": return grotesque_fx.play_fang_spine(attacker, victims)
-		&"vuln_pierce": return grotesque_fx.play_vuln_pierce(attacker, first, first.passive_stance or _defender_defending)
+		&"vuln_pierce": return grotesque_fx.play_vuln_pierce(attacker, first, first.is_vulnerable(_defender_defending))
 		&"umbral_gaze": return grotesque_fx.play_umbral_gaze(attacker, first)
 		&"ignoma": return grotesque_fx.play_ignoma(attacker, first)
 		&"ignoma_esh": return grotesque_fx.play_ignoma_esh(attacker, victims)

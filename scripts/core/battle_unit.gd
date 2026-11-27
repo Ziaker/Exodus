@@ -159,6 +159,13 @@ func has_status(id: StringName) -> bool:
 	return statuses.has(id)
 
 
+## D-131: unified definition of a vulnerable target (performing a non-offensive action /
+## defending, or under an effect that forces PASS such as trap, paralysis or sleep).
+func is_vulnerable(defending: bool = false) -> bool:
+	return passive_stance or defending or trapped_actions > 0 or paralyzed_acts > 0 \
+		or has_status(&"trapped") or has_status(&"paralyzed") or has_status(&"sleep")
+
+
 ## Ends a status and gives its stat back.
 func remove_status(id: StringName) -> void:
 	if not statuses.has(id):

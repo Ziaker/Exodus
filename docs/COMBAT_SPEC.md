@@ -1674,8 +1674,8 @@ Especificação completa das 5 skills canônicas (+ 2 evoluções `ZAHAV`: `Ston
 - **Categorias de habilidade:** `PHYS` (física), `MAGI` (mágica) e `STAT` (status/debuff/marca).
 - **Tipos de dano:** `PHYS` (físico, mitigado por `DEF`), `MAGI` (mágico, mitigado por `MEF`) e `DMG` (dano sem tipagem — ignora `DEF` e `MEF`, mantendo barra de ritmo, bloqueio/desvio, vantagem de SP e variação ±10%).
 - **Notação de alvos:** `1T`, `2T` e `3T` (`T` = target).
-- **Alvo Vulnerável (unificado com `Vuln Pierce` D-124):** combatente que está realizando uma **ação não-ofensiva** ou que está sob um **efeito que força o `PASS`** (como paralisação ou aprisionamento).
-- **Regras fechadas do Lote 2:** `Energy Blow` rouba metade do EN máx. **até o fim da batalha**; `Drain Claw`/`Vital Claws` curam **80% do HP drenado** com teto na parcela percentual contra chefes/Guardiões/Anjos (`40`/`60 HP`); `Weaken`/`Weakenen` **acumulam** (piso efetivo `1`) até o fim do combate e sofrem dispell (`Tahorah`); `Mark of Sun` dispara `+20 MAGI` **por golpe** (mitigado por `MEF`), **desaparecendo no 3º golpe recebido** ou ao fim do próximo round (também dissipável).
+- **Alvo Vulnerável (unificado com `Vuln Pierce` D-124 — IMPLEMENTADO em `BattleUnit.is_vulnerable`):** combatente que está realizando uma **ação não-ofensiva** ou que está sob um **efeito que força o `PASS`** (paralisação, aprisionamento ou sono).
+- **Regras fechadas do Lote 2:** `Energy Blow` rouba metade do EN máx. **até o fim da batalha**; `Drain Claw`/`Vital Claws` curam **80% do HP drenado** com teto na parcela percentual contra chefes/Guardiões/Anjos (`40`/`60 HP`); `Weaken`/`Weakenen` **acumulam até −50% do atributo base** (piso efetivo `1`) até o fim do combate e sofrem dispell (`Tahorah`); `Mark of Sun` dispara `+20 MAGI` **por golpe** (mitigado por `MEF`, piso mínimo `5`), **desaparecendo no 3º golpe recebido** ou ao fim do próximo round (também dissipável).
 
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), itens abençoados da
