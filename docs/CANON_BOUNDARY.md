@@ -28,11 +28,15 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
   * **Regra `IMEDIATO`** (resolve ao anunciar, sem reação) e **sistema `ZAHAV`** (metade do jogo; botão `A`; +2 estágios de dano e +20% chance de efeito por 20 SP após concluir; evolução com nome dourado; acessível a Anjos e elites).
 * **VFX canônicos (`D-052`, `D-113`):** absorção em letras hebraicas (`absorb_vfx.gd`) e **regra obrigatória de VFX 100% letras hebraicas** para todas as rezas ([`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md), `pray_fx.gd`).
 
-### 1.3 Skills canônicas do Prólogo e Expansão Canônica (`D-050`, `D-117`, `D-124`)
+### 1.3 Skills canônicas do Prólogo e Expansões Canônicas (`D-050`, `D-117`, `D-124`, `D-131`)
 * **4 skills do Prólogo** (`SkillBook.KIND_SKILLS`): **LUNGE**, **BLEEDBUFF**, **HEAT WAVE**, **ENERGEAT** *(renomeada de Energy Eat em D-117; id interno `energy_eat`)* + aprendizado permanente a cada 4 absorções.
-* **6 skills canônicas revisadas + 2 evoluções `ZAHAV` (`D-124`, [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) — DESIGN CONFIRMADO; IMPLEMENTADO (mecânica e VFX; aguardando validação visual final do criador no Godot; ativação ZAHAV, IA de escolha das novas skills e distribuição na campanha PENDENTES)):**
+* **Lote 1 — 6 skills canônicas revisadas + 2 evoluções `ZAHAV` (`D-124`, [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) — DESIGN CONFIRMADO; IMPLEMENTADO (mecânica e VFX; aguardando validação visual final do criador no Godot; ativação ZAHAV, IA de escolha das novas skills e distribuição na campanha PENDENTES)):**
   * **Mazz Bite** *(rework de `SHADOW BITE`)*, **Fang Sting** *(rework de `FANG FLURRY`)* → ZAHAV **Fang Spine**, **Vuln Pierce** *(rework de `SOUL PIERCE`)*, **Dark Breath** *(rework de `FROST BREATH`)*, **Umbral Gaze** *(rework de `VOID GAZE`)*, **Ignoma** → ZAHAV **Ignoma Esh**.
   * **3 regras globais canônicas (`D-124`):** `HIGH SPEED` (ponteiro 20% mais rápido e vantagem no contra-ataque), `BLEED` canônico (−20% cura recebida até o fim do próximo turno, acumula 4×) e `Temporização de ação` (dura X ações após o efeito; aprisionamento age como `PASS` automático perdendo a fila atual).
+* **Lote 2 — Taxonomia oficial + Alvo Vulnerável + 5 skills canônicas revisadas + 2 evoluções `ZAHAV` (`D-131`, [`docs/CANON_SKILLS_D131.md`](CANON_SKILLS_D131.md) — DESIGN CONFIRMADO; NÃO IMPLEMENTADO):**
+  * **Taxonomia oficial:** categorias `PHYS`/`MAGI`/`STAT`; tipos de dano `PHYS`/`MAGI`/`DMG` (`DMG` = sem tipagem); alvos `1T`/`2T`/`3T`.
+  * **Alvo Vulnerável:** combatente realizando ação não-ofensiva ou sob efeito que força `PASS` (ex.: paralisação/aprisionamento).
+  * **5 skills + 2 `ZAHAV`:** **Stone Crush** *(rework de `HEAVY CRUSH`)*, **Energy Blow** *(rework de `FINISHING BLOW`)*, **Drain Claw** *(rework de `LIFE DRAIN`)* → ZAHAV **Vital Claws**, **Weaken** *(rework de `CURSE RAY`)* → ZAHAV **Weakenen** *(ambas dissipáveis)*, **Mark of Sun** *(rework de `SPIRIT BRAND`)*.
 
 ### 1.4 Personagens, raças, lore e mundo
 * **Personagens e raças (`D-048`, `D-050`, `D-126`, `D-128`):** **Fallen / Deviron / Samael** (Daema, primeiro devilman, perfeitamente simétrico), **Yoch** (humano), **Maziks** (inimigos de silhueta com simetria perfeita, criados pelos anjos mediante manipulação de corpos humanos), **Anjos** (todos Daemas; imunes a Ra'am). Daema e demônio são raças distintas.
@@ -48,10 +52,10 @@ Este documento separa de forma explícita o que pertence ao **jogo principal (ca
 * **IA/combate exclusivo do Survival:** temperamentos/intenções (`BRUTE`, `CASTER`, `SUPPORT`, `HUNTER`, `TRICKSTER`), 5 afixos de elite (`BRUTAL`, `SWIFT`, `STONE`, `BURNING`, `VAMPIRIC`) e absorção roguelike com raridades `COMMON`/`RARE`/`EPIC`.
 * **Sistema de aliados do Survival (`D-111`, `scripts/survival/survival_allies.gd`):** run começa só com Fallen; recrutamento de demônios/humanos, Yoch raro (15%/estrato), reserva até 8, crescimento a cada 2 lutas, `MANUAL`/`AUTO`, 3 painéis estreitos.
 * **Inimigos exclusivos do Survival:** 35 demônios SMT (`PIXIE` até `IZANAMI`) e 5 grupos genéricos de humanos sem lore (`HUMAN A/B/C`).
-* **22 skills exclusivas do Survival (das 27 do `D-106`, `SurvivalData.SURVIVAL_SKILLS`, valores ainda marcados como proposta; 5 promovidas/reworked para o cânone em `D-124`):**
-  * *10 físicas:* ~~`SHADOW BITE`~~ *(→ `Mazz Bite`, D-124)*, ~~`FANG FLURRY`~~ *(→ `Fang Sting`/`Fang Spine`, D-124)*, `HEAVY CRUSH`, ~~`SOUL PIERCE`~~ *(→ `Vuln Pierce`, D-124)*, `TWIN FANG`, `FROST LANCE`, `LIFE DRAIN`, `FINISHING BLOW` (`crushing_blow`), `BLADE DANCE`, `STONE GRASP`.
-  * *11 mágicas (all foes):* `PIXIE DUST`, ~~`FROST BREATH`~~ *(→ `Dark Breath`, D-124)*, `HELLFIRE`, `SPIRIT BRAND` (`spirit_bolt`), `CURSE RAY`, `VENOM CLOUD`, `MIND DRAIN` (`mind_blast`), `THUNDER CALL`, `SOUL LEECH` (`spirit_wave`), `EMBER BURST` (`ember_touch`), ~~`VOID GAZE`~~ *(→ `Umbral Gaze`, D-124)*.
-  * *6 suportes/curas:* `HOWL`, `PRIMAL ROAR`, `WAR CRY`, `MEND`, `DARK BOON` (`dark_siphon`), `RENEW`.
+* **17 skills exclusivas do Survival (das 27 do `D-106`, `SurvivalData.SURVIVAL_SKILLS`, valores ainda marcados como proposta; 10 promovidas/reworked para o cânone em `D-124` e `D-131`):**
+  * *10 físicas (4 restantes):* ~~`SHADOW BITE`~~ *(→ `Mazz Bite`, D-124)*, ~~`FANG FLURRY`~~ *(→ `Fang Sting`/`Fang Spine`, D-124)*, ~~`HEAVY CRUSH`~~ *(→ `Stone Crush`, D-131)*, ~~`SOUL PIERCE`~~ *(→ `Vuln Pierce`, D-124)*, `TWIN FANG`, `FROST LANCE`, ~~`LIFE DRAIN`~~ *(→ `Drain Claw`/`Vital Claws`, D-131)*, ~~`FINISHING BLOW`~~ *(→ `Energy Blow`, D-131)*, `BLADE DANCE`, `STONE GRASP`.
+  * *11 mágicas (7 restantes):* `PIXIE DUST`, ~~`FROST BREATH`~~ *(→ `Dark Breath`, D-124)*, `HELLFIRE`, ~~`SPIRIT BRAND`~~ *(→ `Mark of Sun`, D-131)*, ~~`CURSE RAY`~~ *(→ `Weaken`/`Weakenen`, D-131)*, `VENOM CLOUD`, `MIND DRAIN` (`mind_blast`), `THUNDER CALL`, `SOUL LEECH` (`spirit_wave`), `EMBER BURST` (`ember_touch`), ~~`VOID GAZE`~~ *(→ `Umbral Gaze`, D-124)*.
+  * *6 suportes/curas (6 restantes):* `HOWL`, `PRIMAL ROAR`, `WAR CRY`, `MEND`, `DARK BOON` (`dark_siphon`), `RENEW`.
 * **5 itens de loja do Survival (`D-072`):** `BEAD`, `CHAKRA`, `MEDICINE`, `SOMA`, `BLAST STONE`.
 * **Cenas e scripts:** `scenes/survival/SurvivalWorld.tscn`, `scenes/survival/SurvivalBattle.tscn`, `scripts/survival/*`, `prototypes/necropole-battle/`.
 

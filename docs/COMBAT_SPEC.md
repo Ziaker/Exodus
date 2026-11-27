@@ -1668,6 +1668,15 @@ Especificação completa das 6 skills canônicas (+ 2 evoluções `ZAHAV`: `Mazz
 - **`BLEED` (canônico):** condição de status que **reduz em 20% as curas recebidas** até o fim do próximo turno, podendo **acumular até 4 vezes** (até −80%).
 - **Temporização de ação:** efeitos que duram por **X ações/atos** encerram-se após **X ações realizadas depois da efetuação do efeito**. Para efeitos de prisão/imobilização, funciona como um **`PASS` automático**: o alvo **não perde** ações/reações ainda não utilizadas, **porém perde os atos que estavam em fila**.
 
+## Taxonomia oficial de combate, Alvo Vulnerável e Lote 2 de skills — D-131 (criador, 2026-11-27; DESIGN CONFIRMADO; NÃO IMPLEMENTADO)
+Especificação completa das 5 skills canônicas (+ 2 evoluções `ZAHAV`: `Stone Crush`, `Energy Blow`, `Drain Claw`/`Vital Claws`, `Weaken`/`Weakenen`, `Mark of Sun`) em `docs/CANON_SKILLS_D131.md`.
+
+- **Categorias de habilidade:** `PHYS` (física), `MAGI` (mágica) e `STAT` (status/debuff/marca).
+- **Tipos de dano:** `PHYS` (físico), `MAGI` (mágico) e `DMG` (dano sem tipagem).
+- **Notação de alvos:** `1T`, `2T` e `3T` (`T` = target).
+- **Alvo Vulnerável:** combatente que está realizando uma **ação não-ofensiva** ou que está sob um **efeito que força o `PASS`** (como paralisação ou aprisionamento).
+- **Dispell em `Weaken`/`Weakenen`:** ambas as versões duram até o fim do combate e podem sofrer dispell.
+
 ## Escopo fora deste protótipo
 Equipamentos, magia/elementos (AQUA/IGNI/AERO/ROCK/MANA/LUZI), itens abençoados da
 Reza (D-048), progressão narrativa e absorção de longo prazo.
