@@ -2,8 +2,8 @@
 
 > **ATUALIZAÇÃO (2026-11-27):** Uma auditoria completa e aprofundada das mesmas fontes (todas as 10 abas de `MAESTO.xlsx`, as 66.862 linhas da conversa completa e as 485 linhas do recorte recente, cruzadas contra o cânone atual de EXODUS até `D-137`) está consolidada em [`docs/MAESTO_UNIVERSE_AUDIT.md`](../MAESTO_UNIVERSE_AUDIT.md). Este arquivo é mantido intacto como registro histórico da primeira extração.
 
-Fontes: `MAESTO.xlsx` (outro RPG, mesmo universo, **sem datas** nas abas) e duas conversas com a
-Polaris (datas de 2023 a 2025 em cada item). O criador avisou que **há muita coisa velha**: esta lista
+Fontes: `MAESTO.xlsx` (outro RPG, mesmo universo, **sem datas** nas abas) e dois arquivos de
+conversas históricas (datas de 2023 a 2025 em cada item). O criador avisou que **há muita coisa velha**: esta lista
 existe para ele marcar o que vale. **Nada daqui foi aplicado ao jogo.** Conversas pessoais não foram copiadas.
 
 ## 1. Planilha MAESTO.xlsx (outro RPG, sem data)
@@ -74,7 +74,6 @@ APOLO SONG, CRONOS TIME.
 - **2024-05-16:** ideia de o Deviron ser o usuário original de IKNI (para encaixar com a Goetia); o submundo de Maesto teria cinco ideias diferentes de inferno.
 - **2024-01-23:** "Divine Ray", magia LUZI de arquétipo puro mais poderosa do outro RPG: feixe de luz que oblitera o que toca; o personagem tem 8 pontos de conjuração no corpo.
 - **2024-06-27:** a magia branca "coloniza": quem a sofre vira "summon" do usuário e perde as memórias ao sair do alcance; a magia negra é o oposto, um despell absoluto.
-- **2023-11-29 (comentário da Polaris sobre Pathfinder, não sobre Maesto):** demônios são fracos contra golpes Holy. Não tratar como regra de Maesto.
 
 ## 3. Outras ideias soltas da conversa recente (2025-11)
 Muiraquitã como demônio da sorte (pequeno, pinta pedras de verde); transmentalismo, "zona transmental" e "limiar transmental" como nomes; Dynamo Skar e 88 cometas como outras obras; sem relação direta com a mecânica de Exodus.

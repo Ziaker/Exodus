@@ -12,8 +12,8 @@
 | Fonte | Período / Conteúdo | Volume auditado | Observação |
 | :--- | :--- | :--- | :--- |
 | `MAESTO.xlsx` | Sem datas internas (RPG de mesa / Goetia) | 10 abas (345 linhas preenchidas; 0 comentários; aba `Mecanicas` vazia; matriz `ELEMENTOS` 40×40 vazia) | Base estrutural de facções, 40 elementos, proficiências, Olímpios, raças/espécies, andares de Goetia e fichas curtas (`Descs`). |
-| `Conversa do WhatsApp com Polaris.zip` (arquivo completo) | `28/06/2023` – `02/09/2025` | 66.862 linhas analisadas via extração integral e dossiês temáticos completos | Principal fonte de cosmologia, sistema de magia, evoluções de 2024–2025, regras de espécies/animais e notas de EXODUS. |
-| `Convers_com_Polaris.zip` (recorte recente) | `23/11/2024` – `30/11/2025` | 485 linhas lidas integralmente | Contém notas recentes (`29/11/2025`: possível renomeação `Sambatia -> Sandarians`, `Muiraquitã`, termos *transmentalismo*, projetos paralelos). |
+| Arquivo de conversas completo (2023–2025) | `28/06/2023` – `02/09/2025` | 66.862 linhas analisadas via extração integral e dossiês temáticos completos | Principal fonte de cosmologia, sistema de magia, evoluções de 2024–2025, regras de espécies/animais e notas de EXODUS. |
+| Recorte recente de conversas (2024–2025) | `23/11/2024` – `30/11/2025` | 485 linhas lidas integralmente | Contém notas recentes (`29/11/2025`: possível renomeação `Sambatia -> Sandarians`, `Muiraquitã`, termos *transmentalismo*, projetos paralelos). |
 | Cânone atual do repositório EXODUS | `D-001` – `D-137` | `docs/DECISIONS.md`, `docs/GDD.md`, `docs/SURVIVAL_MODE.md`, `docs/MAGIC_VOCABULARY_BACKLOG.md`, `docs/plans/maesto-referencia-extraida.md` | Linha de base para marcar conflitos, omissões e compatibilidades. |
 
 ### 1.2 Legenda de classificação de auditoria
@@ -31,7 +31,6 @@ Durante a auditoria, diversos termos homônimos ou obras paralelas apareceram na
 | **Universo Maesto (ALVO)** | Criador | *EXODUS* (era primordial), *Masks* + *Uthópia* (2ª Guerra das Raças), *Maestina*, *Maestena*, *Maestuna*, *Maestona*, *Maestana*, *Goetia* (Torre Prisão / RPG), *Maesto F* (Futuro), *Dimensão Daema*. | Separar o que vale para a **era primordial (EXODUS)** do que só existe em eras posteriores (ex.: Eluminia, armas de fogo, Technomia). |
 | **BV / Best Villain** | Criador | Zuzu, Zoa, Zaya, Zezé, Matai, Guido, Todd, Nyansuei, **Gimiqs**, ranques de Heróis, **Terminita** (mineral), Guffyn, Apockalos, temática biopunk/sci-fi. | **`Terminita` (mineral de BV) NÃO é `Terminia` (Daema de Maesto).** "Zona espiritual" via Gimiqs (`19/08/2024`) é de BV, não de Maesto. |
 | **Outras obras do criador** | Criador | *Sekom Fokus* (Muiraquitã/Malverde), *DaiSpell* (projeto Godot separado de cartas / 3 chars: anjo, mago, fera), *Dynamo Skar*, *88 Cometas*, *Galagala*. | `Muiraquitã` (demônio da sorte que pinta pedras de verde, `11/2025`) aparece em contexto de *Sekom Fokus* / notas soltas — não assumir como Maesto sem aval. |
-| **Obras da Polaris** | Polaris | *Aetherwind*, *Lemegeton* (72 selos de Goetia, Asmodeus, Bael de Lemegeton, Foras, Belial, Rakshasas/Divs), *Gehennom/Gehenna*, *Oubliette*, comentários sobre *Pathfinder 2e*. | **`Goetia` em Maesto é a Torre Prisão / submundo, NÃO o sistema *Lemegeton* da Polaris.** Regra de Pathfinder ("demônios fracos a Holy", `29/11/2023`) NÃO é regra de Maesto. Único crossover-piada mencionado: portal *Moonooze* (*Maesto F* ↔ *Aetherwind*) e cidade `Otsema`. |
 
 ---
 
