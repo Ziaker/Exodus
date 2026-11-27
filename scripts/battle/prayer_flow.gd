@@ -171,16 +171,16 @@ func plan_pick(unit: BattleUnit, details: Array, acts_left: int) -> Dictionary:
 		var en_paid := PrayerBook.uses_en(pick, unit)
 		var entry := {"spell": pick, "cost": 0 if en_paid else PrayerBook.base_cost(pick)}
 		if not bool(PrayerBook.simulate(_plan_start_pp, _queue(details, -1, 0, entry)).ok):
-			_say("Not enough PP for %s." % PrayerBook.spell_name(pick))
+			_say("NO PP: %s" % PrayerBook.spell_name(pick))
 			continue
 		if PrayerBook.targets_allies(pick):
-			_say("%s queued on all allies: %d PP." % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
+			_say("%s → All allies  %d PP" % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
 		elif PrayerBook.targets_enemies(pick):
-			_say("%s queued on all foes: %d PP." % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
+			_say("%s → All foes  %d PP" % [PrayerBook.spell_name(pick), PrayerBook.base_cost(pick)])
 		elif PrayerBook.targets_self(pick):
-			_say("%s queued." % PrayerBook.spell_name(pick))
+			_say("%s → Self" % PrayerBook.spell_name(pick))
 		else:
-			_say("%s queued on %s: %d PP." % [PrayerBook.spell_name(pick), target.display_name, PrayerBook.base_cost(pick)])
+			_say("%s → %s  %d PP" % [PrayerBook.spell_name(pick), battle.short_name(target), PrayerBook.base_cost(pick)])
 		return {"pray": pick, "target": target, "extra": 0, "paid": 0, "owed": 0, "en_paid": en_paid}
 	return {}
 
@@ -299,7 +299,7 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 	var hud: Control = battle.hud
 	battle.action_attacker = unit
 	battle.action_defender = d.get("target", unit)
-	battle.phase_text = ("REACTION " if reacting else "") + ("PRAY" if id == PrayerBook.PRAY else PrayerBook.spell_name(id).to_upper())
+	battle.phase_text = ("REACTION " if reacting else "") + ("PRAY" if id == PrayerBook.PRAY else PrayerBook.spell_name(id))
 	if id == PrayerBook.PRAY:
 		await _pray(unit, reacting)
 	elif id == PrayerBook.MAGEN:
@@ -308,7 +308,7 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			(ally as BattleUnit).def_stages.append(SkillFx.MAGEN_ROUNDS)
 		fx.play_magen(allies)
 		_log("%s prays Magen: all allies +1 DEF stage until the end of the next round (%d PP)." % [unit.display_name, _cost(d)])
-		_event("%s prays Magen: allies' DEF rises." % battle.short_name(unit))
+		_event("%s Magen → All allies  DEF ↑" % battle.short_name(unit))
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	elif id == PrayerBook.CHEREV:
@@ -413,7 +413,7 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			var healed := target.heal(PrayerBook.refuah_heal(int(d.extra)))
 			fx.play_refuah(target, int(d.extra))
 			_log("%s prays Refuah on %s: +%d HP (%d PP)." % [unit.display_name, target.display_name, healed, _cost(d)])
-			_event("%s prays Refuah on %s: +%d HP." % [battle.short_name(unit), battle.short_name(target), healed])
+			_event("%s REFUAH → %s  +%d HP" % [battle.short_name(unit), battle.short_name(target), healed])
 			hud.feedback = "%s: HP %d/%d | PP %d/%d" % [battle.short_name(target), target.current_hp,
 				target.stats.max_hp, unit.current_pp, PrayerBook.MAX_PP]
 		elif id == PrayerBook.HAGANAH:
@@ -422,19 +422,19 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 				"owner": battle.turn_owner.id if battle.turn_owner != null else &""}
 			_log("%s prays Haganah on %s: shielded from status conditions for one round (%d PP)." % [
 				unit.display_name, target.display_name, _cost(d)])
-			_event("%s prays Haganah on %s." % [battle.short_name(unit), battle.short_name(target)])
+			_event("%s Haganah → %s" % [battle.short_name(unit), battle.short_name(target)])
 		elif id == PrayerBook.TAHORAH:
 			var cleared := SkillFx.cleanse_all(target)
 			fx.play_tahorah(target)
 			_log("%s prays Tahorah on %s: %d condition(s) cleansed (%d PP)." % [unit.display_name, target.display_name, cleared, _cost(d)])
-			_event("%s prays Tahorah on %s." % [battle.short_name(unit), battle.short_name(target)])
+			_event("%s Tahorah → %s" % [battle.short_name(unit), battle.short_name(target)])
 		elif id == PrayerBook.GEVURAH:
 			var bonus := PrayerBook.gevurah_bonus(int(d.extra))
 			target.gevurah_bonus = maxf(target.gevurah_bonus, bonus)
 			fx.play_gevurah(target)
 			var pct := int(round(bonus * 100.0))
 			_log("%s prays Gevurah on %s: next attack +%d%% damage (%d PP)." % [unit.display_name, target.display_name, pct, _cost(d)])
-			_event("%s prays Gevurah on %s (+%d%%)." % [battle.short_name(unit), battle.short_name(target), pct])
+			_event("%s Gevurah → %s  +%d%%" % [battle.short_name(unit), battle.short_name(target), pct])
 		elif id == PrayerBook.MISHPAT:
 			await fx.play_mishpat(unit, target)
 			if not battle.is_inside_tree() or not target.is_alive():
@@ -445,34 +445,33 @@ func execute(unit: BattleUnit, detail: Dictionary, reacting: bool) -> bool:
 			battle.fx.play("RAAM", target, applied, unit)
 			_log("%s prays Mishpat on %s: %d damage (last dealt %d + 15, %d PP)." % [
 				unit.display_name, target.display_name, applied, target.last_damage_dealt, _cost(d)])
-			_event("Mishpat strikes %s: %d damage." % [battle.short_name(target), applied])
-			if not target.is_alive():
-				_event("%s is down." % battle.short_name(target))
+			_event("%s Mishpat → %s  %d%s" % [battle.short_name(unit), battle.short_name(target), applied,
+				battle.result_suffix(target, unit, not target.is_alive(), 0)])
 		elif id == PrayerBook.ZOHAR:
 			SkillFx.apply_status(target, &"zohar", SkillFx.ZOHAR_ROUNDS)
 			fx.play_zohar(target)
 			_log("%s prays Zohar on %s: POINT zone widened until the end of the next round (%d PP)." % [
 				unit.display_name, target.display_name, _cost(d)])
-			_event("%s prays Zohar on %s." % [battle.short_name(unit), battle.short_name(target)])
+			_event("%s Zohar → %s" % [battle.short_name(unit), battle.short_name(target)])
 		elif id == PrayerBook.SANVERIM:
 			SkillFx.apply_status(target, &"blind", SkillFx.BLIND_ROUNDS)
 			fx.play_sanverim(target)
 			_log("%s prays Sanverim on %s: blinded until the end of the next round (%d PP)." % [
 				unit.display_name, target.display_name, _cost(d)])
-			_event("%s prays Sanverim on %s." % [battle.short_name(unit), battle.short_name(target)])
+			_event("%s Sanverim → %s" % [battle.short_name(unit), battle.short_name(target)])
 		elif id == PrayerBook.NECHAMAH:
 			target.mends.append(SkillFx.MEND_ROUNDS)
 			fx.play_nechamah(target, target.mends.size())
 			_log("%s prays Nechamah on %s: +%d HP per round for %d rounds (%d PP)." % [
 				unit.display_name, target.display_name, SkillFx.MEND_HEAL, SkillFx.MEND_ROUNDS, _cost(d)])
-			_event("%s prays Nechamah on %s." % [battle.short_name(unit), battle.short_name(target)])
+			_event("%s Nechamah → %s" % [battle.short_name(unit), battle.short_name(target)])
 		elif id == PrayerBook.CHAKI:
 			SkillFx.apply_status(target, &"chaki", 1)
 			target.acts_available = 0
 			fx.play_chaki(target)
 			_log("%s prays Chaki on %s: bound in light, cannot act until round end (%d PP)." % [
 				unit.display_name, target.display_name, _cost(d)])
-			_event("%s binds %s with Chaki!" % [battle.short_name(unit), battle.short_name(target)])
+			_event("%s Chaki → %s" % [battle.short_name(unit), battle.short_name(target)])
 		elif id == PrayerBook.LEHAVAH:
 			await _lehavah(unit, target, d, reacting)
 		elif id == PrayerBook.ESH_SINAI:
@@ -524,7 +523,7 @@ func _reaction_pick(unit: BattleUnit) -> Dictionary:
 ## The first enemy that hit gains the lost commands' acts.
 func _pray(unit: BattleUnit, reacting: bool) -> void:
 	_log("%s prays." % unit.display_name)
-	_event("%s prays." % battle.short_name(unit))
+	_event("%s  PRAY" % battle.short_name(unit))
 	var first_hitter: BattleUnit = null
 	for foe in battle.hud.opponents.duplicate():
 		if not foe.is_alive() or foe.acts_available <= 0 or not unit.is_alive():
@@ -539,7 +538,7 @@ func _pray(unit: BattleUnit, reacting: bool) -> void:
 		battle._clear_roles()
 		battle._set_role(foe, "REACT")
 		battle._set_role(unit, "TARGET")
-		battle._event("%s attacks %s's prayer." % [battle.short_name(foe), battle.short_name(unit)])
+		# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 		var timing: int = battle._ai_roll(foe, unit)
 		# D-057: a basic attack uses the basic power (D-031: 8), not the old fixed 100.
 		var applied: int = battle._skill_hit(foe, unit, battle.basic_power, true, timing, BattleMath.RhythmResult.MISS, false)
@@ -552,13 +551,13 @@ func _pray(unit: BattleUnit, reacting: bool) -> void:
 		battle._player_interrupted = true
 		battle._interrupt_gainer = first_hitter
 		_log("%s's prayer is interrupted by %s: no PP." % [unit.display_name, first_hitter.display_name])
-		_event("%s's prayer is interrupted." % battle.short_name(unit))
+		_event("%s  PRAYER BROKEN" % battle.short_name(unit))
 		return
 	var gained := unit.change_pp(1)
 	fx.cast(unit)
 	var paid := _settle_owed(unit)
 	_log("%s prays: +%d PP (%d/%d%s)." % [unit.display_name, gained, unit.current_pp, PrayerBook.MAX_PP, paid])
-	_event("%s gains %d PP." % [battle.short_name(unit), gained])
+	_event("%s  +%d PP" % [battle.short_name(unit), gained])
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	battle.hud.feedback = "%s: PP %d/%d | SP %d" % [battle.short_name(unit), unit.current_pp, PrayerBook.MAX_PP, unit.current_sp]
@@ -589,7 +588,7 @@ func _cherev(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting:
 	battle._set_role(unit, "REACT" if reacting else "ATTACK")
 	for foe in foes:
 		battle._set_role(foe, "TARGET")
-	_event("%s prays Cherev!" % battle.short_name(unit))
+	_event("%s Cherev → All foes" % battle.short_name(unit))
 	var marks: Array[float] = [0.5]
 	var attack: Array[int] = await battle._skill_attack_timing(unit, foes[0], marks, false)
 	await fx.play_cherev(true)
@@ -608,14 +607,14 @@ func _cherev(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting:
 			if defense[0] != BattleMath.RhythmResult.MISS:
 				battle._set_role(foe, "DEFEND")
 			_log("%s -> %s: 0 dmg (Cherev, NO CONTACT)" % [unit.display_name, foe.display_name])
-			_event("%s dodges." % battle.short_name(foe))
+			_event("%s → %s  DODGE" % [battle.short_name(unit), battle.short_name(foe)])
 			battle._present_strike(unit, foe, 0)
 			continue
 		var r := PrayerBook.raam_damage(0, int(round(unit.effective_mak())), unit.effective_agi(), foe.effective_mef(),
 			unit.current_sp, foe.current_sp, foe.race, battle.rng)
 		if bool(r.angel):
 			_log("%s -> %s: 0 dmg (Cherev has no effect on angels)" % [unit.display_name, foe.display_name])
-			_event("Cherev has no effect on %s." % battle.short_name(foe))
+			_event("%s → %s  NO EFFECT" % [battle.short_name(unit), battle.short_name(foe)])
 			battle._present_strike(unit, foe, 0, true)
 			continue
 		var amount := BattleMath.scaled_damage(int(r.amount), attack[0], defense[0])
@@ -632,12 +631,9 @@ func _cherev(unit: BattleUnit, foes: Array[BattleUnit], d: Dictionary, reacting:
 		battle.fx.play("RAAM_BLOCK" if beam else "RAAM", foe, applied, unit)
 		_log("%s -> %s: %d dmg (Cherev, rhythm %s, def %s)" % [unit.display_name, foe.display_name, applied,
 			battle._rhythm_name(attack[0]), battle._rhythm_name(defense[0])])
-		if beam:
-			_event("%s blocks: %d damage." % [battle.short_name(foe), applied])
-		else:
-			_event("Cherev cuts %s: %d damage." % [battle.short_name(foe), applied])
-		if not foe.is_alive():
-			_event("%s is down." % battle.short_name(foe))
+		# D-110: one telegraphic line per foe, the fall inside it.
+		_event("%s → %s  %d%s%s" % [battle.short_name(unit), battle.short_name(foe), applied, "  BLOCK" if beam else "",
+			battle.result_suffix(foe, unit, not foe.is_alive(), 0)])
 
 
 ## Ra'am: the struck enemy may counter-attack it on the D-049 two rails (33%); otherwise
@@ -647,13 +643,13 @@ func _raam(unit: BattleUnit, target: BattleUnit, d: Dictionary, reacting: bool) 
 	if not reacting: battle._clear_roles()
 	battle._set_role(unit, "REACT" if reacting else "ATTACK")
 	battle._set_role(target, "TARGET")
-	_event("%s prays Ra'am on %s." % [battle.short_name(unit), battle.short_name(target)])
+	# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 	var extra := int(d.extra)
 	if target.acts_available > 0 and battle._enemy_raam_counter_roll(target):
 		target.spend_act()
 		battle._append_log("%s counter-attacks %s's Ra'am (1 act spent)." % [target.display_name, unit.display_name])
 		battle._set_role(target, "COUNTER")
-		battle._event("%s counter-attacks!" % battle.short_name(target))
+		# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 		var o: Dictionary = await battle._counter_exchange(unit, target, "enemy")
 		match int(o.winner):
 			BattleMath.CounterWinner.PLAYER:
@@ -693,8 +689,8 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 		if defense != BattleMath.RhythmResult.MISS:
 			battle._set_role(target, "DEFEND")
 		# D-109: sem contato só existe com defesa no centro.
-		_event("%s dodges." % battle.short_name(target))
-		battle._present_strike(unit, target, 0)
+		_event("%s → %s  DODGE" % [battle.short_name(unit), battle.short_name(target)])
+		battle._present_strike(unit, target, 0, false, false)
 		return
 	# Approved thunder (2026-11-23): the damage lands at the strike.
 	await fx.play_raam(target)
@@ -704,8 +700,8 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 		unit.current_sp, target.current_sp, target.race, battle.rng)
 	if bool(r.angel):
 		_log("%s -> %s: 0 dmg (Ra'am has no effect on angels)" % [unit.display_name, target.display_name])
-		_event("Ra'am has no effect on %s." % battle.short_name(target))
-		battle._present_strike(unit, target, 0, true)
+		_event("%s → %s  NO EFFECT" % [battle.short_name(unit), battle.short_name(target)])
+		battle._present_strike(unit, target, 0, true, false)
 		return
 	var amount := int(r.amount)
 	# D-109: marco do ataque 50/80/100%; defesa na lateral = metade.
@@ -724,12 +720,10 @@ func raam_hit(unit: BattleUnit, target: BattleUnit, extra: int, reacting: bool, 
 	var dealt := hp_before - target.current_hp
 	if defense != BattleMath.RhythmResult.MISS:
 		battle._set_role(target, "DEFEND")
-	if defense == BattleMath.RhythmResult.BEAM:
-		_event("%s blocks: %d damage." % [battle.short_name(target), dealt])
-	else:
-		_event("Ra'am strikes %s: %d damage." % [battle.short_name(target), dealt])
-	if not target.is_alive():
-		_event("%s is down." % battle.short_name(target))
+	var line := "%s → %s  %d%s" % [battle.short_name(unit), battle.short_name(target), dealt,
+		"  BLOCK" if defense == BattleMath.RhythmResult.BEAM else ""]
+	# D-110: a queda e o ato ganho entram na linha do resultado.
+	_event(line + battle.result_suffix(target, unit, not target.is_alive(), 0))
 	_present_raam(unit, target, dealt, beam, bool(r.crit))
 
 
@@ -756,7 +750,7 @@ func _release(unit: BattleUnit, d: Dictionary, why: String) -> void:
 	if back > 0:
 		unit.change_pp(back)
 		_log("%s: %s, %d PP back to %s." % [PrayerBook.spell_name(StringName(d.pray)), why, back, unit.display_name])
-		_event("%s is not cast: %d PP back." % [PrayerBook.spell_name(StringName(d.pray)), back])
+		_event("%s NOT CAST  +%d PP" % [PrayerBook.spell_name(StringName(d.pray)), back])
 
 
 ## After a plan block: queued spells that never resolved give their PP back.
@@ -785,7 +779,7 @@ func rest(unit: BattleUnit, reacting: bool) -> bool:
 	battle._append_log("%s %s: %d act(s) stored; round participation ended." % [
 		unit.display_name, "reacts with REST" if reacting else "rests", remaining])
 	if reacting: battle._set_role(unit, "REACT")
-	battle._event("%s rests: %d act(s) stored." % [battle.short_name(unit), remaining])
+	battle._event("%s  REST  %d ACT KEPT" % [battle.short_name(unit), remaining])
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	battle.hud.feedback = "%s: 0 ACT spent, %d stored" % [unit.display_name, remaining]
@@ -1296,10 +1290,10 @@ func expire(owner: BattleUnit) -> void:
 			unit.haganah = {}
 			if is_aegis:
 				_log("%s: Aegis Iris ended." % unit.display_name)
-				_event("%s's status shield ends." % battle.short_name(unit))
+				_event("%s  AEGIS END" % battle.short_name(unit))
 			else:
 				_log("%s: Haganah ended." % unit.display_name)
-				_event("%s's Haganah ends." % battle.short_name(unit))
+				_event("%s  HAGANAH END" % battle.short_name(unit))
 
 
 ## D-118 Shachar: detonates every pending dawn from an earlier round across all living foes.

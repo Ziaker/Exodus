@@ -268,7 +268,14 @@ func _battle_loot() -> void:
 	var b := await _battle("cerberus", {"seed": seed, "macca": 0, "fallen_relics": ["golden_calf", "manna_jar"],
 		"fallen_hp": 8})
 	_freeze(b)
-	_check(b.hud.opponents[0].display_name.begins_with("ELITE CERBERUS"), "Elite label (%s)" % b.hud.opponents[0].display_name)
+	SurvivalState.patch({"fallen_relics": [], "party": []})
+	_check(is_equal_approx(float(b.absorb_context().skill_bonus), 0.0), "D-120: no relic, no skill bonus")
+	SurvivalState.patch({"party": [{"relics": ["raziel_book"]}]})
+	_check(is_equal_approx(float(b.absorb_context().skill_bonus), 0.25), "D-120: BOOK OF RAZIEL gives +25% skill chance")
+	SurvivalState.patch({"fallen_relics": ["burning_bush"]})
+	_check(is_equal_approx(float(b.absorb_context().skill_bonus), 0.5), "D-120: it stacks with BURNING BUSH")
+	SurvivalState.patch({"fallen_relics": ["golden_calf", "manna_jar"], "party": []})
+	_check(b.hud.opponents[0].display_name == "CERBERUS" and SurvivalData.is_elite(seed, "cerberus"), "D-133: the elite shows its plain name (%s)" % b.hud.opponents[0].display_name)
 	var relics_before: int = (SurvivalState.data().relics as Array).size()
 	for foe in b.hud.opponents:
 		foe.current_hp = 0

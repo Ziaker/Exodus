@@ -3244,6 +3244,97 @@ Formato: ID · data · decisão · estado · impacto documental.
   `playable_controller.gd`, `prayer_flow.gd`; testes `test_battle_math`, `test_battle_combat`,
   `verify_playable_feedback/fx/prayer/reactions/skills`; `docs/COMBAT_SPEC.md`,
   `docs/DECISIONS.md`.
+- **D-110 · 2026-11-26 (decisão do criador) — Battle Log: 3 linhas no topo, rola sozinho, só o resultado.**
+  Pedido: ``o log de batalha desesperadamente precisa de outro rework``. Respostas do criador, uma
+  por pergunta: incômodos = ``Pouco espaço, Paginação com Z, Texto confuso``; linhas = ``3 linhas``;
+  sem Z = ``Rola sozinho``; texto confuso = ``a posição do texto dentro do bloco, opção 1 também``
+  (frases demais por golpe); posição = ``Topo, à esquerda``; golpe = ``Só o resultado``; queda e ato
+  = ``Entram no resultado``; outros anúncios que saem = ``Contra-ataque, Ataque à reza, Skill e
+  Ra'am``. Regra: `LOG_LINES` 3, primeira linha no alto da janela (`LOG_FIRST_BASELINE` 316, escolha
+  do agente para caber 3 linhas com folga); `push_event` marca tudo como lido e `_flush_log` não
+  espera mais o Z; os anúncios "X attacks Y.", "X counter-attacks…", "X attacks Y's prayer.", "X uses
+  SKILL on Y." / "X uses SKILL." (skill de golpe ou magia) e "X prays Ra'am on Y." saem do log (o
+  diagnóstico em `log_history` continua); "Down!" e "+N act." entram na própria linha do resultado
+  (`result_suffix`), também no Ra'am e no item arremessado do Survival. Ficam como estavam, aguardando
+  o criador: skills de buff/cura ("X uses SKILL."), dano por queimadura/sangramento seguido de "X is
+  down.", "X gains N acts." da fila perdida. Também corrigido: o Ra'am escrevia o desvio duas vezes e,
+  em anjo, "no effect" seguido de "hits X: 0 damage". Impacto: `playable_hud.gd`,
+  `playable_controller.gd`, `prayer_flow.gd`, `survival_battle.gd`; testes `verify_log_wrap`,
+  `verify_playable_layout`, `verify_playable_feedback`; `docs/DECISIONS.md`.
+  Segunda rodada (2026-11-26): o criador apontou ``muito texto com palavras redundantes e
+  desnecessárias`` e escolheu o estilo ``Telegráfico`` (prévia "FALLEN → FOE A  12  DOWN  +1 ACT",
+  "FOE B → FALLEN  7  BLOCK", "FALLEN ✖ FOE A  +12 SP", "FOE A  −2 COMMANDS", "FALLEN  REST  +20
+  EN"); a tabela frase a frase foi aprovada com ``Sim, implementa``. Golpe: "A → B  N" com
+  "  BLOCK", "  DODGE", "  MISS", "  NO EFFECT", "  DOWN", "  +N ACT"; contra-ataque "A ✖ B
+  [PERFECT] [+N SP]" / "A ✖ B  TIE"; fila "X  −N COMMAND(S)", "X  +N ACT"; turno "X  TURN",
+  "ROUND N END  +20% EN", "VICTORY"/"DEFEAT"; ações "X  NO ACT", "X  DEFEND", "X  PASS", "X  REST
+  +N EN  N ACT KEPT", "X ITEM → Y  +N HP", skill de buff/cura "X  SKILL", "X  CAN'T PAY SKILL";
+  absorção "X ABSORB → Y", "X ABSORBED Y", "X  NEW SKILL: S", "Y  RESISTS ABSORB", "NO ABSORB:
+  HUMAN"; estados "X  ATK ↑", "X  ATK ↑ END", "X  +N HP", "X  BURN  N", "X  BURN BLAST  N", "X
+  BLEED  N", "X  DOWN", "X  BURN/BLEED/BLIND/SLEEP", "X  MEND +N HP", "X  REGEN +N HP"; reza "X
+  PRAY", "X REFUAH → Y  +N HP", "X HAGANAH → Y", "X  PRAYER BROKEN", "X  +N PP", "SPELL NOT CAST
+  +N PP", "X  HAGANAH END", "NO PP: SPELL", "SPELL → Y  N PP"; Survival "S IDENTIFIED", "X ITEM →
+  Y  N/FULL/+N HP/PP/EN", "X ABSORBED Y  ganho", "CONTINUE  N LEFT", "RELIC: R", "+N MACCA".
+  Nomes de skill, item e reza em maiúsculas. Escolhas do agente: a quebra de linha do log passou a
+  preservar os dois espaços entre campos (antes juntava tudo com um espaço) e a fonte do HUD ganhou
+  uma reserva de símbolos monocromática (Segoe UI Symbol), porque o ✖ caía na fonte de emoji e saía
+  roxo. Ficaram como estavam, fora da tabela: as falas de planejamento do menu PRAY ("No act left…",
+  "Not enough PP for +1 on…", "…: +1 PP (N PP in total).") e as explicações dos menus.
+  Terceira rodada (2026-11-26): ``tira todos nomes em maiusculo deixa apenas a primeira letra assim
+  como yoch``; alcance = ``Na tela toda``. `NameCase.of` (scripts/core/name_case.gd) deixa só a
+  primeira letra maiúscula em cada palavra toda em maiúsculas ("FALLEN" → "Fallen", "FOE A" → "Foe
+  A", "HEAT WAVE" → "Heat Wave", "SHUTEN-DOUJI" → "Shuten-Douji"); nomes já mistos ("Yoch",
+  "Ra'am") ficam. Aplicado na exibição, não nos dados: `short_name` (log, setas, rótulos sobre os
+  inimigos, cabeçalho, anúncios, trilhas), fila de turnos, cartões dos heróis, menu de skills e de
+  itens, intenções do Survival, rótulo NEW SKILL da absorção, faixa de fase. Termos de jogo (ROUND,
+  ATTACK, BLOCK, DOWN, TURN…) seguem em maiúsculas. Fora do alcance (não é a tela de batalha): o
+  mapa do Survival ("FALLEN"/"YOCH" no painel do grupo), a loja e o diagnóstico em `log_history`.
+- **D-118 · 2026-11-26 (decisão do criador) — Herói ativo em destaque.**
+  Pedido: ``quero que quando um personagem esta ativo, no caso, eu estou escolhendo as opcoes de1
+  personagem, o outro fique escurecido, tenha mais destaque pra saber quem esta jogando e quem nao
+  esta``. Respostas do criador, uma por pergunta: o que escurece = ``Só o cartão``; intensidade =
+  ``Médio (50%)``; destaque do ativo = ``Borda pulsando``; cor = ``Verde da fila``; ritmo = ``1,5
+  segundo``. Regra: nos menus de escolha (plan, command, target, skill, pray, en_extra, item, react)
+  o cartão do herói que não está escolhendo recebe uma camada preta a 50% (`INACTIVE_CARD_DIM`); a
+  borda do cartão ativo pulsa em `GREEN_TEXT` (#81e6a8, o verde da fila) de opacidade 1,0 a 0,3 e
+  volta em 1,5 s (`ACTIVE_PULSE_PERIOD`). A curva do pulso e o mínimo de 0,3 seguem o pulso de
+  defesa que já existia (escolha do agente). Fora desses menus nenhum cartão escurece. Impacto:
+  `playable_hud.gd`; teste `verify_playable_layout`; `docs/DECISIONS.md`.
+- **D-119 · 2026-11-26 (decisão do criador) — Sem cartões sob a arte dos inimigos.**
+  Pedido: ``quero que remova estes cartoes de inimigos elite embaixo da arte deles, eles
+  atrapalham, deixe so os nomes deles com um parenteses normal, sem cartoes sem alteracao de
+  cor``. Respostas do criador, uma por pergunta: o que sai = ``Os dois, de todos`` (cartão de
+  intenção e texto do temperamento); nome do elite = ``apenas remove, deixe so os nomes deles
+  normais``. Regra: `_draw_intents` não desenha mais nada; `battle_label` devolve o nome simples
+  do elite (sem "ELITE" e sem [afixo]); o guardião mantém "WARDEN ". As intenções seguem rolando
+  e sendo executadas (`intent_text`, `intent_rect` ficam para a IA e os testes). Interpretei
+  ``parênteses normal`` + ``apenas remove`` como nome sem decoração nenhuma. Consequência: o
+  jogador deixa de ver a ação anunciada e quem é elite. Impacto: `survival_battle.gd`,
+  `survival_data.gd`; teste `verify_survival_run`; `docs/SURVIVAL_MODE.md`.
+- **D-121 · 2026-11-26 (decisão do criador) — Sem nome sobre a arte; papéis em texto.**
+  Pedido: ``eu acho que nao precisa ter o nome deles encima no geral, troque os cartoes que aparece
+  acima deles por textos maiusculos ao inves de blocos tambem``. Respostas do criador, uma por
+  pergunta: nomes saem = ``De todos (batalha toda)``; cor do texto = ``A cor do papel``; cartões de
+  papel dos heróis = ``remove``. Regra: `_enemy` não desenha mais o nome acima da arte; o papel do
+  inimigo é texto em negrito e maiúsculas na cor de `ROLE_ARROW_INKS` (ATTACK vermelho, TARGET
+  amarelo, DEFEND azul, COUNTER laranja, REACT verde) com sombra, sem bloco nem borda, na linha
+  onde o nome ficava; o papel do herói não é desenhado, mas a entrada continua como ponta das
+  setas (`hidden`). Tamanho do texto (9 px, o mesmo do cartão) e posição são escolha do agente. O
+  nome segue no cabeçalho, na fila de turnos, no Battle Log e nos anúncios. Revoga os blocos da
+  D-057 e da D-102 (a regra de duração da D-102 continua: o texto fica enquanto o papel existe).
+  Consequência: com o nome fora, dois inimigos iguais só se distinguem pela posição (Foe A à
+  esquerda). Impacto: `playable_hud.gd`; teste `verify_playable_feedback`; `docs/DECISIONS.md`.
+- **D-120 · 2026-11-26 (decisão do criador) — Sem identificação de habilidades.**
+  Pedido: ``remova essa regra de magia ter que ser usada uma vez pra saber oq ela faz``. Regra:
+  `learn_skill` e a absorção não marcam mais a skill como não identificada; o submenu FIGHT mostra
+  sempre o nome real e a descrição (some o nome hebraico, o "UNKNOWN EFFECT" e a linha "X
+  IDENTIFIED"); o evento que ensina uma skill diz o nome real. A lista `unidentified` do save é
+  mantida vazia (saves antigos deixam de esconder nomes). A relíquia BOOK OF RAZIEL
+  ("skills absorvidas chegam identificadas") perdia o efeito; pergunta ao criador, resposta
+  ``Chance de skill``: ela passa a dar +25% de chance de skill nova (perk `skill_chance_2`, soma com
+  o BURNING BUSH; empilhar é escolha do agente) e a REVELATION (par com SEER EYE) segue como estava. Impacto: `survival_battle.gd`,
+  `survival_state.gd`, `survival_world.gd`; testes `verify_survival_roguelike`,
+  `verify_survival_strata`; `docs/SURVIVAL_MODE.md`.
 
 Decisões anteriores de combate (atos, reações, SP, Press Turn, ritmo, absorção, itens,
 escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas em
@@ -3354,3 +3445,6 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   - **Alvo Vulnerável (unificado com `Vuln Pierce` D-124 — IMPLEMENTADO em `BattleUnit.is_vulnerable`):** combatente realizando ação não-ofensiva ou sob efeito que força `PASS` (paralisação, aprisionamento ou sono).
   - **5 ataques promovidos/reworked do Survival + 2 evoluções `ZAHAV`:** **Stone Crush** (`4ACT/0EN/PHYS/1T`, arremessa grande rocha causando `30 PHYS (+ATK)` — rework de `HEAVY CRUSH`); **Energy Blow** (`3ACT/0EN/MAGI/1T`, `COND` alvo vulnerável ou ≤ 1/4 HP, causa `25 DMG + MAK` e rouba metade do EN máximo do alvo até o fim da batalha — rework de `FINISHING BLOW`); **Drain Claw** (`2ACT/15EN/PHYS/1T`, toma `15 HP + 1/4 HP máx.` com teto de `40 HP` na parcela percentual em chefes/Guardiões/Anjos e cura `80%` do drenado — rework de `LIFE DRAIN`) com evolução `ZAHAV` **Vital Claws** (`3ACT/25EN/PHYS/1T`, toma `30 HP + 1/4 HP máx.` com teto de `60 HP` e `15 EN`, cura `80%` do HP drenado); **Weaken** (`1ACT/10EN/STAT/1T`, esfera de energia azul reduzindo `MEF` em `5 + 50% MAK` até o fim do combate, acumula até −50% da base, piso efetivo `1`, dissipável via `Tahorah` — rework de `CURSE RAY`) com evolução `ZAHAV` **Weakenen** (`2ACT/15EN/STAT/2T`, esfera maior em 2 alvos distintos reduzindo `MAK` e `MEF` em `10 + 50% MAK` até o fim do combate, acumula até −50% da base, piso efetivo `1`, dissipável); **Mark of Sun** (`4ACT/20EN/STAT/1T`, sol acima do alvo faz sofrer `20 MAGI` extra por golpe mitigado por `MEF` com piso mínimo `5` até o fim do próximo round, desaparecendo no 3º golpe recebido, dissipável — rework de `SPIRIT BRAND`).
   Impacto: `docs/CANON_SKILLS_D131.md`, `docs/CANON_SKILLS_D124.md`, `docs/DECISIONS.md`, `docs/GDD.md` (Apêndice A), `docs/COMBAT_SPEC.md`, `docs/CANON_BOUNDARY.md`.
+
+- **D-136 · 2026-11-27 (decisão do criador) — indicador de papel dentro do cartão do herói (opções 2 + 3, refinando a D-135).**
+  Substitui definitivamente o antigo bloco flutuante sobre a borda superior do cartão do herói (D-057) e acrescenta sinalização integrada ao cartão sem invadir a borda nem o Battle Log: (1) filete vertical interno de 2 px de layout (3 px na tela 816×624) rente à borda interna esquerda + degradê horizontal sutil (14% até 0% em 38% da largura interna) na cor do papel (`ROLE_ARROW_INKS`), desenhados dentro da moldura de 1 px e acompanhando o tremor de dano; (2) texto solto em maiúsculas (`ATTACK`, `TARGET`, `DEFEND`, `COUNTER`, `REACT`) sem caixa, alinhado à direita na linha inferior (`HP`/`EN` ou `PP`) sempre que o cartão não é estreito e há largura livre sem colisão; nos 3 cartões estreitos (D-111), o rótulo se recolhe e permanecem o filete e o degradê. As setas animadas (D-059), o texto solto sobre os inimigos (D-135) e as cores dos nomes no log (D-060) permanecem intactos. Impacto: `scripts/battle/playable_hud.gd`, `tests/verify_playable_feedback.gd`, `docs/DECISIONS.md`, `docs/GDD.md` (Apêndice A).

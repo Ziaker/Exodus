@@ -22,15 +22,15 @@ const STAGE_SHIFT := -32.0 / 1.5
 const STAGE_RECT := Rect2(0, 0, 544, 300.0)
 ## Option 13 moved the enemies 36 screen px (24 here) down.
 const FIELD_RECT := Rect2(7, 82 + STAGE_SHIFT + 24, 530, 210)
-const LOG_LINES := 2
+## D-110 (criador 2026-11-26): 3 linhas, alinhadas no topo e à esquerda (revoga as 2
+## linhas centradas da D-056); a primeira linha começa no alto da janela.
+const LOG_LINES := 3
 const LOG_STEP := 14.0
 const LOG_PX := 11
-## Creator 2026-11-24 (D-056): two log lines, centred in a tall strip with clear space
-## above the caps and under the descenders — no glyph touches a border.
 ## Faixa fixa de estado dentro da janela do log: de quem é a vez, o que está
 ## acontecendo e o que fazer. Nunca some após 0,75 s como o announce antigo.
 const PHASE_STRIP_HEIGHT := 16.0
-const LOG_FIRST_BASELINE := 331.0
+const LOG_FIRST_BASELINE := 316.0
 ## The strip is 88 screen px tall: top at 450, bottom at 538 (8 px above the panels).
 const BATTLE_LOG_RECT := Rect2(16.0 / 3.0, 300.0, 1600.0 / 3.0, 176.0 / 3.0)
 ## Old log lines at 80% (the prototype's .old lines).
@@ -71,6 +71,10 @@ const SVG_SCALE_Y := 298.0 / 251.0
 const TEXT := Color("f7f3ed")
 const GREEN_TEXT := Color("81e6a8")
 const FLOATER_EYE_GREEN := Color("36ce72")
+## D-132 (criador 2026-11-26): the other hero's card at 50% while one hero chooses; the
+## active hero's border pulses in GREEN_TEXT (the turn queue's green), 1.5 s there and back.
+const INACTIVE_CARD_DIM := 0.5
+const ACTIVE_PULSE_PERIOD := 1.5
 const RED_TEXT := Color("ff9a92")
 const OWN_FILL := Color("36aa6d")
 const FOE_FILL := Color("bb3d48")
@@ -149,9 +153,8 @@ var _log_age := 99.0
 ## Menu explanations (skill/pray/EN/absorb/item) stay transient: they show as the newest
 ## line only while their menu is open.
 var events: Array[Dictionary] = []
-## Lines from the start that the player has had the chance to read. The window shows the
-## oldest unread pair; the controller pages the rest with Z before the battle goes on, so
-## a burst of events (a counter-attack gives 3-4) is never lost on the 2-line log.
+## D-110 (criador 2026-11-26): sem paginação com Z. O log rola sozinho: cada frase nova
+## entra embaixo e as antigas sobem e saem na hora; a batalha nunca espera pelo log.
 var events_read := 0
 const EVENT_CAP := 64
 const NO_INK := Color(0, 0, 0, 0)
@@ -164,6 +167,14 @@ const ROLE_FILLS := {
 	"DEFEND": Color("3f6fb8"), "COUNTER": Color("c8701e"), "REACT": Color("2f8f5b"),
 }
 const ROLE_PX := 9
+## D-136 (creator 2026-11-27): hero role cue inside the hero card (options 2 + 3),
+## replacing the floating top-border box (D-057) and refining D-135: a 2 layout-px
+## (3 screen-px) left inner strip + subtle horizontal tint in the role's colour, plus
+## plain right-aligned role text on the HP/EN row when width allows (non-narrow cards).
+const HERO_ROLE_STRIP_WIDTH := 2.0
+const HERO_ROLE_TINT_SHARE := 0.38
+const HERO_ROLE_TINT_ALPHA := 0.14
+const HERO_ROLE_PX := 8
 ## D-058 turn strip under the top line (layout chosen by the agent, pending the creator's
 ## visual judgment).
 const TURN_STRIP_TOP := 38.0  # under the announcement line (baseline 30, 12 px)
@@ -207,6 +218,12 @@ func _ready() -> void:
 	ui_bold = SystemFont.new()
 	ui_bold.font_names = ui_font.font_names
 	ui_bold.font_weight = 700
+	# D-110: Tahoma has no ✖; without this the system falls back to the colour emoji
+	# font and the log's ✖ came out purple. A monochrome symbol font draws it in the ink.
+	var symbols := SystemFont.new()
+	symbols.font_names = PackedStringArray(["Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols 2"])
+	ui_font.fallbacks = [symbols]
+	ui_bold.fallbacks = [symbols]
 	target_sheet = load(TARGET_SHEET) as Texture2D
 	marks = Node2D.new()
 	marks.name = "TargetMarks"
@@ -524,7 +541,7 @@ func push_event(text: String, ink: Color = NO_INK) -> void:
 	events.append({"text": text, "ink": ink, "names": _role_name_inks()})
 	while events.size() > EVENT_CAP:
 		events.pop_front()
-		events_read = maxi(0, events_read - 1)
+	events_read = events.size()
 
 
 ## D-060 (creator 2026-11-25): in the log, each name takes the colour of its role at the
@@ -573,30 +590,18 @@ func _str_named(text: String, x: float, baseline: float, ink: Color, px: int, na
 	return cursor - x
 
 
-## End (exclusive) of the lines the window shows: from the oldest unread line, whole
-## lines while they fit the two rows (all read: the end of the log).
+## D-110: the window always shows the newest lines (no unread page waits).
 func _events_end() -> int:
-	if events_read >= events.size():
-		return events.size()
-	var rows := 0
-	var end := events_read
-	while end < events.size():
-		var need := _rows_needed(String(events[end].text))
-		if end > events_read and rows + need > LOG_LINES:
-			break
-		rows += need
-		end += 1
-	return end
+	return events.size()
 
 
-## True while event lines wait beyond the window (the controller pages them with Z).
+## D-110: nothing ever waits beyond the window, so the battle never pages the log.
 func log_hidden() -> bool:
-	return events.size() > _events_end()
+	return false
 
 
-## The lines on screen now count as read; the window moves to the next unread ones.
 func page_log() -> void:
-	events_read = _events_end()
+	events_read = events.size()
 
 
 func press_command(row: int, kind: String) -> void:
@@ -774,6 +779,12 @@ func _draw() -> void:
 	_log_line()
 	for who in players.size():
 		_character(who, status_rect(who))
+		# D-132 (criador 2026-11-26): while one hero's options are being chosen, the other
+		# hero's card is darkened to 50% so it is clear who is playing.
+		if card_dimmed(players[who]):
+			draw_set_transform(shake_offset(players[who]))
+			draw_rect(status_rect(who), Color(0, 0, 0, INACTIVE_CARD_DIM))
+			draw_set_transform(Vector2.ZERO)
 	_menu()
 	if mode in ["timing", "counter", "absorb", "continue", "announce", "turn", "result"]:
 		hitboxes.append({"rect": Rect2(Vector2.ZERO, SCREEN), "key": "live-confirm"})
@@ -851,7 +862,7 @@ func turn_strip_entries() -> Array[Dictionary]:
 		if not unit.is_alive(): continue
 		result.append({
 			"unit": unit,
-			"text": unit.display_name if unit.is_player else "FOE",
+			"text": NameCase.of(unit.display_name) if unit.is_player else "FOE",
 			"current": unit == owner,
 			"done": unit != owner and unit.acts_available <= 0,
 		})
@@ -923,7 +934,7 @@ func _sp_window() -> void:
 	var own: BattleUnit = pair[0]
 	var foe: BattleUnit = pair[1]
 	if own == null or foe == null: return
-	var own_text := "%s · %d SP" % [own.display_name, own.current_sp]
+	var own_text := "%s · %d SP" % [NameCase.of(own.display_name), own.current_sp]
 	var foe_text := "FOE · %d SP" % foe.current_sp
 	# Texto nunca invade a barra: cada lado tem seu espaço reservado antes dela.
 	var own_limit := SP_TRACK.position.x - 64.0 - 6.0
@@ -1025,14 +1036,15 @@ func _enemy(_x: float, index: int) -> void:
 				_sp_arrow(Vector2(left + ARROW_HEAD.x * 0.5, art.position.y), up)
 				label_x += ARROW_HEAD.x
 			_str("SP", label_x + SIGN_GAP, art.position.y + ARROW_HEIGHT * 0.5 + 4, color, 12, true, HORIZONTAL_ALIGNMENT_LEFT, Color(0, 0, 0, 0.65))
-	# Criador 2026-11-27: sem nomes desenhados acima dos inimigos na tela de batalha;
-	# mantém o ponto de ancoragem para cartões de papel (D-057) e setas de atos planejados.
-	var name_y := maxf(FIELD_RECT.position.y + 16.0, art.position.y - 10.0)
+	# D-135 (criador 2026-11-26): o nome do inimigo não é mais desenhado acima da arte (o
+	# nome segue no cabeçalho e na fila). `name_y` é a linha onde ele ficava.
+	var name_y := maxf(FIELD_RECT.position.y + 16.0, art.position.y - 16.0)
 	var role := role_of(unit)
-	# D-057: the enemy's role in the action on screen sits right above its art (the
-	# queued-acts arrows give way to it while the action runs).
+	# D-057/D-135: the enemy's role in the action on screen is plain upper-case text, in
+	# the role's colour, on the line where the name used to be (the queued-acts arrows give
+	# way to it while the action runs).
 	if not role.is_empty():
-		_role_tag(role, column.get_center().x, name_y - 16.0, true)
+		_role_tag(role, column.get_center().x, name_y - 9.5, true)
 		_role_tags[-1]["unit"] = unit
 		_role_tags[-1]["side"] = "enemy"
 		_role_tags[-1]["anchor"] = Vector2(column.get_center().x, name_y + 2.0)
@@ -1201,21 +1213,22 @@ func _role_arrow(from: Vector2, tip: Vector2, ink: Color, head_ink: Color) -> vo
 var drawn_role_boxes: Array[String] = []
 
 
-## "box": filled box, light border, bold caps with a shadow (D-057).
+## D-135 (criador 2026-11-26, revoga os blocos da D-057): the role is plain bold upper-case
+## text in the role's colour (ROLE_ARROW_INKS) with a shadow, no box; only enemies have it.
 func _draw_role_boxes() -> void:
-	# D-102 (creator 2026-11-25, revokes D-061): a box stays while its role exists; it goes
+	# D-102 (creator 2026-11-25, revokes D-061): the text stays while its role exists; it goes
 	# away when the controller clears the roles (result confirmed).
 	drawn_role_boxes.clear()
 	for tag in _role_tags:
+		if bool(tag.get("hidden", false)):
+			continue
 		var role: String = tag.role
 		var r: Rect2 = tag.rect
 		drawn_role_boxes.append(role)
-		role_layer.draw_rect(r, ROLE_FILLS.get(role, ROLE_FILLS.TARGET))
-		role_layer.draw_rect(Rect2(r.position + Vector2(0.5, 0.5), r.size - Vector2.ONE), Color(1, 1, 1, 0.85), false, 1)
 		var w := _width(role, ROLE_PX, true)
 		var at := Vector2(r.get_center().x - w * 0.5, r.position.y + 9.5)
 		role_layer.draw_string(ui_bold, at + Vector2(0, 1), role, HORIZONTAL_ALIGNMENT_LEFT, -1, ROLE_PX, Color(0, 0, 0, 0.6))
-		role_layer.draw_string(ui_bold, at, role, HORIZONTAL_ALIGNMENT_LEFT, -1, ROLE_PX, Color.WHITE)
+		role_layer.draw_string(ui_bold, at, role, HORIZONTAL_ALIGNMENT_LEFT, -1, ROLE_PX, ROLE_ARROW_INKS.get(role, Color.WHITE))
 
 
 ## D-100 (creator 2026-11-25): every SP change floats ONE random Hebrew letter (never the value)
@@ -1443,9 +1456,8 @@ func _log_line() -> void:
 	var text_start := text_x + _width("*", LOG_PX, true) + 4.0
 	var rows := _log_rows(lines, _log_inner())
 	for i in rows.size():
-		# D-056: the rows are centred in the window, so a single line never sits on the
-		# bottom border (creator 2026-11-24: it looked cut). Newest last.
-		var row := (LOG_LINES - rows.size()) * 0.5 + i
+		# D-110: the rows start at the top of the window, newest last.
+		var row := i
 		var entry: Dictionary = rows[i]
 		var baseline := LOG_FIRST_BASELINE + row * LOG_STEP
 		var newest: bool = entry.newest
@@ -1464,13 +1476,19 @@ func _log_line() -> void:
 func _wrap_text(value: String, max_width: float, px: int) -> Array[String]:
 	var rows: Array[String] = []
 	var current := ""
-	for word in value.split(" ", false):
+	# D-110: the telegraphic lines separate fields with two spaces; keep them (an empty
+	# token is an extra space), but never start or end a row with one.
+	for word in value.split(" ", true):
+		if word.is_empty():
+			if not current.is_empty():
+				current += " "
+			continue
 		var candidate := word if current.is_empty() else current + " " + word
 		if _width(candidate, px) <= max_width:
 			current = candidate
 			continue
 		if not current.is_empty():
-			rows.append(current)
+			rows.append(current.strip_edges(false, true))
 		# A single word wider than the window is split by characters, never lost.
 		var rest := word
 		while _width(rest, px) > max_width and rest.length() > 1:
@@ -1480,6 +1498,7 @@ func _wrap_text(value: String, max_width: float, px: int) -> Array[String]:
 			rows.append(rest.left(cut))
 			rest = rest.substr(cut)
 		current = rest
+	current = current.strip_edges(false, true)
 	if not current.is_empty():
 		rows.append(current)
 	return rows
@@ -1539,6 +1558,43 @@ func status_rect(i: int) -> Rect2:
 	return STATUS_RECTS[clampi(i, 0, STATUS_RECTS.size() - 1)]
 
 
+## D-136 (creator 2026-11-27): geometry and visibility of the hero's in-card role cue
+## (options 2 + 3: left inner strip + subtle tint, plus right-aligned plain text on the
+## HP/EN row on non-narrow cards). Returns {} when the hero has no active role.
+func hero_role_cue(who: int) -> Dictionary:
+	if who < 0 or who >= players.size() or ui_font == null or ui_bold == null:
+		return {}
+	var unit := players[who]
+	var role := role_of(unit)
+	if role.is_empty() or not ROLE_ARROW_INKS.has(role):
+		return {}
+	var r := status_rect(who)
+	var inner := Rect2(r.position + Vector2.ONE, r.size - Vector2(2.0, 2.0))
+	var strip_rect := Rect2(inner.position, Vector2(HERO_ROLE_STRIP_WIDTH, inner.size.y))
+	var tint_rect := Rect2(inner.position, Vector2(inner.size.x * HERO_ROLE_TINT_SHARE, inner.size.y))
+	var narrow := r.size.x < NARROW_PANEL_LIMIT
+	var x := r.position.x + 9.0
+	var right := r.end.x - 9.0
+	var sec_label := "PP" if unit.prays else "EN"
+	var sec_value := "%d/%d" % [unit.current_pp, PrayerBook.MAX_PP] if unit.prays else "%d/%d" % [unit.current_en, unit.stats.max_en]
+	var hp_value := "%d/%d" % [unit.current_hp, unit.stats.max_hp]
+	var sec_label_x := x + _width("HP", 9) + 4.0 + _width(hp_value, 9) + 10.0
+	var sec_end_x := sec_label_x + _width(sec_label, 9) + 4.0 + _width(sec_value, 9, true)
+	var avail := right - (sec_end_x + 6.0)
+	var px := _fit_px(role, HERO_ROLE_PX, maxf(1.0, avail), true, 6)
+	var show_label := (not narrow) and avail >= _width(role, px, true)
+	return {
+		"role": role,
+		"ink": ROLE_ARROW_INKS[role],
+		"strip_rect": strip_rect,
+		"tint_rect": tint_rect,
+		"show_label": show_label,
+		"label_px": px,
+		"label_right": right,
+		"label_avail": avail,
+	}
+
+
 func _character(who: int, r: Rect2) -> void:
 	if who >= players.size(): return
 	var unit := players[who]
@@ -1564,7 +1620,30 @@ func _character(who: int, r: Rect2) -> void:
 	if defending:
 		var swing := absf(fmod(time / 0.7, 2.0) - 1.0)
 		border = Color(1, 1, 1, lerpf(0.95, 0.38, _bezier(swing, 0.42, 0, 0.58, 1)))
+	elif _choosing_unit() == unit and unit.is_player:
+		border = active_border(time)
 	_window(r, CARD_FILL, border)
+	# D-136 (options 2 + 3): subtle left tint and vertical inner strip stay strictly inside the
+	# 1 px border and shake together with the card.
+	var role_cue := hero_role_cue(who)
+	if not role_cue.is_empty():
+		var tint: Rect2 = role_cue.tint_rect
+		var role_ink: Color = role_cue.ink
+		draw_polygon(
+			PackedVector2Array([
+				tint.position,
+				Vector2(tint.end.x, tint.position.y),
+				tint.end,
+				Vector2(tint.position.x, tint.end.y),
+			]),
+			PackedColorArray([
+				Color(role_ink, HERO_ROLE_TINT_ALPHA),
+				Color(role_ink, 0.0),
+				Color(role_ink, 0.0),
+				Color(role_ink, HERO_ROLE_TINT_ALPHA),
+			])
+		)
+		draw_rect(role_cue.strip_rect, role_ink)
 	var x := r.position.x + 9
 	var right := r.end.x - 9
 	var top_line := r.position.y + 16
@@ -1585,7 +1664,7 @@ func _character(who: int, r: Rect2) -> void:
 	if not down:
 		# Nome, SP e ACT dividem a mesma linha: o nome encolhe antes de colidir.
 		name_limit = act_right - _width(act_text, 9) - (0.0 if narrow else SP_ACT_GAP) - _width(sp_text, 9) - (6.0 if narrow else 32.0 / 3.0) - name_x
-	var label := unit.display_name + (" [DOWN]" if down else "")
+	var label := NameCase.of(unit.display_name) + (" [DOWN]" if down else "")
 	_str(label, name_x, top_line,
 			Color("ede7e1") if down else Color.WHITE,
 			_narrow_name_px(r) if narrow and not down else _fit_px(label, 12, maxf(12.0, name_limit), true), true)
@@ -1626,13 +1705,19 @@ func _character(who: int, r: Rect2) -> void:
 	_str(sec_label, sec_label_x, bottom_line, Color(TEXT, vitals_alpha), 9)
 	# O número fica logo após o rótulo, não encostado na borda direita do painel.
 	_str(sec_value, sec_label_x + _width(sec_label, 9) + 4, bottom_line, sec_ink, 9, true)
+	# D-136 (option 3): plain role text at bottom-right of the HP/EN row when width allows.
+	if not role_cue.is_empty() and bool(role_cue.show_label):
+		_str(String(role_cue.role), float(role_cue.label_right), bottom_line, Color(role_cue.ink),
+				int(role_cue.label_px), true, HORIZONTAL_ALIGNMENT_RIGHT, Color(0, 0, 0, 0.75))
 	draw_set_transform(Vector2.ZERO)
-	# D-057: the hero's role in the action on screen, on the top border of its window.
+	# D-057 / D-135 / D-136: the hero's role cue lives inside the hero card now; the hidden
+	# _role_tags entry stays only as the animated arrows' endpoint (D-059).
 	var role := role_of(unit)
 	if not role.is_empty():
 		_role_tag(role, r.position.x + 6.0, r.position.y - 6.0, false)
 		_role_tags[-1]["unit"] = unit
 		_role_tags[-1]["side"] = "hero"
+		_role_tags[-1]["hidden"] = true
 		# Arrows stop at the top edge of the log, above this hero, so they never cross its text.
 		_role_tags[-1]["anchor"] = Vector2(r.get_center().x, BATTLE_LOG_RECT.position.y - 2.0)
 	if mode == "target" and battle.target_side == "player":
@@ -1655,6 +1740,18 @@ func _choosing_unit() -> BattleUnit:
 	if mode in ["plan", "command", "target", "skill", "pray", "en_extra", "item"]:
 		return battle.reaction_actor if battle.in_reaction else battle.active_actor
 	return null
+
+
+## D-132: true for the hero whose card is darkened (another hero is choosing).
+func card_dimmed(unit: BattleUnit) -> bool:
+	var chooser := _choosing_unit()
+	return chooser != null and chooser.is_player and unit != chooser
+
+
+## D-132: the active hero's border pulses in the turn queue's green, 1.5 s there and back.
+func active_border(t: float) -> Color:
+	var swing := absf(fmod(t / (ACTIVE_PULSE_PERIOD * 0.5), 2.0) - 1.0)
+	return Color(GREEN_TEXT, lerpf(0.3, 1.0, _bezier(swing, 0.42, 0, 0.58, 1)))
 
 
 func _panel_highlighted(unit: BattleUnit, who: int) -> bool:

@@ -308,8 +308,8 @@ func _relics() -> void:
 	_check(st.atk == 5 + 9 and st.agi == 7, "apply_all applies relics + covenant")
 	_check(SurvivalRelics.covenants(["shard_of_urim"]).is_empty(), "Half a pair gives nothing")
 	_check(SurvivalRelics.has_perk(["golden_calf", "merchant_seal"], "mammon"), "MAMMON perk from the pair")
-	_check(SurvivalRelics.party_has({"fallen_relics": [], "party": [{"relics": ["raziel_book"]}]}, "identified"), "party_has sees an ally's relics")
-	_check(not SurvivalRelics.party_has({"fallen_relics": [], "party": [], "reserve": [{"relics": ["raziel_book"]}]}, "identified"), "D-111: the reserve does not count")
+	_check(SurvivalRelics.party_has({"fallen_relics": [], "party": [{"relics": ["raziel_book"]}]}, "skill_chance_2"), "party_has sees an ally's relics")
+	_check(not SurvivalRelics.party_has({"fallen_relics": [], "party": [], "reserve": [{"relics": ["raziel_book"]}]}, "skill_chance_2"), "D-111: the reserve does not count")
 	_check(SurvivalRelics.cap_of({"kind": "demon"}) == 1 and SurvivalRelics.cap_of({"kind": "human"}) == 2 and SurvivalRelics.cap_of({"kind": "yoch"}) == 2 and SurvivalRelics.cap_of("fallen") == 1, "D-111: 1 relic per unit, humans 2")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
@@ -377,7 +377,7 @@ func _economy() -> void:
 	_check(not (SurvivalState.data().unidentified as Array).has("hellfire"), "BOOK OF RAZIEL: skill arrives identified")
 	SurvivalState.patch({"fallen_relics": []})
 	SurvivalState.learn_skill(&"mend")
-	_check((SurvivalState.data().unidentified as Array).has("mend"), "Without it the skill is unidentified")
+	_check(not (SurvivalState.data().unidentified as Array).has("mend"), "D-120: no skill is ever unidentified, relic or not")
 	# OMEN 4 = 2 continues.
 	SurvivalState.patch({"omen": 4})
 	_check(SurvivalState.max_continues() == 2, "OMEN 4 caps continues at 2")

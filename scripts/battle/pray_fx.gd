@@ -152,7 +152,7 @@ func _draw() -> void:
 				"suffix": "x%d" % unit.paralyzed_acts})
 		if unit.has_status(&"gods_message"):
 			marks.append({"glyph": MARK_GODS_MESSAGE, "color": Color("ffd84a", 0.7 + 0.3 * pulse), "jitter": 0.0})
-		var x: float = card.position.x + 7 + hud._width(unit.display_name, 13, true) + 8
+		var x: float = card.position.x + 7 + hud._width(NameCase.of(unit.display_name), 13, true) + 8
 		var cursor := x
 		for m_idx in marks.size():
 			var mk: Dictionary = marks[m_idx]

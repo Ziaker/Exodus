@@ -263,7 +263,7 @@ func _run() -> void:
 	battle.counter.finish(R.MISS, R.POINT)
 	# Power 8 with no damage floor yet (D-033 floor not implemented) can land a 0-damage hit:
 	# the strike is proven by its event line, not by HP.
-	var struck: bool = battle.hud.events.any(func(e): return String(e.text).contains("hits FALLEN") or String(e.text).begins_with("FALLEN blocks"))
+	var struck: bool = battle.hud.events.any(func(e): return String(e.text).contains("→ Fallen  "))
 	check(struck, "The winning enemy counter strikes the hero (%s)" % str(battle.hud.events.map(func(e): return e.text)))
 	check(battle._fallen.current_sp <= fallen_sp - 4, "The hero loses 4 SP to the enemy")
 	confirm(battle)

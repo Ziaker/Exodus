@@ -269,7 +269,7 @@ func _verify_human_example_battle() -> void:
 		var it: Dictionary = b.intents.get(eye.id, {})
 		check(String(it.get("kind", "")) == "buff", "%s intent is buff (got %s)" % [eye.display_name, it.get("kind")])
 		check(it.get("target") == human, "%s intent targets HUMAN A" % eye.display_name)
-		check(b.intent_text(eye).contains("HUMAN A"), "%s intent text names HUMAN A (%s)" % [eye.display_name, b.intent_text(eye)])
+		check(b.intent_text(eye).contains("Human A"), "%s intent text names HUMAN A (%s)" % [eye.display_name, b.intent_text(eye)])
 
 	# Executa os 5 buffs e verifica alvo = HUMAN A, olhos NUNCA buffados, consumo exato de EN e efeito real
 	b.turn_owner = eye_a

@@ -602,12 +602,10 @@ static func grant_relic(id: String) -> bool:
 static func learn_skill(skill: StringName) -> void:
 	var s := data()
 	var skills: Array = s.get("skills", [])
-	var unknown: Array = s.get("unidentified", [])
 	if not skills.has(String(skill)):
 		skills.append(String(skill))
-		if not SurvivalRelics.party_has(s, "identified"):
-			unknown.append(String(skill))
-	patch({"skills": skills, "unidentified": unknown})
+	# D-134: skills are never unidentified (the list stays empty, also for old saves).
+	patch({"skills": skills, "unidentified": []})
 
 
 static func identify_skill(skill: StringName) -> void:

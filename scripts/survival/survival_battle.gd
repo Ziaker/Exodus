@@ -418,15 +418,15 @@ func intent_text(unit: BattleUnit) -> String:
 		return "FLEE"
 	if skill == &"rest":
 		return "REST (+2 EN)"
-	var name := "ATTACK" if skill == &"" else SkillBook.display_name(skill)
+	var name := "ATTACK" if skill == &"" else NameCase.of(SkillBook.display_name(skill))
 	match String(it.kind):
 		"attack", "strike":
 			var t: BattleUnit = it.target
-			return "%s ▸ %s" % [name, t.display_name.to_upper() if t != null else "?"]
+			return "%s ▸ %s" % [name, NameCase.of(t.display_name) if t != null else "?"]
 		"buff":
 			var bt: BattleUnit = it.target
 			if bt != null:
-				return "%s ▸ %s" % [name, bt.display_name.to_upper()]
+				return "%s ▸ %s" % [name, NameCase.of(bt.display_name)]
 		"magic":
 			return "%s ▸ ALL" % name
 	return name
@@ -488,6 +488,13 @@ func intent_rect(index: int) -> Rect2:
 	return Rect2(art.get_center().x - w * 0.5, art.end.y + 11.0, w, 24.0)
 
 
+## D-133 (criador 2026-11-26): the cards under the enemies' art (announced action and
+## temperament) are gone, "eles atrapalham"; the enemies keep deciding by their intents, only
+## nothing is drawn. `intent_text` / `intent_rect` stay for the tests and the AI.
+func _draw_intents() -> void:
+	pass
+
+
 ## D-073 LEVIATHAN SCALE: quem a usa não queima (as queimaduras somem antes do tique).
 func _burn_tick() -> void:
 	var s := SurvivalState.data()
@@ -500,7 +507,7 @@ func _burn_tick() -> void:
 
 
 func short_name(unit: BattleUnit) -> String:
-	return unit.display_name if unit != null else ""
+	return NameCase.of(unit.display_name) if unit != null else ""
 
 
 func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
@@ -517,29 +524,9 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 
 # ------------------------------------------------- Skill identification
 
-func skill_label(skill: StringName) -> String:
-	var unknown: Array = SurvivalState.data().get("unidentified", [])
-	if unknown.has(String(skill)):
-		return SurvivalData.hebrew_skill(skill)
-	return super.skill_label(skill)
-
-
-func skill_info(index: int) -> String:
-	if index >= 0 and index < skill_ids.size():
-		var sk := skill_ids[index]
-		var unknown: Array = SurvivalState.data().get("unidentified", [])
-		if unknown.has(String(sk)):
-			return "UNKNOWN EFFECT — use it once to reveal its name and power."
-	return super.skill_info(index)
-
-
-func submit_skill(index: int) -> void:
-	var sk := StringName(skill_ids[index]) if index >= 0 and index < skill_ids.size() else &""
-	super.submit_skill(index)
-	if sk != &"":
-		SurvivalState.identify_skill(sk)
-		_append_log("IDENTIFIED: %s" % SkillBook.display_name(sk))
-		_event("%s identified." % SkillBook.display_name(sk))
+## D-134 (criador 2026-11-26): "remova essa regra de magia ter que ser usada uma vez pra saber
+## oq ela faz". Every skill shows its real name and info from the moment it is learned: the
+## identification (Hebrew name, UNKNOWN EFFECT, IDENTIFIED line) is gone.
 
 
 # ------------------------------------------------- Survival items (BEAD / CHAKRA)
@@ -552,7 +539,7 @@ func _wait_item_menu() -> String:
 		var id := String(entry.id)
 		var count := int(s.get(id, 0))
 		if count > 0:
-			labels.append("%s x%d" % [String(entry.name), count])
+			labels.append("%s x%d" % [NameCase.of(String(entry.name)), count])
 			item_ids.append(id)
 	if labels.is_empty():
 		return ""
@@ -575,7 +562,7 @@ func item_info(index: int) -> String:
 	var def := SurvivalData.shop_item(item_ids[index])
 	if def.is_empty():
 		return ""
-	return "%s: %s" % [String(def.name), String(def.info)]
+	return "%s: %s" % [NameCase.of(String(def.name)), String(def.info)]
 
 
 ## Quantidade real do item: SHEPHERD'S STAFF faz HP/EN de itens render +50%.
@@ -651,9 +638,9 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 		fx.play("MAGIC", recipient, dealt, unit)
 		_append_log("%s throws %s at %s: -%d HP." % [
 			unit.display_name, String(item_def.name), recipient.display_name, dealt])
-		_event("%s throws %s at %s: %d damage." % [short_name(unit), String(item_def.name), short_name(recipient), dealt])
-		if not recipient.is_alive():
-			_event("%s is down." % short_name(recipient))
+		# D-110: a queda entra na linha do resultado.
+		_event("%s %s → %s  %d%s" % [short_name(unit), NameCase.of(String(item_def.name)), short_name(recipient), dealt,
+			result_suffix(recipient, unit, not recipient.is_alive(), 0)])
 		hud.feedback = "%s: HP %d/%d | 1 ACT spent" % [recipient.display_name, recipient.current_hp, recipient.stats.max_hp]
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
@@ -674,7 +661,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 		_append_log("%s uses %s on %s: +%d HP, +%d %s%s." % [
 			unit.display_name, String(item_def.name), recipient.display_name, healed_full, restored,
 			"PP" if recipient.prays else "EN", " (-2 SP)" if unit.is_fallen else ""])
-		_event("%s uses %s on %s: fully restored." % [short_name(unit), String(item_def.name), short_name(recipient)])
+		_event("%s %s → %s  FULL" % [short_name(unit), NameCase.of(String(item_def.name)), short_name(recipient)])
 		hud.feedback = "%s: HP %d/%d | 1 ACT spent" % [recipient.display_name, recipient.current_hp, recipient.stats.max_hp]
 		if reacting:
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
@@ -688,14 +675,14 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 		_append_log("%s uses %s on %s: +%d HP%s." % [
 			unit.display_name, String(item_def.name), recipient.display_name, healed,
 			" (-2 SP)" if unit.is_fallen else ""])
-		_event("%s uses %s on %s: +%d HP." % [short_name(unit), String(item_def.name), short_name(recipient), healed])
+		_event("%s %s → %s  +%d HP" % [short_name(unit), NameCase.of(String(item_def.name)), short_name(recipient), healed])
 		hud.feedback = "%s: HP %d/%d | 1 ACT spent" % [recipient.display_name, recipient.current_hp, recipient.stats.max_hp]
 	else:
 		if recipient.prays:
 			var gained := recipient.change_pp(2)
 			fx.play("REST", recipient, gained)
 			_append_log("%s uses %s on %s: +%d PP." % [unit.display_name, String(item_def.name), recipient.display_name, gained])
-			_event("%s uses %s on %s: +%d PP." % [short_name(unit), String(item_def.name), short_name(recipient), gained])
+			_event("%s %s → %s  +%d PP" % [short_name(unit), NameCase.of(String(item_def.name)), short_name(recipient), gained])
 			hud.feedback = "%s: PP %d/%d | 1 ACT spent" % [recipient.display_name, recipient.current_pp, PrayerBook.MAX_PP]
 		else:
 			var before := recipient.current_en
@@ -707,7 +694,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 			_append_log("%s uses %s on %s: +%d EN%s." % [
 				unit.display_name, String(item_def.name), recipient.display_name, gained,
 				" (-2 SP)" if unit.is_fallen else ""])
-			_event("%s uses %s on %s: +%d EN." % [short_name(unit), String(item_def.name), short_name(recipient), gained])
+			_event("%s %s → %s  +%d EN" % [short_name(unit), NameCase.of(String(item_def.name)), short_name(recipient), gained])
 			hud.feedback = "%s: EN %d/%d | 1 ACT spent" % [recipient.display_name, recipient.current_en, recipient.stats.max_en]
 	if reacting:
 		unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
@@ -765,6 +752,10 @@ func absorb_context() -> Dictionary:
 	var bonus := 0.0
 	if SurvivalRelics.party_has(s, "skill_chance"):
 		bonus += 0.25
+	# D-120: BOOK OF RAZIEL no longer identifies skills; it gives its own +25%, stacking
+	# with BURNING BUSH.
+	if SurvivalRelics.party_has(s, "skill_chance_2"):
+		bonus += 0.25
 	if SurvivalRelics.party_has(s, "revelation"):
 		bonus += 0.20
 	return {
@@ -795,14 +786,14 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	var absorbed := bool(result.absorbed)
 	if presses <= 0:
 		_append_log("ABSORB failed: no input.")
-		_event("%s resists the absorption." % short_name(defender))
+		_event("%s  RESISTS ABSORB" % short_name(defender))
 		_flash_feedback("ABSORB FAILED")
 		hud.mode = "busy"
 		return
 	if not absorbed:
 		_append_log("ABSORB failed: %s resisted (%d SP taken, chance %d%%)." % [
 			defender.display_name, taken, absorb_chance])
-		_event("%s resists the absorption." % short_name(defender))
+		_event("%s  RESISTS ABSORB" % short_name(defender))
 		_flash_feedback("ABSORB FAILED")
 		hud.mode = "busy"
 		return
@@ -819,7 +810,6 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	var pick: int = await _wait_absorb_choice(options)
 	pick = clampi(pick, 0, options.size() - 1)
 	var chosen: Dictionary = options[pick]
-	var owned_before: Array[StringName] = owned.duplicate()
 	var base_before := unit.sp_base()
 	var fallen_sp_before := _fallen.stats.sp_value()
 	var hp_before := unit.stats.max_hp
@@ -835,21 +825,14 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	absorb_count_label = String(chosen.get("rarity", "RUN"))
 	absorb_skill_label = ""
 	if String(chosen.get("kind", "")) == "skill":
-		absorb_skill_label = "NEW SKILL: " + SkillBook.display_name(StringName(chosen.get("skill", &"")))
+		absorb_skill_label = "NEW SKILL: " + NameCase.of(SkillBook.display_name(StringName(chosen.get("skill", &""))))
 	var skill_names: Array[String] = []
 	for sk in _fallen.skills:
 		skill_names.append(String(sk))
-	var unknown: Array = SurvivalState.data().get("unidentified", []).duplicate()
-	if String(chosen.get("kind", "")) == "skill":
-		var learned := StringName(chosen.get("skill", &""))
-		# BOOK OF RAZIEL: a skill chega identificada.
-		if not owned_before.has(learned) and not unknown.has(String(learned)) \
-				and not SurvivalRelics.party_has(SurvivalState.data(), "identified"):
-			unknown.append(String(learned))
 	SurvivalState.patch({
 		"gains": _progress_gains.duplicate(true),
 		"skills": skill_names,
-		"unidentified": unknown,
+		"unidentified": [],
 	})
 	defender.consume_by_absorption()
 	if not was_absorbed and defender.absorbed:
@@ -859,7 +842,7 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	_flash_feedback("ABSORBED")
 	_append_log("Absorbed %s: %s (%d presses, %d SP taken); %s eliminated." % [
 		defender.display_name, absorb_gain_label, presses, taken, defender.display_name])
-	_event("%s absorbs %s: %s." % [short_name(unit), short_name(defender), absorb_gain_label])
+	_event("%s ABSORBED %s  %s" % [short_name(unit), short_name(defender), absorb_gain_label])
 	hud.mode = "busy"
 
 
@@ -1022,7 +1005,7 @@ func _play_death() -> void:
 		var remaining := SurvivalState.use_continue()
 		_revive_party_for_continue()
 		_append_log("CONTINUE USED (%d/%d left). Full HP/EN restored, stats kept!" % [remaining, SurvivalState.max_continues()])
-		_event("Continue used: %d left." % remaining)
+		_event("CONTINUE  %d LEFT" % remaining)
 		hud.mode = "busy"
 		_refresh_all()
 		if is_inside_tree():
@@ -1194,13 +1177,13 @@ func _show_result() -> void:
 				SurvivalState.grant_relic(loot_relic)
 				SurvivalState.patch({"last_loot": loot_relic})
 				_append_log("RELIC FOUND: %s." % SurvivalRelics.name_of(loot_relic))
-				_event("Relic found: %s." % SurvivalRelics.name_of(loot_relic))
+				_event("RELIC: %s" % NameCase.of(SurvivalRelics.name_of(loot_relic)))
 		# D-111: aliados (HP/EN/PP, caídos) e crescimento a cada 2 lutas; depois a oferta ao vencer.
 		_store_members(bonus_heal, s0)
 		_grow_members()
 		Engine.set_meta(DUNGEON_RETURN_META, SurvivalData.WORLD_SCENE)
 		_append_log("Earned +%d MACCA (total %dM)." % [reward, int(SurvivalState.data().macca)])
-		_event("Earned %d MACCA." % reward)
+		_event("+%d MACCA" % reward)
 		offer_ready = true
 	if offer_ready:
 		await _offer_flow()
@@ -1413,13 +1396,13 @@ func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
 	if seen != null:
 		if not seen.haganah.is_empty():
 			_append_log("%s's shield blocks SANVERIM." % seen.display_name)
-			_event("%s resists the blind." % short_name(seen))
+			_event("%s  RESISTS BLIND" % short_name(seen))
 		else:
 			SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
 			if prayer != null:
 				prayer.fx.play_sanverim(seen)
 			_append_log("%s is blinded by %s." % [seen.display_name, unit.display_name])
-			_event("%s is blinded." % short_name(seen))
+			_event("%s  BLIND" % short_name(seen))
 	hud.message = "%s USES %s" % [short_name(unit), SkillBook.display_name(skill)]
 	_refresh_all()
 
@@ -1659,11 +1642,11 @@ func _offer_flow() -> void:
 		var where := SurvivalState.add_member(member_from_foe(offer_unit))
 		offer_result = where
 		_append_log("%s joins the %s." % [name, where])
-		_event("%s joins the %s." % [name, "party" if where == "party" else "reserve"])
+		_event("%s  JOINS %s" % [NameCase.of(name), "PARTY" if where == "party" else "RESERVE"])
 	else:
 		offer_result = "refused"
 		_append_log("%s's offer refused." % name)
-		_event("%s leaves." % name)
+		_event("%s  LEAVES" % NameCase.of(name))
 
 
 func offer_name() -> String:
@@ -1769,9 +1752,9 @@ func _finish_duel(won: bool) -> void:
 				d.get("stats", {}), int(s.get("seed", 1)))
 		var where := SurvivalState.add_member(m)
 		offer_result = where
-		_event("%s joins the %s." % [name, "party" if where == "party" else "reserve"])
+		_event("%s  JOINS %s" % [NameCase.of(name), "PARTY" if where == "party" else "RESERVE"])
 	else:
-		_event("%s leaves: the test was lost." % name)
+		_event("%s  LEAVES  TEST LOST" % NameCase.of(name))
 	Engine.set_meta(DUNGEON_RETURN_META, SurvivalData.WORLD_SCENE)
 	phase_text = "TEST WON" if won else "TEST LOST"
 	hud.announce(phase_text)

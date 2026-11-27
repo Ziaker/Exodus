@@ -758,8 +758,7 @@ func confirm_event() -> String:
 				var skill: StringName = pool[_event_rng(3).randi_range(0, pool.size() - 1)]
 				SurvivalState.patch({"macca": int(s.macca) - price})
 				SurvivalState.learn_skill(skill)
-				var known := not (SurvivalState.data().get("unidentified", []) as Array).has(String(skill))
-				event_feedback = "Learned %s." % (SkillBook.display_name(skill) if known else SurvivalData.hebrew_skill(skill))
+				event_feedback = "Learned %s." % SkillBook.display_name(skill)
 				done = true
 		"gamble":
 			var rng := _event_rng(4)

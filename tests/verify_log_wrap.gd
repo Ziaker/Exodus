@@ -42,7 +42,7 @@ func _run() -> void:
 	var hud = battle.hud
 	var inner: float = _inner(hud)
 	_check(inner > 300.0, "Log inner width must be usable (got %s)" % inner)
-	_check(hud.LOG_LINES == 2, "D-056: the battle log shows two lines")
+	_check(hud.LOG_LINES == 3, "D-110: the battle log shows three lines")
 
 	# 1. Frase longa: quebra em linhas que caibam, sem perder palavra alguma.
 	var long_line := "PIXIE -> YOCH: HIT, 13 DAMAGE (FULL, RHYTHM POINT, DEF MISS, CRIT NO, AFFINITY WEAK, SP ROLL -3)"
@@ -60,15 +60,17 @@ func _run() -> void:
 	var short_rows: Array = hud._log_rows(["A", "B"] as Array[String], inner)
 	_check(short_rows.size() == 2 and String(short_rows[1].text) == "B", "Two short lines fill the two log rows")
 
-	# 3. Mensagem de 2 linhas + uma curta mais nova: a mais nova entra inteira e a antiga,
-	# que não cabe inteira, sai inteira (nunca pela metade). Newest last (criador 2026-11-24).
-	var mixed: Array = hud._log_rows([long_line, "SHORT ONE"] as Array[String], inner)
-	_check(mixed.size() == 1 and String(mixed[0].text) == "SHORT ONE", "The newest message enters whole; an older one that no longer fits leaves whole")
+	# 3. Mensagem de 2 linhas + duas curtas mais novas (D-110: 3 linhas): as mais novas
+	# entram inteiras e a antiga, que não cabe inteira, sai inteira (nunca pela metade).
+	var mixed: Array = hud._log_rows([long_line, "SHORT ONE", "SHORT TWO"] as Array[String], inner)
+	_check(mixed.size() == 2 and String(mixed[0].text) == "SHORT ONE" and String(mixed[1].text) == "SHORT TWO", "The newest messages enter whole; an older one that no longer fits leaves whole")
 	_check(not _rows_text(hud, mixed).contains("PIXIE"), "No half of the older wrapped message is left behind")
+	var fits: Array = hud._log_rows([long_line, "SHORT ONE"] as Array[String], inner)
+	_check(fits.size() == 3 and String(fits[2].text) == "SHORT ONE", "D-110: a 2-row message and a short one share the 3 rows")
 
-	# 4. Três mensagens curtas: só as duas mais novas entram, inteiras.
-	var three: Array = hud._log_rows(["A", "B", "C"] as Array[String], inner)
-	_check(three.size() == 2 and String(three[1].text) == "C", "Only the newest whole messages are drawn")
+	# 4. Quatro mensagens curtas: só as três mais novas entram, inteiras (D-110).
+	var three: Array = hud._log_rows(["A", "B", "C", "D"] as Array[String], inner)
+	_check(three.size() == 3 and String(three[0].text) == "B" and String(three[2].text) == "D", "Only the newest whole messages are drawn")
 
 	# 5. Nunca passa do retângulo nem por 1 px.
 	for entry in mixed:

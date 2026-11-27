@@ -81,11 +81,9 @@ func _run() -> void:
 	_check(SurvivalData.hebrew_skill(&"nao_existe") == "???", "Unknown skill falls back to ???")
 	SurvivalState.reset()
 	SurvivalState.learn_skill(&"spirit_wave")
-	_check((SurvivalState.data().unidentified as Array).has("spirit_wave"), "New move starts unidentified")
-	SurvivalState.identify_skill(&"spirit_wave")
-	_check(not (SurvivalState.data().unidentified as Array).has("spirit_wave"), "Identified after use")
+	_check(not (SurvivalState.data().unidentified as Array).has("spirit_wave"), "D-120: a new move is never unidentified")
 
-	# O submenu FIGHT mostra o nome hebraico enquanto não identificado.
+	# D-120: o submenu FIGHT mostra o nome real, mesmo com uma lista antiga de não identificadas.
 	SurvivalState.patch({"encounter_id": "pixie", "skills": ["spirit_wave"],
 		"unidentified": ["spirit_wave"],
 		"gains": {"max_hp": 0, "max_en": 0, "atk": 0, "mak": 0, "defense": 0, "mef": 0, "agi": 20}})
@@ -102,8 +100,8 @@ func _run() -> void:
 	b.submit_plan(cmds.find("FIGHT"))
 	b.exec_plan()
 	_check(await _wait_mode(b, "skill"), "FIGHT opens the skill submenu")
-	_check(b.hud.command_options[1] == SurvivalData.hebrew_skill(&"spirit_wave"),
-			"Unidentified skill shows Hebrew name (%s)" % str(b.hud.command_options[1]))
+	_check(b.hud.command_options[1] == NameCase.of(SkillBook.display_name(&"spirit_wave")) and not b.skill_info(1).contains("UNKNOWN"),
+			"D-120: every skill shows its real name and info (%s)" % str(b.hud.command_options[1]))
 	b.queue_free()
 	await process_frame
 	SurvivalState.clear()

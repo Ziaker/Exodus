@@ -224,18 +224,11 @@ func _clear_roles() -> void:
 		_refresh_all()
 
 
-## D-057: before the battle waits for another input, event lines that do not fit the
-## two-row log are paged with Z, so none scrolls away unread. What fits stays on screen.
+## D-110 (criador 2026-11-26): o log rola sozinho, sem paginação com Z; a batalha nunca
+## espera por ele. Mantida como ponto único caso o log volte a precisar de uma pausa.
 func _flush_log() -> void:
 	if not is_inside_tree():
 		return
-	while hud.log_hidden():
-		var previous: String = hud.mode
-		hud.mode = "continue"
-		_refresh_all()
-		await continue_requested
-		hud.page_log()
-		hud.mode = previous
 	hud.page_log()
 	_refresh_all()
 
@@ -503,7 +496,7 @@ func run_battle() -> void:
 		_round_actions = 0
 		state.end_round()
 		_append_log("End of round %d: +20%% EN." % state.round_number)
-		_event("End of round %d: +20%% EN." % state.round_number)
+		_event("ROUND %d END  +20%% EN" % state.round_number)
 	if state.fallen_fell():
 		await _play_death()
 	else:
@@ -524,7 +517,7 @@ func _play_death() -> void:
 	for stat in before.keys():
 		losses[stat] = int(before[stat]) - int(after[stat])
 	_append_log("DEFEAT.")
-	_event("DEFEAT.")
+	_event("DEFEAT")
 	phase_text = "DEFEAT"
 	hud.mode = "death"
 	hud.feedback = ""
@@ -619,7 +612,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 	if command == "PASS":
 		return _execute_pass(unit)
 	if not unit.spend_act():
-		_event("%s has no act left." % short_name(unit))
+		_event("%s  NO ACT" % short_name(unit))
 		return false
 	action_attacker = unit
 	action_defender = defender if defender != null else unit
@@ -631,8 +624,7 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 			_clear_roles()
 			_set_role(unit, "ATTACK")
 			_set_role(defender, "TARGET")
-			if not _chain_continues:
-				_event("%s attacks %s." % [short_name(unit), short_name(defender)])
+			# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 			await _perform_attack(unit, defender, basic_power, reacting, false, false, chain)
 		"ITEM":
 			var recipient: BattleUnit = defender if defender != null else unit
@@ -641,13 +633,13 @@ func _execute_command(unit: BattleUnit, command: String, reacting: bool = false,
 			fx.play("HEAL", recipient, healed)
 			if unit.is_fallen: unit.add_sp(-2)
 			_append_log("%s uses item on %s: +%d HP%s." % [unit.display_name, recipient.display_name, healed, " (-2 SP)" if unit.is_fallen else ""])
-			_event("%s uses an item on %s: +%d HP." % [short_name(unit), short_name(recipient), healed])
+			_event("%s ITEM → %s  +%d HP" % [short_name(unit), short_name(recipient), healed])
 			if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 		"DEFEND":
 			unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 			_set_role(unit, "DEFEND")
 			_append_log("%s reacts with DEFEND (1 act spent)." % unit.display_name)
-			_event("%s defends." % short_name(unit))
+			_event("%s  DEFEND" % short_name(unit))
 	if command == "ITEM":
 		hud.feedback = "%s: HP %d/%d | 1 ACT spent" % [action_defender.display_name, action_defender.current_hp, action_defender.stats.max_hp]
 	_refresh_all()
@@ -666,7 +658,7 @@ func _execute_absorb(unit: BattleUnit, target: BattleUnit, reacting: bool) -> bo
 	# D-107 (creator 2026-11-25): humans cannot be absorbed; nothing is spent.
 	if defender.race == &"human":
 		_append_log("%s cannot absorb a human." % unit.display_name)
-		_event("Humans cannot be absorbed.")
+		_event("NO ABSORB: HUMAN")
 		hud.feedback = "Humans cannot be absorbed."
 		return false
 	unit.acts_available -= ABSORB_ACTS
@@ -674,7 +666,7 @@ func _execute_absorb(unit: BattleUnit, target: BattleUnit, reacting: bool) -> bo
 	action_defender = defender
 	phase_text = "ABSORB"
 	_clear_roles()
-	_event("%s tries to absorb %s." % [short_name(unit), short_name(defender)])
+	_event("%s ABSORB → %s" % [short_name(unit), short_name(defender)])
 	await _perform_absorption(unit, defender)
 	_refresh_all()
 	return true
@@ -714,7 +706,7 @@ func _execute_rest(unit: BattleUnit, reacting: bool) -> bool:
 		unit.display_name, "reacts with REST" if reacting else "rests",
 		BattleMath.REST_EN_RECOVERY, remaining])
 	if reacting: _set_role(unit, "REACT")
-	_event("%s rests: +%d EN, %d act(s) stored." % [short_name(unit), unit.current_en - before, remaining])
+	_event("%s  REST  +%d EN  %d ACT KEPT" % [short_name(unit), unit.current_en - before, remaining])
 	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	hud.feedback = "%s: EN %d/%d | 0 ACT spent, %d stored" % [
 		unit.display_name, unit.current_en, unit.stats.max_en, remaining]
@@ -732,7 +724,7 @@ func _execute_pass(unit: BattleUnit) -> bool:
 	action_defender = null
 	phase_text = "PASS"
 	_append_log("%s passes the turn: %d act(s) kept." % [unit.display_name, unit.acts_available])
-	_event("%s passes." % short_name(unit))
+	_event("%s  PASS" % short_name(unit))
 	hud.feedback = "%s: 0 ACT spent, %d kept" % [unit.display_name, unit.acts_available]
 	_refresh_all()
 	return true
@@ -748,7 +740,7 @@ func _player_turn(unit: BattleUnit) -> void:
 	if unit.acts_available <= 0: return
 	_append_log("%s: %d acts available." % [unit.display_name, unit.acts_available])
 	_clear_roles()
-	_event("%s's turn." % short_name(unit))
+	_event("%s  TURN" % short_name(unit))
 	var options := _commands(unit)
 	# D-046: o jogador compromete até quatro atos antes da resolução; os marcadores verdes
 	# mostram os comandos que ainda vão rodar.
@@ -1022,7 +1014,7 @@ func _enemy_turn(unit: BattleUnit) -> void:
 		_append_log("%s announces an attack on %s." % [unit.display_name, defender.display_name])
 		_set_role(unit, "ATTACK")
 		_set_role(defender, "TARGET")
-		_event("%s attacks %s." % [short_name(unit), short_name(defender)])
+		# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 		hud.announce_attack("NO REACTION AVAILABLE" if eligible_reactors().is_empty() else "%s → %s" % [short_name(unit), short_name(defender)], unit)
 		if eligible_reactors().is_empty():
 			hud.feedback = "No reaction acts left. Z / Enter: resolve attack"
@@ -1069,7 +1061,8 @@ func short_name(unit: BattleUnit) -> String:
 	if unit.kind == &"burning_bush":
 		return unit.display_name
 	var index: int = hud.opponents.find(unit)
-	return "FOE " + char(65 + index) if index >= 0 else unit.display_name
+	# D-110: names on screen keep only the first letter in upper case ("Foe A", "Fallen").
+	return NameCase.of("FOE " + char(65 + index) if index >= 0 else unit.display_name)
 
 
 func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_reaction: bool, defense_act_paid: bool = false, auto_hit: bool = false, chain: bool = false) -> void:
@@ -1094,7 +1087,8 @@ func _perform_attack(attacker: BattleUnit, defender: BattleUnit, power: int, is_
 	_present_strike(attacker, defender, hp_before - defender.current_hp)
 
 
-func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, magic: bool = false) -> void:
+## `tell` false: the caller already wrote the result line (D-110: one line per blow).
+func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, magic: bool = false, tell: bool = true) -> void:
 	var outcome := "HIT"
 	# D-109: todo golpe com barra acerta; só a defesa paga desvia (centro) ou bloqueia (lateral).
 	if defense_result == BattleMath.RhythmResult.POINT: outcome = "DODGE"
@@ -1109,19 +1103,24 @@ func _present_strike(attacker: BattleUnit, defender: BattleUnit, damage: int, ma
 	# in log_history.
 	if defense_result != BattleMath.RhythmResult.MISS and (not defender.is_player or roles.get(defender.id, "") == "DEFEND"):
 		_set_role(defender, "DEFEND")
+	var line := ""
+	# D-110 (criador 2026-11-26): estilo telegráfico, "A → B  N  BLOCK/DODGE/MISS".
+	var pair := "%s → %s" % [short_name(attacker), short_name(defender)]
 	if outcome.begins_with("DODGE"):
-		_event("%s dodges." % short_name(defender))
+		line = pair + "  DODGE"
 	elif outcome.begins_with("MISS"):
-		_event("%s misses." % short_name(attacker))
+		line = pair + "  MISS"
 	elif defense_result == BattleMath.RhythmResult.BEAM:
-		_event("%s blocks: %d damage." % [short_name(defender), damage])
+		line = "%s  %d  BLOCK" % [pair, damage]
 	else:
-		_event("%s hits %s: %d damage." % [short_name(attacker), short_name(defender), damage])
-	if contact and not defender.is_alive():
-		if _hold_down:
-			_pending_down.append(defender)
-		else:
-			_event("%s is down." % short_name(defender))
+		line = "%s  %d" % [pair, damage]
+	# D-110: a queda e o ato ganho entram na linha do resultado (a queda adiada de _hold_down sai depois, sozinha).
+	var fell := contact and not defender.is_alive()
+	line += result_suffix(defender, attacker, fell and not _hold_down, 0)
+	if fell and _hold_down:
+		_pending_down.append(defender)
+	if tell:
+		_event(line)
 	phase_text = "RESULT: " + outcome
 	fx.stop_cues()
 	var cue := "DODGE" if outcome.begins_with("DODGE") else ("MISS" if outcome.begins_with("MISS") else ("BLOCK" if outcome.begins_with("BLOCK") else ("CRITICAL" if outcome.contains("CRITICAL") else "HIT")))
@@ -1218,7 +1217,6 @@ func _execute_counter(reactor: BattleUnit, enemy: BattleUnit, target: BattleUnit
 	phase_text = "COUNTER"
 	_append_log("%s counter-attacks %s (1 act spent)." % [reactor.display_name, enemy.display_name])
 	_set_role(reactor, "COUNTER")
-	_event("%s counter-attacks %s." % [short_name(reactor), short_name(enemy)])
 	var o := await _counter_exchange(reactor, enemy, "panel", "red" if SkillBook.is_high_speed(skill) else "")
 	_counter_resolved = true
 	match int(o.winner):
@@ -1257,7 +1255,6 @@ func _enemy_counter(hero: BattleUnit, enemy: BattleUnit, skill: StringName = &""
 	# D-057: the enemy's counter is announced (it used to be overwritten in the same frame).
 	_set_role(hero, "ATTACK")
 	_set_role(enemy, "COUNTER")
-	_event("%s counter-attacks!" % short_name(enemy))
 	var o := await _counter_exchange(hero, enemy, "enemy", "white" if SkillBook.is_high_speed(skill) else "")
 	match int(o.winner):
 		BattleMath.CounterWinner.PLAYER:
@@ -1304,21 +1301,30 @@ func _interrupt(winner: BattleUnit, loser: BattleUnit, o: Dictionary) -> void:
 		hud.shake(loser)
 	var kind := "PERFECT INTERRUPTION" if bool(o.perfect) else "INTERRUPTION"
 	_append_log("%s: %s interrupts %s (+%d SP stolen)." % [kind, winner.display_name, loser.display_name, stolen])
-	_event("%s%s interrupts %s%s." % ["Perfect! " if bool(o.perfect) else "", short_name(winner), short_name(loser),
-		" and steals %d SP" % stolen if stolen > 0 else ""])
+	_event("%s ✖ %s%s%s" % [short_name(winner), short_name(loser), "  PERFECT" if bool(o.perfect) else "",
+		"  +%d SP" % stolen if stolen > 0 else ""])
 	hud.message = "%s: %s interrupts %s | +%d SP" % [kind, short_name(winner), short_name(loser), stolen]
 
 
 func _release_down() -> void:
 	_hold_down = false
-	for unit in _pending_down:
-		_event("%s is down." % short_name(unit))
 	_pending_down.clear()
+
+
+## D-110: "  DOWN" when the blow felled the target and "  +N ACT" when the attacker
+## gained acts, appended to the blow's own result line (no separate lines).
+func result_suffix(target: BattleUnit, attacker: BattleUnit, fell: bool, acts: int) -> String:
+	var suffix := ""
+	if fell:
+		suffix += "  DOWN"
+	if acts > 0 and attacker != null and attacker.is_alive():
+		suffix += "  +%d ACT" % acts
+	return suffix
 
 
 func _tie_report(hero: BattleUnit, enemy: BattleUnit) -> void:
 	_append_log("COUNTER TIE: %s and %s interrupt each other (no SP)." % [hero.display_name, enemy.display_name])
-	_event("%s and %s interrupt each other." % [short_name(hero), short_name(enemy)])
+	_event("%s ✖ %s  TIE" % [short_name(hero), short_name(enemy)])
 	hud.message = "COUNTER TIE: %s and %s interrupt each other" % [short_name(hero), short_name(enemy)]
 
 
@@ -1343,9 +1349,9 @@ func _lose_queue(unit: BattleUnit, commands: Array, gainer: BattleUnit, acts_ove
 	_append_log("%s loses %d queued command(s)%s." % [unit.display_name, commands.size(),
 		"; %s gains %d act(s)" % [gainer.display_name, gained] if gainer != null and gainer.is_alive() and gained > 0 else ""])
 	# D-057: a queued command never vanishes silently.
-	_event("%s loses %d queued command%s." % [short_name(unit), commands.size(), "" if commands.size() == 1 else "s"])
+	_event("%s  −%d COMMAND%s" % [short_name(unit), commands.size(), "" if commands.size() == 1 else "S"])
 	if gainer != null and gainer.is_alive() and gained > 0:
-		_event("%s gains %d act%s." % [short_name(gainer), gained, "" if gained == 1 else "s"])
+		_event("%s  +%d ACT" % [short_name(gainer), gained])
 	_refresh_all()
 
 
@@ -1381,7 +1387,7 @@ func _maybe_player_reaction(defender: BattleUnit, attacker: BattleUnit) -> bool:
 		hud.mode = "react"
 		hud.react_index = 0
 		hud.message = ("%s ATTACKS %s" % [short_name(attacker), short_name(defender)]) if _announced_skill == &"" \
-			else ("%s USES %s ON %s" % [short_name(attacker), SkillBook.display_name(_announced_skill), short_name(defender)])
+			else ("%s USES %s ON %s" % [short_name(attacker), NameCase.of(SkillBook.display_name(_announced_skill)), short_name(defender)])
 		hud.feedback = "Tab: choose reactor | Z: reaction commands | X: deny"
 		_refresh_all()
 		await reaction_answered
@@ -1463,11 +1469,11 @@ func _perform_absorption(unit: BattleUnit, defender: BattleUnit) -> void:
 	var skills_before := unit.skills.size()
 	await super._perform_absorption(unit, defender)
 	if not was_absorbed and defender.absorbed:
-		_event("%s absorbs %s." % [short_name(unit), short_name(defender)])
+		_event("%s ABSORBED %s" % [short_name(unit), short_name(defender)])
 		if unit.skills.size() > skills_before:
-			_event("%s learns %s." % [short_name(unit), SkillBook.display_name(unit.skills.back())])
+			_event("%s  NEW SKILL: %s" % [short_name(unit), NameCase.of(SkillBook.display_name(unit.skills.back()))])
 	elif defender.is_alive():
-		_event("%s resists the absorption." % short_name(defender))
+		_event("%s  RESISTS ABSORB" % short_name(defender))
 	if not was_absorbed and defender.absorbed:
 		fx.play("ABSORBED", unit)
 		# Creator 2026-11-23: the ABSORBED label stays, in green, with the gain taken,
@@ -1536,7 +1542,7 @@ func proceed() -> void:
 func _show_result() -> void:
 	prayer.battle_end(state.player_victory())
 	_append_log("VICTORY." if state.player_victory() else "DEFEAT.")
-	_event("VICTORY." if state.player_victory() else "DEFEAT.")
+	_event("VICTORY" if state.player_victory() else "DEFEAT")
 	phase_text = "VICTORY" if state.player_victory() else "DEFEAT"
 	hud.announce(phase_text)
 	hud.feedback = "Battle finished. Z / Enter: return to the dungeon." if Engine.has_meta(DUNGEON_RETURN_META) else "Battle finished. Z / Enter: play again. X: stay."
@@ -1618,7 +1624,7 @@ func handle_back() -> void:
 ## {"skill": &""} for ATTACK, or {"skill": id, "extra": EN} for a skill.
 ## Sobrescrito pelo Survival enquanto a habilidade não foi identificada.
 func skill_label(skill: StringName) -> String:
-	return SkillBook.display_name(skill)
+	return NameCase.of(SkillBook.display_name(skill))
 
 
 func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: int) -> Dictionary:
@@ -1739,11 +1745,11 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 	var extra := int(detail.get("extra", 0))
 	if not SkillBook.affordable(skill, unit.acts_available, unit.current_en - extra, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 		_append_log("%s cannot pay %s any more." % [unit.display_name, d.name])
-		_event("%s cannot pay %s." % [short_name(unit), d.name])
+		_event("%s  CAN'T PAY %s" % [short_name(unit), NameCase.of(String(d.name))])
 		return true
 	var target: BattleUnit = null
 	if d.kind == "strike":
-		phase_text = "SELECT %s TARGET" % d.name
+		phase_text = "SELECT %s TARGET" % NameCase.of(String(d.name))
 		# D-057: the target chosen in the plan (a reaction chooses it here).
 		target = await _planned_or_new_target(planned)
 		if target == null: return false
@@ -1769,7 +1775,7 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 		unit.next_attack_high_speed = false
 	_pay_skill(unit, skill, extra)
 	unit.passive_stance = d.kind in ["buff", "heal"]
-	phase_text = ("REACTION " if reacting else "") + String(d.name)
+	phase_text = ("REACTION " if reacting else "") + NameCase.of(String(d.name))
 	_append_log("%s uses %s." % [unit.display_name, d.name])
 	if not reacting: _clear_roles()
 	if reacting: _set_role(unit, "REACT")
@@ -1777,14 +1783,13 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 		"strike":
 			if not reacting: _set_role(unit, "ATTACK")
 			_set_role(target, "TARGET")
-			_event("%s uses %s on %s." % [short_name(unit), d.name, short_name(target)])
+			# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 		"magic":
 			if not reacting: _set_role(unit, "ATTACK")
 			for foe in hud.opponents:
 				if foe.is_alive(): _set_role(foe, "TARGET")
-			_event("%s uses %s." % [short_name(unit), d.name])
 		_:
-			_event("%s uses %s." % [short_name(unit), d.name])
+			_event("%s  %s" % [short_name(unit), NameCase.of(String(d.name))])
 	match String(d.kind):
 		"strike": await _skill_strike(unit, target, skill, reacting)
 		"magic": await _hero_magic(unit, skill, reacting)
@@ -1901,7 +1906,7 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 			letter_fx.self_skill(unit, "buff")
 			_append_log("%s: -%d HP, +%d ATK stage(s) (%d active, ATK x%.2f)." % [unit.display_name, int(d.hp),
 				int(fxd.get("stages", 1)), unit.atk_stages.size(), 1.0 + SkillBook.ATK_STAGE_BONUS * unit.atk_stages.size()])
-			_event("%s's ATK rises." % short_name(unit))
+			_event("%s  ATK ↑" % short_name(unit))
 	else:
 		var patient := unit
 		if bool(fxd.get("ally", false)):
@@ -1916,7 +1921,7 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 		letter_fx.self_skill(patient, "heal")
 		_append_log("%s uses %s on %s: +%d HP%s." % [unit.display_name, d.name, patient.display_name, healed,
 			" (%d extra EN)" % extra if skill == SkillBook.ENERGY_EAT else ""])
-		_event("%s recovers %d HP." % [short_name(patient), healed])
+		_event("%s  +%d HP" % [short_name(patient), healed])
 	if reacting: unit.add_sp(BattleMath.SP_GAIN_PER_EVENT)
 	hud.feedback = "%s: HP %d/%d | EN %d/%d" % [short_name(unit), unit.current_hp, unit.stats.max_hp, unit.current_en, unit.stats.max_en]
 
@@ -1963,7 +1968,7 @@ func _expire_stages(owner: BattleUnit) -> void:
 			if owner == null or StringName(stage_info.owner) == owner.id:
 				unit.atk_stages.remove_at(i)
 				_append_log("%s: ATK stage ended (%d active)." % [unit.display_name, unit.atk_stages.size()])
-				_event("%s's ATK boost ends." % short_name(unit))
+				_event("%s  ATK ↑ END" % short_name(unit))
 		for i in range(unit.mak_stages.size() - 1, -1, -1):
 			var info: Dictionary = unit.mak_stages[i]
 			if int(info.round) >= state.round_number:
@@ -2005,7 +2010,7 @@ func _expire_stages(owner: BattleUnit) -> void:
 					and (owner == null or StringName(unit.haganah.owner) == owner.id):
 				unit.haganah = {}
 				_append_log("%s: Aegis Iris ended." % unit.display_name)
-				_event("%s's status shield ends." % short_name(unit))
+				_event("%s  AEGIS END" % short_name(unit))
 
 
 ## Burns: 3 damage per stacked burn at the start of each round, 3 rounds each.
@@ -2026,9 +2031,9 @@ func _burn_tick() -> void:
 		fx.play("BURN", unit, applied)
 		letter_fx.burn(unit)
 		_append_log("%s burns: -%d HP (%d burn(s) left)." % [unit.display_name, applied, unit.burns.size()])
-		_event("%s burns: %d damage." % [short_name(unit), applied])
+		_event("%s  BURN  %d" % [short_name(unit), applied])
 		if not unit.is_alive():
-			_event("%s is down." % short_name(unit))
+			_event("%s  DOWN" % short_name(unit))
 		burned = true
 	if burned:
 		_refresh_all()
@@ -2080,7 +2085,7 @@ func _skip_if_asleep(unit: BattleUnit) -> bool:
 	unit.acts_available = 0
 	unit.stored_acts = 0
 	_append_log("%s is asleep and loses the turn." % unit.display_name)
-	_event("%s is asleep." % short_name(unit))
+	_event("%s  SLEEP" % short_name(unit))
 	return true
 
 
@@ -2096,12 +2101,12 @@ func _status_tick() -> void:
 			if prayer != null:
 				prayer.fx.play_nechamah_tick(unit, maxi(1, unit.mends.size() + 1))
 			_append_log("%s is mended: +%d HP." % [unit.display_name, int(res.mend)])
-			_event("%s is mended for %d HP." % [short_name(unit), int(res.mend)])
+			_event("%s  MEND +%d HP" % [short_name(unit), int(res.mend)])
 			changed = true
 		if int(res.regen) > 0:
 			fx.play("HEAL", unit, int(res.regen))
 			_append_log("%s regenerates: +%d HP." % [unit.display_name, int(res.regen)])
-			_event("%s regenerates %d HP." % [short_name(unit), int(res.regen)])
+			_event("%s  REGEN +%d HP" % [short_name(unit), int(res.regen)])
 			changed = true
 	if changed:
 		_refresh_all()
@@ -2114,7 +2119,7 @@ func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
 	if bool(fxd.get("pray", false)):
 		var gained := unit.change_pp(1)
 		_append_log("%s prays: +%d PP (%d)." % [unit.display_name, gained, unit.current_pp])
-		_event("%s prays." % short_name(unit))
+		_event("%s  PRAY" % short_name(unit))
 	elif bool(fxd.get("blind", false)):
 		var seen: BattleUnit = null
 		for hero in hud.players:
@@ -2125,21 +2130,21 @@ func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
 		if seen != null:
 			if not seen.haganah.is_empty():
 				_append_log("%s's shield blocks SANVERIM." % seen.display_name)
-				_event("%s resists the blind." % short_name(seen))
+				_event("%s  RESISTS BLIND" % short_name(seen))
 			else:
 				SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
 				if prayer != null:
 					prayer.fx.play_sanverim(seen)
 				_append_log("%s is blinded by %s (smaller POINT zone until the end of the next round)." % [seen.display_name, unit.display_name])
-				_event("%s is blinded." % short_name(seen))
+				_event("%s  BLIND" % short_name(seen))
 	elif bool(fxd.get("mend", false)):
 		var patient := _weakest_ally(unit)
 		patient.mends.append(SkillFx.MEND_ROUNDS)
 		if prayer != null:
 			prayer.fx.play_nechamah(patient, patient.mends.size())
 		_append_log("%s mends %s (%d mend(s))." % [unit.display_name, patient.display_name, patient.mends.size()])
-		_event("%s is being mended." % short_name(patient))
-	hud.message = "%s USES %s" % [short_name(unit), SkillBook.display_name(skill)]
+		_event("%s  MEND" % short_name(patient))
+	hud.message = "%s USES %s" % [short_name(unit), NameCase.of(SkillBook.display_name(skill))]
 	_refresh_all()
 
 
@@ -2213,7 +2218,7 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		var drained_pp := -defender.change_pp(-int(fxd.pp_drain))
 		if drained_pp > 0:
 			_append_log("%s loses %d PP." % [defender.display_name, drained_pp])
-			_event("%s loses %d PP." % [short_name(defender), drained_pp])
+			_event("%s  -%d PP" % [short_name(defender), drained_pp])
 	var is_point := attack == BattleMath.RhythmResult.POINT
 	var bleed_stacks := int(fxd.get("bleed_point", fxd.get("bleed", 0))) if is_point else int(fxd.get("bleed", 0))
 	if bool(fxd.get("bleed_point_only", false)) and not is_point:
@@ -2221,7 +2226,7 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 	if bleed_stacks > 0 and defender.is_alive() and not shielded:
 		defender.add_bleed(bleed_stacks)
 		_append_log("%s bleeds (%d stack(s): -%d%% healing)." % [defender.display_name, defender.bleeds.size(), int(round((1.0 - defender.heal_factor()) * 100.0))])
-		_event("%s is bleeding." % short_name(defender))
+		_event("%s  BLEED" % short_name(defender))
 	if fxd.has("leech"):
 		attacker.heal(int(fxd.leech))
 	if fxd.has("lifesteal"):
@@ -2231,7 +2236,7 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 	if fxd.get("detonate", false) and was_burning and defender.is_alive():
 		var blast := defender.take_damage(defender.burn_round_damage())
 		_append_log("%s detonates: %s burns for %d now." % [attacker.display_name, defender.display_name, blast])
-		_event("%s's burns detonate: %d damage." % [short_name(defender), blast])
+		_event("%s  BURN BLAST  %d" % [short_name(defender), blast])
 	# D-124 UMBRAL GAZE: trapped for X global actions (the unit's queued acts are lost).
 	if fxd.has("trap") and defender.is_alive() and not shielded:
 		trap_unit(defender, int(fxd.trap))
@@ -2241,16 +2246,16 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 			and defender.is_alive() and not shielded and _burn_roll(int(strike_def.burn_chance)):
 		defender.burns.append(int(fxd.get("burn_rounds", SkillBook.BURN_ROUNDS)))
 		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
-		_event("%s is burning." % short_name(defender))
+		_event("%s  BURN" % short_name(defender))
 	if defender.is_alive() and not shielded:
 		if fxd.has("sleep_chance") and _fx_roll(int(fxd.sleep_chance)):
 			SkillFx.apply_status(defender, SkillFx.SLEEP_ID, 1)
 			_append_log("%s falls asleep." % defender.display_name)
-			_event("%s falls asleep." % short_name(defender))
+			_event("%s  SLEEP" % short_name(defender))
 		if fxd.has("status") and _fx_roll(int(fxd.get("chance", 100))):
 			SkillFx.apply_status(defender, StringName(fxd.status), int(fxd.get("rounds", 1)))
 			_append_log("%s: %s." % [defender.display_name, String(fxd.status).to_upper()])
-			_event("%s is %s." % [short_name(defender), String(fxd.status).to_upper()])
+			_event("%s  %s" % [short_name(defender), String(fxd.status).to_upper()])
 	return applied
 
 
@@ -2305,12 +2310,12 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 	_pay_skill(unit, skill, extra)
 	unit.passive_stance = d.kind in ["buff", "heal"] or (d.kind == "prayer" and String(PrayerBook.entry(skill).get("target", "self")) in ["ally", "allies", "self"])
 	action_attacker = unit
-	phase_text = "ENEMY " + String(d.name)
+	phase_text = "ENEMY " + NameCase.of(String(d.name))
 	fx.play("WHITEN", unit)
 	hud.feedback = ""
 	if d.kind in ["buff", "heal", "prayer"]:
 		_append_log("%s uses %s." % [unit.display_name, d.name])
-		_event("%s uses %s." % [short_name(unit), d.name])
+		_event("%s  %s" % [short_name(unit), NameCase.of(String(d.name))])
 		_self_skill(unit, skill, extra, false)
 		hud.message = "%s USES %s" % [short_name(unit), d.name]
 		_refresh_all()
@@ -2335,7 +2340,7 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		_append_log("%s announces %s on %s." % [unit.display_name, d.name, target.display_name])
 		_set_role(unit, "ATTACK")
 		if not roles.has(target.id): _set_role(target, "TARGET")
-		_event("%s uses %s on %s." % [short_name(unit), d.name, short_name(target)])
+		# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 		hud.announce_attack("NO REACTION AVAILABLE" if eligible_reactors().is_empty() else "%s %s → %s" % [short_name(unit), d.name, short_name(target)], unit)
 		if eligible_reactors().is_empty():
 			hud.feedback = "No reaction acts left. Z / Enter: resolve %s" % d.name
@@ -2630,7 +2635,7 @@ func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, i
 	if applied >= 0 and defender.is_alive() and _burn_roll(int(d.get("burn_chance", 0))):
 		defender.burns.append(int(SkillFx.fx_of(skill).get("burn_rounds", SkillBook.BURN_ROUNDS)))
 		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
-		_event("%s is burning." % short_name(defender))
+		_event("%s  BURN" % short_name(defender))
 
 
 ## Attack timing per mark: the hero presses on the rail; an enemy rolls each mark (or

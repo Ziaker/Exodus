@@ -693,7 +693,7 @@ func _count_absorption(actor: BattleUnit, target: BattleUnit) -> void:
 	if count >= SkillBook.ABSORBS_PER_SKILL:
 		var skill: StringName = pool[clampi(_skill_pick(pool.size()), 0, pool.size() - 1)]
 		actor.skills.append(skill)
-		absorb_skill_label = "NEW SKILL: " + SkillBook.display_name(skill)
+		absorb_skill_label = "NEW SKILL: " + NameCase.of(SkillBook.display_name(skill))
 		_append_log("%s learns %s (%d absorptions of %s)." % [actor.display_name,
 			SkillBook.display_name(skill), count, target.display_name])
 		count = 0
