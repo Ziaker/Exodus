@@ -142,3 +142,15 @@ Qualquer novo ataque não-reza adicionado ao jogo só é considerado entregue ap
 3. Conformidade verificada com a **Lei do Outline Dourado** (`ZAHAV` exclusivo) e a **Separação Hebraica** (sem letras hebraicas, salvo exceção nominal).
 4. Cobertura de teste automatizado headless (`tests/`).
 5. Captura visual (quadros/vídeo reais no Godot) inspecionada pelo agente e **aprovada visualmente pelo criador** (`AGENTS.md`).
+
+---
+
+## 7. Fase 3 implementada (2026-11-27) — fundação visual
+
+`scripts/battle/skill_grotesque_fx.gd` (`SkillGrotesqueFX`, `z_index` 50, criado pelo `PlayableController` como `grotesque_fx`), `assets/shaders/hypnotic_moire.gdshader` e `assets/shaders/target_fever_warp.gdshader`; teste `tests/verify_grotesque_fx_core.gd` (111 checks) e captura `tools/capture_grotesque_core.gd`. Ainda **sem as 8 coreografias** (Fases 4 e 5): o motor só oferece as primitivas e os campos. A validação visual é do criador.
+
+- **Espaço de design:** o nó desenha em 816×624 (lógico × 1,5), então a célula de Moiré de 5 px é 5 px reais na janela.
+- **Moiré:** modo 0 (radial, `dark_bias`) e modo 1 (cone da garganta, `dir_x` ±1) na GPU. Cada ataque usa o perfil de limiar do HTML canônico dele: `v2` (0,30 / cristas 1,28), `v3` (0,26 / 1,30) e `v4` (0,30 / 1,30).
+- **Warp do alvo:** inimigo ganha um sprite sobreposto com o shader (o HUD esconde a silhueta preta enquanto isso); o cartão do herói ondula pela mesma equação.
+- **Paletas:** `palette_for(família, is_zahav)`; o ouro `#ffd84a` só sai com `is_zahav == true`. Leitura adotada, a confirmar: `abyss` + ZAHAV (sem paleta definida no guia) troca só a crista para ouro.
+- **Limite conhecido:** o motor não desenha as formas dos ataques (mandíbula, ferrão, vértebras, olhos de cada skill); isso entra nas Fases 4 e 5.

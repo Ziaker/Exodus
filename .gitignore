@@ -14,6 +14,9 @@ assets/**
 !assets/
 !assets/SOURCE_ASSETS.md
 !assets/ASSET_MANIFEST.json
+# D-125: shaders originais do jogo (Moire e warp dos ataques nao-reza)
+!assets/shaders/
+!assets/shaders/**
 # Generated overworld art (original, not third-party placeholder)
 !assets/generated/
 !assets/generated/**

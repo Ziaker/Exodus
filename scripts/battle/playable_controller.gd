@@ -13,6 +13,7 @@ const EFFECTS_SCRIPT = preload("res://scripts/battle/battle_effects.gd")
 const COUNTER_RHYTHM = preload("res://scripts/battle/counter_rhythm_bar.gd")
 const PRAYER_FLOW = preload("res://scripts/battle/prayer_flow.gd")
 const SKILL_LETTERS = preload("res://scripts/battle/skill_letters.gd")
+const SKILL_GROTESQUE = preload("res://scripts/battle/skill_grotesque_fx.gd")
 var hud: Control
 var fx: Control
 const ABSORB_VFX = preload("res://scripts/battle/absorb_vfx.gd")
@@ -118,6 +119,8 @@ var _announced_skill: StringName = &""
 var prayer: RefCounted
 ## Hebrew-letter effects of Lunge, Heat wave, Bleedbuff and Energy Eat (creator 2026-11-23).
 var letter_fx: Node2D
+## D-125: Anatômico Grotesco + Moiré dos ataques não-reza (z_index 50, abaixo do DamageLayer).
+var grotesque_fx: Node2D
 ## Creator 2026-11-23: a Lunge hit shows the normal hit effect normal + mirrored (an X).
 var cross_hit := false
 ## Creator 2026-11-23: the Lunge's second hit is part of the same effect: only its number.
@@ -170,6 +173,11 @@ func _build_ui() -> void:
 	letter_fx.battle = self
 	letter_fx.hud = hud
 	add_child(letter_fx)
+	grotesque_fx = SKILL_GROTESQUE.new()
+	grotesque_fx.name = "SkillGrotesqueFX"
+	grotesque_fx.battle = self
+	grotesque_fx.hud = hud
+	add_child(grotesque_fx)
 
 
 func _refresh_all() -> void:
@@ -1516,7 +1524,7 @@ func _show_result() -> void:
 
 
 func handle_confirm() -> void:
-	if hud.mode == "continue" and fx.is_busy(): return
+	if hud.mode == "continue" and (fx.is_busy() or grotesque_fx.is_busy()): return
 	match hud.mode:
 		"turn":
 			hud.mode = "command"
@@ -1574,7 +1582,7 @@ func handle_back() -> void:
 				hud.mode = "turn"
 				hud.feedback = "Command menu closed. Z / Enter: reopen. No act spent."
 		"continue":
-			if not fx.is_busy(): proceed()
+			if not fx.is_busy() and not grotesque_fx.is_busy(): proceed()
 		"timing", "absorb", "counter": hud.feedback = "Action committed. Z / Enter: finish input."
 		"announce": hud.feedback = "No acts to react. Z / Enter: resolve enemy attack."
 		"result": hud.feedback = "Battle finished. Z / Enter: return to the dungeon." if Engine.has_meta(DUNGEON_RETURN_META) else "Battle finished. Z / Enter: play again."
