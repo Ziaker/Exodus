@@ -121,6 +121,8 @@ Nos HTMLs de referência, o campo Moiré é desenhado em grade pixel-crisp de **
 | `blueStat` (Normal · D-131) | `#25568a` | `#9fc9ec` | `#061124` | `Weaken`, debuffs/status arcanos azuis normais |
 | `zahavBlue` (**ZAHAV** · D-131) | `#2b669e` | **`#ffd84a`** *(dourado)* | `#08162b` | `Weakenen [ZAHAV]`, status arcanos azuis via ZAHAV |
 | `sunNormal` (Normal · D-131) | `#c94c14` | `#f2d9b6` | `#240903` | `Mark of Sun` *(idêntica a `fireNormal` — ZERO dourado ZAHAV)* |
+| `blade` (Normal · D-139) | `#8c1d30` | `#dfe4ee` | `#17070c` (corpo `#050208`) | `Blade Dance`, ataques de lâmina/aço sombrio normais *(ZERO dourado)* |
+| `zahavStone` (**ZAHAV** · D-139) | `#8c7252` | **`#ffd84a`** *(dourado)* | `#1b140d` (corpo `#050208`) | `Stone Body [ZAHAV]`, habilidades pétreas/rochosas via ZAHAV |
 
 ---
 
@@ -152,7 +154,18 @@ Referência HTML única aprovada (modos **Inimigos** e **3 Aliados Survival**): 
 | **Mark of Sun** | `renderMarkOfSun()` | `2.95s` · marca `0.65s` · disparo `0.48s` | `sunNormal` *(zero ouro)* | Sol grotesco rabiscado de 12 raios (acima da cabeça em inimigos; **no canto inferior-direito livre do cartão em aliados**, com `×3`/`×2` ao lado e **0 px sobre o Battle Log**), **zero triângulos**; ao levar dano em ambos os lados, clarão solar limpo (anel expandindo + estrela de 8 raios finos + núcleo `#f2d9b6` + pulso Moiré contido) |
 
 > [!IMPORTANT]
-> **Regra de contenção e marcas persistentes (D-137 / D-131):** ataques devem manter contenção visual fiel à descrição (sem camadas supérfluas). Marcas persistentes que permanecem ativas por várias ações/rodadas (ex.: `Mark of Sun`) **nunca podem obstruir o Battle Log** quando aplicadas em cartões de aliados — ficam encaixadas na área livre do próprio cartão com recorte `min_y` abaixo do log.
+> **Regra de contenção e marcas persistentes (D-137 / D-131):** ataques devem manter contenção visual fiel à descrição (sem camadas supérfluas). Marcas persistentes que permanecem ativas por várias ações/rodadas (ex.: `Mark of Sun`, `STURDY`) **nunca podem obstruir o Battle Log** quando aplicadas em cartões de aliados — ficam encaixadas na área livre do próprio cartão com recorte `min_y` abaixo do log.
+
+### 5.3 Catálogo Aprovado — Coreografia 1:1 dos 4 Ataques da D-139 (4/4 Aprovados de 1ª)
+
+Referência HTML única aprovada (modos **Inimigos** e **3 Aliados Survival**): [`docs/vfx_refs/d139/d139_skills_vfx_canon.html`](vfx_refs/d139/d139_skills_vfx_canon.html) ([`README`](vfx_refs/d139/README.md) · [`VALIDATION_LOG_D139.md`](VALIDATION_LOG_D139.md) · [`CLAUDE_PROMPTS_D139.md`](CLAUDE_PROMPTS_D139.md)).
+
+| Ataque | Função HTML | Duração / Hit | Paleta | Coreografia Canônica Aprovada |
+|---|---|---|---|---|
+| **Twin Fang** | `renderTwinFang()` | `2.35s` · hits `0.28s`, `0.86s` | `blood` *(zero ouro)* | 2 pares de presas curvas (`drawTwinFangPair`) rasgando em X (`-0.58` e `+0.62 rad`) com 2 cicatrizes paralelas (`drawParallelGashes`), anel de ligação COMBO (`+50%`) entre os golpes, 2º par em escala `1.32×`, Moiré ampliado (`68×54` → `108×82`) e respingos |
+| **Blade Dance** | `renderBladeDance()` | `0.34 + n×0.33 + 0.95s` (`2.94s` p/ 5 hits) | `blade` *(zero ouro)* | Escurece palco `0.28` → fita/rastro rabiscado em arcos alternados ligando **alvos intercalados** (ou laço lateral se 1 alvo vivo no Godot) → em cada chegada, crescente de corte + sabre (`drawCurvedBladeSlash`, escala `0.92× → 1.22×`), Moiré `76×58`, cicatriz residual e 6 faíscas |
+| **Rock Body** | `renderStoneArmor(false)` | `2.95s` · lock `0.44s` · hold `1.65s` | `stone` *(zero ouro)* | `IMEDIATO` (`SELF`): 7 placas angulosas (`drawRockPlate`) convergem e travam com anel seco + poeira + Moiré `78×58` → **persistente `STURDY`** (ombreiras + `drawSturdyBadge` em inimigos; 4 cantoneiras + escudo no canto inferior-direito do cartão em aliados, **0 px sobre o Battle Log**); cúpula de choque ao segurar `COUNTER` |
+| **Stone Body [ZAHAV]** | `renderStoneArmor(true)` | `3.15s` · lock `0.62s` · hold `1.78s` | `zahavStone` *(outline/veios `#ffd84a`)* | `IMEDIATO` (`SELF`, ZAHAV): escurece `0.24` → 10 blocos pesados em 2 ondas com **veios dourados `#ffd84a`** + Moiré `104×78` + 6 setas ascendentes douradas (`+15 DEF`) → estado persistente `STURDY +15 DEF` (cantoneiras grossas douradas + escudo dourado-pedra 100% abaixo do Battle Log) |
 
 ---
 
