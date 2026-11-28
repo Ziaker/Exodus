@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0">
+  <div class="py-1.5 space-y-1.5 select-none">
+    <!-- Barra 1: 4 Elementos (v2: CRYO e LEAF refeitos; VENO e AQUA mantidos) -->
+    <div class="flex flex-wrap items-center justify-between gap-1.5 pb-1.5 border-b border-[var(--card-border)] text-xs">
+      <div class="flex flex-wrap items-center gap-1">
+        <button data-skill="aqua" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#2e6c8a"></span>
+          <span>1 · AQUA</span>
+          <span class="opacity-75 font-normal">Nile Surge</span>
+        </button>
+        <button data-skill="cryo" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#68a8cc"></span>
+          <span>2 · CRYO</span>
+          <span class="opacity-75 font-normal">Hail Fangs v2</span>
+        </button>
+        <button data-skill="veno" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#638029"></span>
+          <span>3 · VENO ✓</span>
+          <span class="opacity-75 font-normal">Uraeus Venom</span>
+        </button>
+        <button data-skill="leaf" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#265c3a"></span>
+          <span>4 · LEAF</span>
+          <span class="opacity-75 font-normal">Thorn Lash v2</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="btn-frieze" title="Alternar painel/borda de papiro egípcio atrás do ataque" class="px-2 py-1 rounded font-medium border border-[var(--border)] transition">☥ Cartucho: ON</button>
+        <button id="btn-zahav" title="Pré-visualizar Lei do Outline Dourado (ZAHAV)" class="px-2 py-1 rounded font-medium border border-[var(--border)] transition">✦ ZAHAV: OFF</button>
+      </div>
+    </div>
+
+    <!-- Barra 2: Modo Alvo (Inimigos vs Aliados no tamanho exato do cartão 256×52) -->
+    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-1">
+        <span class="text-[var(--muted-foreground)] mr-0.5">Alvo:</span>
+        <button data-side="allies" class="side-btn px-2 py-0.5 rounded font-medium border border-[var(--border)] transition">Aliados (tamanho do cartão)</button>
+        <button data-side="foes" class="side-btn px-2 py-0.5 rounded font-medium border border-[var(--border)] transition">Inimigos (3)</button>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="btn-play" class="px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">⏸</button>
+        <button id="btn-replay" class="px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition">↻ Replay</button>
+        <label class="flex items-center gap-1 text-[var(--muted-foreground)] cursor-pointer">
+          <input id="chk-loop" type="checkbox" checked class="accent-[var(--primary)]" />
+          Loop
+        </label>
+        <button id="btn-speed" class="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] font-mono tabular-nums text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">1.0×</button>
+      </div>
+    </div>
+
+    <!-- Palco EXODUS 816x360 -->
+    <div class="relative w-full rounded overflow-hidden border border-[var(--card-border)] bg-[#0b0714]">
+      <canvas id="stage" width="816" height="360" class="block w-full h-auto"></canvas>
+    </div>
+
+    <!-- Rodapé: Paleta mineral + Conceito -->
+    <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
+      <div class="flex items-center gap-2 min-w-0">
+        <span id="pal-swatches" class="inline-flex items-center gap-1 shrink-0"></span>
+        <span id="caption-text" class="truncate"></span>
+      </div>
+      <span id="badge-text" class="font-mono text-[11px] opacity-85 shrink-0"></span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const BAYER = [
+      [0,  8,  2, 10],
+      [12, 4, 14,  6],
+      [3, 11,  1,  9],
+      [15, 7, 13,  5]
+    ];
+
+    const INK = '#0a0608';
+    const PAPYRUS = '#d4c198';
+
+    // Pigmentos minerais 100% 2D chapados (ZERO 3D, ZERO gradiente, ZERO dourado ZAHAV no normal)
+    const BASE_PALS = {
+      aqua: {
+        main: '#2e6c8a',     // Azul egípcio mineral
+        dark: '#143347',     // Lápis-lazúli fundo
+        light: '#c9d7cf',    // Espuma de calcário
+        accent: '#a8693c',   // Terracota de ânfora
+        stone: '#1b1512'
+      },
+      cryo: {
+        main: '#5c9bc0',     // Gelo faience nítido
+        dark: '#1b3850',     // Sombra glacial chapada
+        light: '#eaf6fa',    // Branco-gelo cortante
+        accent: '#92c4de',   // Faceta intermediária de gelo
+        stone: '#101b24'
+      },
+      veno: {
+        main: '#638029',     // Malaquita biliar
+        dark: '#1d260b',     // Piche de cobra
+        light: '#cfd696',    // Papiro-peçonha
+        accent: '#9c2d35',   // Hematita vermelha (língua / presa / escorpião)
+        stone: '#1a180f'
+      },
+      leaf: {
+        main: '#265c3a',     // Verde-sarça profundo
+        dark: '#0f2617',     // Sombra de espinheiro
+        light: '#d4c198',    // Fibra seca / papiro
+        accent: '#8f2e2c',   // Espinho rubro-hematita
+        stone: '#151710'
+      }
+    };
+
+    const SKILLS = {
+      aqua: {
+        label: 'NILE SURGE',
+        elem: 'AQUA',
+        title: 'ÁGUA 2D · Faixas em zigue-zague do Nilo (𓈖), ânforas de perfil derramando correnteza e peixes nadando em perfil',
+        badge: 'MURAL 2D · ZIGUE-ZAGUE + PEIXES · 10 FPS',
+        statusTag: { text: 'SOAK', col: '#c9d7cf', accent: '#2e6c8a' },
+        logFoe:  ['Painted Nile waves unfold across the wall in flat bands!', 'NILE SURGE: 34 MAGI — swept under sacred river currents!'],
+        logAlly: ['Painted Nile waves flood YOCH\'s card from edge to edge!', 'NILE SURGE: YOCH takes 34 MAGI — swept by river currents!'],
+        duration: 2.80
+      },
+      cryo: {
+        label: 'HAIL FANGS',
+        elem: 'CRYO',
+        title: 'GELO 2D v2 · Rajada diagonal de lanças de gelo, dentes de estalactites fechando do teto/chão, glifos de geada e estilhaço',
+        badge: 'V2 · LANÇAS + DENTES DE GELO · 10 FPS',
+        statusTag: { text: 'CHILL', col: '#eaf6fa', accent: '#5c9bc0' },
+        logFoe:  ['Diagonal ice spears hail down as jagged frost fangs lock shut!', 'HAIL FANGS shatters! 38 MAGI — target CHILLED!'],
+        logAlly: ['Ice spears hail across YOCH\'s card as frost fangs lock shut!', 'HAIL FANGS shatters! YOCH takes 38 MAGI — CHILLED!'],
+        duration: 2.85
+      },
+      veno: {
+        label: 'URAEUS VENOM',
+        elem: 'VENO / TOXI',
+        title: 'VENENO 2D ✓ · Cobras Uraeus simétricas de perfil, bote em 2 quadros, escorpião chapado e gotas-lágrima verticais',
+        badge: 'APROVADO · URAEUS + ESCORPIÃO · 10 FPS',
+        statusTag: { text: 'VENO×2', col: '#cfd696', accent: '#638029' },
+        logFoe:  ['Twin painted Uraeus cobras uncoil in profile and strike!', 'URAEUS VENOM: 26 MAGI — Serqet venom applied (VENO ×2)!'],
+        logAlly: ['Twin painted Uraeus cobras strike across YOCH\'s card!', 'URAEUS VENOM: YOCH takes 26 MAGI — VENO ×2 applied!'],
+        duration: 2.85
+      },
+      leaf: {
+        label: 'THORN LASH',
+        elem: 'LEAF',
+        title: 'NATUREZA 2D v2 · Chicotes de sarça espinhosa disparando em X, estalo seco de espinhos curvos e rajada de folhas-lança',
+        badge: 'V2 · SARÇA EM X + FOLHAS-LANÇA · 10 FPS',
+        statusTag: { text: 'SNARE', col: '#d4c198', accent: '#265c3a' },
+        logFoe:  ['Barbed bramble whips lash in a sharp X and snap thorns shut!', 'THORN LASH tears through! 30 MAGI — target SNARED!'],
+        logAlly: ['Barbed bramble whips lash across YOCH\'s card in a sharp X!', 'THORN LASH tears through! YOCH takes 30 MAGI — SNARED!'],
+        duration: 2.80
+      }
+    };
+
+    const FOES = [
+      { id: 'A', kind: 'jackal', x: 220, y: 146, w: 62, h: 100 },
+      { id: 'B', kind: 'sobek',  x: 408, y: 138, w: 72, h: 112 },
+      { id: 'C', kind: 'ibis',   x: 596, y: 146, w: 64, h: 100 }
+    ];
+
+    const ALLIES = [
+      { id: 'FALLEN', name: '▸ FALLEN', rx: 14,  ry: 298, rw: 256, rh: 52, hp: 72, maxHp: 100, resLabel: 'EN', res: 28, maxRes: 40, resCol: '#8ad8ff', x: 142, y: 324 },
+      { id: 'YOCH',   name: 'YOCH',     rx: 280, ry: 298, rw: 256, rh: 52, hp: 74, maxHp: 74,  resLabel: 'PP', res: 6,  maxRes: 8,  resCol: '#f5f58c', x: 408, y: 324 },
+      { id: 'PIXIE',  name: 'PIXIE',    rx: 546, ry: 298, rw: 256, rh: 52, hp: 56, maxHp: 56,  resLabel: 'EN', res: 32, maxRes: 36, resCol: '#8ad8ff', x: 674, y: 324 }
+    ];
+
+    let activeSkill = 'cryo';
+    let targetSide = 'allies';
+    let showCartouche = true;
+    let zahavMode = false;
+    let paused = false;
+    let loop = true;
+    let speed = 1.0;
+    let t = 0;
+    let lastTs = performance.now();
+
+    function hash(n) {
+      const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+      return s - Math.floor(s);
+    }
+
+    function getPal(id) {
+      const b = BASE_PALS[id];
+      if (!zahavMode) return { ...b, strokeHi: b.light };
+      return { ...b, strokeHi: '#ffd84a' };
+    }
+
+    // Caixa do efeito: nos Aliados é EXATAMENTE o retângulo do cartão (256×52); nos Inimigos é o mural sobre o inimigo
+    function getScene() {
+      if (targetSide === 'foes') {
+        const foe = FOES[1];
+        return {
+          isAlly: false,
+          tgt: foe,
+          tgtIdx: 1,
+          box: { x: foe.x - 108, y: foe.y - 72, w: 216, h: 148, cx: foe.x, cy: foe.y + 2 }
+        };
+      }
+      const al = ALLIES[1];
+      return {
+        isAlly: true,
+        tgt: al,
+        tgtIdx: 1,
+        box: { x: al.rx, y: al.ry, w: al.rw, h: al.rh, cx: al.rx + al.rw * 0.5, cy: al.ry + al.rh * 0.5 }
+      };
+    }
+
+    function qTime(time, fps = 10) {
+      return Math.floor(time * fps) / fps;
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.sk-btn').forEach(btn => {
+        const on = btn.dataset.skill === activeSkill;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? '#ffffff' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+      document.querySelectorAll('.side-btn').forEach(btn => {
+        const on = btn.dataset.side === targetSide;
+        btn.style.backgroundColor = on ? 'var(--primary)' : 'var(--card)';
+        btn.style.color = on ? '#ffffff' : 'var(--foreground)';
+        btn.style.borderColor = on ? 'var(--primary)' : 'var(--border)';
+      });
+
+      const fb = document.getElementById('btn-frieze');
+      fb.textContent = showCartouche ? '☥ Cartucho: ON' : '☥ Cartucho: OFF';
+      fb.style.backgroundColor = showCartouche ? 'var(--secondary)' : 'var(--card)';
+      fb.style.color = 'var(--foreground)';
+      fb.style.borderColor = showCartouche ? 'var(--primary)' : 'var(--border)';
+
+      const zb = document.getElementById('btn-zahav');
+      zb.textContent = zahavMode ? '✦ ZAHAV: ON' : '✦ ZAHAV: OFF';
+      zb.style.backgroundColor = zahavMode ? '#a16207' : 'var(--card)';
+      zb.style.color = zahavMode ? '#ffffff' : 'var(--muted-foreground)';
+      zb.style.borderColor = zahavMode ? '#ffd84a' : 'var(--border)';
+
+      document.getElementById('btn-play').textContent = paused ? '▶' : '⏸';
+      const pal = getPal(activeSkill);
+      const sw = [['dark', pal.dark], ['main', pal.main], ['accent', pal.accent], ['light', pal.strokeHi]];
+      document.getElementById('pal-swatches').innerHTML = sw.map(([name, hex]) =>
+        `<span title="${name}: ${hex}" class="inline-flex items-center gap-1 px-1 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] font-mono text-[10px]">` +
+        `<span class="inline-block w-2 h-2 border border-white/20" style="background:${hex}"></span>${hex}</span>`
+      ).join('');
+      document.getElementById('caption-text').textContent = SKILLS[activeSkill].title;
+      document.getElementById('badge-text').textContent =
+        (targetSide === 'allies' ? 'CARTÃO 256×52 · ' : 'INIMIGOS · ') +
+        (zahavMode ? 'ZAHAV · ' : '') +
+        SKILLS[activeSkill].badge;
+    }
+
+    // ==================== PRIMITIVAS 100% 2D DE ARTE EGÍPCIA ====================
+    function flatPoly(pts, fill, stroke = INK, lw = 2.0) {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke && lw > 0) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lw;
+        ctx.lineJoin = 'miter';
+        ctx.stroke();
+      }
+    }
+
+    function flatLine(pts, stroke, lw = 2.0, close = false) {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      if (close) ctx.closePath();
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = lw;
+      ctx.lineJoin = 'miter';
+      ctx.stroke();
+    }
+
+    function drawEgyptianBorder(x, y, w, h, pal) {
+      ctx.fillStyle = INK;
+      ctx.fillRect(x, y, w, h);
+      const seg = h <= 5 ? 12 : 14;
+      const cols = [pal.main, pal.light, pal.accent, pal.dark];
+      let idx = 0;
+      for (let bx = x + 1.5; bx < x + w - 1.5; bx += seg) {
+        const bw = Math.min(seg - 1.5, x + w - 1.5 - bx);
+        if (bw <= 0) break;
+        ctx.fillStyle = cols[idx % cols.length];
+        ctx.fillRect(bx, y + 1, bw, Math.max(1, h - 2));
+        idx++;
+      }
+      if (zahavMode) {
+        ctx.fillStyle = '#ffd84a';
+        ctx.fillRect(x, y, w, 1);
+        ctx.fillRect(x, y + h - 1, w, 1);
+      }
+    }
+
+    // Cartucho no Inimigo (mural) OU no Cartão do Aliado (friso exato 256×52, fundo translúcido para manter o cartão legível)
+    function drawMuralCartouche(box, unfold, pal, isAlly) {
+      if (!showCartouche || unfold <= 0.02) return;
+      const curW = Math.max(8, box.w * unfold);
+      const x = box.cx - curW * 0.5;
+      const y = box.y;
+      const bh = isAlly ? 4 : 7;
+      ctx.save();
+      ctx.fillStyle = pal.stone;
+      ctx.globalAlpha = isAlly ? 0.68 : 0.96;
+      ctx.fillRect(x, y, curW, box.h);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(212, 193, 152, 0.06)';
+      for (let gy = y + bh + 3; gy < y + box.h - bh - 2; gy += 6) ctx.fillRect(x + 3, gy, curW - 6, 1);
+      drawEgyptianBorder(x, y, curW, bh, pal);
+      drawEgyptianBorder(x, y + box.h - bh, curW, bh, pal);
+      ctx.fillStyle = INK;
+      ctx.fillRect(x, y, 3, box.h);
+      ctx.fillRect(x + curW - 3, y, 3, box.h);
+      ctx.fillStyle = pal.strokeHi;
+      ctx.fillRect(x + 1, y + bh, 1.5, box.h - bh * 2);
+      ctx.fillRect(x + curW - 2.5, y + bh, 1.5, box.h - bh * 2);
+      ctx.restore();
+    }
+
+    function drawEgyptianEye(x, y, r, pal, pupilCol = INK) {
+      const pts = [
+        [x - r * 1.4, y], [x - r * 0.4, y - r * 0.75], [x + r * 0.6, y - r * 0.65],
+        [x + r * 1.5, y], [x + r * 0.5, y + r * 0.7],  [x - r * 0.5, y + r * 0.65]
+      ];
+      flatPoly(pts, pal.light, INK, 1.3);
+      flatLine([[x + r * 1.35, y], [x + r * 2.1, y + r * 0.15]], INK, 1.4);
+      ctx.fillStyle = pupilCol;
+      ctx.fillRect(x - r * 0.35, y - r * 0.35, r * 0.7, r * 0.7);
+    }
+
+    // Estrela de gelo geométrica de 6 pontas (100% 2D egípcio — simetria de cristal + linha reta)
+    function drawFrostGlyph(cx, cy, r, pal) {
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI;
+        const dx = Math.cos(a) * r, dy = Math.sin(a) * r;
+        flatLine([[cx - dx, cy - dy], [cx + dx, cy + dy]], INK, 3.2);
+        flatLine([[cx - dx, cy - dy], [cx + dx, cy + dy]], pal.strokeHi, 1.5);
+        // Pequenos chevrons nas pontas
+        [-1, 1].forEach(s => {
+          const px = cx + dx * s * 0.68, py = cy + dy * s * 0.68;
+          const a1 = a + (s > 0 ? 2.45 : -0.68);
+          const a2 = a + (s > 0 ? -2.45 : 0.68);
+          const br = r * 0.34;
+          flatLine([[px + Math.cos(a1) * br, py + Math.sin(a1) * br], [px, py], [px + Math.cos(a2) * br, py + Math.sin(a2) * br]], pal.strokeHi, 1.3);
+        });
+      }
+      // Miolo em losango chapado
+      flatPoly([[cx, cy - r * 0.3], [cx + r * 0.3, cy], [cx, cy + r * 0.3], [cx - r * 0.3, cy]], pal.main, INK, 1.3);
+    }
+
+    // Dente/estalactite de gelo 2D com 2 facetas planas (luz/sombra, zero gradiente)
+    function drawIceFang(baseX, baseY, w, h, dirY, pal) {
+      const tipX = baseX + (dirY > 0 ? 2 : -2);
+      const tipY = baseY + dirY * h;
+      const midX = baseX + w * 0.10;
+      const midY = baseY + dirY * h * 0.45;
+      // Faceta clara (esquerda)
+      flatPoly([[baseX - w * 0.5, baseY], [midX, baseY], [tipX, tipY]], pal.light, INK, 1.6);
+      // Faceta azul-gelo (direita)
+      flatPoly([[midX, baseY], [baseX + w * 0.5, baseY], [tipX, tipY]], pal.main, INK, 1.6);
+      // Filete central
+      flatLine([[midX, baseY + dirY * 2], [tipX, tipY - dirY * 2]], pal.strokeHi, 1.1);
+      if (zahavMode) flatLine([[baseX - w * 0.5, baseY], [tipX, tipY], [baseX + w * 0.5, baseY]], '#ffd84a', 1.3);
+    }
+
+    // Lança de gelo 2D (granizo/estaca de mural)
+    function drawIceSpear(cx, cy, len, w, ang, pal) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(ang);
+      const leftF = [[len * 0.5, 0], [-len * 0.15, -w], [-len * 0.5, 0]];
+      const rightF = [[len * 0.5, 0], [-len * 0.15, w], [-len * 0.5, 0]];
+      flatPoly(leftF, pal.light, INK, 1.5);
+      flatPoly(rightF, pal.main, INK, 1.5);
+      flatLine([[len * 0.45, 0], [-len * 0.45, 0]], pal.strokeHi, 1.1);
+      if (zahavMode) flatLine([[-len * 0.5, 0], [len * 0.5, 0]], '#ffd84a', 1.3);
+      ctx.restore();
+    }
+
+    function drawEgyptianFish(cx, cy, sc, dir, pal) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(dir * sc, sc);
+      const body = [
+        [22, 0], [10, -10], [-8, -11], [-20, -3], [-28, -11],
+        [-24, 0], [-28, 11], [-20, 3], [-8, 11], [10, 10]
+      ];
+      flatPoly(body, pal.light, INK, 1.8);
+      flatPoly([[4, -10], [-10, -17], [-14, -10]], pal.accent, INK, 1.5);
+      flatPoly([[-2, 10], [-12, 16], [-14, 9]], pal.accent, INK, 1.5);
+      flatLine([[6, -9], [4, 0], [6, 9]], INK, 1.6);
+      flatLine([[-4, -9], [-6, 0], [-4, 9]], pal.main, 1.4);
+      flatLine([[-12, -8], [-14, 0], [-12, 8]], pal.main, 1.4);
+      drawEgyptianEye(12, -1.5, 2.8, pal);
+      ctx.restore();
+    }
+
+    function drawEgyptianJar(cx, cy, dir, tilt, sc, pal) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(dir * sc, sc);
+      ctx.rotate(tilt);
+      const jar = [
+        [-7, -18], [7, -18], [5, -10], [14, -1], [12, 14], [4, 21],
+        [-4, 21], [-12, 14], [-14, -1], [-5, -10]
+      ];
+      flatPoly(jar, pal.accent, INK, 2.0);
+      flatLine([[-11, -3], [11, -3]], INK, 1.6);
+      flatLine([[-13, 3], [13, 3]], pal.light, 2.2);
+      flatLine([[-11, 9], [11, 9]], INK, 1.6);
+      if (zahavMode) flatPoly(jar, null, '#ffd84a', 1.4);
+      ctx.restore();
+    }
+
+    function drawNileBand(x0, x1, y, amp, toothW, thickness, phase, fill, strokeTop, clipTop, clipBot) {
+      const top = [];
+      const bot = [];
+      const startX = x0 - toothW * 2;
+      for (let x = startX; x <= x1 + toothW * 2; x += toothW * 0.5) {
+        const stepIdx = Math.round((x - startX) / (toothW * 0.5));
+        const zx = x + phase;
+        const zy = y + ((stepIdx % 2 === 0) ? -amp : amp);
+        top.push([zx, zy]);
+        bot.unshift([zx, zy + thickness]);
+      }
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, clipTop, x1 - x0, Math.max(0, clipBot - clipTop));
+      ctx.clip();
+      flatPoly(top.concat(bot), fill, INK, 1.6);
+      flatLine(top, strokeTop, 1.8);
+      ctx.restore();
+    }
+
+    function drawUraeusCobra(baseX, baseY, dir, sc, reach, strike, pal) {
+      ctx.save();
+      ctx.translate(baseX, baseY);
+      ctx.scale(dir * sc, sc);
+
+      const ext = reach * 56 + strike * 26;
+      const headX = ext;
+      const headY = -36 + strike * 16;
+
+      const bodyOuter = [
+        [-42, 34], [-18, 34], [-4, 16], [12, 4], [headX - 18, headY + 12],
+        [headX - 12, headY - 8], [headX + 6, headY - 12], [headX + 18, headY - 4],
+        [headX + 18, headY + 3], [headX + 4, headY + 4], [headX - 2, headY + 14],
+        [headX - 14, headY + 26], [4, 26], [-12, 42], [-42, 42]
+      ];
+      flatPoly(bodyOuter, pal.main, INK, 2.2);
+      if (zahavMode) flatPoly(bodyOuter, null, '#ffd84a', 1.4);
+
+      const hood = [
+        [headX - 16, headY - 4], [headX - 30, headY + 6],
+        [headX - 26, headY + 22], [headX - 12, headY + 24], [headX - 4, headY + 10]
+      ];
+      flatPoly(hood, pal.dark, INK, 2.0);
+      for (let k = 0; k < 4; k++) {
+        const hy = headY + 2 + k * 5.2;
+        flatLine([[headX - 26 + k * 1.2, hy], [headX - 8 - k * 1.2, hy]], pal.strokeHi, 1.8);
+      }
+
+      flatLine([[-28, 38], [-10, 26], [8, 15]], pal.dark, 3.0);
+      flatLine([[-22, 35], [-4, 23], [12, 13]], pal.light, 1.3);
+
+      if (strike > 0.15) {
+        flatPoly([[headX + 12, headY + 2], [headX + 14, headY + 11], [headX + 9, headY + 3]], pal.light, INK, 1.3);
+        flatLine([[headX + 17, headY + 1], [headX + 27, headY + 1], [headX + 33, headY - 3]], pal.accent, 2.0);
+        flatLine([[headX + 27, headY + 1], [headX + 33, headY + 5]], pal.accent, 2.0);
+      }
+      drawEgyptianEye(headX + 4, headY - 4, 3.2, pal, pal.accent);
+      ctx.restore();
+    }
+
+    function drawScorpionGlyph(cx, cy, sc, pal) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(sc, sc);
+      flatPoly([[0, -14], [7, -6], [6, 8], [0, 14], [-6, 8], [-7, -6]], pal.dark, INK, 1.8);
+      flatLine([[-5, -4], [5, -4]], pal.strokeHi, 1.4);
+      flatLine([[-5, 1], [5, 1]], pal.strokeHi, 1.4);
+      flatLine([[-4, 6], [4, 6]], pal.strokeHi, 1.4);
+      [-1, 1].forEach(s => {
+        flatLine([[s * 5, -10], [s * 14, -18], [s * 12, -26]], pal.accent, 2.6);
+        flatLine([[s * 14, -18], [s * 19, -23]], pal.accent, 2.2);
+        for (let l = 0; l < 3; l++) {
+          const ly = -5 + l * 6;
+          flatLine([[s * 6, ly], [s * 14, ly + 2], [s * 18, ly + 7]], INK, 1.8);
+          flatLine([[s * 6, ly], [s * 14, ly + 2], [s * 18, ly + 7]], pal.main, 1.1);
+        }
+      });
+      flatLine([[0, 14], [0, 24], [8, 28], [6, 20]], pal.accent, 2.8);
+      flatPoly([[6, 20], [11, 17], [8, 23]], pal.light, INK, 1.2);
+      ctx.restore();
+    }
+
+    // Chicote de Sarça Espinhosa 2D (fita angular em 2 tons + espinhos-garra curvos de perfil)
+    function drawThornWhip(x0, y0, x1, y1, prog, snap, thick, pal) {
+      if (prog <= 0.02) return;
+      const steps = 9;
+      const active = Math.max(2, Math.floor(steps * prog));
+      const dx = x1 - x0, dy = y1 - y0;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len, uy = dy / len;
+      const nx = -uy, ny = ux;
+      const spine = [];
+      const top = [], bot = [];
+
+      for (let i = 0; i <= active; i++) {
+        const u = i / steps;
+        // Onda angular rígida (tensa quando snap=1!)
+        const bend = Math.sin(u * Math.PI * 2) * (1 - snap * 0.65) * 9;
+        const px = x0 + dx * u + nx * bend;
+        const py = y0 + dy * u + ny * bend;
+        spine.push([px, py]);
+        const hw = thick * (1 - u * 0.55) * 0.5;
+        top.push([px + nx * hw, py + ny * hw]);
+        bot.unshift([px - nx * hw, py - ny * hw]);
+      }
+
+      flatPoly(top.concat(bot), pal.main, INK, 1.8);
+      flatLine(spine, pal.strokeHi, 1.3);
+      if (zahavMode) flatPoly(top.concat(bot), null, '#ffd84a', 1.3);
+
+      // Espinhos-garra curvos brotando dos dois lados do chicote (aumentam no estalo!)
+      const thornBoost = 1 + snap * 0.65;
+      for (let i = 1; i < active; i++) {
+        const [sx, sy] = spine[i];
+        const side = i % 2 === 0 ? 1 : -1;
+        const thLen = (7 + (i % 3) * 2) * thornBoost;
+        const baseW = 3.2;
+        const poly = [
+          [sx - ux * baseW, sy - uy * baseW],
+          [sx + nx * side * thLen + ux * 4.5, sy + ny * side * thLen + uy * 4.5],
+          [sx + ux * baseW, sy + uy * baseW]
+        ];
+        flatPoly(poly, i % 3 === 0 ? pal.accent : pal.dark, INK, 1.4);
+        flatLine([[sx, sy], [sx + nx * side * thLen * 0.85 + ux * 3.5, sy + ny * side * thLen * 0.85 + uy * 3.5]], pal.strokeHi, 1.0);
+      }
+    }
+
+    // Folha-lança cortante 2D (formato ponta de flecha egípcia — nada de pétala fofa!)
+    function drawBladeLeaf(cx, cy, len, w, ang, pal) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(ang);
+      flatPoly([[len * 0.55, 0], [0, -w], [-len * 0.45, -w * 0.3], [-len * 0.55, 0], [-len * 0.45, w * 0.3], [0, w]], pal.main, INK, 1.5);
+      flatLine([[-len * 0.45, 0], [len * 0.5, 0]], pal.strokeHi, 1.2);
+      ctx.restore();
+    }
+
+    // Selo geométrico de Sarça/Espinho no centro do X
+    function drawBriarCrest(cx, cy, r, pal) {
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + Math.PI * 0.25;
+        const c = Math.cos(a), s = Math.sin(a);
+        const nx = -s, ny = c;
+        flatPoly([
+          [cx + c * r * 0.22, cy + s * r * 0.22],
+          [cx + c * r * 0.52 + nx * r * 0.24, cy + s * r * 0.52 + ny * r * 0.24],
+          [cx + c * r, cy + s * r],
+          [cx + c * r * 0.52 - nx * r * 0.24, cy + s * r * 0.52 - ny * r * 0.24]
+        ], i % 2 === 0 ? pal.accent : pal.main, INK, 1.6);
+      }
+      flatPoly([[cx, cy - r * 0.28], [cx + r * 0.28, cy], [cx, cy + r * 0.28], [cx - r * 0.28, cy]], pal.dark, pal.strokeHi, 1.5);
+    }
+
+    // ==================== PALCO EXODUS & ENTIDADES ====================
+    function drawExodusBg(time, darken = 0) {
+      ctx.fillStyle = '#240d19';
+      ctx.fillRect(0, 22, W, 152);
+      ctx.fillStyle = '#381425';
+      const step = 6;
+      for (let y = 22; y < 174; y += step) {
+        const thresh = (((y - 22) / 152) * 10) | 0;
+        for (let x = 0; x < W; x += step) {
+          if (BAYER[((y / step) | 0) & 3][((x / step + ((time * 2) | 0)) | 0) & 3] < thresh) {
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+      }
+      ctx.fillStyle = '#2b1d15';
+      ctx.fillRect(0, 174, W, 74);
+      ctx.fillStyle = '#18100b';
+      for (let i = 0; i < 6; i++) ctx.fillRect(0, 178 + i * 12, W, 2);
+      if (darken > 0.01) {
+        ctx.fillStyle = `rgba(6, 3, 10, ${darken})`;
+        ctx.fillRect(0, 22, W, 226);
+      }
+      ctx.fillStyle = 'rgba(245, 245, 140, 0.08)';
+      ctx.fillRect(0, 246, W, 2);
+    }
+
+    function foeParts(foe) {
+      const w = foe.w, h = foe.h;
+      if (foe.kind === 'jackal') {
+        return [
+          [-w * 0.24, -h * 0.62, w * 0.12, h * 0.22], [w * 0.12, -h * 0.62, w * 0.12, h * 0.22],
+          [-w * 0.24, -h * 0.44, w * 0.48, h * 0.20], [-w * 0.34, -h * 0.22, w * 0.68, h * 0.44],
+          [-w * 0.46, -h * 0.08, w * 0.14, h * 0.28], [w * 0.32, -h * 0.08, w * 0.14, h * 0.28],
+          [-w * 0.22,  h * 0.22, w * 0.16, h * 0.30], [w * 0.06,  h * 0.22, w * 0.16, h * 0.30]
+        ];
+      }
+      if (foe.kind === 'ibis') {
+        return [
+          [-w * 0.18, -h * 0.54, w * 0.36, h * 0.20], [w * 0.18, -h * 0.48, w * 0.24, h * 0.07],
+          [-w * 0.64, -h * 0.34, w * 0.30, h * 0.28], [w * 0.34, -h * 0.34, w * 0.30, h * 0.28],
+          [-w * 0.34, -h * 0.28, w * 0.68, h * 0.46], [-w * 0.18, h * 0.18, w * 0.36, h * 0.32]
+        ];
+      }
+      return [
+        [-w * 0.34, -h * 0.58, w * 0.12, h * 0.16], [w * 0.22, -h * 0.58, w * 0.12, h * 0.16],
+        [-w * 0.28, -h * 0.48, w * 0.56, h * 0.22], [-w * 0.46, -h * 0.24, w * 0.92, h * 0.46],
+        [-w * 0.58, -h * 0.14, w * 0.14, h * 0.30], [w * 0.44, -h * 0.14, w * 0.14, h * 0.30],
+        [-w * 0.26,  h * 0.22, w * 0.20, h * 0.32], [w * 0.06,  h * 0.22, w * 0.20, h * 0.32]
+      ];
+    }
+
+    function drawFoe(foe, st = {}) {
+      ctx.save();
+      const x = foe.x + (st.ox || 0), y = foe.y + (st.oy || 0);
+      ctx.fillStyle = 'rgba(0,0,0,0.52)';
+      ctx.fillRect(x - foe.w * 0.56, y + foe.h * 0.51, foe.w * 1.12, 6);
+      ctx.fillStyle = st.fill || (st.inv ? PAPYRUS : '#050208');
+      foeParts(foe).forEach(([px, py, pw, ph]) => ctx.fillRect(x + px, y + py, pw, ph));
+      if (st.roleText) {
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = st.roleText.col;
+        ctx.fillText(st.roleText.text, x, y - foe.h * 0.68);
+      }
+      if (st.statusTag) drawDarkStatusTag(x, y + foe.h * 0.66, st.statusTag);
+      if (st.dmg) {
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = '#050208';
+        ctx.fillText(st.dmg.text, x + 1, y - 28 - st.dmg.rise + 1);
+        ctx.fillStyle = st.dmg.col || PAPYRUS;
+        ctx.fillText(st.dmg.text, x, y - 28 - st.dmg.rise);
+      }
+      ctx.restore();
+    }
+
+    function drawDarkStatusTag(cx, cy, tag) {
+      ctx.save();
+      ctx.font = 'bold 10px monospace';
+      const tw = ctx.measureText(tag.text).width;
+      const bw = tw + 12, bh = 14;
+      const bx = cx - bw * 0.5, by = cy - bh * 0.5;
+      ctx.fillStyle = '#0a0407';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = 'rgba(237, 227, 216, 0.34)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      ctx.fillStyle = tag.accent;
+      ctx.fillRect(bx + 1, by + 1, 2, bh - 2);
+      ctx.fillStyle = tag.col;
+      ctx.textAlign = 'center';
+      ctx.fillText(tag.text, cx + 1.5, cy + 3.5);
+      ctx.restore();
+    }
+
+    function drawHud(logLine, topTag, allyState = {}) {
+      ctx.fillStyle = 'rgba(10, 6, 18, 0.88)';
+      ctx.fillRect(0, 0, W, 22);
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#cfc7e2';
+      ctx.fillText('ROUND 1   PARTY SP 178   FOES SP 172', 14, 15);
+      if (topTag) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = zahavMode ? '#ffd84a' : PAPYRUS;
+        ctx.fillText(topTag, W - 14, 15);
+      }
+
+      // Battle Log (sempre 100% livre no modo Aliados!)
+      ctx.fillStyle = 'rgba(10, 7, 20, 0.92)';
+      ctx.fillRect(14, 252, W - 28, 38);
+      ctx.fillStyle = zahavMode ? 'rgba(255, 216, 74, 0.5)' : 'rgba(212, 193, 152, 0.32)';
+      ctx.fillRect(14, 252, W - 28, 1);
+      ctx.fillRect(14, 289, W - 28, 1);
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = zahavMode ? '#ffd84a' : '#e8ddd0';
+      ctx.fillText('* ' + logLine, 26, 275);
+
+      ALLIES.forEach((al, idx) => {
+        const st = allyState[idx] || {};
+        const inv = !!st.inv;
+        const x = al.rx + (st.ox || 0), y = al.ry + (st.oy || 0);
+
+        ctx.save();
+        ctx.fillStyle = st.fill || (inv ? PAPYRUS : 'rgba(14, 10, 26, 0.94)');
+        ctx.fillRect(x, y, al.rw, al.rh);
+        ctx.strokeStyle = st.isTarget ? (zahavMode ? '#ffd84a' : '#e8b954') : (idx === 0 && targetSide === 'foes' ? '#7de08b' : 'rgba(220, 214, 232, 0.28)');
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, al.rw - 1, al.rh - 1);
+
+        const roleCol = st.isTarget ? '#f2c94c' : (idx === 0 && targetSide === 'foes' ? '#e55353' : null);
+        if (roleCol && !inv) {
+          ctx.fillStyle = roleCol;
+          ctx.fillRect(x + 1, y + 1, 3, al.rh - 2);
+          ctx.fillStyle = roleCol + '1e';
+          ctx.fillRect(x + 4, y + 1, al.rw * 0.26, al.rh - 2);
+        }
+
+        const hpVal = Math.max(1, Math.min(al.maxHp, al.hp + (st.hpDelta || 0)));
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = inv ? '#090512' : '#f2eefc';
+        ctx.fillText(al.name, x + 12, y + 20);
+        ctx.font = '11px monospace';
+        ctx.fillStyle = inv ? '#090512' : '#9b93b0';
+        ctx.textAlign = 'right';
+        ctx.fillText('ACT ●●○○', x + al.rw - 10, y + 20);
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = inv ? '#090512' : ((st.hpDelta || 0) < 0 ? '#ff6b6b' : '#f09494');
+        ctx.fillText(`HP ${hpVal}/${al.maxHp}`, x + 12, y + 40);
+        ctx.fillStyle = inv ? '#090512' : al.resCol;
+        ctx.fillText(`${al.resLabel} ${al.res}/${al.maxRes}`, x + 122, y + 40);
+
+        if (st.statusTag) drawDarkStatusTag(x + al.rw - 36, y + al.rh - 4, st.statusTag);
+        ctx.restore();
+      });
+    }
+
+    function drawAllyDmg(tgt, dmg) {
+      if (!dmg) return;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 16px monospace';
+      ctx.fillStyle = '#050208';
+      ctx.fillText(dmg.text, tgt.x + 1, tgt.ry - 6 - dmg.rise * 0.35 + 1);
+      ctx.fillStyle = dmg.col;
+      ctx.fillText(dmg.text, tgt.x, tgt.ry - 6 - dmg.rise * 0.35);
+      ctx.restore();
+    }
+
+    // Helper: executa desenho recortado exatamente ao cartão do aliado (256×52) quando isAlly=true
+    function withCardClip(box, isAlly, shakeX, fn) {
+      ctx.save();
+      if (isAlly) {
+        ctx.translate(shakeX, 0);
+        ctx.beginPath();
+        ctx.rect(box.x, box.y, box.w, box.h);
+        ctx.clip();
+      }
+      fn();
+      ctx.restore();
+    }
+
+    // ==================== 1. AQUA — NILE SURGE ====================
+    function renderAqua() {
+      const pal = getPal('aqua');
+      const qt = qTime(t, 10);
+      const sc = getScene();
+      const { box, isAlly } = sc;
+      const hitT = 0.85;
+      const post = Math.max(0, t - hitT);
+
+      const unfold = t < 0.30 ? Math.min(1, qt / 0.26) : (t > 2.36 ? Math.max(0, 1 - (qt - 2.36) / 0.40) : 1);
+      const inv = post > 0 && post < 0.12;
+      const shake = post > 0 && post < 0.26 ? ((Math.floor(t * 24) % 2 === 0 ? 1 : -1) * 5 * (1 - post / 0.26)) : 0;
+      const dmgObj = post > 0.04 && post < 1.35 ? { text: '-34', col: pal.strokeHi, rise: Math.min(34, Math.floor(post * 12) * 3.2) } : null;
+      const tagObj = post > 0.30 ? SKILLS.aqua.statusTag : null;
+      const logLine = post > 0.02
+        ? (isAlly ? SKILLS.aqua.logAlly[1] : SKILLS.aqua.logFoe[1])
+        : (isAlly ? SKILLS.aqua.logAlly[0] : SKILLS.aqua.logFoe[0]);
+
+      const drawBack = () => drawMuralCartouche(box, unfold, pal, isAlly);
+
+      const drawFront = () => {
+        if (unfold <= 0.05) return;
+        const bh = isAlly ? 4 : 7;
+        const x0 = box.cx - (box.w * unfold) * 0.5 + 3;
+        const x1 = box.cx + (box.w * unfold) * 0.5 - 3;
+        const topY = box.y + bh;
+        const botY = box.y + box.h - bh;
+        const rise = qt < 0.85 ? Math.min(1, qt / 0.80) : (qt < 1.85 ? 1 : Math.max(0, 1 - (qt - 1.85) / 0.72));
+
+        // 2 Ânforas de perfil despejando jatos em zigue-zague vertical
+        const jarP = qt < 0.38 ? Math.min(1, qt / 0.28) : (qt > 1.72 ? Math.max(0, 1 - (qt - 1.72) / 0.38) : 1);
+        if (jarP > 0.05) {
+          const jScale = isAlly ? 0.56 : 1.0;
+          const jOffX = isAlly ? (box.w * 0.5 - 16) : 84;
+          const jY = isAlly ? (topY + 11) : (topY + 18);
+          [-1, 1].forEach(side => {
+            const jx = box.cx + side * (jOffX - jarP * (isAlly ? 3 : 6));
+            drawEgyptianJar(jx, jY, -side, 0.62 * jarP, jScale, pal);
+            if (qt > 0.22 && qt < 1.72) {
+              const streamH = Math.min(botY - jY - 2, (qt - 0.22) * (isAlly ? 110 : 210));
+              const sx = jx - side * (isAlly ? 9 : 14);
+              const sy0 = jY + (isAlly ? 4 : 8);
+              const stepY = isAlly ? 6 : 9;
+              const zig = [];
+              for (let yy = 0; yy <= streamH; yy += stepY) {
+                const off = ((Math.floor((yy + qt * 95) / stepY) % 2 === 0) ? -3.5 : 3.5);
+                zig.push([sx + off, sy0 + yy]);
+              }
+              flatLine(zig, INK, isAlly ? 4.4 : 6.0);
+              flatLine(zig, pal.main, isAlly ? 2.4 : 3.4);
+              flatLine(zig, pal.strokeHi, 1.1);
+            }
+          });
+        }
+
+        // Faixas paralelas de zigue-zague do Nilo (3 no cartão 52px; 5 no inimigo 148px)
+        const bands = isAlly ? 3 : 5;
+        const availH = (botY - topY) * rise;
+        const tooth = isAlly ? 14 : 18;
+        const amp = isAlly ? 3.5 : 5.5;
+        const thick = isAlly ? 16 : 24;
+        for (let b = 0; b < bands; b++) {
+          const frac = (b + 1) / bands;
+          const by = botY - availH * frac + (isAlly ? 2 : 0);
+          if (by > botY - 2) continue;
+          const dir = (b % 2 === 0) ? 1 : -1;
+          const phase = ((qt * 54 * dir) % tooth);
+          drawNileBand(x0, x1, by, amp, tooth, thick, phase, b % 2 === 0 ? pal.main : pal.dark, b === bands - 1 ? pal.strokeHi : pal.light, topY, botY);
+        }
+
+        // Peixes egípcios de perfil nadando de ponta a ponta
+        if (qt > 0.55 && qt < 2.05) {
+          const fSc = isAlly ? 0.56 : 0.85;
+          const fp1 = (qt - 0.55) / 1.12;
+          if (fp1 >= 0 && fp1 <= 1) {
+            drawEgyptianFish(x0 - 14 + (x1 - x0 + 28) * fp1, box.cy - (isAlly ? 6 : 8), fSc, 1, pal);
+          }
+          const fp2 = (qt - 0.82) / 1.08;
+          if (fp2 >= 0 && fp2 <= 1) {
+            drawEgyptianFish(x1 + 14 - (x1 - x0 + 28) * fp2, box.cy + (isAlly ? 9 : 20), fSc * 0.92, -1, pal);
+          }
+        }
+      };
+
+      drawExodusBg(t, isAlly ? 0 : unfold * 0.24);
+      if (!isAlly) drawBack();
+      FOES.forEach((f, idx) => {
+        const hit = !isAlly && idx === sc.tgtIdx;
+        drawFoe(f, {
+          ox: hit ? shake : 0, inv: hit && inv,
+          roleText: idx === 1 ? { text: isAlly ? 'CASTING' : 'TARGET', col: isAlly ? '#8ad8ff' : '#f2c94c' } : null,
+          statusTag: hit ? tagObj : null, dmg: hit ? dmgObj : null
+        });
+      });
+      if (!isAlly) drawFront();
+
+      const allyState = {};
+      if (isAlly) allyState[sc.tgtIdx] = { isTarget: true, ox: shake, inv, hpDelta: post > 0.02 ? -34 : 0, statusTag: tagObj };
+      drawHud(logLine, `${SKILLS.aqua.elem} · ${SKILLS.aqua.label}`, allyState);
+      if (isAlly) {
+        withCardClip(box, true, shake, () => { drawBack(); drawFront(); });
+        drawAllyDmg(sc.tgt, dmgObj);
+      }
+    }
+
+    // ==================== 2. CRYO v2 — HAIL FANGS (LANÇAS + DENTES DE GELO 2D) ====================
+    function renderCryo() {
+      const pal = getPal('cryo');
+      const qt = qTime(t, 10);
+      const sc = getScene();
+      const { box, isAlly } = sc;
+      const lockT = 0.82;
+      const shatterT = 1.44;
+      const locked = t >= lockT && t < shatterT;
+      const post = Math.max(0, t - shatterT);
+
+      const unfold = t < 0.28 ? Math.min(1, qt / 0.24) : (t > 2.40 ? Math.max(0, 1 - (qt - 2.40) / 0.42) : 1);
+      const inv = post > 0 && post < 0.13;
+      const shake = post > 0 && post < 0.28
+        ? ((Math.floor(t * 28) % 2 === 0 ? 1 : -1) * (isAlly ? 6 : 9) * (1 - post / 0.28))
+        : (locked ? ((Math.floor(t * 22) % 2 === 0 ? 1 : -1) * 1.4) : 0);
+      const dmgObj = post > 0.04 && post < 1.35 ? { text: '-38', col: pal.strokeHi, rise: Math.min(36, Math.floor(post * 12) * 3.4) } : null;
+      const tagObj = post > 0.22 ? SKILLS.cryo.statusTag : null;
+      const logLine = post > 0.02
+        ? (isAlly ? SKILLS.cryo.logAlly[1] : SKILLS.cryo.logFoe[1])
+        : (isAlly ? SKILLS.cryo.logAlly[0] : SKILLS.cryo.logFoe[0]);
+
+      const drawBack = () => drawMuralCartouche(box, unfold, pal, isAlly);
+
+      const drawFront = () => {
+        if (unfold <= 0.05) return;
+        const bh = isAlly ? 4 : 7;
+        const topY = box.y + bh;
+        const botY = box.y + box.h - bh;
+        const innerH = botY - topY;
+
+        // Ato 1 (0.05 -> 0.85s): Rajada diagonal de lanças de gelo 2D cruzando o alvo/cartão
+        if (qt < shatterT) {
+          const spearCount = isAlly ? 8 : 7;
+          for (let i = 0; i < spearCount; i++) {
+            const delay = 0.06 + i * 0.075;
+            const sp = (qt - delay) / 0.42;
+            if (sp <= 0 || sp >= 1.1) continue;
+            const u = Math.min(1, sp);
+            const sx0 = box.x + (i / spearCount) * (box.w * 0.85) - 24;
+            const sy0 = topY - 12;
+            const sx = sx0 + u * (isAlly ? 72 : 95);
+            const sy = sy0 + u * (innerH + 22);
+            const ang = Math.atan2(innerH + 22, isAlly ? 72 : 95);
+            drawIceSpear(sx, sy, isAlly ? 24 : 36, isAlly ? 3.5 : 5.2, ang, pal);
+          }
+        }
+
+        // Ato 2 (0.35 -> 1.44s): Mandíbula de dentes de gelo (estalactites + estalagmites 2D) crescendo do teto e do chão!
+        if (qt > 0.32 && t < shatterT) {
+          const grow = Math.min(1, (qt - 0.32) / (lockT - 0.32));
+          const ease = 1 - Math.pow(1 - grow, 3);
+          const count = isAlly ? 9 : 7;
+          const spacing = (box.w - 16) / count;
+          // Lâmina translúcida glacial travando no freeze-frame
+          if (locked) {
+            ctx.save();
+            ctx.fillStyle = pal.main;
+            ctx.globalAlpha = 0.28;
+            ctx.fillRect(box.x + 3, topY, box.w - 6, innerH);
+            ctx.restore();
+          }
+          for (let i = 0; i < count; i++) {
+            const fx = box.x + 8 + spacing * (i + 0.5);
+            const varH = 0.65 + hash(i * 19 + 3) * 0.45;
+            const maxTooth = (innerH * 0.56) * varH * ease;
+            const w = spacing * 0.88;
+            // Dente descendo do teto
+            drawIceFang(fx, topY, w, maxTooth, 1, pal);
+            // Dente subindo do chão (deslocado meio passo para encaixar como mandíbula!)
+            const fx2 = fx + spacing * 0.25 * (i % 2 === 0 ? 1 : -1);
+            drawIceFang(fx2, botY, w * 0.95, maxTooth * 0.94, -1, pal);
+          }
+
+          // Glifos geométricos de geada de 6 pontas piscando em 10 FPS durante o congelamento
+          if (locked) {
+            const gPositions = isAlly
+              ? [[box.x + 48, box.cy], [box.cx, box.cy], [box.x + box.w - 48, box.cy]]
+              : [[box.cx - 56, box.cy - 22], [box.cx, box.cy + 4], [box.cx + 56, box.cy - 22]];
+            gPositions.forEach(([gx, gy], idx) => {
+              const r = (isAlly ? 11 : 17) + (((Math.floor(qt * 10) + idx) % 2 === 0) ? 2 : 0);
+              drawFrostGlyph(gx, gy, r, pal);
+            });
+
+            // Trinca horizontal seca rasgando de ponta a ponta antes de estilhaçar
+            const crP = Math.min(1, (qt - lockT) / (shatterT - lockT));
+            const crPts = [];
+            const segs = isAlly ? 8 : 6;
+            const maxSeg = Math.max(1, Math.ceil(crP * segs));
+            for (let s = 0; s <= maxSeg; s++) {
+              const u = s / segs;
+              const cx = box.x + 10 + u * (box.w - 20);
+              const cy = box.cy + ((s % 2 === 0) ? -4 : 4);
+              crPts.push([cx, cy]);
+            }
+            flatLine(crPts, INK, 3.6);
+            flatLine(crPts, pal.strokeHi, 1.8);
+          }
+        }
+
+        // Ato 3 (post > 0): Estilhaçamento nítido em cacos angulares de gelo + 2 glifos estourando
+        if (post > 0) {
+          const sp = qTime(post, 12);
+          if (sp < 0.24) {
+            drawFrostGlyph(box.cx, box.cy, (isAlly ? 20 : 38) + sp * (isAlly ? 45 : 95), pal);
+          }
+          if (sp < 1.25) {
+            const n = isAlly ? 16 : 18;
+            for (let i = 0; i < n; i++) {
+              const ox = (hash(i * 13) - 0.5) * (isAlly ? box.w * 0.72 : 90);
+              const oy = (hash(i * 29) - 0.5) * (isAlly ? 24 : 70);
+              const a = Math.atan2(oy || (i % 2 === 0 ? -1 : 1), ox || 1) + (hash(i * 7) - 0.5) * 0.5;
+              const spd = (isAlly ? 48 : 110) + hash(i * 23) * (isAlly ? 70 : 140);
+              const sx = box.cx + ox + Math.cos(a) * spd * sp;
+              const sy = box.cy + oy + Math.sin(a) * spd * sp + (isAlly ? 45 : 140) * sp * sp;
+              const sz = (isAlly ? 5 : 9) + (i % 3) * (isAlly ? 2.5 : 4.5);
+              const rot = Math.floor(sp * 10) * (i % 2 === 0 ? 0.6 : -0.6) + i;
+              const c = Math.cos(rot), s = Math.sin(rot);
+              const raw = [[sz * 1.3, 0], [-sz * 0.4, -sz * 0.55], [-sz, sz * 0.35]];
+              const pts = raw.map(([px, py]) => [sx + px * c - py * s, sy + px * s + py * c]);
+              flatPoly(pts, i % 3 === 0 ? pal.light : (i % 3 === 1 ? pal.main : pal.accent), zahavMode ? '#ffd84a' : INK, 1.5);
+            }
+          }
+        }
+      };
+
+      drawExodusBg(t, isAlly ? 0 : unfold * 0.24);
+      if (!isAlly) drawBack();
+      FOES.forEach((f, idx) => {
+        const hit = !isAlly && idx === sc.tgtIdx;
+        drawFoe(f, {
+          ox: hit ? shake : 0, inv: hit && inv,
+          fill: (hit && locked) ? '#3a6685' : null,
+          roleText: idx === 1 ? { text: isAlly ? 'CASTING' : 'TARGET', col: isAlly ? '#eaf6fa' : '#f2c94c' } : null,
+          statusTag: hit ? tagObj : null, dmg: hit ? dmgObj : null
+        });
+      });
+      if (!isAlly) drawFront();
+
+      const allyState = {};
+      if (isAlly) {
+        allyState[sc.tgtIdx] = {
+          isTarget: true, ox: shake, inv,
+          fill: locked ? 'rgba(34, 68, 94, 0.96)' : null,
+          hpDelta: post > 0.02 ? -38 : 0, statusTag: tagObj
+        };
+      }
+      drawHud(logLine, `${SKILLS.cryo.elem} · ${SKILLS.cryo.label}`, allyState);
+      if (isAlly) {
+        withCardClip(box, true, shake, () => { drawBack(); drawFront(); });
+        drawAllyDmg(sc.tgt, dmgObj);
+      }
+    }
+
+    // ==================== 3. VENO — URAEUS VENOM (APROVADO, ADAPTADO A 256×52) ====================
+    function renderVeno() {
+      const pal = getPal('veno');
+      const qt = qTime(t, 10);
+      const sc = getScene();
+      const { box, isAlly } = sc;
+      const strikeT = 0.76;
+      const post = Math.max(0, t - strikeT);
+
+      const unfold = t < 0.28 ? Math.min(1, qt / 0.24) : (t > 2.38 ? Math.max(0, 1 - (qt - 2.38) / 0.42) : 1);
+      const inv = post > 0 && post < 0.11;
+      const shake = post > 0 && post < 0.28 ? ((Math.floor(t * 24) % 2 === 0 ? 1 : -1) * (isAlly ? 5 : 7) * (1 - post / 0.28)) : 0;
+      const dmgObj = post > 0.04 && post < 1.35 ? { text: '-26', col: pal.strokeHi, rise: Math.min(34, Math.floor(post * 12) * 3.2) } : null;
+      const tagObj = post > 0.28 ? SKILLS.veno.statusTag : null;
+      const logLine = post > 0.02
+        ? (isAlly ? SKILLS.veno.logAlly[1] : SKILLS.veno.logFoe[1])
+        : (isAlly ? SKILLS.veno.logAlly[0] : SKILLS.veno.logFoe[0]);
+
+      const drawBack = () => {
+        drawMuralCartouche(box, unfold, pal, isAlly);
+        if (post > 0.06 && qt < 2.30) {
+          const baseSc = isAlly ? 0.68 : 1.30;
+          const scScale = post < 0.20 ? baseSc * (0.45 + (post / 0.20) * 0.55) : baseSc;
+          ctx.save();
+          ctx.globalAlpha = post > 1.35 ? Math.max(0, 1 - (post - 1.35) / 0.7) : 0.90;
+          drawScorpionGlyph(box.cx, box.cy - (isAlly ? 1 : 6), scScale, pal);
+          ctx.restore();
+        }
+      };
+
+      const drawFront = () => {
+        const reach = qt < 0.62 ? Math.min(1, qt / 0.56) : (qt > 1.72 ? Math.max(0, 1 - (qt - 1.72) / 0.58) : 1);
+        const strike = (qt >= strikeT - 0.06 && qt < 1.38)
+          ? (qt < strikeT + 0.14 ? 1.0 : Math.max(0, 1 - (qt - (strikeT + 0.14)) / 0.48))
+          : 0;
+
+        if (reach > 0.05) {
+          const cobraSc = isAlly ? 0.52 : 1.0;
+          const offX = isAlly ? (box.w * 0.5 - 12) : 96;
+          const baseY = isAlly ? (box.y + box.h - 14) : (box.cy + 24);
+          [-1, 1].forEach(side => {
+            drawUraeusCobra(box.cx - side * offX, baseY, side, cobraSc, reach, strike, pal);
+          });
+        }
+
+        if (post > 0 && qt < 2.40) {
+          const dp = qTime(post, 10);
+          const fade = post > 1.45 ? Math.max(0, 1 - (post - 1.45) / 0.65) : 1;
+          ctx.save();
+          ctx.globalAlpha = fade;
+          const cols = isAlly ? [-3, -2, -1, 0, 1, 2, 3] : [-2, -1, 0, 1, 2];
+          const colStep = isAlly ? 26 : 18;
+          const maxLen = isAlly ? (box.h - 14) : (box.h * 0.62);
+          const y0 = isAlly ? (box.y + 4) : (box.cy - 28);
+          cols.forEach(i => {
+            const dx = box.cx + i * colStep;
+            const len = Math.min(maxLen, Math.max(0, (dp - Math.abs(i) * 0.05) * (isAlly ? 85 : 135)));
+            if (len < 6) return;
+            const y1 = y0 + len;
+            const w = isAlly ? 3.2 : 4.0;
+            flatPoly([
+              [dx - w, y0], [dx + w, y0], [dx + w * 0.75, y1 - 6],
+              [dx + w * 1.4, y1 - 1], [dx, y1 + 4.5], [dx - w * 1.4, y1 - 1], [dx - w * 0.75, y1 - 6]
+            ], i % 2 === 0 ? pal.main : pal.dark, INK, 1.5);
+            flatLine([[dx, y0 + 2], [dx, y1 - 2]], pal.strokeHi, 1.2);
+          });
+
+          const pops = isAlly
+            ? [{ ox: -68, oy: -4, d: 0.14 }, { ox: 68, oy: 4, d: 0.24 }, { ox: -28, oy: 8, d: 0.36 }, { ox: 30, oy: -6, d: 0.48 }]
+            : [{ ox: -32, oy: -20, d: 0.15 }, { ox: 30, oy: -14, d: 0.28 }, { ox: -16, oy: 18, d: 0.42 }, { ox: 22, oy: 22, d: 0.56 }];
+          pops.forEach((p, idx) => {
+            const pt = dp - p.d;
+            if (pt <= 0 || pt > 0.52) return;
+            const px = box.cx + p.ox, py = box.cy + p.oy;
+            if (pt < 0.34) {
+              const r = (isAlly ? 3 : 4) + (pt / 0.34) * (isAlly ? 5.5 : 9);
+              const oct = [];
+              for (let k = 0; k < 8; k++) {
+                const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
+                oct.push([px + Math.cos(a) * r, py + Math.sin(a) * r]);
+              }
+              flatPoly(oct, idx % 2 === 0 ? pal.main : pal.accent, INK, 1.5);
+              ctx.fillStyle = pal.strokeHi;
+              ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+            } else {
+              const bp = (pt - 0.34) / 0.18;
+              const r0 = (isAlly ? 4 : 5) + bp * 5, r1 = (isAlly ? 9 : 12) + bp * 7;
+              [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([ux, uy]) => {
+                flatLine([[px + ux * r0, py + uy * r0], [px + ux * r1, py + uy * r1]], pal.strokeHi, 1.8);
+              });
+            }
+          });
+          ctx.restore();
+        }
+      };
+
+      drawExodusBg(t, isAlly ? 0 : unfold * 0.24);
+      if (!isAlly) drawBack();
+      FOES.forEach((f, idx) => {
+        const hit = !isAlly && idx === sc.tgtIdx;
+        drawFoe(f, {
+          ox: hit ? shake : 0, inv: hit && inv,
+          roleText: idx === 1 ? { text: isAlly ? 'CASTING' : 'TARGET', col: isAlly ? '#cfd696' : '#f2c94c' } : null,
+          statusTag: hit ? tagObj : null, dmg: hit ? dmgObj : null
+        });
+      });
+      if (!isAlly) drawFront();
+
+      const allyState = {};
+      if (isAlly) allyState[sc.tgtIdx] = { isTarget: true, ox: shake, inv, hpDelta: post > 0.02 ? -26 : 0, statusTag: tagObj };
+      drawHud(logLine, `${SKILLS.veno.elem} · ${SKILLS.veno.label}`, allyState);
+      if (isAlly) {
+        withCardClip(box, true, shake, () => { drawBack(); drawFront(); });
+        drawAllyDmg(sc.tgt, dmgObj);
+      }
+    }
+
+    // ==================== 4. LEAF v2 — THORN LASH (SARÇA EM X + ESPINHOS + FOLHAS-LANÇA) ====================
+    function renderLeaf() {
+      const pal = getPal('leaf');
+      const qt = qTime(t, 10);
+      const sc = getScene();
+      const { box, isAlly } = sc;
+      const snapT = 0.86;
+      const post = Math.max(0, t - snapT);
+
+      const unfold = t < 0.26 ? Math.min(1, qt / 0.22) : (t > 2.36 ? Math.max(0, 1 - (qt - 2.36) / 0.40) : 1);
+      const inv = post > 0 && post < 0.11;
+      const shake = post > 0 && post < 0.26 ? ((Math.floor(t * 26) % 2 === 0 ? 1 : -1) * (isAlly ? 6 : 8) * (1 - post / 0.26)) : 0;
+      const dmgObj = post > 0.04 && post < 1.35 ? { text: '-30', col: pal.strokeHi, rise: Math.min(34, Math.floor(post * 12) * 3.2) } : null;
+      const tagObj = post > 0.24 ? SKILLS.leaf.statusTag : null;
+      const logLine = post > 0.02
+        ? (isAlly ? SKILLS.leaf.logAlly[1] : SKILLS.leaf.logFoe[1])
+        : (isAlly ? SKILLS.leaf.logAlly[0] : SKILLS.leaf.logFoe[0]);
+
+      const drawBack = () => {
+        drawMuralCartouche(box, unfold, pal, isAlly);
+        // Selo de espinhos-cruz no centro no momento do estalo
+        if (post > 0 && qt < 2.25) {
+          const r = (isAlly ? 20 : 34) * (post < 0.16 ? 0.55 + (post / 0.16) * 0.55 : 1.0);
+          ctx.save();
+          ctx.globalAlpha = qt > 1.85 ? Math.max(0, 1 - (qt - 1.85) / 0.40) : 0.92;
+          drawBriarCrest(box.cx, box.cy, r, pal);
+          ctx.restore();
+        }
+      };
+
+      const drawFront = () => {
+        if (unfold <= 0.05) return;
+        const bh = isAlly ? 4 : 7;
+        const xL = box.x + 4, xR = box.x + box.w - 4;
+        const yT = box.y + bh + 2, yB = box.y + box.h - bh - 2;
+
+        // Ato 1 & 2: 4 chicotes de sarça espinhosa disparando das 4 quinas cruzando em X + estalo seco em snapT!
+        const retract = qt > 1.92 ? Math.min(1, (qt - 1.92) / 0.48) : 0;
+        const snap = post > 0 && qt < 2.05 ? Math.min(1, post / 0.12) : 0;
+        const whips = [
+          { x0: xL, y0: yB, x1: xR, y1: yT, d: 0.08 },
+          { x0: xR, y0: yB, x1: xL, y1: yT, d: 0.18 },
+          { x0: xL, y0: yT, x1: xR, y1: yB, d: 0.30 },
+          { x0: xR, y0: yT, x1: xL, y1: yB, d: 0.40 }
+        ];
+        whips.forEach(w => {
+          const p = Math.max(0, Math.min(1, (qt - w.d) / 0.36) - retract);
+          if (p <= 0.03) return;
+          drawThornWhip(w.x0, w.y0, w.x1, w.y1, p, snap, isAlly ? 5.5 : 8.5, pal);
+        });
+
+        // No estalo (snapT): 2 barras horizontais de espinhos travando o topo e a base (gaiola de sarça 2D)
+        if (post > 0 && qt < 2.15) {
+          const lockP = Math.min(1, post / 0.14) * (qt > 1.85 ? Math.max(0, 1 - (qt - 1.85) / 0.30) : 1);
+          if (lockP > 0.05) {
+            drawThornWhip(xL, box.cy, xR, box.cy, lockP, 1, isAlly ? 5.0 : 7.5, pal);
+          }
+        }
+
+        // Ato 3: Rajada horizontal de folhas-lança cortantes (como flechas de mural egípcio!)
+        if (post > 0.04 && post < 1.55) {
+          const sp = qTime(post - 0.04, 12);
+          const count = isAlly ? 10 : 12;
+          for (let i = 0; i < count; i++) {
+            const dir = i % 2 === 0 ? 1 : -1;
+            const rowU = ((i * 0.37) % 1);
+            const ly = yT + 6 + rowU * (yB - yT - 12);
+            const delay = (i % 4) * 0.09;
+            const lp = (sp - delay) / 0.58;
+            if (lp <= 0 || lp >= 1.05) continue;
+            const lx = dir > 0 ? (xL - 12 + lp * (box.w + 24)) : (xR + 12 - lp * (box.w + 24));
+            drawBladeLeaf(lx, ly, isAlly ? 18 : 26, isAlly ? 3.5 : 5.2, dir > 0 ? 0 : Math.PI, pal);
+          }
+        }
+      };
+
+      drawExodusBg(t, isAlly ? 0 : unfold * 0.22);
+      if (!isAlly) drawBack();
+      FOES.forEach((f, idx) => {
+        const hit = !isAlly && idx === sc.tgtIdx;
+        drawFoe(f, {
+          ox: hit ? shake : 0, inv: hit && inv,
+          roleText: idx === 1 ? { text: isAlly ? 'CASTING' : 'TARGET', col: isAlly ? '#d4c198' : '#f2c94c' } : null,
+          statusTag: hit ? tagObj : null, dmg: hit ? dmgObj : null
+        });
+      });
+      if (!isAlly) drawFront();
+
+      const allyState = {};
+      if (isAlly) allyState[sc.tgtIdx] = { isTarget: true, ox: shake, inv, hpDelta: post > 0.02 ? -30 : 0, statusTag: tagObj };
+      drawHud(logLine, `${SKILLS.leaf.elem} · ${SKILLS.leaf.label}`, allyState);
+      if (isAlly) {
+        withCardClip(box, true, shake, () => { drawBack(); drawFront(); });
+        drawAllyDmg(sc.tgt, dmgObj);
+      }
+    }
+
+    // ==================== LOOP & CONTROLES ====================
+    function renderFrame() {
+      ctx.clearRect(0, 0, W, H);
+      if (activeSkill === 'aqua') renderAqua();
+      else if (activeSkill === 'cryo') renderCryo();
+      else if (activeSkill === 'veno') renderVeno();
+      else renderLeaf();
+    }
+
+    function tick(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000);
+      lastTs = now;
+      if (!paused) {
+        t += dt * speed;
+        const dur = SKILLS[activeSkill].duration;
+        if (t >= dur) {
+          if (loop) t = 0; else { t = dur; paused = true; updateUI(); }
+        }
+      }
+      renderFrame();
+      requestAnimationFrame(tick);
+    }
+
+    document.querySelectorAll('.sk-btn').forEach(btn => {
+      btn.addEventListener('click', () => { activeSkill = btn.dataset.skill; t = 0; paused = false; updateUI(); });
+    });
+    document.querySelectorAll('.side-btn').forEach(btn => {
+      btn.addEventListener('click', () => { targetSide = btn.dataset.side; t = 0; paused = false; updateUI(); });
+    });
+    document.getElementById('btn-frieze').addEventListener('click', () => { showCartouche = !showCartouche; updateUI(); });
+    document.getElementById('btn-zahav').addEventListener('click', () => { zahavMode = !zahavMode; updateUI(); });
+    document.getElementById('btn-play').addEventListener('click', () => {
+      if (paused && t >= SKILLS[activeSkill].duration) t = 0;
+      paused = !paused;
+      updateUI();
+    });
+    document.getElementById('btn-replay').addEventListener('click', () => { t = 0; paused = false; updateUI(); });
+    document.getElementById('chk-loop').addEventListener('change', e => { loop = e.target.checked; });
+    const SPEEDS = [1.0, 0.5, 0.25];
+    let spIdx = 0;
+    document.getElementById('btn-speed').addEventListener('click', () => {
+      spIdx = (spIdx + 1) % SPEEDS.length;
+      speed = SPEEDS[spIdx];
+      document.getElementById('btn-speed').textContent = speed.toFixed(speed === 0.25 ? 2 : 1) + '×';
+    });
+
+    window.addEventListener('keydown', e => {
+      if (e.key === '1') { activeSkill = 'aqua'; t = 0; paused = false; updateUI(); }
+      else if (e.key === '2') { activeSkill = 'cryo'; t = 0; paused = false; updateUI(); }
+      else if (e.key === '3') { activeSkill = 'veno'; t = 0; paused = false; updateUI(); }
+      else if (e.key === '4') { activeSkill = 'leaf'; t = 0; paused = false; updateUI(); }
+      else if (e.key === ' ') { e.preventDefault(); paused = !paused; updateUI(); }
+      else if (e.key.toLowerCase() === 'r') { t = 0; paused = false; updateUI(); }
+      else if (e.key.toLowerCase() === 't') { targetSide = targetSide === 'foes' ? 'allies' : 'foes'; t = 0; paused = false; updateUI(); }
+      else if (e.key.toLowerCase() === 'c') { showCartouche = !showCartouche; updateUI(); }
+      else if (e.key.toLowerCase() === 'z') { zahavMode = !zahavMode; updateUI(); }
+    });
+    window.addEventListener('themechange', updateUI);
+
+    updateUI();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

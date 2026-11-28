@@ -50,11 +50,17 @@ o autor decidir explicitamente.
     branches `claude/*` atrasadas ou commits antigos — para testar, capturar ou provar algo.
     A evidência de teste cita o `git rev-parse HEAD` sobre o qual rodou.
 
-13. **Protótipos VFX sempre com modo Aliados / 3 cartões Survival (D-137).** Todo
-    protótipo visual HTML de ataque/VFX criado para aprovação do autor DEVE funcionar
-    tanto com inimigos como alvo quanto nos **cartões dos aliados (3 cartões do modo
-    Survival)**, exibindo o efeito diretamente sobre o(s) cartão(ões) no mesmo tamanho
-    usado contra inimigos (sem recorte ao cartão), com seletor direto no protótipo.
+13. **Obrigação visual dual: Figuras (Inimigos) E Cartões dos Aliados (D-137 / D-140).** Todo
+    próximo ataque/magia — tanto em **protótipos visuais HTML** quanto na **implementação final
+    no Godot** — DEVE funcionar visualmente em **ambos os contextos**: sobre **figuras/sprites
+    (inimigos)** e sobre os **cartões dos aliados (3 cartões do modo Survival e 1–2 da campanha)**,
+    com seletor direto no protótipo:
+    - **Estética Grotesca / Rabisco (D-125 / D-137):** exibe o efeito diretamente sobre o(s)
+      cartão(ões) no mesmo tamanho usado contra inimigos (sem recorte ao cartão), mantendo
+      marcas persistentes fora do Battle Log.
+    - **Estética Arte Egípcia Animada 100% 2D dos Animais (D-140):** exibe o efeito nos aliados
+      **exatamente no tamanho e recorte do cartão (`status_rect`, ex.: `256×52` nos 3 cartões
+      Survival)** com composição panorâmica dedicada e **`0 px` sobre o Battle Log**.
 
 ## Evidência mínima por tipo de trabalho
 

@@ -3,6 +3,7 @@
 **Decisão:** D-125 · 2026-11-27 (decisão do criador; **8/8 ataques D-124 aprovados visualmente**)  
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md)  
 **Contraponto sagrado (Rezas):** [`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md) (D-113)  
+**Estética irmã dos Animais (`AQUA`/`CRYO`/`VENO`/`LEAF`):** [`docs/ANIMAL_EGYPTIAN_VFX_STYLE.md`](ANIMAL_EGYPTIAN_VFX_STYLE.md) (D-140 — Arte Egípcia Animada 100% 2D, com efeitos nos aliados no tamanho exato do cartão)  
 **Catálogo mecânico base:** [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) (D-124)  
 **Referências HTML canônicas:** [`docs/vfx_refs/d124_d125/README.md`](vfx_refs/d124_d125/README.md)
 
@@ -10,7 +11,7 @@
 
 ## 1. Pilar Estético Unificado (Lei Canônica)
 
-> **Todos os ataques não-reza de EXODUS (físicos, mágicos demoníacos/abissais e habilidades absorvidas) compartilham uma estética visual própria e reutilizável: Anatômico Grotesco de Rabisco (boil em 12 FPS, silhueta negra + contorno orgânico duplo) combinado com Interferência Hipnótica (Moiré / ondas febris) em paleta sombria sem neon.**
+> **Todos os ataques não-reza físicos, demoníacos, abissais e habilidades absorvidas de EXODUS compartilham uma estética visual própria e reutilizável: Anatômico Grotesco de Rabisco (boil em 12 FPS, silhueta negra + contorno orgânico duplo) combinado com Interferência Hipnótica (Moiré / ondas febris) em paleta sombria sem neon.** *(Exceção canônica da Tríade Visual — D-140: magias dos Animais em `AQUA`, `CRYO`, `VENO`/`TOXI` e `LEAF` seguem a estética **Arte Egípcia Animada 100% 2D** documentada em [`docs/ANIMAL_EGYPTIAN_VFX_STYLE.md`](ANIMAL_EGYPTIAN_VFX_STYLE.md).)*
 
 Assim como as **rezas** possuem uma identidade visual unificada e inconfundível (tipografia 100% hebraica da **D-113**), os **ataques não-reza** possuem esta assinatura visual única que os distingue imediatamente no campo de batalha — evocando o grotesco anatômico, o febril e o desconforto metafísico de *EXODUS* sobre o palco 816×624.
 
