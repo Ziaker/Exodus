@@ -3470,10 +3470,12 @@ escopo do protótipo) foram aprovadas em rodadas anteriores e estão registradas
   - **Obrigação visual dual permanente (estende `D-137`):** todos os próximos efeitos (em protótipos HTML e implementações Godot) devem funcionar visualmente em **ambos — figuras/sprites (inimigos) e cartões de aliados** — sendo que na estética egípcia 2D o efeito nos aliados adapta-se **exatamente ao tamanho e recorte do cartão (`status_rect`, `256×52` nos 3 cartões Survival, `0 px` sobre o Battle Log)** com composição panorâmica dedicada.
   Impacto: `docs/ANIMAL_EGYPTIAN_VFX_STYLE.md`, `docs/vfx_refs/animal_egyptian/`, `AGENTS.md` (obrigação 13), `docs/NON_PRAYER_VFX_STYLE.md`, `docs/DECISIONS.md`, `docs/GDD.md` (Apêndice A).
 
-- **D-141 · 2026-11-28 (decisão do criador) — nomenclatura canônica em Egípcio Antigo para magias dos Animais + 4 magias genéricas base (`Hapi`, `Qebeh`, `Metut`, `Seret`).**
+- **D-141 · 2026-11-28 (decisão do criador) — nomenclatura canônica em Egípcio Antigo para magias dos Animais + 4 magias genéricas base (`Hapi`, `Qebeh`, `Metut`, `Seret`) + regras canônicas de `VENO` e `CHILL`.**
   Fecha a tríade linguística de EXODUS (**Rezas = Hebraico `D-113`/`D-116` · Demônios = Inglês/Maesto · Animais = Egípcio Antigo**) e canoniza as 4 magias genéricas base dos Animais com design enxuto (1 efeito claro por magia, escala `Ignoma`, `2 ACT / 8 EN / MAGI / 1T`, `vfx_style: "egyptian_2d"`, zero afinidade `D-119`/`D-138`):
-  - **`Hapi`** (*ḥꜥpj* — cheia do Nilo, `AQUA`): `2 ACT / 8 EN / MAGI / 1T` — `10 MAGI (+MAK)` e remove 1 buff positivo do alvo.
-  - **`Qebeh`** (*qbḥ* — frio/gelado, `CRYO`): `2 ACT / 8 EN / MAGI / 1T` — `12 MAGI (+MAK)` e aplica **`CHILL`** (`−25%` dano causado por 2 rodadas).
-  - **`Metut`** (*mtwt* — veneno/peçonha, `VENO`/`TOXI`): `2 ACT / 8 EN / MAGI / 1T` — `8 MAGI (+MAK)` e aplica **`VENO`** (`4 DMG` por 3 rodadas, dissipável).
+  - **`Hapi`** (*ḥꜥpj* — cheia do Nilo, `AQUA`): `2 ACT / 8 EN / MAGI / 1T` — `10 MAGI (+MAK)` e remove 1 buff positivo do alvo (**o maior ou o último aplicado**).
+  - **`Qebeh`** (*qbḥ* — frio/gelado, `CRYO`): `2 ACT / 8 EN / MAGI / 1T` — `12 MAGI (+MAK)` e aplica **`CHILL`**.
+  - **`Metut`** (*mtwt* — veneno/peçonha, `VENO`/`TOXI`): `2 ACT / 8 EN / MAGI / 1T` — `8 MAGI (+MAK)` e aplica **`VENO`**.
   - **`Seret`** (*srt* — espinho, `LEAF`): `2 ACT / 8 EN / MAGI / 1T` — `10 MAGI (+MAK)` e aplica **`SNARE`** (`−4 AGI` por 2 rodadas).
+  - **Regra canônica de `VENO`:** permanente até ser dissipado/curado; outras fontes novas de veneno acumulam no mesmo efeito; causa **`1` de dano por ação**, com cada acúmulo aumentando o dano em `+1` (`dano por ação = total de acúmulos`).
+  - **Regra canônica de `CHILL`:** reduz **`2 AGI` por acúmulo**, podendo acumular infinitamente, com duração de **`1 round`** (substitui o efeito antigo de `−25%` dano por 2 rodadas).
   Raízes adicionais (`Mu`, `Nun`, `Iteru`, `Qeb`, `Peret`, `Iaret`, `Hefau`, `Serqet`, `Wadj`, `Shent`, `Khet`) e qualificadores (`Wer`, `Aa`) permanecem como banco de referência não-canônico em `docs/ANIMAL_EGYPTIAN_VFX_STYLE.md` §8. Impacto: `docs/ANIMAL_EGYPTIAN_VFX_STYLE.md`, `docs/vfx_refs/animal_egyptian/`, `docs/DECISIONS.md`, `docs/GDD.md` (Apêndice A).
