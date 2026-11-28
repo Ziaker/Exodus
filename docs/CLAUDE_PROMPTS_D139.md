@@ -15,7 +15,7 @@
 > 2. **D-130:** sempre executar `git fetch origin --prune` e rodar testes/capturas apenas sobre o `HEAD` atual de `main`.
 > 3. **D-125:** `#ffd84a` (dourado) existe **exclusivamente** em `Stone Body [ZAHAV]`; **zero letras hebraicas** em todas as 4 skills da D-139.
 > 4. **HUD adaptativo de status (`a73da1c`):** o repositório já possui gravuras monocromáticas adaptativas de status nos cartões/inimigos — incluir o ícone/gravura de **`STURDY`** sem regredir as 28 gravuras existentes.
-> 5. **Pendências sinalizadas ao implementador:** (a) ao remover `frost_lance` de `PAZUZU` em `survival_data.gd`, confirmar/registrar se Pazuzu fica só com `ember_touch` ou recebe skill provisória do pool atual; (b) `Blade Dance` usa `15 PHYS (+ATK)` por golpe conforme o protótipo aprovado.
+> 5. **Fechamentos confirmados pelo criador (2026-11-28):** (a) **`Blade Dance`** usa **`15 PHYS (+ATK)` fixo por golpe** (sem escalada acumulativa); (b) ao remover `frost_lance` de **`PAZUZU`** em `survival_data.gd`, a ficha de Pazuzu passa para **`[&"ember_touch", &"ignoma", &"twin_fang", &"rock_body"]`** (3 outras skills escolhidas pelo agente sob autorização do criador).
 
 ---
 
@@ -85,8 +85,9 @@ Implemente a FASE 2 da D-139:
    - **Remover `frost_lance` no geral:**
      - Remova `&"frost_lance"` de `SkillBook.DEFS`, `SurvivalData.SURVIVAL_SKILLS`, `SurvivalData.HEBREW_SKILLS` e qualquer referência em `scripts/` e `tests/` (`git grep frost_lance`).
      - Em `SkillBook.migrate_ids(skills)`: descarte/filtre `&"frost_lance"` caso apareça em saves antigos (sem quebrar o carregamento de runs antigas).
-     - Em `SurvivalData.DEMONS` (`PAZUZU`, `survival_data.gd`): remova `&"frost_lance"` da ficha de Pazuzu; verifique se algum teste exige ≥ 2 skills por demônio — se exigir, dê uma skill substituta canônica coerente (ex.: `&"twin_fang"`) e registre explicitamente na crítica para o autor confirmar.
+     - Em `SurvivalData.DEMONS` (`PAZUZU`, `survival_data.gd`): remova `&"frost_lance"` e atualize sua lista de skills para **`[&"ember_touch", &"ignoma", &"twin_fang", &"rock_body"]`** (decisão do criador em 2026-11-28: 3 outras skills aleatórias; assinatura única e cumpre `skills.size() >= 2`).
      - Em `SurvivalData.DEMONS` (`BARONG`): atualize `&"stone_grasp"` para `&"rock_body"` (e `HEBREW_SKILLS` / `SURVIVAL_SKILLS` igualmente).
+     - Em `tests/verify_survival_data.gd` (L108): atualize `&"stone_grasp"` para `&"rock_body"` na lista `required` e confirme ausência de `&"frost_lance"`.
 
 2. Integração ao HUD adaptativo de status (`scripts/battle/playable_hud.gd` e galeria de gravuras do commit `a73da1c`):
    - Adicione a entrada visual do status positivo **`&"sturdy"`** (gravura monocromática do escudo hexagonal de pedra com fissura, tag `STURDY` / `STURDY +15`, cor de buff positivo) ao sistema adaptativo `FULL → SHORT → ICON`, mantendo intocadas todas as 28 gravuras anteriores.

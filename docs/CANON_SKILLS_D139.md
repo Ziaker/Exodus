@@ -25,7 +25,7 @@
 ## 2. Remoção Global de `FROST LANCE`
 
 - **Decisão do criador (2026-11-27):** **`FROST LANCE` (`frost_lance`) é removida no geral** — sai tanto do caminho de canonização quanto do catálogo/pool do Survival (`SkillBook.DEFS`, `SurvivalData.SURVIVAL_SKILLS`, `HEBREW_SKILLS` e ficha de `PAZUZU`), até que seja definida a estética visual das magias dos **Animais** (`D-138`: `LEAF`, `VENO`/`TOXI`, `AQUA`).
-- **Pendência explícita para o autor / implementação:** em `scripts/survival/survival_data.gd`, `PAZUZU` possui hoje `[&"ember_touch", &"frost_lance"]`. Ao remover `frost_lance`, definir se `PAZUZU` fica provisoriamente só com `ember_touch` ou recebe uma skill substituta já canônica/do pool (ex.: `twin_fang` ou `blade_dance`) até o retorno das magias dos Animais.
+- **Substituição fechada em `PAZUZU` (2026-11-28):** por ordem do criador (*"escolhe outras 3 aleatórias"*), ao remover `&"frost_lance"` de `PAZUZU` (`scripts/survival/survival_data.gd`), sua ficha recebe **3 outras skills** do pool atual (mantendo `ember_touch`): **`[&"ember_touch", &"ignoma", &"twin_fang", &"rock_body"]`** *(assinatura única entre os 35 demônios, cumpre `skills.size() >= 2` em `verify_survival_data.gd` e estreia `ignoma`, `twin_fang` e `rock_body` no Guardião do Estrato 4)*.
 
 ---
 
@@ -55,8 +55,8 @@
    - Alvos de `Blade Dance` **podem usar `DEFEND`** normalmente na barra de defesa, mas **não podem declarar `COUNTER`** nem reagir ofensivamente.
 4. **Cooldown de 2 rounds (`cooldown_rounds: 2`):**
    - Ao usar `Blade Dance` na rodada `R`, ela fica bloqueada na rodada `R + 1` e volta a ficar disponível na rodada `R + 2` *(ex.: usada no Round 1 → indisponível no Round 2 → disponível no Round 3)*.
-5. **Nota de confirmação aberta (para checagem do autor na implementação):**
-   - A redação *"cada golpe causando 15PHYS extra"* foi modelada no protótipo aprovado e nesta spec como **poder `15 PHYS (+ATK)` em cada golpe individual** (padrão idêntico a `Fang Spine` e `Stone Crush`). Caso o autor queira escalada acumulativa (`+15` adicional por golpe consecutivo), alterar apenas o multiplicador por índice de golpe na Fase 1.
+5. **Poder por golpe confirmado (criador, 2026-11-28):**
+   - **Confirmado: `15 PHYS (+ATK)` fixo em cada golpe individual** (sem escalada acumulativa; padrão idêntico a `Fang Spine` e `Stone Crush`).
 
 ### 3.3 `IMEDIATO` em Habilidades `SkillBook` (extensão da D-118)
 - `Rock Body` e `Stone Body [ZAHAV]` reutilizam a palavra-chave canônica **`IMEDIATO`** (`D-118`): resolvem no momento em que são anunciadas (sem janela de reação/contra-ataque do oponente), descontando `1 ACT` e `10 EN` / `25 EN` na hora e permitindo que o usuário siga agindo no mesmo turno já protegido por `STURDY`.
