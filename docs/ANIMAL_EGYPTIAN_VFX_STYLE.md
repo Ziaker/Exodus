@@ -1,6 +1,6 @@
-# Estilo Artístico & Especificação de Implementação — VFX Egípcio 2D dos Animais (D-140)
+# Estilo Artístico, Catálogo & Implementação — Magias Egípcias 2D dos Animais (D-140 / D-141)
 
-**Decisão:** D-140 · 2026-11-27 (decisão e aprovação visual do criador — **4/4 arquétipos aprovados**)  
+**Decisões:** D-140 · D-141 · 2026-11-27/28 (decisões e aprovação visual do criador — **4/4 visuais, nomenclatura egípcia e 4 mecânicas base aprovadas**)  
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md)  
 **Estéticas irmãs da Tríade EXODUS:**
 - **Rezas / Anjos (D-113):** [`docs/PRAYER_VFX_RULE.md`](PRAYER_VFX_RULE.md) — tipografia 100% hebraica.
@@ -39,6 +39,8 @@
    - **ZERO letras hebraicas** nas magias dos Animais. Glifos permitidos são exclusivamente geométricos/egípcios (zigue-zague do Nilo `𓈖`, estrelas de 5/6 pontas, escorpião, olho kohl, bordas de blocos).
 5. **Zero Afinidade Elemental (D-119 / D-138):**
    - Nenhuma skill desta família introduz campo `affinity`, multiplicador elemental ou Press Turn. O caráter de cada elemento nasce apenas da **estética visual** e da **mecânica tática** da skill.
+6. **Nomenclatura Canônica em Egípcio Antigo (D-141):**
+   - Todas as magias da raça dos Animais são nomeadas com raízes reais do **Egípcio Antigo** em transliteração limpa e pronunciável, fechando a tríade linguística de EXODUS (**Rezas = Hebraico `D-113`/`D-116` · Demônios = Inglês/Maesto · Animais = Egípcio Antigo `D-141`**).
 
 ---
 
@@ -126,14 +128,16 @@ Todas as primitivas operam com tempo quantizado `q_time(t, fps := 10.0) -> float
 
 ---
 
-## 5. Coreografia Canônica 1:1 dos 4 Arquétipos Aprovados
+## 5. Catálogo Canônico 1:1 das 4 Magias Base (D-140 + D-141)
 
-| # | Elemento | Arquétipo | Duração / Marcos | Coreografia Aprovada (Figuras & Cartão) |
-|---|---|---|---|---|
-| 1 | **`AQUA`** | **Nile Surge** | `2.80 s` · hit `0.85 s` | Cartucho abre → 2 ânforas nos cantos superiores inclinam e despejam jatos em zigue-zague vertical → 5 faixas (3 no cartão) de zigue-zague `𓈖` sobem deslizando em sentidos opostos (período exato `toothW`) → 2 peixes de perfil cruzam em linha reta de ponta a ponta → impacto seco (`0.85 s`, flash papiro `0.12 s`, shake `±5 px`) → vazante e tag `SOAK`. |
-| 2 | **`CRYO`** | **Hail Fangs** | `2.85 s` · trava `0.82 s` · estilhaço `1.44 s` | Cartucho abre → rajada diagonal de 7–8 lanças de gelo bipartidas → 7–9 pares de dentes de gelo (estalactites + estalagmites planas) crescem do teto e da base fechando em mandíbula (`0.82 s`) → **freeze-frame** (`0.82–1.44 s`): tint glacial no alvo, 3 glifos geométricos de geada piscam em 10 FPS e uma trinca horizontal rasga de ponta a ponta → **estilhaço (`1.44 s`)**: flash `0.13 s`, glifo central expandindo + 16–18 cacos triangulares giratórios e tag `CHILL`. |
-| 3 | **`VENO`/`TOXI`** | **Uraeus Venom** | `2.85 s` · bote `0.76 s` | Cartucho abre → 2 cobras Uraeus simétricas de perfil desenrolam das bordas esquerda/direita (`1.0×` figura; `0.52×` cartão) → **bote simultâneo em 2 quadros (`0.76 s`)** com presas + língua rubra → selo de escorpião (Serqet) surge no centro ao fundo → 5–7 colunas verticais de veneno escorrem de cima para baixo + 4 bolhas octogonais estouram em cruzes 2D → cobras recuam e tag `VENO×2`. |
-| 4 | **`LEAF`** | **Thorn Lash** | `2.80 s` · estalo `0.86 s` | Cartucho abre → 4 chicotes de sarça espinhosa disparam sequencialmente das 4 quinas cruzando em **X** → **estalo seco (`0.86 s`)**: chicotes esticam, espinhos-garra crescem `1.65×`, barra horizontal de sarça trava o centro, selo de espinhos pulsa no meio + flash `0.11 s` → rajada horizontal de 10–12 folhas-lança cortantes rasga de ponta a ponta → chicotes recuam e tag `SNARE`. |
+Todas as 4 magias genéricas base seguem o padrão enxuto de EXODUS (**1 efeito claro por magia**, escala `Ignoma`, `vfx_style: "egyptian_2d"`, zero campo `affinity`):
+
+| # | Nome Egípcio (Raiz) | Elemento | Ficha Canônica (`D-141`) | Mecânica Aprovada (`D-141`) | Duração / Marcos | Coreografia Visual Aprovada (`D-140` — Figuras & Cartão) |
+|---|---|---|---|---|---|---|
+| 1 | **`Hapi`** (*ḥꜥpj* · cheia do Nilo) | **`AQUA`** | `2 ACT / 8 EN / MAGI / 1T` | **`10 MAGI (+MAK)`** e **remove 1 buff positivo** do alvo *(lavagem)* | `2.80 s` · hit `0.85 s` | Cartucho abre → 2 ânforas nos cantos superiores inclinam e despejam jatos em zigue-zague vertical → 5 faixas (3 no cartão) de zigue-zague `𓈖` sobem deslizando em sentidos opostos (período exato `toothW`) → 2 peixes de perfil cruzam em linha reta de ponta a ponta → impacto seco (`0.85 s`, flash papiro `0.12 s`, shake `±5 px`) → vazante e tag `DISPEL`. |
+| 2 | **`Qebeh`** (*qbḥ* · frio/gelado) | **`CRYO`** | `2 ACT / 8 EN / MAGI / 1T` | **`12 MAGI (+MAK)`** e aplica **`CHILL`** (`−25%` dano causado por `2` rodadas) | `2.85 s` · trava `0.82 s` · estilhaço `1.44 s` | Cartucho abre → rajada diagonal de 7–8 lanças de gelo bipartidas → 7–9 pares de dentes de gelo (estalactites + estalagmites planas) crescem do teto e da base fechando em mandíbula (`0.82 s`) → **freeze-frame** (`0.82–1.44 s`): tint glacial no alvo, 3 glifos geométricos de geada piscam em 10 FPS e uma trinca horizontal rasga de ponta a ponta → **estilhaço (`1.44 s`)**: flash `0.13 s`, glifo central expandindo + 16–18 cacos triangulares giratórios e tag `CHILL`. |
+| 3 | **`Metut`** (*mtwt* · veneno/peçonha) | **`VENO`/`TOXI`** | `2 ACT / 8 EN / MAGI / 1T` | **`8 MAGI (+MAK)`** e aplica **`VENO`** (`4 DMG` por `3` rodadas, dissipável) | `2.85 s` · bote `0.76 s` | Cartucho abre → 2 cobras Uraeus simétricas de perfil desenrolam das bordas esquerda/direita (`1.0×` figura; `0.52×` cartão) → **bote simultâneo em 2 quadros (`0.76 s`)** com presas + língua rubra → selo de escorpião (Serqet) surge no centro ao fundo → 5–7 colunas verticais de veneno escorrem de cima para baixo + 4 bolhas octogonais estouram em cruzes 2D → cobras recuam e tag `VENO`. |
+| 4 | **`Seret`** (*srt* · espinho) | **`LEAF`** | `2 ACT / 8 EN / MAGI / 1T` | **`10 MAGI (+MAK)`** e aplica **`SNARE`** (`−4 AGI` por `2` rodadas) | `2.80 s` · estalo `0.86 s` | Cartucho abre → 4 chicotes de sarça espinhosa disparam sequencialmente das 4 quinas cruzando em **X** → **estalo seco (`0.86 s`)**: chicotes esticam, espinhos-garra crescem `1.65×`, barra horizontal de sarça trava o centro, selo de espinhos pulsa no meio + flash `0.11 s` → rajada horizontal de 10–12 folhas-lança cortantes rasga de ponta a ponta → chicotes recuam e tag `SNARE`. |
 
 ---
 
@@ -146,20 +150,48 @@ Todas as primitivas operam com tempo quantizado `q_time(t, fps := 10.0) -> float
    - Infraestrutura dual de alvo: camada sobre figura inimiga (`enemy_sprite_rect`) e subárvore `_card_clip` (`Control` com `clip_contents = true`) posicionada exatamente sobre `hud.status_rect(idx)` em espaço `816×624`.
 2. Teste headless `tests/verify_animal_egyptian_core.gd` verificando: paletas sem ouro em normal, ouro presente em ZAHAV, zero letras hebraicas, `q_time`, cálculo exato de `card_rect` (1, 2 e 3 heróis) com `min_y > BATTLE_LOG_RECT.end.y` (`0 px` sobre o Battle Log).
 
-### Fase 2 — Coreografias 1:1 dos 4 Arquétipos & Roteamento no `PlayableController`
-1. Implementar `play_nile_surge`, `play_hail_fangs`, `play_uraeus_venom` e `play_thorn_lash` em `AnimalEgyptianFX`, com parâmetros `(target_rect, is_ally, is_zahav, show_cartouche)` e callbacks/tempos de impacto exatos (`0.85 s`, `1.44 s`, `0.76 s`, `0.86 s`).
-2. Integrar `egyptian_fx` em `scripts/battle/playable_controller.gd` roteando qualquer skill com `"vfx_style": "egyptian_2d"` (em vez de `"grotesque": true`) tanto para **jogador → inimigo** quanto **inimigo → herói (cartão)**.
+### Fase 2 — Coreografias 1:1 (`Hapi`, `Qebeh`, `Metut`, `Seret`) & Roteamento no `PlayableController`
+1. Implementar `play_hapi`, `play_qebeh`, `play_metut` e `play_seret` em `AnimalEgyptianFX`, com parâmetros `(target_rect, is_ally, is_zahav, show_cartouche)` e tempos de impacto exatos (`0.85 s`, `1.44 s`, `0.76 s`, `0.86 s`).
+2. Integrar `egyptian_fx` em `scripts/battle/playable_controller.gd` roteando qualquer skill com `"vfx_style": "egyptian_2d"` tanto para **jogador → inimigo** quanto **inimigo → herói (cartão)**.
 3. Adicionar `tests/verify_animal_egyptian_vfx.gd` + ferramenta de captura `tools/capture_animal_egyptian_vfx.gd` gerando quadros-chave em **ambos os modos (Figuras e 3 Cartões Survival)** sobre o `HEAD` atual (`D-130`) para inspeção visual do criador.
 
-### Fase 3 — Catálogo Mecânico dos Animais (Aguardando Decisão do Autor)
-- **Bloqueado até aprovação explícita do autor:** definição final de custos (`ACT`/`EN`), fórmulas e efeitos mecânicos das 4 magias genéricas (e sua distribuição entre os 8 Animais livres do Survival — `Neko Shogun`, `Bastet`, `Azumi`, `Sobek`, `Hamsa`, `Girimekhala`, `Camazotz`, `Flauros` — mais resolução do conflito de `Anubis`), bem como qualquer novo ícone de status (ex.: `SOAK` / `VENO`) no HUD adaptativo de `StatusIcons`.
+### Fase 3 — Registro Mecânico (`SkillBook` + `SkillFx` + HUD `VENO`)
+1. Registrar `&"hapi"`, `&"qebeh"`, `&"metut"` e `&"seret"` em `scripts/core/skill_book.gd` conforme §5 (`vfx_style: "egyptian_2d"`, zero `affinity`).
+2. Conectar em `scripts/core/skill_fx.gd`:
+   - `Hapi`: remover 1 buff positivo (`dispel_one_positive(target)` — compatível com `STURDY` da `D-139` e buffs de estágio/shield).
+   - `Qebeh`: reutilizar `status: "chill", rounds: 2` já existente (`−25%` dano causado).
+   - `Metut`: adicionar status negativo dissipável `&"veno"` (`4 DMG` por `3` rodadas no tick de fim/início de rodada, com gravura monocromática dedicada em `StatusIcons` / `playable_hud.gd` sem regredir as gravuras existentes).
+   - `Seret`: reutilizar `status: "snare", rounds: 2` já existente (`−4 AGI`).
+3. Distribuir entre os **Animais do Modo Survival** após confirmação do roster final (8 sprites livres vs. conflito de `Anubis` na `MAESTO_UNIVERSE_AUDIT.md`).
 
 ---
 
 ## 7. Critério de Aceitação para Toda Nova Magia Egípcia 2D
 Uma nova magia da família dos Animais só é considerada entregue após cumprir:
-1. Definição em `scripts/core/skill_book.gd` com `"vfx_style": "egyptian_2d"` e **zero campo `affinity`** (`D-119`/`D-138`).
+1. Nome em **Egípcio Antigo** (`D-141`) e definição em `scripts/core/skill_book.gd` com `"vfx_style": "egyptian_2d"` e **zero campo `affinity`** (`D-119`/`D-138`).
 2. **Protótipo HTML obrigatório com modo Dual (Figuras × Cartão `256×52`)** aprovado visualmente pelo criador (`D-140`).
 3. Conformidade 100% 2D (zero 3D, zero gradientes, 10 FPS, zero hebraico, `#ffd84a` apenas em `ZAHAV`).
 4. Implementação em `AnimalEgyptianFX` com recorte exato no cartão do aliado (`0 px` sobre Battle Log) e composição proporcional nas figuras inimigas.
 5. Teste headless passando no `HEAD` atual (`D-130`) + capturas em **ambos** os modos (figuras e cartões) aprovadas visualmente pelo criador (`AGENTS.md` obrigação 7).
+
+---
+
+## 8. Banco de Vocabulário Egípcio de Referência *(Candidatos Não-Canônicos)*
+
+> [!NOTE]
+> Apenas os 4 nomes da §5 (`Hapi`, `Qebeh`, `Metut`, `Seret`) são canônicos pela **D-141**. As raízes abaixo ficam registradas apenas como banco de inspiração para magias futuras dos Animais (análogo ao `docs/MAGIC_VOCABULARY_BACKLOG.md` do Hebraico).
+
+| Grupo | Candidato | Transliteração | Significado real | Uso sugerido |
+|---|---|---|---|---|
+| **`AQUA`** | **`Mu`** | *mw* | Água | Magia curta/básica ou suporte hídrico |
+| **`AQUA`** | **`Nun`** | *nwn* | Águas primordiais / abismo | Magia de água superior / área |
+| **`AQUA`** | **`Iteru`** | *jtrw* | Rio / Nilo | Correnteza / fluxo |
+| **`CRYO`** | **`Qeb`** | *qb* | Frio (raiz curta) | Variante rápida de gelo |
+| **`CRYO`** | **`Peret`** | *prt* | Inverno / estação fria | Geada em área |
+| **`VENO`** | **`Iaret`** | *jꜥrt* | Cobra Uraeus | Variante ofensiva / `ZAHAV` de veneno |
+| **`VENO`** | **`Hefau`** | *ḥfꜣw* | Serpente | Mordida/bote venenoso |
+| **`VENO`** | **`Serqet`** | *srqt* | Escorpião / deusa escorpião | Veneno potente / maldição |
+| **`LEAF`** | **`Wadj`** | *wꜣḏ* | Verde / papiro / vigor | Cura / regeneração / suporte `LEAF` |
+| **`LEAF`** | **`Shent`** | *šndt* | Acácia espinhosa | Barreira de espinhos / defesa `LEAF` |
+| **`LEAF`** | **`Khet`** | *ḫt* | Madeira / árvore | Construto / defesa `WOOD`/`LEAF` |
+| **Qualificadores *(futuro)*** | **`Wer`** / **`Aa`** | *wr* / *ꜥꜣ* | Grande / poderoso / maior | Possível sufixo para versões evoluídas / `ZAHAV` |

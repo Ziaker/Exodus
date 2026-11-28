@@ -12,22 +12,22 @@
         <button data-skill="aqua" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
           <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#2e6c8a"></span>
           <span>1 · AQUA</span>
-          <span class="opacity-75 font-normal">Nile Surge</span>
+          <span class="opacity-75 font-normal">Hapi ✓</span>
         </button>
         <button data-skill="cryo" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
           <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#68a8cc"></span>
           <span>2 · CRYO</span>
-          <span class="opacity-75 font-normal">Hail Fangs v2</span>
+          <span class="opacity-75 font-normal">Qebeh ✓</span>
         </button>
         <button data-skill="veno" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
           <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#638029"></span>
-          <span>3 · VENO ✓</span>
-          <span class="opacity-75 font-normal">Uraeus Venom</span>
+          <span>3 · VENO</span>
+          <span class="opacity-75 font-normal">Metut ✓</span>
         </button>
         <button data-skill="leaf" class="sk-btn inline-flex items-center gap-1.5 px-2 py-1 rounded font-medium border border-[var(--border)] transition">
           <span class="inline-block w-2.5 h-2.5 rounded-sm border border-white/25" style="background:#265c3a"></span>
           <span>4 · LEAF</span>
-          <span class="opacity-75 font-normal">Thorn Lash v2</span>
+          <span class="opacity-75 font-normal">Seret ✓</span>
         </button>
       </div>
       <div class="flex items-center gap-1">
@@ -120,43 +120,43 @@
 
     const SKILLS = {
       aqua: {
-        label: 'NILE SURGE',
+        label: 'HAPI',
         elem: 'AQUA',
-        title: 'ÁGUA 2D · Faixas em zigue-zague do Nilo (𓈖), ânforas de perfil derramando correnteza e peixes nadando em perfil',
-        badge: 'MURAL 2D · ZIGUE-ZAGUE + PEIXES · 10 FPS',
-        statusTag: { text: 'SOAK', col: '#c9d7cf', accent: '#2e6c8a' },
-        logFoe:  ['Painted Nile waves unfold across the wall in flat bands!', 'NILE SURGE: 34 MAGI — swept under sacred river currents!'],
-        logAlly: ['Painted Nile waves flood YOCH\'s card from edge to edge!', 'NILE SURGE: YOCH takes 34 MAGI — swept by river currents!'],
+        title: 'HAPI (2ACT/8EN/MAGI/1T) · 10 MAGI (+MAK) + remove 1 buff positivo · Faixas em zigue-zague do Nilo (𓈖), ânforas e peixes',
+        badge: 'D-141 · AQUA · 10 MAGI + DISPEL',
+        statusTag: { text: 'DISPEL', col: '#c9d7cf', accent: '#2e6c8a' },
+        logFoe:  ['Painted Nile waves unfold across the wall in flat bands!', 'HAPI: 10 MAGI (+MAK) — 1 positive buff washed away!'],
+        logAlly: ['Painted Nile waves flood YOCH\'s card from edge to edge!', 'HAPI: YOCH takes 10 MAGI (+MAK) — 1 positive buff washed away!'],
         duration: 2.80
       },
       cryo: {
-        label: 'HAIL FANGS',
+        label: 'QEBEH',
         elem: 'CRYO',
-        title: 'GELO 2D v2 · Rajada diagonal de lanças de gelo, dentes de estalactites fechando do teto/chão, glifos de geada e estilhaço',
-        badge: 'V2 · LANÇAS + DENTES DE GELO · 10 FPS',
+        title: 'QEBEH (2ACT/8EN/MAGI/1T) · 12 MAGI (+MAK) + CHILL (-25% dano, 2R) · Lanças de gelo, dentes de estalactites e estilhaço',
+        badge: 'D-141 · CRYO · 12 MAGI + CHILL',
         statusTag: { text: 'CHILL', col: '#eaf6fa', accent: '#5c9bc0' },
-        logFoe:  ['Diagonal ice spears hail down as jagged frost fangs lock shut!', 'HAIL FANGS shatters! 38 MAGI — target CHILLED!'],
-        logAlly: ['Ice spears hail across YOCH\'s card as frost fangs lock shut!', 'HAIL FANGS shatters! YOCH takes 38 MAGI — CHILLED!'],
+        logFoe:  ['Diagonal ice spears hail down as jagged frost fangs lock shut!', 'QEBEH shatters! 12 MAGI (+MAK) — target CHILLED (2R)!'],
+        logAlly: ['Ice spears hail across YOCH\'s card as frost fangs lock shut!', 'QEBEH shatters! YOCH takes 12 MAGI (+MAK) — CHILLED (2R)!'],
         duration: 2.85
       },
       veno: {
-        label: 'URAEUS VENOM',
+        label: 'METUT',
         elem: 'VENO / TOXI',
-        title: 'VENENO 2D ✓ · Cobras Uraeus simétricas de perfil, bote em 2 quadros, escorpião chapado e gotas-lágrima verticais',
-        badge: 'APROVADO · URAEUS + ESCORPIÃO · 10 FPS',
-        statusTag: { text: 'VENO×2', col: '#cfd696', accent: '#638029' },
-        logFoe:  ['Twin painted Uraeus cobras uncoil in profile and strike!', 'URAEUS VENOM: 26 MAGI — Serqet venom applied (VENO ×2)!'],
-        logAlly: ['Twin painted Uraeus cobras strike across YOCH\'s card!', 'URAEUS VENOM: YOCH takes 26 MAGI — VENO ×2 applied!'],
+        title: 'METUT (2ACT/8EN/MAGI/1T) · 8 MAGI (+MAK) + VENO (4 DMG × 3R) · Cobras Uraeus em perfil, escorpião e veneno escorrendo',
+        badge: 'D-141 · VENO · 8 MAGI + VENO',
+        statusTag: { text: 'VENO', col: '#cfd696', accent: '#638029' },
+        logFoe:  ['Twin painted Uraeus cobras uncoil in profile and strike!', 'METUT: 8 MAGI (+MAK) — target poisoned (VENO: 4 DMG × 3R)!'],
+        logAlly: ['Twin painted Uraeus cobras strike across YOCH\'s card!', 'METUT: YOCH takes 8 MAGI (+MAK) — VENO (4 DMG × 3R)!'],
         duration: 2.85
       },
       leaf: {
-        label: 'THORN LASH',
+        label: 'SERET',
         elem: 'LEAF',
-        title: 'NATUREZA 2D v2 · Chicotes de sarça espinhosa disparando em X, estalo seco de espinhos curvos e rajada de folhas-lança',
-        badge: 'V2 · SARÇA EM X + FOLHAS-LANÇA · 10 FPS',
+        title: 'SERET (2ACT/8EN/MAGI/1T) · 10 MAGI (+MAK) + SNARE (-4 AGI, 2R) · Chicotes de sarça em X, estalo e folhas-lança',
+        badge: 'D-141 · LEAF · 10 MAGI + SNARE',
         statusTag: { text: 'SNARE', col: '#d4c198', accent: '#265c3a' },
-        logFoe:  ['Barbed bramble whips lash in a sharp X and snap thorns shut!', 'THORN LASH tears through! 30 MAGI — target SNARED!'],
-        logAlly: ['Barbed bramble whips lash across YOCH\'s card in a sharp X!', 'THORN LASH tears through! YOCH takes 30 MAGI — SNARED!'],
+        logFoe:  ['Barbed bramble whips lash in a sharp X and snap thorns shut!', 'SERET tears through! 10 MAGI (+MAK) — target SNARED (-4 AGI, 2R)!'],
+        logAlly: ['Barbed bramble whips lash across YOCH\'s card in a sharp X!', 'SERET tears through! YOCH takes 10 MAGI (+MAK) — SNARED (-4 AGI, 2R)!'],
         duration: 2.80
       }
     };
