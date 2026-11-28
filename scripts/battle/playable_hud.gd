@@ -1869,14 +1869,9 @@ func _draw_status_glyph(id: String, box: Rect2) -> void:
 			draw_line(Vector2(c.x, box.position.y + 1.0), Vector2(c.x, box.end.y - 1.0), ink, 0.8)
 			draw_line(Vector2(box.position.x + 1.0, c.y), Vector2(box.end.x - 1.0, c.y), ink, 0.8)
 		"shield":
-			draw_polyline(PackedVector2Array([
-				Vector2(c.x - 2.6, box.position.y + 1.4),
-				Vector2(c.x + 2.6, box.position.y + 1.4),
-				Vector2(c.x + 2.6, c.y + 0.6),
-				Vector2(c.x, box.end.y - 1.2),
-				Vector2(c.x - 2.6, c.y + 0.6),
-				Vector2(c.x - 2.6, box.position.y + 1.4),
-			]), ink, 0.95)
+			# Haganah (הֲגָנָה): glifo hebraico ה para diferenciar claramente de DEF+ (escudo)
+			var tw := _width("ה", 7, true)
+			_str("ה", c.x - tw * 0.5, box.end.y - 1.2, ink, 7, true)
 		"atk_up", "weaken":
 			draw_line(Vector2(box.position.x + 1.8, box.end.y - 1.8), Vector2(box.end.x - 1.5, box.position.y + 1.5), ink, 1.05)
 			draw_line(Vector2(box.position.x + 2.0, box.end.y - 3.6), Vector2(box.position.x + 3.8, box.end.y - 1.8), ink, 0.9)
@@ -1910,13 +1905,35 @@ func _draw_status_glyph(id: String, box: Rect2) -> void:
 		"sp_up":
 			draw_circle(c + Vector2(0.5, 0.2), s * 0.26, ink, false, 0.9)
 			_draw_glyph_arrow(box, true)
-		"chill", "snare", "slow":
+		"chill":
+			# Cristal de gelo (6 pontas) + seta vermelha
+			draw_line(Vector2(c.x + 0.4, box.position.y + 1.4), Vector2(c.x + 0.4, box.end.y - 1.4), ink, 0.85)
+			draw_line(Vector2(c.x - 2.0, c.y - 1.4), Vector2(c.x + 2.8, c.y + 1.4), ink, 0.85)
+			draw_line(Vector2(c.x - 2.0, c.y + 1.4), Vector2(c.x + 2.8, c.y - 1.4), ink, 0.85)
+			_draw_glyph_arrow(box, false)
+		"snare":
+			# Armadilha/laço fechado + seta vermelha
 			draw_polyline(PackedVector2Array([
-				Vector2(c.x - 2.0, box.position.y + 1.5),
-				Vector2(c.x + 2.4, box.position.y + 1.5),
-				Vector2(c.x - 2.0, box.end.y - 1.5),
-				Vector2(c.x + 2.4, box.end.y - 1.5),
-			]), ink, 0.9)
+				Vector2(c.x - 1.8, box.position.y + 2.0),
+				Vector2(c.x + 0.5, c.y + 0.4),
+				Vector2(c.x + 2.8, box.position.y + 2.0),
+			]), ink, 0.95)
+			draw_line(Vector2(c.x - 2.0, box.end.y - 1.8), Vector2(c.x + 2.8, box.end.y - 1.8), ink, 0.95)
+			_draw_glyph_arrow(box, false)
+		"slow":
+			# Ampulheta fechada (dois triângulos opostos) + seta vermelha
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x - 1.8, box.position.y + 1.5),
+				Vector2(c.x + 2.6, box.position.y + 1.5),
+				Vector2(c.x + 0.4, c.y),
+				Vector2(c.x - 1.8, box.position.y + 1.5),
+			]), ink, 0.85)
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x + 0.4, c.y),
+				Vector2(c.x + 2.6, box.end.y - 1.5),
+				Vector2(c.x - 1.8, box.end.y - 1.5),
+				Vector2(c.x + 0.4, c.y),
+			]), ink, 0.85)
 			_draw_glyph_arrow(box, false)
 		"gevurah":
 			draw_polyline(PackedVector2Array([Vector2(c.x - 2.4, c.y + 0.5), Vector2(c.x, c.y - 2.2), Vector2(c.x + 2.4, c.y + 0.5)]), ink, 0.95)

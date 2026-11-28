@@ -1783,8 +1783,12 @@ func _draw_sun_body(spot: Dictionary, grow: float, pulse_env: float, hits: int, 
 	var p: Vector2 = spot.p
 	var pulse := 1.0 + sin(t * 9.0) * 0.05 + pulse_env * 0.28
 	var sr: float = float(spot.r) * grow * pulse
-	if sr < 0.8:
+	if sr < 1.2:
 		return
+	var j_scale := clampf(grow, 0.0, 1.0)
+	var ray_j := float(spot.ray_jit) * j_scale
+	var disc_j := minf(float(spot.disc_jit) * j_scale, sr * 0.16)
+	var inner_j := minf(1.1 * j_scale, sr * 0.08)
 	var ally: bool = spot.ally
 	for i in 12:
 		var a := (float(i) / 12.0) * TAU + floorf(t * 12.0) * 0.04
@@ -1794,17 +1798,17 @@ func _draw_sun_body(spot: Dictionary, grow: float, pulse_env: float, hits: int, 
 		var spread := 0.14
 		draw_sketch_shape(PackedVector2Array([
 			p + Vector2(cos(a - spread), sin(a - spread)) * r_in, p + Vector2(cos(a), sin(a)) * r_out, p + Vector2(cos(a + spread), sin(a + spread)) * r_in]),
-			f_idx + i * 7, pal, float(spot.ray_jit), pal.deep, float(spot.ray_w), alpha)
+			f_idx + i * 7, pal, ray_j, pal.deep, float(spot.ray_w), alpha)
 	var disc := PackedVector2Array()
 	for i in 14:
 		var a2 := (float(i) / 14.0) * TAU
 		disc.append(p + Vector2(cos(a2), sin(a2)) * sr)
-	draw_sketch_shape(disc, f_idx, pal, float(spot.disc_jit), pal.deep, float(spot.disc_w), alpha)
+	draw_sketch_shape(disc, f_idx, pal, disc_j, pal.deep, float(spot.disc_w), alpha)
 	var inner := PackedVector2Array()
 	for q in disc:
 		inner.append(p + (q - p) * 0.48)
 	var core_col: Color = pal.hi if pulse_env > 0.2 else pal.accent
-	_fill_poly(sketchy_pts(inner, f_idx + 31, 1.1), Color(core_col, core_col.a * alpha))
+	_fill_poly(sketchy_pts(inner, f_idx + 31, inner_j), Color(core_col, core_col.a * alpha))
 	if ally and grow > 0.45:
 		var hi: Color = pal.hi
 		var count_pos := p + Vector2(-16.0 - 30.0, 4.0)
