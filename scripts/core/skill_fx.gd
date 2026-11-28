@@ -136,7 +136,74 @@ static func tick(unit: BattleUnit) -> Dictionary:
 		unit.statuses[id].rounds = int(unit.statuses[id].rounds) - 1
 		if int(unit.statuses[id].rounds) <= 0:
 			unit.remove_status(id)
+	unit.tick_cooldowns()
 	return result
+
+
+## D-139 STURDY: blocks a debilitating effect when no Haganah/Aegis Iris shield already absorbed it,
+## consuming STURDY (and Stone Body's +15 DEF) in the process. Priority: AEGIS IRIS / Haganah first,
+## preserving STURDY; if not shielded, STURDY absorbs the debuff and breaks.
+static func try_block_debilitating(target: BattleUnit, kind: StringName = &"") -> bool:
+	if target == null or not target.is_alive():
+		return false
+	if not target.haganah.is_empty():
+		return false
+	if not target.has_status(&"sturdy"):
+		return false
+	if kind != &"" and not NEGATIVE_STATUSES.has(kind) and not (kind in [&"burn", &"bleed", &"weaken", &"mark_of_sun", &"trapped", &"paralyzed"]):
+		return false
+	target.remove_status(&"sturdy")
+	return true
+
+
+## D-139: enemy dispel of positive buffs (removes STURDY and Stone Body's +15 DEF along with other buffs).
+## Tahorah (`cleanse_all`) only clears negative statuses and therefore preserves STURDY.
+static func dispel_positive(unit: BattleUnit) -> int:
+	var removed := 0
+	for id in [&"sturdy", &"taunt", &"zohar"]:
+		if unit.has_status(id):
+			unit.remove_status(id)
+			removed += 1
+	if not unit.atk_stages.is_empty():
+		removed += unit.atk_stages.size()
+		unit.atk_stages.clear()
+	if not unit.mak_stages.is_empty():
+		removed += unit.mak_stages.size()
+		unit.mak_stages.clear()
+	if not unit.def_stages.is_empty():
+		removed += unit.def_stages.size()
+		unit.def_stages.clear()
+	if not unit.def_round_stages.is_empty():
+		removed += unit.def_round_stages.size()
+		unit.def_round_stages.clear()
+	if not unit.mef_stages.is_empty():
+		removed += unit.mef_stages.size()
+		unit.mef_stages.clear()
+	if not unit.agi_buffs.is_empty():
+		removed += unit.agi_buffs.size()
+		unit.agi_buffs.clear()
+	if not unit.sp_buffs.is_empty():
+		for info in unit.sp_buffs:
+			unit.add_sp(-int(info.get("amount", 0)))
+		removed += unit.sp_buffs.size()
+		unit.sp_buffs.clear()
+	if unit.next_attack_high_speed:
+		unit.next_attack_high_speed = false
+		removed += 1
+	if unit.gevurah_bonus > 0.0:
+		unit.gevurah_bonus = 0.0
+		removed += 1
+	if unit.regen_rounds > 0:
+		unit.regen_rounds = 0
+		unit.regen_amount = 0
+		removed += 1
+	if not unit.mends.is_empty():
+		removed += unit.mends.size()
+		unit.mends.clear()
+	if not unit.haganah.is_empty():
+		unit.haganah = {}
+		removed += 1
+	return removed
 
 
 ## MEND: burns and bleeds go away.

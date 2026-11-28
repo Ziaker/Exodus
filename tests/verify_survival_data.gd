@@ -105,7 +105,7 @@ func _run() -> void:
 			"Encounters scale 1/2/3 demons by tier")
 	_check(SurvivalData.encounter_for("beelzebub").has("beelzebub"),
 			"The touched demon always leads its encounter")
-	for required in [&"vuln_pierce", &"blade_dance", &"umbral_gaze", &"renew", &"stone_grasp", &"mazz_bite", &"fang_sting", &"dark_breath", &"ignoma"]:
+	for required in [&"vuln_pierce", &"blade_dance", &"umbral_gaze", &"renew", &"rock_body", &"mazz_bite", &"fang_sting", &"dark_breath", &"ignoma"]:
 		_check(not SkillBook.def(required).is_empty(), "New placeholder skill exists: %s" % required)
 
 	# Verifica que KIND_SKILLS do jogo base não foi alterado.

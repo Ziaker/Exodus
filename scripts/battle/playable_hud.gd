@@ -1950,6 +1950,22 @@ func _draw_status_glyph(id: String, box: Rect2) -> void:
 		"regen":
 			draw_line(Vector2(c.x, box.position.y + 1.5), Vector2(c.x, box.end.y - 1.5), ink, 1.1)
 			draw_line(Vector2(box.position.x + 1.5, c.y), Vector2(box.end.x - 1.5, c.y), ink, 1.1)
+		"sturdy":
+			# D-139 STURDY: escudo hexagonal de pedra com fissura central
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x, box.position.y + 1.2),
+				Vector2(box.end.x - 1.5, c.y - 1.4),
+				Vector2(box.end.x - 1.8, c.y + 1.5),
+				Vector2(c.x, box.end.y - 1.2),
+				Vector2(box.position.x + 1.8, c.y + 1.5),
+				Vector2(box.position.x + 1.5, c.y - 1.4),
+				Vector2(c.x, box.position.y + 1.2),
+			]), ink, 0.95)
+			draw_polyline(PackedVector2Array([
+				Vector2(c.x, box.position.y + 2.6),
+				Vector2(c.x + 0.8, c.y),
+				Vector2(c.x - 0.6, box.end.y - 2.4),
+			]), ink, 0.8)
 		_:
 			draw_circle(c, 1.6, ink)
 

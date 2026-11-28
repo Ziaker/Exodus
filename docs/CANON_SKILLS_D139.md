@@ -1,7 +1,7 @@
 # Skills Canônicas Revisadas — Lote 3 (Físicos Restantes) + Regra `STURDY` + Remoção de `Frost Lance` (D-139)
 
-**Decisão:** D-139 · 2026-11-27 (decisão do criador)  
-**Estado:** **CANÔNICO — DESIGN E VISUAIS (4/4) APROVADOS DE PRIMEIRA; PRONTO PARA IMPLEMENTAÇÃO NO GODOT**  
+**Decisão:** D-139 · 2026-11-27 (decisão do criador; fechamentos em 2026-11-28)  
+**Estado:** **CANÔNICO — DESIGN E VISUAIS (4/4) APROVADOS; IMPLEMENTADO NAS 3 FASES (motor, catálogo, HUD e VFX no jogo; aguarda a validação visual final do criador no Godot)**  
 **Índice canônico:** [`docs/DECISIONS.md`](DECISIONS.md) · **GDD:** [`docs/GDD.md`](GDD.md) (Apêndice A) · **Combate:** [`docs/COMBAT_SPEC.md`](COMBAT_SPEC.md) · **Fronteira Canônica:** [`docs/CANON_BOUNDARY.md`](CANON_BOUNDARY.md) · **Lote 1 (D-124):** [`docs/CANON_SKILLS_D124.md`](CANON_SKILLS_D124.md) · **Lote 2 (D-131):** [`docs/CANON_SKILLS_D131.md`](CANON_SKILLS_D131.md) · **Estilo VFX Não-Reza (D-125):** [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md) · **HTML Canônico (4/4):** [`docs/vfx_refs/d139/README.md`](vfx_refs/d139/README.md) · **Dossiê de Construção & Validação:** [`docs/VALIDATION_LOG_D139.md`](VALIDATION_LOG_D139.md) · **Prompts Faseados:** [`docs/CLAUDE_PROMPTS_D139.md`](CLAUDE_PROMPTS_D139.md)
 
 > [!IMPORTANT]
@@ -86,4 +86,4 @@ Todos os 4 ataques da D-139 foram construídos integralmente sobre os **4 motore
 ## 5. Status de Aprovação e Próximos Passos
 
 - **Validação visual do protótipo HTML (2026-11-27):** **4/4 APROVADOS DE PRIMEIRA** pelo criador (*"absolutamente perfeitos todos"*), sem necessidade de v2.
-- **Implementação in-engine no Godot:** especificada em 3 fases prontas para execução em [`docs/CLAUDE_PROMPTS_D139.md`](CLAUDE_PROMPTS_D139.md); validação visual final no Godot pertence ao criador (`AGENTS.md` Regra 7).
+- **Implementação in-engine no Godot (2026-11-28):** **CONCLUÍDA NAS 3 FASES** (`scripts/core/{battle_unit,skill_fx,skill_book}.gd`, `scripts/survival/survival_data.gd`, `scripts/battle/{playable_controller,playable_hud,status_icons,skill_grotesque_fx}.gd`; suítes `tests/verify_d139_{rules,skills,vfx}.gd` e gravador `tools/record_d139_all.gd`). Prioridade determinística implementada e autorizada pelo criador: **`AEGIS IRIS` / `Haganah` absorve primeiro** preservando `STURDY`; sem escudo de status, `STURDY` bloqueia o efeito debilitante e se consome no processo. Validação visual final no Godot pertence ao criador (`AGENTS.md` Regra 7).

@@ -35,6 +35,9 @@ const PAL_ENERGY := {"accent": Color("553675"), "hi": Color("c9bde0"), "deep": C
 const PAL_BLUE_STAT := {"accent": Color("25568a"), "hi": Color("9fc9ec"), "deep": Color("061124")}
 const PAL_ZAHAV_BLUE := {"accent": Color("2b669e"), "hi": Color("ffd84a"), "deep": Color("08162b")}
 const PAL_SUN_NORMAL := {"accent": Color("c94c14"), "hi": Color("f2d9b6"), "deep": Color("240903")}
+## D-139 (Lote 3): paletas de Blade Dance (normal, zero ouro) e Stone Body (ZAHAV, outline/veios dourados).
+const PAL_BLADE := {"accent": Color("8c1d30"), "hi": Color("dfe4ee"), "deep": Color("17070c")}
+const PAL_ZAHAV_STONE := {"accent": Color("8c7252"), "hi": Color("ffd84a"), "deep": Color("1b140d")}
 ## Preenchimentos de corpo (negro abissal) usados pelos rabiscos.
 const FILL_BODY := Color("050208")
 const FILL_BODY_DARK := Color("030106")
@@ -137,6 +140,7 @@ static func palette_for(family: StringName, is_zahav: bool) -> Dictionary:
 			&"blood": return PAL_ZAHAV_BLOOD.duplicate()
 			&"blue": return PAL_ZAHAV_BLUE.duplicate()
 			&"fire": return PAL_ZAHAV_FIRE.duplicate()
+			&"stone": return PAL_ZAHAV_STONE.duplicate()
 			_:
 				var p: Dictionary = PAL_ABYSS_DARK.duplicate()
 				p["hi"] = GOLD
@@ -148,6 +152,7 @@ static func palette_for(family: StringName, is_zahav: bool) -> Dictionary:
 		&"energy": return PAL_ENERGY.duplicate()
 		&"blue": return PAL_BLUE_STAT.duplicate()
 		&"sun": return PAL_SUN_NORMAL.duplicate()
+		&"blade": return PAL_BLADE.duplicate()
 		_: return PAL_ABYSS_DARK.duplicate()
 
 
@@ -461,6 +466,7 @@ func clear_all() -> void:
 	_effects.clear()
 	clear_fields(true)
 	_sun_pulse.clear()
+	_sturdy_pulse.clear()
 	_clear_warps()
 	set_darken(0.0)
 	_shake_until = -1.0
@@ -496,6 +502,7 @@ func _draw() -> void:
 		if drawer.is_valid():
 			drawer.call(self, time - float(e.at))
 	_draw_suns()
+	_draw_sturdies()
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -628,7 +635,21 @@ const DURATIONS := {&"mazz_bite": 2.35, &"fang_sting": 2.35, &"fang_spine": 2.70
 	&"dark_breath": 2.95, &"umbral_gaze": 2.85, &"ignoma": 2.45, &"ignoma_esh": 2.85,
 	# D-131 (README do canônico). Mark of Sun: só o ACENDER (0,65 s); depois vale a marca persistente.
 	&"stone_crush": 2.55, &"energy_blow": 2.65, &"drain_claw": 2.25, &"vital_claws": 2.40, &"weaken": 2.45, &"weakenen": 2.50,
-	&"mark_of_sun": 0.67}
+	&"mark_of_sun": 0.67,
+	# D-139 (Lote 3: Twin Fang, Blade Dance, Rock Body, Stone Body [ZAHAV]).
+	&"twin_fang": 2.35, &"blade_dance": 2.94, &"rock_body": 1.15, &"stone_body": 1.35}
+const HIT_TWIN_FANG: Array[float] = [0.28, 0.86]
+const BLADE_DANCE_START := 0.34
+const BLADE_DANCE_STEP := 0.33
+const HIT_ROCK_BODY := 0.44
+const HIT_STONE_BODY := 0.62
+const STURDY_HOLD_DUR := 0.55
+const STURDY_BREAK_DUR := 0.60
+var _sturdy_pulse: Dictionary = {}
+
+
+static func blade_dance_hit_age(index: int) -> float:
+	return BLADE_DANCE_START + float(maxi(0, index)) * BLADE_DANCE_STEP
 const HEBREW_ALPHABET := "אבגדהוזחטיכלמנסעפצקרשת"
 const BREATH_SPEED := 640.0
 const BREATH_START := 0.26
@@ -1902,3 +1923,573 @@ func play_mark_of_sun_trigger(target: BattleUnit) -> float:
 			clear_field(key)
 			_sun_pulse.erase(target.id)
 			release_target_warp(target))
+
+
+# ======================================================================================================================
+# D-139 (Lote 3 — 4/4 aprovados de 1ª): Twin Fang, Blade Dance, Rock Body, Stone Body [ZAHAV] + STURDY persistente
+# Referência canônica 1:1: docs/vfx_refs/d139/d139_skills_vfx_canon.html (docs/vfx_refs/d139/README.md).
+# ======================================================================================================================
+
+## Primitiva 1:1 de drawTwinFangPair (d139_skills_vfx_canon.html L497-525).
+func _draw_twin_fang_pair(center: Vector2, angle: float, sc: float, progress: float, f_idx: int, pal: Dictionary, alpha: float) -> void:
+	if alpha <= 0.02:
+		return
+	var slide := (progress - 0.5) * 110.0 * sc
+	var spread := 16.0 * sc
+	var ln := 62.0 * sc
+	var thick := 11.0 * sc
+	var cs := cos(angle)
+	var sn := sin(angle)
+	var rot_pt := func(lx: float, ly: float) -> Vector2:
+		return center + Vector2(lx * cs - ly * sn, lx * sn + ly * cs)
+	for si in 2:
+		var side := -1.0 if si == 0 else 1.0
+		var oy := side * spread
+		var fang := PackedVector2Array([
+			rot_pt.call(slide + ln * 0.55, oy + side * 4.0 * sc),
+			rot_pt.call(slide + ln * 0.10, oy - thick * 0.55),
+			rot_pt.call(slide - ln * 0.48, oy - thick * 0.85),
+			rot_pt.call(slide - ln * 0.58, oy + thick * 0.15),
+			rot_pt.call(slide - ln * 0.18, oy + thick * 0.55),
+			rot_pt.call(slide + ln * 0.24, oy + thick * 0.35),
+		])
+		draw_sketch_shape(fang, f_idx + si * 23, pal, 2.0 * sc, FILL_BODY, 2.0 * minf(1.3, sc), alpha)
+		draw_sketch_line(PackedVector2Array([
+			rot_pt.call(slide - ln * 0.34, oy - thick * 0.15),
+			rot_pt.call(slide + ln * 0.16, oy + side * 1.2),
+		]), f_idx + si * 37 + 9, pal.accent, 1.4, 1.3, alpha)
+
+
+## Primitiva 1:1 de drawParallelGashes (d139_skills_vfx_canon.html L527-542).
+func _draw_parallel_gashes(center: Vector2, angle: float, ln: float, spread: float, grow: float, alpha: float,
+		f_idx: int, pal: Dictionary, bold: bool = false) -> void:
+	if alpha <= 0.02 or grow <= 0.02:
+		return
+	var half := ln * 0.5 * grow
+	var cs := cos(angle)
+	var sn := sin(angle)
+	var rot_pt := func(lx: float, ly: float) -> Vector2:
+		return center + Vector2(lx * cs - ly * sn, lx * sn + ly * cs)
+	for si in 2:
+		var side := -1.0 if si == 0 else 1.0
+		var y := side * spread
+		var pts := PackedVector2Array([
+			rot_pt.call(-half, y),
+			rot_pt.call(-half * 0.3, y + side * 2.5),
+			rot_pt.call(half * 0.3, y - side * 2.0),
+			rot_pt.call(half, y),
+		])
+		draw_sketch_line(pts, f_idx + si * 19, FILL_BODY, 6.2 if bold else 4.2, 1.8, alpha)
+		draw_sketch_line(pts, f_idx + si * 19 + 5, pal.accent, 3.2 if bold else 2.2, 1.6, alpha)
+		draw_sketch_line(pts, f_idx + si * 19 + 11, pal.hi, 1.5 if bold else 1.1, 1.2, alpha)
+
+
+## Primitiva 1:1 de drawCurvedBladeSlash (d139_skills_vfx_canon.html L669-702).
+func _draw_curved_blade_slash(center: Vector2, angle: float, sc: float, prog: float, f_idx: int, pal: Dictionary, alpha: float) -> void:
+	if alpha <= 0.02:
+		return
+	var cs := cos(angle)
+	var sn := sin(angle)
+	var rot_pt := func(lx: float, ly: float) -> Vector2:
+		return center + Vector2(lx * cs - ly * sn, lx * sn + ly * cs)
+	var sweep := -1.0 + prog * 2.0
+	var r_arc := 68.0 * sc
+	var crescent := PackedVector2Array()
+	for i in 9:
+		var u := -0.9 + (float(i) / 8.0) * 1.8 * minf(1.0, prog * 1.6)
+		crescent.append(rot_pt.call(sin(u) * r_arc, -cos(u) * 26.0 * sc + 10.0 * sc))
+	for i in range(8, -1, -1):
+		var u := -0.9 + (float(i) / 8.0) * 1.8 * minf(1.0, prog * 1.6)
+		crescent.append(rot_pt.call(sin(u) * (r_arc * 0.78), -cos(u) * 12.0 * sc + 12.0 * sc))
+	draw_sketch_shape(crescent, f_idx, pal, 2.2 * sc, FILL_BODY, 2.0, alpha)
+	var bx := sweep * 52.0 * sc
+	var blade := PackedVector2Array([
+		rot_pt.call(bx + 46.0 * sc, -10.0 * sc),
+		rot_pt.call(bx + 12.0 * sc, -14.0 * sc),
+		rot_pt.call(bx - 36.0 * sc, -4.0 * sc),
+		rot_pt.call(bx - 48.0 * sc, 6.0 * sc),
+		rot_pt.call(bx - 12.0 * sc, 6.0 * sc),
+		rot_pt.call(bx + 26.0 * sc, -2.0 * sc),
+	])
+	draw_sketch_shape(blade, f_idx + 29, pal, 1.9 * sc, FILL_BODY, 2.2, alpha)
+	draw_sketch_line(PackedVector2Array([
+		rot_pt.call(bx - 32.0 * sc, 1.0),
+		rot_pt.call(bx + 36.0 * sc, -8.0 * sc),
+	]), f_idx + 43, pal.hi, 1.6, 1.2, alpha)
+
+
+## Primitiva 1:1 de drawRockPlate (d139_skills_vfx_canon.html L864-882).
+func _draw_rock_plate(center: Vector2, rx: float, ry: float, rot: float, seed_v: int, f_idx: int,
+		pal: Dictionary, is_zahav: bool, alpha: float = 1.0) -> void:
+	if alpha <= 0.02:
+		return
+	var cs := cos(rot)
+	var sn := sin(rot)
+	var pts := PackedVector2Array()
+	for i in 7:
+		var a := (float(i) / 7.0) * TAU
+		var r_mod := 0.78 + sketch_hash(float(seed_v + i * 11)) * 0.42
+		var lx := cos(a) * rx * r_mod
+		var ly := sin(a) * ry * r_mod
+		pts.append(center + Vector2(lx * cs - ly * sn, lx * sn + ly * cs))
+	draw_sketch_shape(pts, f_idx + seed_v, pal, 2.1 if is_zahav else 1.7, FILL_BODY, 2.3 if is_zahav else 1.9, alpha)
+	var vein_col: Color = pal.hi if is_zahav else pal.accent
+	draw_sketch_line(PackedVector2Array([pts[0], center, pts[3]]), f_idx + seed_v + 13, vein_col, 1.5 if is_zahav else 1.2, 1.1, alpha)
+	if is_zahav:
+		var mid := center + Vector2(2.0 * cs + sn, 2.0 * sn - cs)
+		draw_sketch_line(PackedVector2Array([pts[2], mid, pts[5]]), f_idx + seed_v + 29, pal.accent, 1.1, 1.1, alpha)
+
+
+## Primitiva 1:1 de drawSturdyBadge (d139_skills_vfx_canon.html L885-901).
+func _draw_sturdy_badge(center: Vector2, r: float, f_idx: int, pal: Dictionary, is_zahav: bool, pulse: float = 0.0, alpha: float = 1.0) -> void:
+	var s := 1.0 + pulse * 0.22
+	var pts := PackedVector2Array([
+		center + Vector2(0.0, -r * 1.15 * s),
+		center + Vector2(r * 0.95 * s, -r * 0.55 * s),
+		center + Vector2(r * 0.80 * s, r * 0.48 * s),
+		center + Vector2(0.0, r * 1.12 * s),
+		center + Vector2(-r * 0.80 * s, r * 0.48 * s),
+		center + Vector2(-r * 0.95 * s, -r * 0.55 * s),
+	])
+	draw_sketch_shape(pts, f_idx, pal, 1.2, pal.deep, 2.1 if is_zahav else 1.7, alpha)
+	draw_sketch_line(PackedVector2Array([
+		center + Vector2(0.0, -r * 0.65 * s),
+		center + Vector2(r * 0.16 * s, 0.0),
+		center + Vector2(-r * 0.14 * s, r * 0.62 * s),
+	]), f_idx + 17, pal.hi, 1.4, 0.9, alpha)
+	if is_zahav:
+		draw_sketch_line(PackedVector2Array([
+			center + Vector2(-r * 0.5 * s, -r * 0.1 * s),
+			center + Vector2(r * 0.5 * s, -r * 0.1 * s),
+		]), f_idx + 31, pal.accent, 1.2, 0.9, alpha)
+
+
+# ---- 1. TWIN FANG (renderTwinFang, normal, ZERO ouro) ----------------------------------------------------------------
+func play_twin_fang(_caster: BattleUnit, target: BattleUnit, combo_active: bool = true) -> float:
+	var g := unit_geom(target)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var ally := target.is_player
+	var pal := palette_for(&"blood", false)
+	var hit1 := HIT_TWIN_FANG[0]
+	var hit2 := HIT_TWIN_FANG[1]
+	var splats1: Array = []
+	for i in 7:
+		var a := -0.8 + (float(i) / 6.0) * 2.2 + (sketch_hash(float(i * 17)) - 0.5) * 0.2
+		var sp := 55.0 + sketch_hash(float(i * 29)) * 85.0
+		splats1.append({"vx": cos(a) * sp, "vy": sin(a) * sp - 24.0, "r": 3.2 + sketch_hash(float(i * 11)) * 3.8})
+	var splats2: Array = []
+	for i in 12:
+		var a := -PI + (float(i) / 11.0) * PI * 1.9 + (sketch_hash(float(i * 23)) - 0.5) * 0.25
+		var sp := 75.0 + sketch_hash(float(i * 37)) * 130.0
+		splats2.append({"vx": cos(a) * sp, "vy": sin(a) * sp - 34.0, "r": 3.8 + sketch_hash(float(i * 13)) * 5.2})
+	var s2 := 1.32 if combo_active else 1.0
+	return add_effect(DURATIONS[&"twin_fang"], func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		var post1 := maxf(0.0, t - hit1)
+		var post2 := maxf(0.0, t - hit2)
+		_local(c, k)
+		if post1 > 0.0 and t < 1.85:
+			var g1 := minf(1.0, post1 / 0.12)
+			var a1 := 0.92 if t < hit2 else maxf(0.0, 1.0 - (t - hit2) / 0.98)
+			_draw_parallel_gashes(Vector2.ZERO, -0.58, 104.0, 14.0, g1, a1, f_idx, pal, false)
+		if combo_active and t > hit1 + 0.18 and t < hit2 + 0.04:
+			var cp := (t - (hit1 + 0.18)) / (hit2 - hit1 - 0.14)
+			var cr := 56.0 * (1.0 - cp * 0.62)
+			var ring := PackedVector2Array()
+			for i in 12:
+				var a := (float(i) / 12.0) * TAU + float(f_idx) * 0.16
+				ring.append(Vector2(cos(a) * cr, sin(a) * cr * 0.72))
+			draw_sketch_shape(ring, f_idx + 51, pal, 2.2, Color(0, 0, 0, 0), 1.8, sin(minf(1.0, cp) * PI) * 0.85)
+		if post2 > 0.0 and t < 2.20:
+			var g2 := minf(1.0, post2 / 0.11)
+			var a2 := maxf(0.0, 1.0 - maxf(0.0, post2 - 0.35) / 0.95)
+			_draw_parallel_gashes(Vector2.ZERO, 0.62, 134.0 if combo_active else 108.0, 18.0 if combo_active else 14.0, g2, a2, f_idx + 33, pal, combo_active)
+		if t > 0.06 and t < hit1 + 0.24:
+			var p := minf(1.0, (t - 0.06) / (hit1 + 0.18 - 0.06))
+			var al := 1.0 if t < hit1 + 0.08 else maxf(0.0, 1.0 - (t - (hit1 + 0.08)) / 0.16)
+			_draw_twin_fang_pair(Vector2.ZERO, -0.58, 0.96, p, f_idx, pal, al)
+		if t > hit2 - 0.20 and t < hit2 + 0.34:
+			var p2 := minf(1.0, (t - (hit2 - 0.20)) / 0.44)
+			var al2 := 1.0 if t < hit2 + 0.12 else maxf(0.0, 1.0 - (t - (hit2 + 0.12)) / 0.22)
+			_draw_twin_fang_pair(Vector2.ZERO, 0.62, s2, p2, f_idx + 61, pal, al2)
+		if post1 > 0.0 and post1 < 0.55:
+			var sa1 := maxf(0.0, 1.0 - post1 / 0.55)
+			for i in splats1.size():
+				var s: Dictionary = splats1[i]
+				var p := Vector2(s.vx * post1, s.vy * post1 + 170.0 * post1 * post1)
+				var r: float = s.r
+				draw_sketch_shape(PackedVector2Array([p + Vector2(r, 0), p + Vector2(0, -r), p + Vector2(-r, 0), p + Vector2(0, r)]), f_idx + i * 7, pal, 1.0, pal.accent, 1.2, sa1)
+		if post2 > 0.0 and post2 < 0.78:
+			var sa2 := maxf(0.0, 1.0 - post2 / 0.78)
+			for i in splats2.size():
+				var s: Dictionary = splats2[i]
+				var p := Vector2(s.vx * post2, s.vy * post2 + 210.0 * post2 * post2)
+				var r: float = s.r
+				draw_sketch_shape(PackedVector2Array([p + Vector2(r * 1.2, 0), p + Vector2(0, -r), p + Vector2(-r * 1.1, 0), p + Vector2(0, r)]), f_idx + i * 11 + 31, pal, 1.2, pal.accent, 1.4, sa2)
+		_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var post1 := maxf(0.0, t - hit1)
+			var post2 := maxf(0.0, t - hit2)
+			var env1 := maxf(0.0, 1.0 - post1 / 0.72) if post1 > 0.0 else 0.0
+			var env2 := maxf(0.0, 1.0 - post2 / 1.15) if post2 > 0.0 else 0.0
+			if env2 > 0.02:
+				set_field(&"twin_fang", {"mode": 0, "cx": c.x, "cy": c.y, "rx": 108.0 * k, "ry": 82.0 * k, "env": env2 * 0.94, "pal": pal, "profile": &"v4", "free": ally})
+			elif env1 > 0.02:
+				set_field(&"twin_fang", {"mode": 0, "cx": c.x, "cy": c.y, "rx": 68.0 * k, "ry": 54.0 * k, "env": env1 * 0.76, "pal": pal, "profile": &"v4", "free": ally})
+			else:
+				clear_field(&"twin_fang")
+			var inv := 1.0 if ((post1 > 0.0 and post1 < 0.09) or (post2 > 0.0 and post2 < 0.14)) else 0.0
+			drive_target_warp(target, maxf(env1 * 5.5, env2 * 10.5) * k, inv)
+			if post1 > 0.0 and post1 < 0.20:
+				camera_shake(5.0, 0.08)
+			if post2 > 0.0 and post2 < 0.34:
+				camera_shake(9.5, 0.12)
+			set_darken(maxf(env1 * 0.12, env2 * 0.22)),
+		func(_fx: Node2D) -> void: _release_all([target]))
+
+
+# ---- 2. BLADE DANCE (renderBladeDance, alvo intercalado, normal, ZERO ouro) ------------------------------------------
+func play_blade_dance(caster: BattleUnit, hit_targets: Array) -> float:
+	if hit_targets.is_empty():
+		return -1.0
+	var pal := palette_for(&"blade", false)
+	var angles: Array[float] = [-0.62, 0.72, -0.45, 0.88, -0.32]
+	var n := hit_targets.size()
+	var dur := BLADE_DANCE_START + float(n) * BLADE_DANCE_STEP + 0.95
+	var last_hit_t := blade_dance_hit_age(n - 1)
+	var origin := _origin_of(caster)
+	var ally: bool = (hit_targets[0] as BattleUnit).is_player
+	var hits: Array = []
+	var unique_units: Array = []
+	for i in n:
+		var u: BattleUnit = hit_targets[i]
+		if not unique_units.has(u):
+			unique_units.append(u)
+		var g := unit_geom(u)
+		var ang: float = angles[i % angles.size()]
+		var sc := 0.92 + (float(i) / float(maxi(1, n - 1))) * 0.30
+		var sparks: Array = []
+		for si in 6:
+			var sa := ang + (sketch_hash(float(i * 41 + si * 17)) - 0.5) * 1.3
+			var sp := 68.0 + sketch_hash(float(i * 19 + si * 23)) * 95.0
+			sparks.append({"vx": cos(sa) * sp, "vy": sin(sa) * sp, "len": 9.0 + sketch_hash(float(i * 7 + si * 31)) * 11.0})
+		hits.append({"u": u, "c": g.c, "k": g.k, "t_hit": blade_dance_hit_age(i), "angle": ang, "scale": sc, "sparks": sparks})
+	return add_effect(dur, func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE / DESIGN_SCALE)
+		# 1) Fita/rastro de salto intercalado (com laço lateral quando from == to para 1 alvo vivo)
+		for i in n:
+			var h: Dictionary = hits[i]
+			var from_pos: Vector2 = origin if i == 0 else hits[i - 1].c
+			var to_pos: Vector2 = h.c
+			var start_t: float = 0.04 if i == 0 else float(hits[i - 1].t_hit) + 0.04
+			var h_dur := maxf(0.08, float(h.t_hit) - start_t)
+			var lt := t - start_t
+			if lt >= 0.0 and t < float(h.t_hit) + 0.42:
+				var p := minf(1.0, lt / h_dur)
+				var fade := maxf(0.0, 1.0 - (t - float(h.t_hit)) / 0.42) if t > float(h.t_hit) else 1.0
+				var pts := PackedVector2Array()
+				var hk: float = h.k
+				if from_pos.distance_to(to_pos) < 8.0:
+					# 1 alvo vivo: laço curvo lateral saindo e retornando ao alvo único
+					var side := -1.0 if i % 2 == 0 else 1.0
+					for s_i in 9:
+						var u := (float(s_i) / 8.0) * p
+						var a := u * TAU
+						pts.append(to_pos + Vector2(sin(a) * 58.0 * hk * side, -sin(u * PI) * 44.0 * hk))
+				else:
+					var arc_h := (-44.0 if i % 2 == 0 else 34.0) * (0.72 if ally else 1.0) * hk
+					for s_i in 9:
+						var u := (float(s_i) / 8.0) * p
+						pts.append(from_pos.lerp(to_pos, u) + Vector2(0.0, sin(u * PI) * arc_h))
+				var al := fade * 0.85
+				draw_sketch_line(pts, f_idx + i * 17, FILL_BODY, 5.0, 2.0, al)
+				draw_sketch_line(pts, f_idx + i * 17 + 3, pal.accent, 2.6, 1.8, al)
+				draw_sketch_line(pts, f_idx + i * 17 + 9, pal.hi, 1.3, 1.3, al)
+		# 2) Cortes, cicatrizes residuais e faíscas por golpe
+		for hi in n:
+			var h: Dictionary = hits[hi]
+			var post := t - float(h.t_hit)
+			var tc: Vector2 = h.c
+			var hk: float = h.k
+			var ang: float = h.angle
+			var sc: float = h.scale
+			if post >= 0.0 and t < last_hit_t + 0.72:
+				var g_len := minf(1.0, post / 0.09)
+				var a_scar := maxf(0.0, 1.0 - (t - (last_hit_t + 0.15)) / 0.57) if t > last_hit_t + 0.15 else 0.82
+				var L := 58.0 * sc * g_len * hk
+				var cs := cos(ang)
+				var sn := sin(ang)
+				var p0 := tc + Vector2(-L * cs, -L * sn)
+				var pm := tc + Vector2(3.0 * hk * sn, -3.0 * hk * cs)
+				var p1 := tc + Vector2(L * cs, L * sn)
+				draw_sketch_line(PackedVector2Array([p0, pm, p1]), f_idx + hi * 23, FILL_BODY, 4.6, 1.6, a_scar)
+				draw_sketch_line(PackedVector2Array([p0, pm, p1]), f_idx + hi * 23 + 5, pal.accent, 2.4, 1.4, a_scar)
+				draw_sketch_line(PackedVector2Array([tc + Vector2(-L * 0.85 * cs, -L * 0.85 * sn), tc + Vector2(L * 0.85 * cs, L * 0.85 * sn)]), f_idx + hi * 23 + 11, pal.hi, 1.2, 1.0, a_scar)
+			if post >= -0.10 and post < 0.28:
+				var prog := (post + 0.10) / 0.38
+				var al := 1.0 if post < 0.12 else maxf(0.0, 1.0 - (post - 0.12) / 0.16)
+				_draw_curved_blade_slash(tc, ang, sc * hk, prog, f_idx + hi * 31, pal, al)
+			if post >= 0.0 and post < 0.34:
+				var sp_a := maxf(0.0, 1.0 - post / 0.34)
+				for si in (h.sparks as Array).size():
+					var sp: Dictionary = h.sparks[si]
+					var x1 := tc.x + float(sp.vx) * post * hk
+					var y1 := tc.y + float(sp.vy) * post * hk
+					var sa := atan2(float(sp.vy), float(sp.vx))
+					var sl := float(sp.len) * hk
+					draw_sketch_line(PackedVector2Array([Vector2(x1, y1), Vector2(x1 - cos(sa) * sl, y1 - sin(sa) * sl)]),
+						f_idx + hi * 13 + si * 7, pal.hi if si % 2 == 0 else pal.accent, 1.6, 1.1, sp_a),
+		func(_fx: Node2D, t: float) -> void:
+			var dance_env := 0.0
+			if t < last_hit_t + 0.75:
+				dance_env = minf(1.0, t / 0.25) * (maxf(0.0, 1.0 - (t - (last_hit_t + 0.20)) / 0.55) if t > last_hit_t + 0.20 else 1.0)
+			var warp_max := {}
+			var inv_map := {}
+			for hi in n:
+				var h: Dictionary = hits[hi]
+				var post := t - float(h.t_hit)
+				var fkey := StringName("bd_%d" % hi)
+				if post >= -0.08 and post < 0.68:
+					var env := maxf(0.0, 1.0 - post / 0.56) if post >= 0.0 else maxf(0.0, 1.0 + post / 0.08) * 0.45
+					var tc: Vector2 = h.c
+					var hk: float = h.k
+					var sc: float = h.scale
+					set_field(fkey, {"mode": 0, "cx": tc.x, "cy": tc.y, "rx": 76.0 * sc * hk, "ry": 58.0 * sc * hk, "env": env * 0.86, "pal": pal, "profile": &"v4", "free": ally})
+				else:
+					clear_field(fkey)
+				if post >= 0.0:
+					var u: BattleUnit = h.u
+					var env_w := maxf(0.0, 1.0 - post / 0.52)
+					warp_max[u.id] = maxf(float(warp_max.get(u.id, 0.0)), env_w * 9.5 * float(h.k))
+					if post < 0.085:
+						inv_map[u.id] = 1.0
+					if post < 0.16:
+						camera_shake(6.0 + float(hi) * 1.1, 0.08)
+			for u in unique_units:
+				drive_target_warp(u, float(warp_max.get(u.id, 0.0)), float(inv_map.get(u.id, 0.0)))
+			set_darken(dance_env * 0.28),
+		func(_fx: Node2D) -> void:
+			for hi in n:
+				clear_field(StringName("bd_%d" % hi))
+			_release_all(unique_units))
+
+
+# ---- 3 & 4. ROCK BODY (normal) & STONE BODY [ZAHAV] + STURDY persistente ---------------------------------------------
+func play_rock_body(user: BattleUnit) -> float:
+	return _play_stone_armor(user, palette_for(&"stone", false), false)
+
+
+func play_stone_body(user: BattleUnit) -> float:
+	return _play_stone_armor(user, palette_for(&"stone", true), true)
+
+
+func _play_stone_armor(user: BattleUnit, pal: Dictionary, is_zahav: bool) -> float:
+	var g := unit_geom(user)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var ally := user.is_player
+	var lock_t := HIT_STONE_BODY if is_zahav else HIT_ROCK_BODY
+	var dur: float = DURATIONS[&"stone_body"] if is_zahav else DURATIONS[&"rock_body"]
+	var count := 10 if is_zahav else 7
+	var plates: Array = []
+	for i in count:
+		var a := (float(i) / float(count)) * TAU + (sketch_hash(float(i * 19)) - 0.5) * 0.24
+		var d_start := (124.0 if is_zahav else 96.0) + sketch_hash(float(i * 13)) * 28.0
+		var d_end := (38.0 if is_zahav else 30.0) + sketch_hash(float(i * 29)) * 10.0
+		var delay := ((0.0 if i < 5 else 0.20) + float(i % 5) * 0.03) if is_zahav else float(i) * 0.035
+		plates.append({
+			"a": a, "d0": d_start, "d1": d_end, "delay": delay,
+			"rx": (19.0 if is_zahav else 14.0) + sketch_hash(float(i * 31)) * 9.0,
+			"ry": (14.0 if is_zahav else 10.0) + sketch_hash(float(i * 23)) * 7.0,
+			"rot": a + (sketch_hash(float(i * 43)) - 0.5) * 0.6,
+			"seed": i * 17 + 5,
+		})
+	var dust: Array = []
+	for i in count + 4:
+		var a := (float(i) / float(count + 4)) * TAU + sketch_hash(float(i * 11)) * 0.3
+		var sp := 42.0 + sketch_hash(float(i * 29)) * 85.0
+		dust.append({"vx": cos(a) * sp, "vy": sin(a) * sp - 12.0, "r": 3.5 + sketch_hash(float(i * 17)) * 5.5})
+	var up_arrows: Array = []
+	for i in 6:
+		up_arrows.append({"ox": (sketch_hash(float(i * 17)) - 0.5) * 62.0, "delay": (float(i) / 6.0) * 0.45,
+			"spd": 38.0 + sketch_hash(float(i * 31)) * 24.0, "len": 12.0 + sketch_hash(float(i * 7)) * 8.0})
+	var key := &"stone_body_f" if is_zahav else &"rock_body_f"
+	return add_effect(dur, func(_fx: Node2D, t: float) -> void:
+		var f_idx := boil_index(t)
+		var post := maxf(0.0, t - lock_t)
+		_local(c, k)
+		if t < lock_t + 0.62:
+			var fade_after := maxf(0.0, 1.0 - (t - (lock_t + 0.18)) / 0.44) if t > lock_t + 0.18 else 1.0
+			for pl in plates:
+				var lt := maxf(0.0, t - float(pl.delay))
+				var p_dur := maxf(0.18, lock_t - float(pl.delay))
+				var p := minf(1.0, lt / p_dur)
+				var ease := 1.0 - pow(1.0 - p, 3.0)
+				var dist := float(pl.d0) + (float(pl.d1) - float(pl.d0)) * ease
+				var px := cos(float(pl.a)) * dist * (1.15 if ally else 0.92)
+				var py := sin(float(pl.a)) * dist * (0.56 if ally else 1.05)
+				_draw_rock_plate(Vector2(px, py), float(pl.rx), float(pl.ry), float(pl.rot) + (1.0 - ease) * 0.6, int(pl.seed), f_idx, pal, is_zahav, fade_after)
+		if post > 0.0 and post < 0.56:
+			var p := post / 0.56
+			var al := 1.0 - p
+			var ring_r := 26.0 + p * (76.0 if is_zahav else 56.0)
+			var ring := PackedVector2Array()
+			for i in 12:
+				var a := (float(i) / 12.0) * TAU
+				ring.append(Vector2(cos(a) * ring_r, sin(a) * ring_r * (0.52 if ally else 0.92)))
+			draw_sketch_shape(ring, f_idx + 55, pal, 2.2, Color(0, 0, 0, 0), 2.4 if is_zahav else 1.9, al)
+			for idx in dust.size():
+				var d: Dictionary = dust[idx]
+				var dp := Vector2(float(d.vx) * post, float(d.vy) * post + 95.0 * post * post)
+				var r: float = d.r
+				draw_sketch_shape(PackedVector2Array([dp + Vector2(r, 0), dp + Vector2(0, -r * 0.8), dp + Vector2(-r, 0), dp + Vector2(0, r * 0.8)]), f_idx + idx * 7, pal, 1.0, FILL_BODY, 1.3, al)
+		if is_zahav and post > 0.04 and post < 0.72:
+			var a_up := minf(1.0, post / 0.15) * (maxf(0.0, 1.0 - (post - 0.45) / 0.27) if post > 0.45 else 1.0)
+			for idx in up_arrows.size():
+				var ar: Dictionary = up_arrows[idx]
+				var lt := fmod(post + float(ar.delay), 0.68)
+				var ax: float = ar.ox
+				var ay := 22.0 - lt * float(ar.spd) * 1.4
+				draw_sketch_line(PackedVector2Array([Vector2(ax, ay + float(ar.len)), Vector2(ax, ay)]), f_idx + idx * 9, pal.hi, 1.9, 1.1, a_up)
+				draw_sketch_line(PackedVector2Array([Vector2(ax - 4.5, ay + 5.5), Vector2(ax, ay), Vector2(ax + 4.5, ay + 5.5)]), f_idx + idx * 9 + 3, pal.accent, 1.6, 0.9, a_up)
+		_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var post := maxf(0.0, t - lock_t)
+			var lock_env := maxf(0.0, 1.0 - post / 0.72) if post > 0.0 else 0.0
+			var m_env := (t / lock_t) * 0.62 if t < lock_t else lock_env * 0.90
+			set_field(key, {"mode": 0, "cx": c.x, "cy": c.y, "rx": (104.0 if is_zahav else 78.0) * k, "ry": (78.0 if is_zahav else 58.0) * k, "env": m_env, "pal": pal, "profile": &"v4", "free": ally})
+			if post > 0.0 and post < 0.24:
+				camera_shake(8.5 if is_zahav else 5.5, 0.10)
+			set_darken((0.24 if is_zahav else 0.14) * minf(1.0, t / 0.35) * (maxf(0.0, 1.0 - (t - (dur - 0.35)) / 0.35) if t > dur - 0.35 else 1.0)),
+		func(_fx: Node2D) -> void:
+			clear_field(key)
+			_release_all([user]))
+
+
+## Geometria persistente de STURDY: no aliado, 100% dentro do cartão abaixo do Battle Log (0 px sobre o log, D-137).
+func sturdy_spot(u: BattleUnit) -> Dictionary:
+	var g := unit_geom(u)
+	if u.is_player:
+		var card: Rect2 = g.card
+		var log_bottom: float = hud.BATTLE_LOG_RECT.end.y * DESIGN_SCALE
+		var shift_x := 44.0 if u.sun_mark_hits > 0 else 22.0
+		var badge_pos := Vector2(card.end.x - shift_x, maxf(log_bottom + 12.0, card.position.y + minf(35.0, card.size.y * 0.66)))
+		return {"ally": true, "card": card, "badge": badge_pos, "r": 10.0 if u.sturdy_zahav else 8.5, "min_y": log_bottom + 2.0, "k": 1.0}
+	var k: float = g.k
+	var c: Vector2 = g.c
+	var w := float(g.h) * 0.62
+	var badge_y := maxf(STAGE_TOP * DESIGN_SCALE + 16.0, c.y - float(g.h) * 0.50)
+	return {"ally": false, "c": c, "w": w, "badge": Vector2(c.x + w * 0.52, badge_y), "r": (12.0 if u.sturdy_zahav else 10.0) * k, "min_y": STAGE_TOP * DESIGN_SCALE, "k": k}
+
+
+func _draw_sturdies() -> void:
+	if hud == null or hud.get("players") == null:
+		return
+	var f_idx := boil_index(time)
+	for list in [hud.players, hud.opponents]:
+		for u in list:
+			if not u.is_alive() or not u.has_status(&"sturdy"):
+				continue
+			var is_zahav: bool = u.sturdy_zahav
+			var pal := palette_for(&"stone", is_zahav)
+			var spot := sturdy_spot(u)
+			var pulse := float(_sturdy_pulse.get(u.id, 0.0))
+			if bool(spot.ally):
+				var card: Rect2 = spot.card
+				var x0 := card.position.x
+				var y0 := maxf(float(spot.min_y), card.position.y)
+				var x1 := card.end.x
+				var y1 := card.end.y
+				var clen := 15.0 if is_zahav else 11.0
+				var corners: Array = [
+					PackedVector2Array([Vector2(x0, y0 + clen), Vector2(x0, y0), Vector2(x0 + clen, y0)]),
+					PackedVector2Array([Vector2(x1 - clen, y0), Vector2(x1, y0), Vector2(x1, y0 + clen)]),
+					PackedVector2Array([Vector2(x0, y1 - clen), Vector2(x0, y1), Vector2(x0 + clen, y1)]),
+					PackedVector2Array([Vector2(x1 - clen, y1), Vector2(x1, y1), Vector2(x1, y1 - clen)]),
+				]
+				for ci in corners.size():
+					draw_sketch_line(corners[ci], f_idx + ci * 11, pal.hi, 2.6 if is_zahav else 2.0, 0.9)
+					draw_sketch_line(corners[ci], f_idx + ci * 11 + 31, pal.accent, 1.3, 1.2)
+				_draw_sturdy_badge(spot.badge, float(spot.r), f_idx, pal, is_zahav, pulse)
+			else:
+				var c: Vector2 = spot.c
+				var k: float = spot.k
+				var w: float = spot.w
+				_draw_rock_plate(c + Vector2(-w * 0.56, -6.0 * k), (14.0 if is_zahav else 11.0) * k, (24.0 if is_zahav else 18.0) * k, -0.22, 101, f_idx, pal, is_zahav)
+				_draw_rock_plate(c + Vector2(w * 0.56, -6.0 * k), (14.0 if is_zahav else 11.0) * k, (24.0 if is_zahav else 18.0) * k, 0.22, 137, f_idx, pal, is_zahav)
+				_draw_sturdy_badge(spot.badge, float(spot.r), f_idx, pal, is_zahav, pulse)
+
+
+## Pulso de resistência de STURDY ao segurar um COUNTER sem ser interrompido (L1020-1045 do HTML canônico).
+func play_sturdy_hold(unit: BattleUnit) -> float:
+	var g := unit_geom(unit)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var ally := unit.is_player
+	var is_zahav := unit.sturdy_zahav
+	var pal := palette_for(&"stone", is_zahav)
+	var key := StringName("sturdy_h_%d" % int(time * 1000.0))
+	return add_effect(STURDY_HOLD_DUR, func(_fx: Node2D, t: float) -> void:
+		var p := minf(1.0, t / STURDY_HOLD_DUR)
+		var al := 1.0 - p
+		var f_idx := boil_index(t)
+		_local(c, k)
+		var rad := 28.0 + p * 44.0
+		var arc := PackedVector2Array()
+		for i in 13:
+			var a := -PI * 0.90 + (float(i) / 12.0) * PI * 1.80
+			arc.append(Vector2(cos(a) * rad * (1.45 if ally else 1.05), sin(a) * rad * (0.68 if ally else 1.05)))
+		draw_sketch_line(arc, f_idx + 73, pal.hi, 3.2 if is_zahav else 2.5, 2.0, al)
+		draw_sketch_line(arc, f_idx + 79, pal.accent, 1.8, 2.5, al)
+		for i in 6:
+			var a := (float(i) / 6.0) * TAU + 0.3
+			var r1 := 18.0 + p * 26.0
+			var r2 := r1 + 18.0
+			var ys := 0.68 if ally else 1.0
+			draw_sketch_line(PackedVector2Array([Vector2(cos(a) * r1, sin(a) * r1 * ys), Vector2(cos(a) * r2, sin(a) * r2 * ys)]), f_idx + i * 13, pal.hi, 2.0, 1.4, al)
+		_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var p := minf(1.0, t / STURDY_HOLD_DUR)
+			var env := pow(1.0 - p, 1.3)
+			_sturdy_pulse[unit.id] = env
+			set_field(key, {"mode": 0, "cx": c.x, "cy": c.y, "rx": (74.0 + p * 28.0) * k, "ry": (52.0 + p * 18.0) * k, "env": env * 0.85, "pal": pal, "profile": &"v4", "free": ally})
+			if t < 0.16:
+				camera_shake(4.0, 0.06),
+		func(_fx: Node2D) -> void:
+			clear_field(key)
+			_sturdy_pulse.erase(unit.id))
+
+
+## Estilhaçamento de STURDY quando o escudo bloqueia um efeito debilitante e se consome no processo.
+func play_sturdy_break(unit: BattleUnit, is_zahav: bool = false) -> float:
+	var g := unit_geom(unit)
+	var c: Vector2 = g.c
+	var k: float = g.k
+	var ally := unit.is_player
+	var zahav := is_zahav or unit.sturdy_zahav
+	var pal := palette_for(&"stone", zahav)
+	var shards: Array = []
+	for i in 8:
+		var a := (float(i) / 8.0) * TAU + (sketch_hash(float(i * 19)) - 0.5) * 0.3
+		var sp := 85.0 + sketch_hash(float(i * 31)) * 120.0
+		shards.append({"vx": cos(a) * sp, "vy": sin(a) * sp - 28.0, "rx": 9.0 + sketch_hash(float(i * 11)) * 6.0, "ry": 7.0 + sketch_hash(float(i * 23)) * 5.0, "rot": a, "vr": (sketch_hash(float(i * 13)) - 0.5) * 9.0, "seed": i * 17 + 9})
+	var key := StringName("sturdy_b_%d" % int(time * 1000.0))
+	return add_effect(STURDY_BREAK_DUR, func(_fx: Node2D, t: float) -> void:
+		var p := minf(1.0, t / STURDY_BREAK_DUR)
+		var al := 1.0 - p
+		var f_idx := boil_index(t)
+		_local(c, k)
+		for sh in shards:
+			var pos := Vector2(float(sh.vx) * t, float(sh.vy) * t + 220.0 * t * t)
+			_draw_rock_plate(pos, float(sh.rx), float(sh.ry), float(sh.rot) + float(sh.vr) * t, int(sh.seed), f_idx, pal, zahav, al)
+		_unlocal(),
+		func(_fx: Node2D, t: float) -> void:
+			var p := minf(1.0, t / STURDY_BREAK_DUR)
+			var env := pow(1.0 - p, 1.4)
+			set_field(key, {"mode": 0, "cx": c.x, "cy": c.y, "rx": (68.0 + p * 34.0) * k, "ry": (52.0 + p * 22.0) * k, "env": env * 0.78, "pal": pal, "profile": &"v4", "free": ally})
+			if t < 0.14:
+				camera_shake(5.5, 0.08),
+		func(_fx: Node2D) -> void:
+			clear_field(key))

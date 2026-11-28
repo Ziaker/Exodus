@@ -112,9 +112,13 @@ const DEFS := {
 		"cat": "STAT", "targets": "1T", "power": 0, "marks": [0.5],
 		"fx": {"no_damage": true, "mark_of_sun_hits": 3, "mark_of_sun_magi": 20, "mark_of_sun_min": 5, "dispellable": true},
 		"info": "MARK OF SUN 4 ACT / 20 EN (STAT, 1T): a sun over the foe; each hit it takes deals 20 MAGI extra (MEF mitigates, min 5) until the end of the next round or its 3rd hit."},
-	&"twin_fang": {"name": "TWIN FANG", "acts": 2, "en": 5, "hp": 0, "pp": 0, "kind": "strike",
-		"power": 5, "marks": [0.35, 0.65], "fx": {"combo": 0.5},
-		"info": "TWIN FANG 2 ACT / 5 EN: power 5 physical hit, twice; if the first lands the second deals +50% (COMBO)."},
+	# D-139 (criador 2026-11-27/28): Lote 3 canonico (encerramento das fisicas restantes).
+	# TWIN FANG promovida; BLADE DANCE reworked (ALL ACT -> ACT+1 golpes, 0 EN, alvo intercalado, 15 PHYS fixo,
+	# sem COUNTER, cooldown 2 rounds); STONE GRASP substituida por ROCK BODY + ZAHAV STONE BODY (IMEDIATO, STURDY).
+	# FROST LANCE removida no geral (aguarda estetica visual das magias dos Animais).
+	&"twin_fang": {"name": "TWIN FANG", "acts": 2, "en": 5, "hp": 0, "grotesque": true, "pp": 0, "kind": "strike",
+		"cat": "PHYS", "dmg_type": "PHYS", "targets": "1T", "power": 5, "marks": [0.35, 0.65], "fx": {"combo": 0.5},
+		"info": "TWIN FANG 2 ACT / 5 EN (PHYS, 1T): power 5 physical hit, twice; if the first lands the second deals +50% (COMBO)."},
 	&"war_cry": {"name": "WAR CRY", "acts": 2, "en": 6, "hp": 0, "pp": 0, "kind": "buff",
 		"fx": {"stages": 1, "team": true},
 		"info": "WAR CRY 2 ACT / 6 EN: +1 ATK stage for the user and every ally (TEAM)."},
@@ -124,9 +128,6 @@ const DEFS := {
 	&"mind_blast": {"name": "MIND DRAIN", "acts": 2, "en": 8, "hp": 0, "pp": 0, "kind": "magic",
 		"power": 8, "burn_chance": 0, "fx": {"en_drain": 3},
 		"info": "MIND DRAIN 2 ACT / 8 EN: power 8 psychic magic, all foes; each foe hit loses 3 EN, and with no EN it cannot use skills."},
-	&"frost_lance": {"name": "FROST LANCE", "acts": 1, "en": 5, "hp": 0, "pp": 0, "kind": "strike",
-		"power": 9, "marks": [0.5], "fx": {"status": "chill", "rounds": 2},
-		"info": "FROST LANCE 1 ACT / 5 EN: power 9 cold strike; the target's next attack deals 25% less (CHILL)."},
 	&"thunder_call": {"name": "THUNDER CALL", "acts": 2, "en": 9, "hp": 0, "pp": 0, "kind": "magic",
 		"power": 10, "burn_chance": 0, "fx": {"storm": true},
 		"info": "THUNDER CALL 2 ACT / 9 EN: power 10 lightning magic, all foes; each foe takes 1 or 2 bolts at random (STORM)."},
@@ -139,12 +140,18 @@ const DEFS := {
 	&"renew": {"name": "RENEW", "acts": 2, "en": 10, "hp": 0, "pp": 0, "kind": "heal",
 		"heal": 0, "fx": {"regen": 6, "rounds": 3},
 		"info": "RENEW 2 ACT / 10 EN: restores 6 HP at the start of each of the next 3 rounds (REGEN)."},
-	&"blade_dance": {"name": "BLADE DANCE", "acts": 2, "en": 6, "hp": 0, "pp": 0, "kind": "strike",
-		"power": 4, "powers": [3, 4, 5, 6], "marks": [0.25, 0.5, 0.75, 0.9],
-		"info": "BLADE DANCE 2 ACT / 6 EN: four physical hits whose power climbs 3, 4, 5, 6."},
-	&"stone_grasp": {"name": "STONE GRASP", "acts": 1, "en": 4, "hp": 0, "pp": 0, "kind": "strike",
-		"power": 6, "marks": [0.5], "fx": {"status": "snare", "rounds": 2},
-		"info": "STONE GRASP 1 ACT / 4 EN: power 6 earth strike; the target's AGI falls by 4 for 2 rounds (SNARE)."},
+	&"blade_dance": {"name": "BLADE DANCE", "acts": 1, "all_acts": true, "extra_hit": 1, "en": 0, "hp": 0,
+		"grotesque": true, "pp": 0, "kind": "strike", "cat": "PHYS", "dmg_type": "PHYS", "targets": "interleaved",
+		"power": 15, "marks": [0.5], "no_counter": true, "cooldown_rounds": 2,
+		"info": "BLADE DANCE ALL ACT / 0 EN (PHYS, INTERLEAVED): spends all acts for ACT+1 hits of 15 PHYS alternating foes; DEFEND only (no counter); 2-round cooldown."},
+	&"rock_body": {"name": "ROCK BODY", "acts": 1, "en": 10, "hp": 0, "grotesque": true, "pp": 0, "kind": "buff",
+		"cat": "STAT", "targets": "SELF", "immediate": true, "zahav_to": &"stone_body",
+		"fx": {"sturdy": true, "sturdy_def": 0, "rounds": 1},
+		"info": "ROCK BODY 1 ACT / 10 EN (STAT, SELF, IMMEDIATE): hardens into rock, gaining STURDY until the end of the round."},
+	&"stone_body": {"name": "STONE BODY", "acts": 1, "en": 25, "hp": 0, "grotesque": true, "pp": 0, "kind": "buff",
+		"cat": "STAT", "targets": "SELF", "immediate": true, "zahav": true, "zahav_of": &"rock_body",
+		"fx": {"sturdy": true, "sturdy_def": 15, "rounds": 1},
+		"info": "STONE BODY (ZAHAV) 1 ACT / 25 EN (STAT, SELF, IMMEDIATE): hardens into boulders, gaining STURDY and +15 DEF while STURDY lasts."},
 	# D-129 (creator 2026-11-27): 5 new Floater Eye support buff spells (1 full round, ally-targeted;
 	# Floater Eyes never target themselves or other Floater Eyes).
 	&"verdant_might": {"name": "VERDANT MIGHT", "acts": 1, "en": 8, "hp": 0, "pp": 0, "kind": "buff",
@@ -166,11 +173,13 @@ const DEFS := {
 
 ## Creator 2026-11-23: the current first-fight enemies keep their attributes and get the
 ## prologue skills (enemy 1 -> FOE A, enemy 2 -> FOE B).
-## D-131: the five older Survival skills became the canonical ones; saved runs are migrated with this map.
+## D-131 / D-139: old Survival skill ids migrated to the canonical ones; removed ids are dropped from saves.
 const LEGACY_IDS := {
 	&"spirit_bolt": &"mark_of_sun", &"curse_ray": &"weaken", &"heavy_crush": &"stone_crush",
 	&"life_drain": &"drain_claw", &"crushing_blow": &"energy_blow",
+	&"stone_grasp": &"rock_body",
 }
+const REMOVED_IDS: Array[StringName] = [&"frost_lance"]
 
 const KIND_SKILLS := {
 	&"genetic_foe_a": [&"lunge", &"bleedbuff"],
@@ -186,23 +195,31 @@ static func is_high_speed(skill: StringName) -> bool:
 	return bool(def(skill).get("high_speed", false))
 
 
+static func is_immediate(skill: StringName) -> bool:
+	return bool(def(skill).get("immediate", false))
+
+
 ## Bar seconds after HIGH SPEED (the base seconds when the attack is not HIGH SPEED).
 static func bar_seconds(seconds: float, high_speed: bool) -> float:
 	return seconds / HIGH_SPEED_FACTOR if high_speed else seconds
 
 
-## D-131: a (possibly old) skill id as the current one.
+## D-131 / D-139: a (possibly old) skill id as the current one ("" / &"" if removed).
 static func migrate_id(skill: Variant) -> Variant:
 	var id := StringName(str(skill))
+	if REMOVED_IDS.has(id):
+		return "" if skill is String else &""
 	var current: StringName = LEGACY_IDS.get(id, id)
 	return String(current) if skill is String else current
 
 
-## D-131: a saved list of skill ids migrated (and without duplicates).
+## D-131 / D-139: a saved list of skill ids migrated (without removed skills or duplicates).
 static func migrate_ids(skills: Array) -> Array:
 	var result: Array = []
 	for skill in skills:
 		var id: Variant = migrate_id(skill)
+		if str(id).is_empty():
+			continue
 		if not result.has(id):
 			result.append(id)
 	return result

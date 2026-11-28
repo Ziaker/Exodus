@@ -94,7 +94,7 @@ func _run() -> void:
 	# ---- the 27 skills all carry an effect and a description; the 4 main-game skills are untouched
 	var ids: Array[StringName] = []
 	ids.assign(SurvivalData.SURVIVAL_SKILLS)
-	check(ids.size() == 28, "28 Survival skills (D-124: 5 reworked + IGNOMA)")
+	check(ids.size() == 27, "27 Survival skills (D-139 removed frost_lance)")
 	for id in ids:
 		var d := SkillBook.def(id)
 		if d.has("cat") and not d.has("fx"):
@@ -115,13 +115,14 @@ func _run() -> void:
 			[&"mind_blast", "MIND DRAIN"], [&"dark_siphon", "DARK BOON"]]:
 		check(SkillBook.display_name(pair[0]) == pair[1], "%s is now %s" % [pair[0], pair[1]])
 
-	# ---- physical
-	check(SkillFx.hit_power(&"blade_dance", 0) == 3 and SkillFx.hit_power(&"blade_dance", 3) == 6, "BLADE DANCE climbs 3,4,5,6")
+	# ---- physical (D-139: BLADE DANCE is now fixed 15 PHYS, FROST LANCE removed, STONE GRASP -> ROCK BODY;
+	# CHILL and SNARE remain engine statuses tested directly via SkillFx.apply_status)
+	check(SkillFx.hit_power(&"blade_dance", 0) == 15 and SkillFx.hit_power(&"blade_dance", 3) == 15, "BLADE DANCE is fixed 15 PHYS per hit")
 	reset(); foe.stats.defense = 20
 	var normal := plain(7)
 	reset()
-	hit(&"frost_lance")
-	check(foe.has_status(&"chill"), "FROST LANCE chills")
+	SkillFx.apply_status(foe, &"chill", 2)
+	check(foe.has_status(&"chill"), "CHILL status applies")
 	b.rng.seed = 7
 	var before := hero.current_hp
 	reset(); hero.statuses.clear()
@@ -139,8 +140,8 @@ func _run() -> void:
 	var unchilled := 1000 - hero.current_hp
 	check(chilled < unchilled, "CHILL cuts the next attack (%d vs %d)" % [chilled, unchilled])
 	reset()
-	hit(&"stone_grasp")
-	check(foe.has_status(&"snare") and foe.stats.agi == 6, "STONE GRASP snares: AGI 10 -> 6")
+	SkillFx.apply_status(foe, &"snare", 2)
+	check(foe.has_status(&"snare") and foe.stats.agi == 6, "SNARE drops AGI: 10 -> 6")
 	foe.remove_status(&"snare")
 	check(foe.stats.agi == 10, "SNARE gives the AGI back")
 	reset()

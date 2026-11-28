@@ -1,7 +1,7 @@
 # Guia e Prompts Faseados de Implementação — D-139 (Claude / Agentes)
 
 **Decisões:** D-139 · D-125 · D-137 · 2026-11-27  
-**Status:** **CANÔNICO — DESIGN E VISUAIS (4/4) APROVADOS DE PRIMEIRA; PRONTO PARA IMPLEMENTAÇÃO EM 3 FASES**  
+**Status:** **CANÔNICO — DESIGN E VISUAIS (4/4) APROVADOS DE PRIMEIRA; IMPLEMENTADO NAS 3 FASES (motor, catálogo, HUD e VFX no jogo; aguarda a validação visual final do criador no Godot)**  
 **Referências obrigatórias antes de codar:**
 - Especificação mecânica fechada: [`docs/CANON_SKILLS_D139.md`](CANON_SKILLS_D139.md)
 - Estilo visual oficial não-reza: [`docs/NON_PRAYER_VFX_STYLE.md`](NON_PRAYER_VFX_STYLE.md)

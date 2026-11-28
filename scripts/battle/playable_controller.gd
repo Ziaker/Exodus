@@ -357,6 +357,8 @@ func plan_row_disabled(index: int) -> bool:
 func _entry_cost(detail: Dictionary) -> int:
 	# D-105: PASS spends no act.
 	if detail.get("pass", false): return 0
+	if detail.has("all_acts_spent"):
+		return int(detail.all_acts_spent)
 	if detail.has("pray"):
 		return PrayerBook.act_cost(StringName(detail.pray))
 	if detail.is_empty() or not detail.has("skill"): return 1
@@ -575,11 +577,17 @@ func _commands(unit: BattleUnit, reacting: bool = false) -> Array[String]:
 	if not reacting: options.append_array(["PASS", "REST"])
 	if unit.is_fallen and not reacting: options.append("ABSORB")
 	if reacting:
+		var no_counter := bool(SkillBook.def(_announced_skill).get("no_counter", false))
 		# D-045: only the attacked character may block (DEFEND) or use any command;
 		# another reactor may only counter-attack or use an item.
+		# D-139 BLADE DANCE (`no_counter`): cannot be reacted to offensively (DEFEND only, no COUNTER/FIGHT).
 		if unit != reaction_defender:
-			var limited: Array[String] = [FIGHT, "ITEM"]
+			var limited: Array[String] = []
+			if no_counter: limited.assign(["ITEM"])
+			else: limited.assign([FIGHT, "ITEM"])
 			return prayer.commands_for(unit, limited)
+		if no_counter:
+			options.erase(FIGHT)
 		options.append("DEFEND")
 	else:
 		# Creator 2026-11-24: REACT is only offered when an enemy action is announced (the
@@ -823,6 +831,22 @@ func _player_turn(unit: BattleUnit) -> void:
 					continue
 				if StringName(detail.skill) == &"":
 					detail = {}
+				else:
+					var picked_skill := StringName(detail.skill)
+					# D-139 / D-118: IMEDIATO skills (Rock Body / Stone Body) resolve on the spot without queueing or reaction.
+					if SkillBook.is_immediate(picked_skill):
+						hud.page_log()
+						if await _execute_command(unit, FIGHT, false, false, detail):
+							await _pause_result()
+						_auto_exec = false
+						if not is_inside_tree(): return
+						if not unit.is_alive() or state.is_over():
+							break
+						max_acts = mini(BattleMath.MAX_AVAILABLE_ACTS, unit.acts_available)
+						continue
+					# D-139 BLADE DANCE (`all_acts`): spends every remaining act in the plan.
+					if bool(SkillBook.def(picked_skill).get("all_acts", false)):
+						detail["all_acts_spent"] = maxi(1, max_acts - _planned_cost())
 			var target: BattleUnit = null
 			if _needs_enemy_target(chosen, detail):
 				target = await _wait_target()
@@ -948,7 +972,10 @@ func _needs_enemy_target(command: String, detail: Dictionary) -> bool:
 		return false
 	if detail.is_empty():
 		return true
-	return String(SkillBook.def(StringName(detail.skill)).kind) == "strike"
+	var d := SkillBook.def(StringName(detail.skill))
+	if String(d.get("targets", "")) == "interleaved":
+		return false
+	return String(d.kind) == "strike"
 
 
 func _mark_target(target: BattleUnit, delta: int) -> void:
@@ -988,7 +1015,8 @@ func _enemy_turn(unit: BattleUnit) -> void:
 			await _pause_result()
 			break
 		if skill != &"":
-			used += int(SkillBook.def(skill).acts)
+			var sd := SkillBook.def(skill)
+			used += 2 if bool(sd.get("all_acts", false)) else int(sd.acts)
 			await _enemy_skill(unit, skill)
 			_global_action_done()
 			prayer.tick_ochelet(unit)
@@ -1227,16 +1255,26 @@ func _execute_counter(reactor: BattleUnit, enemy: BattleUnit, target: BattleUnit
 	match int(o.winner):
 		BattleMath.CounterWinner.PLAYER:
 			_strike(reactor, enemy, o.player_timing, true)
-			_interrupt(reactor, enemy, o)
-			_enemy_interrupted = true
-			_interrupt_gainer = reactor
+			if enemy.is_alive() and enemy.has_status(&"sturdy"):
+				# D-139 STURDY: counter damage still lands, but the enemy is NOT interrupted.
+				_sturdy_hold(enemy)
+				_counter_resolved = false
+				_enemy_interrupted = false
+				_interrupt_gainer = null
+			else:
+				_interrupt(reactor, enemy, o)
+				_enemy_interrupted = true
+				_interrupt_gainer = reactor
 		BattleMath.CounterWinner.ENEMY:
 			# Creator 2026-11-22: a losing counter-attacker takes the hit in the target's place.
 			# Creator 2026-11-23: an announced Lunge lands whole (2 hits) on the reactor; a
 			# Heat wave lands on every hero.
 			if skill == &"": _strike(enemy, reactor, o.enemy_timing, false)
 			else: await _enemy_skill_lands(enemy, reactor, skill, o.enemy_timing)
-			_interrupt(enemy, reactor, o)
+			if reactor.is_alive() and reactor.has_status(&"sturdy"):
+				_sturdy_hold(reactor)
+			else:
+				_interrupt(enemy, reactor, o)
 		_:
 			# D-049 tie: both blows resolve at once, so a fall is told after both.
 			_hold_down = true
@@ -1244,9 +1282,14 @@ func _execute_counter(reactor: BattleUnit, enemy: BattleUnit, target: BattleUnit
 			if skill == &"": _strike(enemy, target, o.enemy_timing, false)
 			else: await _enemy_skill_lands(enemy, target, skill, o.enemy_timing)
 			_release_down()
-			_enemy_interrupted = true
-			_interrupt_gainer = null
-			_tie_report(reactor, enemy)
+			if enemy.is_alive() and enemy.has_status(&"sturdy"):
+				_sturdy_hold(enemy)
+				_enemy_interrupted = false
+				_interrupt_gainer = null
+			else:
+				_enemy_interrupted = true
+				_interrupt_gainer = null
+				_tie_report(reactor, enemy)
 	return true
 
 
@@ -1265,12 +1308,24 @@ func _enemy_counter(hero: BattleUnit, enemy: BattleUnit, skill: StringName = &""
 		BattleMath.CounterWinner.PLAYER:
 			if skill == &"": _strike(hero, enemy, o.player_timing, false)
 			else: await _hero_skill_lands(hero, enemy, skill, o.player_timing)
-			_interrupt(hero, enemy, o)
+			if enemy.is_alive() and enemy.has_status(&"sturdy"):
+				_sturdy_hold(enemy)
+			else:
+				_interrupt(hero, enemy, o)
 		BattleMath.CounterWinner.ENEMY:
 			_strike(enemy, hero, o.enemy_timing, true)
-			_interrupt(enemy, hero, o)
-			_player_interrupted = true
-			_interrupt_gainer = enemy
+			if hero.is_alive() and hero.has_status(&"sturdy"):
+				# D-139 STURDY: counter damage still lands, but the hero is NOT interrupted and completes its action/queue.
+				_sturdy_hold(hero)
+				_player_interrupted = false
+				_interrupt_gainer = null
+				if hero.is_alive() and enemy.is_alive():
+					if skill == &"": _strike(hero, enemy, o.player_timing, false)
+					else: await _hero_skill_lands(hero, enemy, skill, o.player_timing)
+			else:
+				_interrupt(enemy, hero, o)
+				_player_interrupted = true
+				_interrupt_gainer = enemy
 		_:
 			# D-049 tie: both blows resolve at once, so a fall is told after both.
 			_hold_down = true
@@ -1278,9 +1333,36 @@ func _enemy_counter(hero: BattleUnit, enemy: BattleUnit, skill: StringName = &""
 			else: await _hero_skill_lands(hero, enemy, skill, o.player_timing)
 			_strike(enemy, hero, o.enemy_timing, true)
 			_release_down()
-			_player_interrupted = true
-			_interrupt_gainer = null
-			_tie_report(hero, enemy)
+			if hero.is_alive() and hero.has_status(&"sturdy"):
+				_sturdy_hold(hero)
+				_player_interrupted = false
+				_interrupt_gainer = null
+			else:
+				_player_interrupted = true
+				_interrupt_gainer = null
+				_tie_report(hero, enemy)
+
+
+## D-139 STURDY: prevents pointer-system interruption while still allowing damage/effects to resolve.
+func _sturdy_hold(unit: BattleUnit) -> void:
+	_append_log("STURDY holds firm — %s is not interrupted!" % unit.display_name)
+	_event("%s  STURDY!" % short_name(unit))
+	hud.message = "STURDY: %s is not interrupted!" % short_name(unit)
+	if grotesque_fx != null and grotesque_fx.has_method("play_sturdy_hold"):
+		grotesque_fx.play_sturdy_hold(unit)
+
+
+## D-139 STURDY: blocks a debilitating effect (after AEGIS IRIS / Haganah priority) and consumes STURDY.
+func _try_block_debilitating(target: BattleUnit, kind: StringName) -> bool:
+	var was_zahav := target != null and target.sturdy_zahav
+	if not SkillFx.try_block_debilitating(target, kind):
+		return false
+	_append_log("STURDY blocks %s on %s and shatters!" % [String(kind).to_upper(), target.display_name])
+	_event("%s  STURDY BREAK" % short_name(target))
+	if grotesque_fx != null and grotesque_fx.has_method("play_sturdy_break"):
+		grotesque_fx.play_sturdy_break(target, was_zahav)
+	_refresh_all()
+	return true
 
 
 ## One strike of the exchange with its known timing (no defense rail).
@@ -1646,7 +1728,10 @@ func _wait_skill_menu(unit: BattleUnit, acts_left: int, en_left: int, hp_left: i
 			labels.append(skill_label(skill))
 			skill_ids.append(skill)
 			# D-111: a hero who prays pays prayer skills with PP (Survival human allies).
-			if not SkillBook.affordable(skill, acts_left, en_left, hp_left, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
+			if unit.skill_cooldown(skill) > 0:
+				skill_disabled.append(labels.size() - 1)
+				skill_reasons[labels.size() - 1] = "CD %dR" % unit.skill_cooldown(skill)
+			elif not SkillBook.affordable(skill, acts_left, en_left, hp_left, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 				skill_disabled.append(labels.size() - 1)
 				skill_reasons[labels.size() - 1] = _short_reason(skill, acts_left, en_left, hp_left)
 			elif not _any_foe_meets_cond(skill):
@@ -1760,16 +1845,24 @@ func en_extra_info() -> String:
 
 
 ## A hero uses a skill (action or reaction). Costs are paid when it resolves.
+var _last_acts_spent: int = 1
+
+
 func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planned: BattleUnit = null) -> bool:
 	var skill := StringName(detail.skill)
 	var d := SkillBook.def(skill)
 	var extra := int(detail.get("extra", 0))
+	if unit.skill_cooldown(skill) > 0:
+		_append_log("%s cannot use %s (cooldown %d round(s))." % [unit.display_name, d.name, unit.skill_cooldown(skill)])
+		_event("%s  CD %dR" % [short_name(unit), unit.skill_cooldown(skill)])
+		return true
 	if not SkillBook.affordable(skill, unit.acts_available, unit.current_en - extra, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp):
 		_append_log("%s cannot pay %s any more." % [unit.display_name, d.name])
 		_event("%s  CAN'T PAY %s" % [short_name(unit), NameCase.of(String(d.name))])
 		return true
+	var is_interleaved := String(d.get("targets", "")) == "interleaved"
 	var target: BattleUnit = null
-	if d.kind == "strike":
+	if d.kind == "strike" and not is_interleaved:
 		phase_text = "SELECT %s TARGET" % NameCase.of(String(d.name))
 		# D-057: the target chosen in the plan (a reaction chooses it here).
 		target = await _planned_or_new_target(planned)
@@ -1814,7 +1907,7 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 	_high_speed = SkillBook.is_high_speed(skill) or (d.kind in ["strike", "magic"] and unit.next_attack_high_speed)
 	if d.kind in ["strike", "magic"]:
 		unit.next_attack_high_speed = false
-	_pay_skill(unit, skill, extra)
+	_last_acts_spent = _pay_skill(unit, skill, extra)
 	unit.passive_stance = d.kind in ["buff", "heal"]
 	phase_text = ("REACTION " if reacting else "") + NameCase.of(String(d.name))
 	_append_log("%s uses %s." % [unit.display_name, d.name])
@@ -1823,7 +1916,11 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 	match String(d.kind):
 		"strike":
 			if not reacting: _set_role(unit, "ATTACK")
-			_set_role(target, "TARGET")
+			if is_interleaved:
+				for foe in hud.opponents:
+					if foe.is_alive(): _set_role(foe, "TARGET")
+			else:
+				_set_role(target, "TARGET")
 			# D-110: o anúncio do golpe saiu do log (setas e cartões mostram quem ataca).
 		"magic":
 			if not reacting: _set_role(unit, "ATTACK")
@@ -1832,23 +1929,43 @@ func _execute_skill(unit: BattleUnit, detail: Dictionary, reacting: bool, planne
 		_:
 			_event("%s  %s" % [short_name(unit), NameCase.of(String(d.name))])
 	match String(d.kind):
-		"strike": await _skill_strike(unit, target, skill, reacting)
+		"strike":
+			if is_interleaved:
+				await _skill_interleaved(unit, skill, reacting, _last_acts_spent)
+			else:
+				await _skill_strike(unit, target, skill, reacting)
 		"magic": await _hero_magic(unit, skill, reacting)
-		_: _self_skill(unit, skill, extra, reacting, ally_target)
+		_:
+			if bool(d.get("grotesque", false)):
+				var gstart := _gfx_start(unit, skill, [unit])
+				await _gfx_wait(gstart, skill, 0)
+			_self_skill(unit, skill, extra, reacting, ally_target)
 	_second_target = null
 	_refresh_all()
 	return true
 
 
-func _pay_skill(unit: BattleUnit, skill: StringName, extra: int) -> void:
+func _pay_skill(unit: BattleUnit, skill: StringName, extra: int) -> int:
 	var d := SkillBook.def(skill)
-	for _i in int(d.acts):
-		unit.spend_act()
+	var spent := 0
+	if bool(d.get("all_acts", false)):
+		while unit.acts_available > 0:
+			if not unit.spend_act():
+				break
+			spent += 1
+	else:
+		for _i in int(d.acts):
+			if unit.spend_act():
+				spent += 1
 	unit.current_en = maxi(0, unit.current_en - int(d.en) - extra)
 	unit.current_hp = maxi(1, unit.current_hp - SkillBook.hp_cost_of(skill, unit.stats.max_hp))
 	if unit.prays and int(d.get("pp", 0)) > 0:
 		unit.change_pp(-int(d.pp))
+	var cd := int(d.get("cooldown_rounds", 0))
+	if cd > 0:
+		unit.set_skill_cooldown(skill, cd)
 	_refresh_all()
+	return maxi(1, spent)
 
 
 ## Bleedbuff / Energy Eat on the user itself.
@@ -1939,6 +2056,15 @@ func _self_skill(unit: BattleUnit, skill: StringName, extra: int, reacting: bool
 				unit.display_name, d.name, recipient.display_name, ", ".join(notes), unit.current_en, unit.effective_max_en()])
 			# D-110: telegraphic Battle Log line matching the rest of the combat events.
 			_event("%s → %s  %s" % [short_name(unit), short_name(recipient), "  ".join(tags)])
+		elif bool(fxd.get("sturdy", false)):
+			# D-139 ROCK BODY / STONE BODY (ZAHAV): positive buff STURDY until round end (+15 DEF on ZAHAV).
+			var def_bonus := int(fxd.get("sturdy_def", 0))
+			var is_zahav := bool(d.get("zahav", false))
+			unit.apply_sturdy(def_bonus, int(fxd.get("rounds", 1)), is_zahav)
+			var tag := "STURDY +%d DEF" % def_bonus if def_bonus > 0 else "STURDY"
+			_append_log("%s hardens into %s: gains %s until the end of the round." % [
+				unit.display_name, "boulders" if is_zahav else "rock", tag])
+			_event("%s  %s" % [short_name(unit), tag])
 		else:
 			# D-106: HOWL taunts, PRIMAL ROAR is berserk (2 stages, DEF down), WAR CRY buffs the team.
 			var receivers: Array[BattleUnit] = [unit]
@@ -2121,6 +2247,8 @@ func _auto_pass_trapped(unit: BattleUnit) -> void:
 
 ## D-124: traps `unit` for `actions` global actions; the acts it had queued in its running turn are lost.
 func trap_unit(unit: BattleUnit, actions: int) -> void:
+	if _try_block_debilitating(unit, &"trapped"):
+		return
 	unit.trap(actions)
 	_append_log("%s is trapped for %d action(s)." % [unit.display_name, actions])
 	_event("%s is trapped." % short_name(unit))
@@ -2182,6 +2310,8 @@ func _enemy_prayer(unit: BattleUnit, skill: StringName) -> void:
 			if not seen.haganah.is_empty():
 				_append_log("%s's shield blocks SANVERIM." % seen.display_name)
 				_event("%s  RESISTS BLIND" % short_name(seen))
+			elif _try_block_debilitating(seen, &"blind"):
+				pass
 			else:
 				SkillFx.apply_status(seen, &"blind", SkillFx.BLIND_ROUNDS)
 				if prayer != null:
@@ -2299,25 +2429,28 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 			"  +%d EN" % en_moved if en_moved > 0 else ""])
 	# D-131 WEAKEN / WEAKENEN: MEF (and MAK) fall until the end of the battle, stacking up to -50% of the base.
 	if (fxd.has("weaken_mef_base") or fxd.has("weaken_mak_base")) and defender.is_alive() and defender.haganah.is_empty():
-		var cut := SkillFx.apply_weaken(defender, attacker, fxd)
-		var tags: Array[String] = []
-		if int(cut.mef) > 0: tags.append("MEF -%d" % int(cut.mef))
-		if int(cut.mak) > 0: tags.append("MAK -%d" % int(cut.mak))
-		_append_log("%s is weakened (MEF -%d, MAK -%d)." % [defender.display_name, defender.weaken_mef_penalty, defender.weaken_mak_penalty])
-		_event("%s  %s" % [short_name(defender), "  ".join(tags) if not tags.is_empty() else "WEAKEN MAX"])
+		if not _try_block_debilitating(defender, &"weaken_mef"):
+			var cut := SkillFx.apply_weaken(defender, attacker, fxd)
+			var tags: Array[String] = []
+			if int(cut.mef) > 0: tags.append("MEF -%d" % int(cut.mef))
+			if int(cut.mak) > 0: tags.append("MAK -%d" % int(cut.mak))
+			_append_log("%s is weakened (MEF -%d, MAK -%d)." % [defender.display_name, defender.weaken_mef_penalty, defender.weaken_mak_penalty])
+			_event("%s  %s" % [short_name(defender), "  ".join(tags) if not tags.is_empty() else "WEAKEN MAX"])
 	# D-131 MARK OF SUN: 3 charges and 2 round ticks (a repeat renews them).
 	if fxd.has("mark_of_sun_hits") and defender.is_alive() and defender.haganah.is_empty():
-		defender.apply_sun_mark(int(fxd.mark_of_sun_hits), SkillFx.SUN_MARK_ROUNDS)
-		_append_log("%s is marked by the sun (%d hits)." % [defender.display_name, defender.sun_mark_hits])
-		_event("%s  SUN MARK" % short_name(defender))
+		if not _try_block_debilitating(defender, &"mark_of_sun"):
+			defender.apply_sun_mark(int(fxd.mark_of_sun_hits), SkillFx.SUN_MARK_ROUNDS)
+			_append_log("%s is marked by the sun (%d hits)." % [defender.display_name, defender.sun_mark_hits])
+			_event("%s  SUN MARK" % short_name(defender))
 	var is_point := attack == BattleMath.RhythmResult.POINT
 	var bleed_stacks := int(fxd.get("bleed_point", fxd.get("bleed", 0))) if is_point else int(fxd.get("bleed", 0))
 	if bool(fxd.get("bleed_point_only", false)) and not is_point:
 		bleed_stacks = 0  # D-124 FANG STING: BLEED only on POINT
 	if bleed_stacks > 0 and defender.is_alive() and not shielded:
-		defender.add_bleed(bleed_stacks)
-		_append_log("%s bleeds (%d stack(s): -%d%% healing)." % [defender.display_name, defender.bleeds.size(), int(round((1.0 - defender.heal_factor()) * 100.0))])
-		_event("%s  BLEED" % short_name(defender))
+		if not _try_block_debilitating(defender, &"bleed"):
+			defender.add_bleed(bleed_stacks)
+			_append_log("%s bleeds (%d stack(s): -%d%% healing)." % [defender.display_name, defender.bleeds.size(), int(round((1.0 - defender.heal_factor()) * 100.0))])
+			_event("%s  BLEED" % short_name(defender))
 	if fxd.has("leech"):
 		attacker.heal(int(fxd.leech))
 	if fxd.has("lifesteal"):
@@ -2335,18 +2468,22 @@ func _skill_hit_fx(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 	var strike_def := SkillBook.def(skill)
 	if String(strike_def.get("kind", "")) == "strike" and int(strike_def.get("burn_chance", 0)) > 0 \
 			and defender.is_alive() and not shielded and _burn_roll(int(strike_def.burn_chance)):
-		defender.burns.append(int(fxd.get("burn_rounds", SkillBook.BURN_ROUNDS)))
-		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
-		_event("%s  BURN" % short_name(defender))
+		if not _try_block_debilitating(defender, &"burn"):
+			defender.burns.append(int(fxd.get("burn_rounds", SkillBook.BURN_ROUNDS)))
+			_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
+			_event("%s  BURN" % short_name(defender))
 	if defender.is_alive() and not shielded:
 		if fxd.has("sleep_chance") and _fx_roll(int(fxd.sleep_chance)):
-			SkillFx.apply_status(defender, SkillFx.SLEEP_ID, 1)
-			_append_log("%s falls asleep." % defender.display_name)
-			_event("%s  SLEEP" % short_name(defender))
+			if not _try_block_debilitating(defender, SkillFx.SLEEP_ID):
+				SkillFx.apply_status(defender, SkillFx.SLEEP_ID, 1)
+				_append_log("%s falls asleep." % defender.display_name)
+				_event("%s  SLEEP" % short_name(defender))
 		if fxd.has("status") and _fx_roll(int(fxd.get("chance", 100))):
-			SkillFx.apply_status(defender, StringName(fxd.status), int(fxd.get("rounds", 1)))
-			_append_log("%s: %s." % [defender.display_name, String(fxd.status).to_upper()])
-			_event("%s  %s" % [short_name(defender), String(fxd.status).to_upper()])
+			var st_id := StringName(fxd.status)
+			if not _try_block_debilitating(defender, st_id):
+				SkillFx.apply_status(defender, st_id, int(fxd.get("rounds", 1)))
+				_append_log("%s: %s." % [defender.display_name, String(fxd.status).to_upper()])
+				_event("%s  %s" % [short_name(defender), String(fxd.status).to_upper()])
 	return applied
 
 
@@ -2394,7 +2531,8 @@ func _enemy_choice(unit: BattleUnit, budget: int) -> StringName:
 	var choices: Array[StringName] = [&""]
 	var acts := mini(budget, unit.acts_available)
 	for skill in unit.skills:
-		if SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp) \
+		if unit.skill_cooldown(skill) <= 0 \
+				and SkillBook.affordable(skill, acts, unit.current_en, unit.current_hp, unit.current_pp if unit.prays else 99, unit.stats.max_hp) \
 				and _cond_target_for_enemy(skill) != null:
 			choices.append(skill)
 	return choices[clampi(_enemy_skill_pick(choices.size()), 0, choices.size() - 1)]
@@ -2412,7 +2550,7 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 	_high_speed = SkillBook.is_high_speed(skill) or (d.kind in ["strike", "magic"] and unit.next_attack_high_speed)
 	if d.kind in ["strike", "magic"]:
 		unit.next_attack_high_speed = false
-	_pay_skill(unit, skill, extra)
+	_last_acts_spent = _pay_skill(unit, skill, extra)
 	unit.passive_stance = d.kind in ["buff", "heal"] or (d.kind == "prayer" and String(PrayerBook.entry(skill).get("target", "self")) in ["ally", "allies", "self"])
 	action_attacker = unit
 	phase_text = "ENEMY " + NameCase.of(String(d.name))
@@ -2421,12 +2559,16 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 	if d.kind in ["buff", "heal", "prayer"]:
 		_append_log("%s uses %s." % [unit.display_name, d.name])
 		_event("%s  %s" % [short_name(unit), NameCase.of(String(d.name))])
+		if bool(d.get("grotesque", false)):
+			var gstart := _gfx_start(unit, skill, [unit])
+			await _gfx_wait(gstart, skill, 0)
 		_self_skill(unit, skill, extra, false)
 		hud.message = "%s USES %s" % [short_name(unit), d.name]
 		_refresh_all()
 		return
+	var is_interleaved := String(d.get("targets", "")) == "interleaved"
 	var targets: Array[BattleUnit] = []
-	if d.kind == "strike":
+	if d.kind == "strike" and not is_interleaved:
 		var defender := _cond_target_for_enemy(skill)
 		if defender != null: targets.append(defender)
 	else:
@@ -2455,6 +2597,9 @@ func _enemy_skill(unit: BattleUnit, skill: StringName) -> void:
 		declared[target] = reaction_declared
 	_announced_skill = &""
 	if _counter_resolved or not unit.is_alive():
+		return
+	if is_interleaved:
+		await _skill_interleaved(unit, skill, false, _last_acts_spent, paid, declared)
 		return
 	if d.kind == "strike":
 		var target: BattleUnit = targets[0]
@@ -2506,6 +2651,11 @@ func _gfx_start(attacker: BattleUnit, skill: StringName, victims: Array) -> floa
 		&"weaken": return grotesque_fx.play_weaken(attacker, first)
 		&"weakenen": return grotesque_fx.play_weakenen(attacker, victims)
 		&"mark_of_sun": return grotesque_fx.play_mark_of_sun(attacker, first)
+		# D-139 (Lote 3)
+		&"twin_fang": return grotesque_fx.play_twin_fang(attacker, first, true)
+		&"blade_dance": return grotesque_fx.play_blade_dance(attacker, victims)
+		&"rock_body": return grotesque_fx.play_rock_body(attacker)
+		&"stone_body": return grotesque_fx.play_stone_body(attacker)
 	return -1.0
 
 
@@ -2529,6 +2679,10 @@ func _gfx_wait(start: float, skill: StringName, index: int) -> void:
 		&"weaken": age = grotesque_fx.HIT_WEAKEN
 		&"weakenen": age = grotesque_fx.HIT_WEAKENEN[mini(index, 1)]
 		&"mark_of_sun": age = grotesque_fx.HIT_SUN
+		&"twin_fang": age = grotesque_fx.HIT_TWIN_FANG[mini(index, 1)]
+		&"blade_dance": age = grotesque_fx.blade_dance_hit_age(index)
+		&"rock_body": age = grotesque_fx.HIT_ROCK_BODY
+		&"stone_body": age = grotesque_fx.HIT_STONE_BODY
 	await grotesque_fx.wait_age(start, age)
 
 
@@ -2586,7 +2740,8 @@ func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 	action_attacker = attacker
 	action_defender = defender
 	# Creator 2026-11-23: an attacked enemy may counter-attack a hero's Lunge (33%).
-	if attacker.is_player and not reacting and not defender.is_player and defender.is_alive() \
+	if attacker.is_player and not reacting and not bool(d.get("no_counter", false)) \
+			and not defender.is_player and defender.is_alive() \
 			and defender.acts_available > 0 and _enemy_counter_roll(defender):
 		await _enemy_counter(attacker, defender, skill)
 		return
@@ -2615,6 +2770,62 @@ func _skill_strike(attacker: BattleUnit, defender: BattleUnit, skill: StringName
 		cross_hit = true
 		next_hit = i > 0
 		prev = _skill_hit_fx(attacker, victim, skill, i, reacting, attack[i], defense[i], magic, prev)
+		cross_hit = false
+		next_hit = false
+	_defender_defending = false
+
+
+## D-139 BLADE DANCE (`targets: "interleaved"`): spends all remaining acts for `acts_spent + extra_hit` hits
+## alternating across living opponents (`15 PHYS` fixed per hit). Cannot be countered (`no_counter: true`);
+## targets may still DEFEND normally.
+func _skill_interleaved(attacker: BattleUnit, skill: StringName, reacting: bool, acts_spent: int,
+		paid: Dictionary = {}, declared: Dictionary = {}) -> void:
+	var d := SkillBook.def(skill)
+	var hit_count := maxi(1, acts_spent) + int(d.get("extra_hit", 1))
+	var pool: Array = hud.opponents if attacker.is_player else hud.players
+	var live: Array[BattleUnit] = []
+	for u in pool:
+		if (u as BattleUnit).is_alive():
+			live.append(u)
+	if live.is_empty():
+		return
+	var planned_victims: Array[BattleUnit] = []
+	for i in hit_count:
+		planned_victims.append(live[i % live.size()])
+	var marks: Array[float] = []
+	for i in hit_count:
+		marks.append(0.5)
+	action_attacker = attacker
+	action_defender = planned_victims[0]
+	var auto_hit := not attacker.is_player and declared.values().all(func(v: Variant) -> bool: return not bool(v))
+	var attack := await _skill_attack_timing(attacker, planned_victims[0], marks, auto_hit)
+	var defenses: Array[int] = []
+	for i in hit_count:
+		var victim: BattleUnit = planned_victims[i]
+		if not victim.is_alive():
+			defenses.append(BattleMath.RhythmResult.MISS)
+			continue
+		var def_paid := bool(paid.get(victim, false))
+		var rolled: Array[int] = await _skill_defense_timing(victim, attacker, [0.5], def_paid)
+		defenses.append(rolled[0])
+	var gstart := _gfx_start(attacker, skill, planned_victims)
+	var prev := -1
+	for i in hit_count:
+		var victim: BattleUnit = planned_victims[i]
+		if not victim.is_alive():
+			var fallback: BattleUnit = null
+			for u in pool:
+				if (u as BattleUnit).is_alive():
+					fallback = u
+					break
+			if fallback == null:
+				break
+			victim = fallback
+		await _gfx_wait(gstart, skill, i)
+		_defender_defending = bool(paid.get(victim, false))
+		cross_hit = true
+		next_hit = i > 0
+		prev = _skill_hit_fx(attacker, victim, skill, i, reacting, attack[i], defenses[i], false, prev)
 		cross_hit = false
 		next_hit = false
 	_defender_defending = false
@@ -2779,10 +2990,11 @@ func _magic_hit(attacker: BattleUnit, defender: BattleUnit, skill: StringName, i
 		if bool(SkillFx.fx_of(skill).get("storm", false)) and defender.is_alive() and _fx_roll(50):
 			_skill_hit_fx(attacker, defender, skill, 1, is_reaction, attack, defense, true)
 			_append_log("%s is struck twice." % defender.display_name)
-	if applied >= 0 and defender.is_alive() and _burn_roll(int(d.get("burn_chance", 0))):
-		defender.burns.append(int(SkillFx.fx_of(skill).get("burn_rounds", SkillBook.BURN_ROUNDS)))
-		_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
-		_event("%s  BURN" % short_name(defender))
+	if applied >= 0 and defender.is_alive() and defender.haganah.is_empty() and _burn_roll(int(d.get("burn_chance", 0))):
+		if not _try_block_debilitating(defender, &"burn"):
+			defender.burns.append(int(SkillFx.fx_of(skill).get("burn_rounds", SkillBook.BURN_ROUNDS)))
+			_append_log("%s is burning (%d burn(s))." % [defender.display_name, defender.burns.size()])
+			_event("%s  BURN" % short_name(defender))
 
 
 ## Attack timing per mark: the hero presses on the rail; an enemy rolls each mark (or

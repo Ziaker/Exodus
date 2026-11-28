@@ -104,6 +104,11 @@ static func of(u: BattleUnit) -> Array[Dictionary]:
 		_add(list, "sp_up", "SP+", "S+", Kind.BUFF)
 	if not u.haganah.is_empty():
 		_add(list, "shield", "SHLD", "SHL", Kind.BUFF)
+	if u.has_status(&"sturdy"):
+		if u.sturdy_def_bonus > 0:
+			_add(list, "sturdy", "STURDY+", "S+", Kind.BUFF, u.sturdy_def_bonus, true)
+		else:
+			_add(list, "sturdy", "STURDY", "STR", Kind.BUFF)
 	if u.gevurah_bonus > 0.0:
 		_add(list, "gevurah", "NEXT+", "G+", Kind.BUFF)
 	if u.has_status(&"taunt"):

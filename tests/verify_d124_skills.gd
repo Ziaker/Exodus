@@ -117,7 +117,7 @@ func _catalog() -> void:
 	for id in [&"fang_spine", &"ignoma_esh"]:
 		check(bool(SkillBook.def(id).zahav) and not SurvivalData.SURVIVAL_SKILLS.has(id), "%s is a ZAHAV evolution, not a pool skill" % id)
 	check(SkillBook.def(&"fang_spine").zahav_of == &"fang_sting" and SkillBook.def(&"ignoma_esh").zahav_of == &"ignoma", "ZAHAV evolutions point at their base skill")
-	check(SurvivalData.SURVIVAL_SKILLS.size() == 28, "the pool has 28 skills: 22 untouched + 5 reworked + IGNOMA")
+	check(SurvivalData.SURVIVAL_SKILLS.size() == 27, "the pool has 27 skills (D-139 removed frost_lance)")
 	for id in [&"lunge", &"bleedbuff", &"heat_wave", &"energy_eat"]:
 		check(not SkillBook.def(id).is_empty() and not SkillBook.def(id).has("zahav"), "%s (Prologue) is untouched" % id)
 	check(SkillBook.is_high_speed(&"mazz_bite") and not SkillBook.is_high_speed(&"fang_sting"), "only MAZZ BITE is HIGH SPEED")

@@ -125,7 +125,7 @@ func _catalog() -> void:
 		check(SurvivalData.SURVIVAL_SKILLS.has(id), "%s is in the Survival pool" % id)
 	for id in [&"vital_claws", &"weakenen"]:
 		check(not SurvivalData.SURVIVAL_SKILLS.has(id), "%s is an evolution, not a pool skill" % id)
-	check(SurvivalData.SURVIVAL_SKILLS.size() == 28, "the pool still has 28 skills (1:1 replacement)")
+	check(SurvivalData.SURVIVAL_SKILLS.size() == 27, "the pool has 27 skills (D-139 removed frost_lance)")
 	for id in SurvivalData.SURVIVAL_SKILLS:
 		check(not SkillBook.def(id).is_empty() and SurvivalData.HEBREW_SKILLS.has(id), "%s: defined and has its unidentified (hebrew) name" % id)
 

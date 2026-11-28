@@ -16,9 +16,9 @@ const SILHOUETTES_DIR := "res://assets/generated/survival/"
 const SURVIVAL_SKILLS: Array[StringName] = [
 	&"pixie_dust", &"dark_breath", &"hellfire", &"mark_of_sun", &"weaken", &"mazz_bite",
 	&"fang_sting", &"stone_crush", &"howl", &"primal_roar", &"mend", &"dark_siphon",
-	&"vuln_pierce", &"twin_fang", &"war_cry", &"venom_cloud", &"mind_blast", &"frost_lance",
+	&"vuln_pierce", &"twin_fang", &"war_cry", &"venom_cloud", &"mind_blast",
 	&"thunder_call", &"drain_claw", &"spirit_wave", &"energy_blow", &"ember_touch", &"renew",
-	&"umbral_gaze", &"blade_dance", &"stone_grasp", &"ignoma",
+	&"umbral_gaze", &"blade_dance", &"rock_body", &"ignoma",
 ]
 
 ## Nomes em hebraico das habilidades não identificadas (D-052 / Ra'am).
@@ -28,10 +28,10 @@ const HEBREW_SKILLS := {
 	&"fang_sting": "סערת ניבים", &"stone_crush": "מעיכה כבדה", &"howl": "יללה",
 	&"primal_roar": "שאגה קדומה", &"mend": "תיקון", &"dark_siphon": "מתנה אפלה",
 	&"vuln_pierce": "חדירת נשמה", &"twin_fang": "ניב כפול", &"war_cry": "זעקת מלחמה",
-	&"venom_cloud": "ענן ארס", &"mind_blast": "שאיבת מוח", &"frost_lance": "רומח כפור",
+	&"venom_cloud": "ענן ארס", &"mind_blast": "שאיבת מוח",
 	&"thunder_call": "קריאת רעם", &"drain_claw": "ניקוז חיים", &"spirit_wave": "עלוקת נשמה",
 	&"energy_blow": "מכת סיום", &"ember_touch": "התפרצות גחלת", &"renew": "חידוש",
-	&"umbral_gaze": "מבט הריק", &"ignoma": "כדור אש", &"blade_dance": "מחול להבים", &"stone_grasp": "אחיזת אבן",
+	&"umbral_gaze": "מבט הריק", &"ignoma": "כדור אש", &"blade_dance": "מחול להבים", &"rock_body": "גוף סלע", &"stone_body": "גוף אבנים",
 	# D-129 Floater Eye buffs (hebrew placeholder when unidentified after absorption).
 	&"verdant_might": "עוצמה ירוקה", &"verdant_shell": "שריון ירוק",
 	&"keen_gaze": "מבט חד", &"ether_link": "קשר אתר", &"aegis_iris": "מגן קשתית",
@@ -340,7 +340,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "barong.png",
 		"cell": Vector2i(11, 3),
 		"stats": {"max_hp": 42, "max_en": 12, "atk": 10, "mak": 6, "defense": 10, "mef": 6, "agi": 6},
-		"skills": [&"stone_grasp", &"war_cry"],
+		"skills": [&"rock_body", &"war_cry"],
 	},
 	{
 		"id": "orobas", "name": "OROBAS", "tier": 3, "macca": 50,
@@ -404,7 +404,7 @@ const DEMONS := [
 		"silhouette": SILHOUETTES_DIR + "pazuzu.png",
 		"cell": Vector2i(3, 13),
 		"stats": {"max_hp": 44, "max_en": 15, "atk": 10, "mak": 12, "defense": 9, "mef": 9, "agi": 12},
-		"skills": [&"ember_touch", &"frost_lance"],
+		"skills": [&"ember_touch", &"ignoma", &"twin_fang", &"rock_body"],
 	},
 	{
 		"id": "isis", "name": "ISIS", "tier": 4, "macca": 65,

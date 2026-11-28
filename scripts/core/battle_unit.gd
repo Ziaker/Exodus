@@ -75,6 +75,11 @@ var sun_mark_hits: int = 0
 var sun_mark_rounds: int = 0
 ## D-131: bosses, Guardians and Angels (the Drain Claw / Vital Claws cap applies against them).
 var boss_class: bool = false
+## D-139 STURDY: Stone Body (ZAHAV) grants +15 DEF while STURDY lasts; never mutates stats.defense or sp_base().
+var sturdy_def_bonus: int = 0
+var sturdy_zahav: bool = false
+## D-139: per-skill cooldown remaining in rounds (skill_id -> rounds left; decremented each round tick).
+var skill_cooldowns: Dictionary = {}
 
 func _init(unit_id: StringName, unit_name: String, unit_stats: UnitStats,
 		player_side: bool, fallen: bool = false) -> void:
@@ -138,11 +143,14 @@ func effective_mak() -> float:
 	return float(base) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(mak_stages.size()))
 
 
-## Physical DEF with active Magen and Verdant Shell stages applied (+25% per stage).
+## Physical DEF with active Magen, Verdant Shell (+25% per stage) and D-139 Stone Body (+15 while STURDY lasts).
 func effective_def() -> int:
-	if def_stages.is_empty() and def_round_stages.is_empty():
-		return stats.defense
-	return maxi(1, int(round(float(stats.defense) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(def_stages.size() + def_round_stages.size())))))
+	var base := stats.defense
+	if not (def_stages.is_empty() and def_round_stages.is_empty()):
+		base = maxi(1, int(round(float(stats.defense) * (1.0 + SkillBook.ATK_STAGE_BONUS * float(def_stages.size() + def_round_stages.size())))))
+	if has_status(&"sturdy") and sturdy_def_bonus > 0:
+		base += sturdy_def_bonus
+	return base
 
 
 ## Magic DEF (MEF) with active Verdant Shell stages applied (+25% per stage, D-129).
@@ -189,6 +197,32 @@ func apply_sun_mark(hits: int = 3, rounds: int = 2) -> void:
 	sun_mark_rounds = rounds
 
 
+## D-139 ROCK BODY / STONE BODY: grants positive buff STURDY until the end of the round (+DEF when ZAHAV).
+func apply_sturdy(def_bonus: int = 0, rounds: int = 1, is_zahav: bool = false) -> void:
+	add_status(&"sturdy", maxi(1, rounds), {})
+	sturdy_def_bonus = maxi(0, def_bonus)
+	sturdy_zahav = is_zahav
+
+
+## D-139: per-skill cooldown helpers (cooldown_rounds = 2 -> used Round 1, blocked Round 2, ready Round 3).
+func set_skill_cooldown(skill: StringName, rounds: int) -> void:
+	if rounds > 0:
+		skill_cooldowns[skill] = rounds
+
+
+func skill_cooldown(skill: StringName) -> int:
+	return int(skill_cooldowns.get(skill, 0))
+
+
+func tick_cooldowns() -> void:
+	for k in skill_cooldowns.keys():
+		var left := int(skill_cooldowns[k]) - 1
+		if left <= 0:
+			skill_cooldowns.erase(k)
+		else:
+			skill_cooldowns[k] = left
+
+
 ## AGI with active Keen Gaze buffs applied (D-129: never mutates stats.agi or sp_base()).
 func effective_agi() -> int:
 	if agi_buffs.is_empty():
@@ -233,6 +267,9 @@ func remove_status(id: StringName) -> void:
 		weaken_mef_penalty = 0
 	elif id == &"weaken_mak":
 		weaken_mak_penalty = 0
+	elif id == &"sturdy":
+		sturdy_def_bonus = 0
+		sturdy_zahav = false
 
 
 func is_alive() -> bool:

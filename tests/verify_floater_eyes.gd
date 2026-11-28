@@ -325,13 +325,13 @@ func _verify_human_example_battle() -> void:
 	check(eye_a.haganah.is_empty() and eye_b.haganah.is_empty(), "Floater Eyes NEVER receive AEGIS IRIS")
 	check(String(b.hud.events.back().text) == "Floater Eye B → Human A  STATUS SHIELD",
 			"D-110 telegraphic log for AEGIS IRIS (got %s)" % String(b.hud.events.back().text))
-	# Prova que o escudo bloqueia status (SNARE / BLEED / SLEEP)
+	# Prova que o escudo bloqueia status (WEAKEN / BLEED)
 	human.current_hp = 999
 	human.stats.max_hp = 999
-	b._skill_hit_fx(b._fallen, human, &"stone_grasp", 0, false, R.POINT, R.MISS, false)
+	b._skill_hit_fx(b._fallen, human, &"venom_cloud", 0, false, R.POINT, R.MISS, true)
 	b._skill_hit_fx(b._fallen, human, &"fang_sting", 0, false, R.POINT, R.MISS, false)
-	check(not human.has_status(&"snare") and human.bleeds.is_empty(),
-			"AEGIS IRIS blocks SNARE and BLEED status conditions")
+	check(not human.has_status(&"weaken") and human.bleeds.is_empty(),
+			"AEGIS IRIS blocks WEAKEN and BLEED status conditions")
 
 	# Verifica que MAK buffado aumenta de fato o dano de CHEREV do humano
 	var unbuffed_mak := human.stats.mak
